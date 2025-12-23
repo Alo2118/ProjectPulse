@@ -1,0 +1,14 @@
+# Optional: GitHub Actions for manual deploy trigger
+# Render auto-deploys on push, so this is optional
+
+name: Deploy to Render
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        run: echo "Render will auto-deploy on push. No action needed."
