@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, MessageSquare, Send } from 'lucide-react';
-import { tasksApi, commentsApi, projectsApi } from '../services/api';
+import { tasksApi, commentsApi, projectsApi, milestonesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const statusLabels = {
@@ -17,6 +17,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [projects, setProjects] = useState([]);
+  const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -24,12 +25,29 @@ export default function TaskModal({ task, onClose, onUpdate }) {
     loadProjects();
   }, [task.id]);
 
+  useEffect(() => {
+    if (editedTask.project_id) {
+      loadMilestones(editedTask.project_id);
+    } else {
+      setMilestones([]);
+    }
+  }, [editedTask.project_id]);
+
   const loadProjects = async () => {
     try {
       const response = await projectsApi.getAll();
       setProjects(response.data);
     } catch (error) {
       console.error('Error loading projects:', error);
+    }
+  };
+
+  const loadMilestones = async (projectId) => {
+    try {
+      const response = await milestonesApi.getByProject(projectId);
+      setMilestones(response.data.filter(m => m.status === 'active'));
+    } catch (error) {
+      console.error('Error loading milestones:', error);
     }
   };
 
@@ -124,7 +142,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
             <select
               className="input"
               value={editedTask.project_id || ''}
-              onChange={(e) => setEditedTask({ ...editedTask, project_id: e.target.value ? parseInt(e.target.value) : null })}
+              onChange={(e) => setEditedTask({ ...editedTask, project_id: e.target.value ? parseInt(e.target.value) : null, milestone_id: null })}
               disabled={isDirezione}
             >
               <option value="">Nessun progetto</option>
@@ -138,6 +156,32 @@ export default function TaskModal({ task, onClose, onUpdate }) {
               Seleziona un progetto per spostare il task
             </p>
           </div>
+
+          {/* Milestone */}
+          {editedTask.project_id && milestones.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Milestone (Opzionale)
+              </label>
+              <select
+                className="input"
+                value={editedTask.milestone_id || ''}
+                onChange={(e) => setEditedTask({ ...editedTask, milestone_id: e.target.value ? parseInt(e.target.value) : null })}
+                disabled={isDirezione}
+              >
+                <option value="">Nessuna milestone</option>
+                {milestones.map(milestone => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.name}
+                    {milestone.due_date && ` (scad. ${new Date(milestone.due_date).toLocaleDateString('it-IT')})`}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Assegna il task a una milestone specifica
+              </p>
+            </div>
+          )}
 
           {/* Status and Priority */}
           <div className="grid grid-cols-2 gap-4">

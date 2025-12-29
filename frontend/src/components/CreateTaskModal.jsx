@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Plus } from 'lucide-react';
-import { tasksApi, projectsApi } from '../services/api';
+import { tasksApi, projectsApi, milestonesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function CreateTaskModal({ projects, onClose, onCreate }) {
@@ -9,12 +9,32 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
     title: '',
     description: '',
     project_id: '',
+    milestone_id: '',
     priority: 'medium',
     deadline: ''
   });
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (formData.project_id) {
+      loadMilestones(formData.project_id);
+    } else {
+      setMilestones([]);
+      setFormData(prev => ({ ...prev, milestone_id: '' }));
+    }
+  }, [formData.project_id]);
+
+  const loadMilestones = async (projectId) => {
+    try {
+      const response = await milestonesApi.getByProject(projectId);
+      setMilestones(response.data.filter(m => m.status === 'active'));
+    } catch (error) {
+      console.error('Error loading milestones:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,6 +55,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
       await tasksApi.create({
         ...formData,
         project_id: projectId || null,
+        milestone_id: formData.milestone_id || null,
         assigned_to: user.id
       });
 
@@ -122,6 +143,28 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
               </select>
             )}
           </div>
+
+          {/* Milestone Selector - shown only if project is selected */}
+          {formData.project_id && milestones.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Milestone (Opzionale)
+              </label>
+              <select
+                className="input"
+                value={formData.milestone_id}
+                onChange={(e) => setFormData({ ...formData, milestone_id: e.target.value })}
+              >
+                <option value="">Nessuna milestone</option>
+                {milestones.map(milestone => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.name}
+                    {milestone.due_date && ` (scad. ${new Date(milestone.due_date).toLocaleDateString('it-IT')})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
