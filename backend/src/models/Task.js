@@ -1,16 +1,17 @@
 import db from '../config/database.js';
 
 class Task {
-  static create({ title, description, status, project_id, assigned_to, created_by, priority, deadline }) {
+  static create({ title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline }) {
     const stmt = db.prepare(`
-      INSERT INTO tasks (title, description, status, project_id, assigned_to, created_by, priority, deadline)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       title,
       description || null,
       status || 'todo',
       project_id || null,
+      milestone_id || null,
       assigned_to,
       created_by,
       priority || 'medium',
@@ -24,10 +25,12 @@ class Task {
       SELECT
         t.*,
         p.name as project_name,
+        m.name as milestone_name,
         u1.name as assigned_to_name,
         u2.name as created_by_name
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN milestones m ON t.milestone_id = m.id
       LEFT JOIN users u1 ON t.assigned_to = u1.id
       LEFT JOIN users u2 ON t.created_by = u2.id
       WHERE t.id = ?
@@ -40,10 +43,12 @@ class Task {
       SELECT
         t.*,
         p.name as project_name,
+        m.name as milestone_name,
         u1.name as assigned_to_name,
         u2.name as created_by_name
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN milestones m ON t.milestone_id = m.id
       LEFT JOIN users u1 ON t.assigned_to = u1.id
       LEFT JOIN users u2 ON t.created_by = u2.id
       WHERE 1=1
@@ -62,6 +67,10 @@ class Task {
       query += ' AND t.project_id = ?';
       values.push(filters.project_id);
     }
+    if (filters.milestone_id) {
+      query += ' AND t.milestone_id = ?';
+      values.push(filters.milestone_id);
+    }
 
     query += ' ORDER BY t.created_at DESC';
 
@@ -74,7 +83,7 @@ class Task {
     const values = [];
 
     const allowedFields = [
-      'title', 'description', 'status', 'project_id', 'priority',
+      'title', 'description', 'status', 'project_id', 'milestone_id', 'priority',
       'time_spent', 'blocked_reason', 'clarification_needed', 'deadline', 'completed_at'
     ];
 

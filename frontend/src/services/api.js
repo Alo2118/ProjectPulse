@@ -72,4 +72,14 @@ export const commentsApi = {
   delete: (id) => api.delete(`/comments/${id}`),
 };
 
+// Milestones
+export const milestonesApi = {
+  getByProject: (project_id) => api.get('/milestones', { params: { project_id } }),
+  getById: (id) => api.get(`/milestones/${id}`),
+  create: (data) => api.post('/milestones', data),
+  update: (id, data) => api.put(`/milestones/${id}`, data),
+  delete: (id) => api.delete(`/milestones/${id}`),
+  complete: (id) => api.post(`/milestones/${id}/complete`),
+};
+
 export default api;

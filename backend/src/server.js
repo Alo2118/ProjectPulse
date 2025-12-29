@@ -6,6 +6,7 @@ import projectRoutes from './routes/projects.js';
 import taskRoutes from './routes/tasks.js';
 import timeRoutes from './routes/time.js';
 import commentRoutes from './routes/comments.js';
+import milestoneRoutes from './routes/milestones.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +44,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/time', timeRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/milestones', milestoneRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

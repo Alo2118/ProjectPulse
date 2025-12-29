@@ -38,6 +38,21 @@ const createTables = () => {
     )
   `);
 
+  // Milestones table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS milestones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      project_id INTEGER NOT NULL,
+      due_date DATE,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'completed', 'cancelled')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `);
+
   // Tasks table
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
@@ -46,6 +61,7 @@ const createTables = () => {
       description TEXT,
       status TEXT NOT NULL DEFAULT 'todo' CHECK(status IN ('todo', 'in_progress', 'blocked', 'waiting_clarification', 'completed')),
       project_id INTEGER,
+      milestone_id INTEGER,
       assigned_to INTEGER NOT NULL,
       created_by INTEGER NOT NULL,
       priority TEXT DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
@@ -56,6 +72,7 @@ const createTables = () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       completed_at DATETIME,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (milestone_id) REFERENCES milestones(id) ON DELETE SET NULL,
       FOREIGN KEY (assigned_to) REFERENCES users(id),
       FOREIGN KEY (created_by) REFERENCES users(id)
     )
