@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, MessageSquare, Send } from 'lucide-react';
-import { tasksApi, commentsApi } from '../services/api';
+import { tasksApi, commentsApi, projectsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const statusLabels = {
@@ -16,11 +16,22 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const [editedTask, setEditedTask] = useState(task);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadComments();
+    loadProjects();
   }, [task.id]);
+
+  const loadProjects = async () => {
+    try {
+      const response = await projectsApi.getAll();
+      setProjects(response.data);
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  };
 
   const loadComments = async () => {
     try {
@@ -103,6 +114,29 @@ export default function TaskModal({ task, onClose, onUpdate }) {
               onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
               disabled={isDirezione}
             />
+          </div>
+
+          {/* Project */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Progetto
+            </label>
+            <select
+              className="input"
+              value={editedTask.project_id || ''}
+              onChange={(e) => setEditedTask({ ...editedTask, project_id: e.target.value ? parseInt(e.target.value) : null })}
+              disabled={isDirezione}
+            >
+              <option value="">Nessun progetto</option>
+              {projects.map(project => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Seleziona un progetto per spostare il task
+            </p>
           </div>
 
           {/* Status and Priority */}
