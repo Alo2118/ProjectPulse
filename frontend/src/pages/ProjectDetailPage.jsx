@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Archive, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { projectsApi, tasksApi } from '../services/api';
+import { ArrowLeft, Plus, Edit, Archive, Clock, CheckCircle, AlertCircle, Target, Calendar } from 'lucide-react';
+import { projectsApi, tasksApi, milestonesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
 import TaskModal from '../components/TaskModal';
 import CreateTaskModal from '../components/CreateTaskModal';
 import ProjectModal from '../components/ProjectModal';
+import MilestoneModal from '../components/MilestoneModal';
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [milestones, setMilestones] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,17 +29,38 @@ export default function ProjectDetailPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [projectRes, tasksRes] = await Promise.all([
+      const [projectRes, tasksRes, milestonesRes] = await Promise.all([
         projectsApi.getById(id),
-        tasksApi.getAll({ project_id: id })
+        tasksApi.getAll({ project_id: id }),
+        milestonesApi.getByProject(id)
       ]);
       setProject(projectRes.data);
       setTasks(tasksRes.data);
+      setMilestones(milestonesRes.data);
     } catch (error) {
       console.error('Error loading project:', error);
       navigate('/projects');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMilestoneComplete = async (milestoneId) => {
+    try {
+      await milestonesApi.complete(milestoneId);
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Errore durante il completamento');
+    }
+  };
+
+  const handleMilestoneDelete = async (milestoneId) => {
+    if (!confirm('Eliminare questa milestone?')) return;
+    try {
+      await milestonesApi.delete(milestoneId);
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Errore durante l\'eliminazione');
     }
   };
 
@@ -192,6 +217,159 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
+        {/* Milestones Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Target className="w-6 h-6 text-primary-600" />
+              Milestone
+            </h3>
+            <button
+              onClick={() => {
+                setSelectedMilestone(null);
+                setShowMilestoneModal(true);
+              }}
+              className="btn-primary flex items-center gap-2 hover:scale-105 transition-transform"
+            >
+              <Plus className="w-4 h-4" />
+              Nuova Milestone
+            </button>
+          </div>
+
+          {milestones.length === 0 ? (
+            <div className="card text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100">
+              <Target className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500 mb-4">Nessuna milestone definita</p>
+              <button
+                onClick={() => {
+                  setSelectedMilestone(null);
+                  setShowMilestoneModal(true);
+                }}
+                className="btn-secondary"
+              >
+                Crea la prima milestone
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {milestones.map((milestone, index) => {
+                const milestoneProgress = milestone.task_count > 0
+                  ? Math.round((milestone.completed_count / milestone.task_count) * 100)
+                  : 0;
+                const isCompleted = milestone.status === 'completed';
+                const isCancelled = milestone.status === 'cancelled';
+                const dueDate = milestone.due_date ? new Date(milestone.due_date) : null;
+                const isOverdue = dueDate && dueDate < new Date() && !isCompleted;
+
+                return (
+                  <div
+                    key={milestone.id}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                    className={`card hover:shadow-lg transition-all hover:-translate-y-1 animate-fade-in ${
+                      isCompleted ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200' :
+                      isCancelled ? 'bg-gray-100 opacity-60' :
+                      isOverdue ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' :
+                      'bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                          {milestone.name}
+                          {isCompleted && (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          )}
+                        </h4>
+                        {milestone.description && (
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                            {milestone.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-gray-600">Progresso</span>
+                        <span className="font-semibold text-gray-900">{milestoneProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            isCompleted ? 'bg-green-600' : 'bg-primary-600'
+                          }`}
+                          style={{ width: `${milestoneProgress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex items-center justify-between text-sm mb-3 pb-3 border-b border-gray-200">
+                      <div className="flex items-center gap-1 text-gray-600">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>{milestone.completed_count || 0}/{milestone.task_count || 0} task</span>
+                      </div>
+                      {milestone.total_time > 0 && (
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatTime(milestone.total_time)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Due date */}
+                    {dueDate && (
+                      <div className={`flex items-center gap-1 text-sm mb-3 ${
+                        isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'
+                      }`}>
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          Scadenza: {dueDate.toLocaleDateString('it-IT')}
+                          {isOverdue && ' (In ritardo)'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      {!isCompleted && !isCancelled && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedMilestone(milestone);
+                              setShowMilestoneModal(true);
+                            }}
+                            className="btn-secondary flex-1 text-sm py-1.5"
+                          >
+                            <Edit className="w-3 h-3 inline mr-1" />
+                            Modifica
+                          </button>
+                          <button
+                            onClick={() => handleMilestoneComplete(milestone.id)}
+                            className="btn-primary flex-1 text-sm py-1.5"
+                          >
+                            <CheckCircle className="w-3 h-3 inline mr-1" />
+                            Completa
+                          </button>
+                        </>
+                      )}
+                      {(isCompleted || isCancelled) && (
+                        <button
+                          onClick={() => handleMilestoneDelete(milestone.id)}
+                          className="btn-secondary flex-1 text-sm py-1.5"
+                        >
+                          Elimina
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Tasks by Status */}
         {tasks.length === 0 ? (
           <div className="text-center py-12">
@@ -341,6 +519,22 @@ export default function ProjectDetailPage() {
           onClose={() => setShowEditProject(false)}
           onSave={() => {
             setShowEditProject(false);
+            loadData();
+          }}
+        />
+      )}
+
+      {showMilestoneModal && (
+        <MilestoneModal
+          milestone={selectedMilestone}
+          projectId={id}
+          onClose={() => {
+            setShowMilestoneModal(false);
+            setSelectedMilestone(null);
+          }}
+          onSave={() => {
+            setShowMilestoneModal(false);
+            setSelectedMilestone(null);
             loadData();
           }}
         />
