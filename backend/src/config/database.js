@@ -27,34 +27,50 @@ const createTables = () => {
 
   // Migration: Update users table to support amministratore role
   try {
-    // Check if we need to migrate by trying to insert a test amministratore
     const testMigration = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
     if (testMigration && testMigration.sql.includes("CHECK(role IN ('dipendente', 'direzione'))")) {
       console.log('🔄 Migrating users table to support amministratore role...');
 
-      // Create new table with updated constraint
-      db.exec(`
-        CREATE TABLE users_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          email TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          name TEXT NOT NULL,
-          role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
+      // Temporarily disable foreign keys for migration
+      db.pragma('foreign_keys = OFF');
 
-      // Copy data from old table
-      db.exec(`INSERT INTO users_new SELECT * FROM users`);
+      // Use a transaction for safety
+      db.exec('BEGIN TRANSACTION');
 
-      // Drop old table and rename new one
-      db.exec(`DROP TABLE users`);
-      db.exec(`ALTER TABLE users_new RENAME TO users`);
+      try {
+        // Create new table with updated constraint
+        db.exec(`
+          CREATE TABLE users_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            name TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
 
-      console.log('✅ Successfully migrated users table');
+        // Copy data from old table
+        db.exec(`INSERT INTO users_new SELECT * FROM users`);
+
+        // Drop old table and rename new one
+        db.exec(`DROP TABLE users`);
+        db.exec(`ALTER TABLE users_new RENAME TO users`);
+
+        db.exec('COMMIT');
+        console.log('✅ Successfully migrated users table');
+      } catch (migrationError) {
+        db.exec('ROLLBACK');
+        throw migrationError;
+      }
+
+      // Re-enable foreign keys
+      db.pragma('foreign_keys = ON');
     }
   } catch (error) {
     console.error('Migration error:', error.message);
+    // Re-enable foreign keys even if migration fails
+    db.pragma('foreign_keys = ON');
   }
 
   // Projects table
