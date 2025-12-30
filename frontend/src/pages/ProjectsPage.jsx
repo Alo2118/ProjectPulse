@@ -88,55 +88,55 @@ export default function ProjectsPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Progetti R&D</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl font-bold text-gray-900">Progetti R&D</h1>
+            <p className="text-gray-600 mt-0.5 text-sm">
               Sviluppo dispositivi ortopedici, protesi e strumenti chirurgici
             </p>
           </div>
 
           <button
             onClick={handleCreate}
-            className="btn-primary flex items-center gap-2 hover:scale-105 transition-transform shadow-lg"
+            className="btn-primary flex items-center gap-2"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             Nuovo Progetto
           </button>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
           <div className="card bg-blue-50 border-blue-200">
-            <FolderOpen className="w-8 h-8 text-blue-600 mb-2" />
-            <div className="text-2xl font-bold text-blue-900">{projects.length}</div>
-            <div className="text-sm text-blue-600">Progetti Attivi</div>
+            <FolderOpen className="w-6 h-6 text-blue-600 mb-1" />
+            <div className="text-xl font-bold text-blue-900">{projects.length}</div>
+            <div className="text-xs text-blue-600">Progetti Attivi</div>
           </div>
 
           <div className="card bg-green-50 border-green-200">
-            <CheckCircle className="w-8 h-8 text-green-600 mb-2" />
-            <div className="text-2xl font-bold text-green-900">
+            <CheckCircle className="w-6 h-6 text-green-600 mb-1" />
+            <div className="text-xl font-bold text-green-900">
               {Object.values(projectStats).reduce((sum, s) => sum + s.completed, 0)}
             </div>
-            <div className="text-sm text-green-600">Task Completati</div>
+            <div className="text-xs text-green-600">Task Completati</div>
           </div>
 
           <div className="card bg-yellow-50 border-yellow-200">
-            <Clock className="w-8 h-8 text-yellow-600 mb-2" />
-            <div className="text-2xl font-bold text-yellow-900">
+            <Clock className="w-6 h-6 text-yellow-600 mb-1" />
+            <div className="text-xl font-bold text-yellow-900">
               {Object.values(projectStats).reduce((sum, s) => sum + s.in_progress, 0)}
             </div>
-            <div className="text-sm text-yellow-600">In Corso</div>
+            <div className="text-xs text-yellow-600">In Corso</div>
           </div>
 
           <div className="card bg-red-50 border-red-200">
-            <AlertCircle className="w-8 h-8 text-red-600 mb-2" />
-            <div className="text-2xl font-bold text-red-900">
+            <AlertCircle className="w-6 h-6 text-red-600 mb-1" />
+            <div className="text-xl font-bold text-red-900">
               {Object.values(projectStats).reduce((sum, s) => sum + s.blocked, 0)}
             </div>
-            <div className="text-sm text-red-600">Bloccati</div>
+            <div className="text-xs text-red-600">Bloccati</div>
           </div>
         </div>
 
@@ -155,7 +155,7 @@ export default function ProjectsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {projects.map(project => {
               const stats = projectStats[project.id] || {};
               const completionRate = getCompletionRate(project.id);
@@ -166,13 +166,13 @@ export default function ProjectsPage() {
                   className="card hover:shadow-lg transition-shadow cursor-pointer group"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-gray-900 group-hover:text-primary-600 transition-colors">
+                      <h3 className="font-semibold text-base text-gray-900 group-hover:text-primary-600 transition-colors">
                         {project.name}
                       </h3>
                       {project.description && (
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
                           {project.description}
                         </p>
                       )}
@@ -181,7 +181,7 @@ export default function ProjectsPage() {
 
                   {/* Progress Bar */}
                   {stats.total > 0 && (
-                    <div className="mb-4">
+                    <div className="mb-3">
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span className="text-gray-600">Progresso</span>
                         <span className="font-medium text-gray-900">{completionRate}%</span>
@@ -196,25 +196,25 @@ export default function ProjectsPage() {
                   )}
 
                   {/* Stats */}
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
                     <div>
-                      <div className="text-2xl font-bold text-gray-900">
+                      <div className="text-xl font-bold text-gray-900">
                         {stats.total || 0}
                       </div>
                       <div className="text-xs text-gray-500">Task Totali</div>
                     </div>
 
                     <div>
-                      <div className="text-2xl font-bold text-green-600">
+                      <div className="text-xl font-bold text-green-600">
                         {stats.completed || 0}
                       </div>
                       <div className="text-xs text-gray-500">Completati</div>
                     </div>
 
                     {stats.total_time > 0 && (
-                      <div className="col-span-2 mt-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Clock className="w-4 h-4" />
+                      <div className="col-span-2 mt-1">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                          <Clock className="w-3.5 h-3.5" />
                           <span>{formatTime(stats.total_time)} di lavoro</span>
                         </div>
                       </div>
@@ -222,7 +222,7 @@ export default function ProjectsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

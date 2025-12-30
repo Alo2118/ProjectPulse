@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, MessageSquare, Send } from 'lucide-react';
-import { tasksApi, commentsApi, projectsApi, milestonesApi } from '../services/api';
+import { X, Clock, MessageSquare, Send, User } from 'lucide-react';
+import { tasksApi, commentsApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const statusLabels = {
@@ -18,11 +18,15 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const [newComment, setNewComment] = useState('');
   const [projects, setProjects] = useState([]);
   const [milestones, setMilestones] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadComments();
     loadProjects();
+    if (isDirezione) {
+      loadUsers();
+    }
   }, [task.id]);
 
   useEffect(() => {
@@ -48,6 +52,15 @@ export default function TaskModal({ task, onClose, onUpdate }) {
       setMilestones(response.data.filter(m => m.status === 'active'));
     } catch (error) {
       console.error('Error loading milestones:', error);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await usersApi.getAll();
+      setUsers(response.data.filter(u => u.role === 'dipendente'));
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
   };
 
@@ -179,6 +192,31 @@ export default function TaskModal({ task, onClose, onUpdate }) {
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 Assegna il task a una milestone specifica
+              </p>
+            </div>
+          )}
+
+          {/* Assigned User (only for direzione) */}
+          {isDirezione && users.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Assegnato a
+              </label>
+              <select
+                className="input"
+                value={editedTask.assigned_to || ''}
+                onChange={(e) => setEditedTask({ ...editedTask, assigned_to: e.target.value ? parseInt(e.target.value) : null })}
+              >
+                <option value="">Nessun assegnatario</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.email})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Assegna o riassegna il task a un dipendente
               </p>
             </div>
           )}
@@ -328,16 +366,21 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           </div>
 
           {/* Actions */}
-          {!isDirezione && (
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            {!isDirezione && (
               <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
                 {loading ? 'Salvataggio...' : 'Salva modifiche'}
               </button>
-              <button onClick={onClose} className="btn-secondary">
-                Annulla
+            )}
+            {isDirezione && (
+              <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
+                {loading ? 'Salvataggio...' : 'Salva assegnazione'}
               </button>
-            </div>
-          )}
+            )}
+            <button onClick={onClose} className="btn-secondary">
+              {isDirezione ? 'Chiudi' : 'Annulla'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

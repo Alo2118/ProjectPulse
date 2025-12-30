@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react';
-import { X, Plus } from 'lucide-react';
-import { tasksApi, projectsApi, milestonesApi } from '../services/api';
+import { X, Plus, User } from 'lucide-react';
+import { tasksApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function CreateTaskModal({ projects, onClose, onCreate }) {
-  const { user } = useAuth();
+  const { user, isDirezione } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     project_id: '',
     milestone_id: '',
     priority: 'medium',
-    deadline: ''
+    deadline: '',
+    assigned_to: ''
   });
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [milestones, setMilestones] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isDirezione) {
+      loadUsers();
+    }
+  }, []);
 
   useEffect(() => {
     if (formData.project_id) {
@@ -26,6 +34,15 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
       setFormData(prev => ({ ...prev, milestone_id: '' }));
     }
   }, [formData.project_id]);
+
+  const loadUsers = async () => {
+    try {
+      const response = await usersApi.getAll();
+      setUsers(response.data.filter(u => u.role === 'dipendente'));
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
 
   const loadMilestones = async (projectId) => {
     try {
@@ -56,7 +73,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
         ...formData,
         project_id: projectId || null,
         milestone_id: formData.milestone_id || null,
-        assigned_to: user.id
+        assigned_to: formData.assigned_to || user.id
       });
 
       onCreate();
@@ -163,6 +180,31 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Assigned User (only for direzione) */}
+          {isDirezione && users.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Assegna a
+              </label>
+              <select
+                className="input"
+                value={formData.assigned_to}
+                onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
+              >
+                <option value="">Seleziona dipendente</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.email})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Assegna il task a un dipendente specifico
+              </p>
             </div>
           )}
 

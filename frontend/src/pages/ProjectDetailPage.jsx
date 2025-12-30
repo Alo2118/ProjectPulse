@@ -20,6 +20,7 @@ export default function ProjectDetailPage() {
   const [showEditProject, setShowEditProject] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
+  const [milestoneFilter, setMilestoneFilter] = useState('all'); // 'all', 'none', or milestone ID
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,12 +76,19 @@ export default function ProjectDetailPage() {
     }
   };
 
+  // Filter tasks based on milestone selection
+  const filteredTasks = tasks.filter(task => {
+    if (milestoneFilter === 'all') return true;
+    if (milestoneFilter === 'none') return !task.milestone_id;
+    return task.milestone_id === parseInt(milestoneFilter);
+  });
+
   const groupedTasks = {
-    todo: tasks.filter(t => t.status === 'todo'),
-    in_progress: tasks.filter(t => t.status === 'in_progress'),
-    blocked: tasks.filter(t => t.status === 'blocked'),
-    waiting_clarification: tasks.filter(t => t.status === 'waiting_clarification'),
-    completed: tasks.filter(t => t.status === 'completed')
+    todo: filteredTasks.filter(t => t.status === 'todo'),
+    in_progress: filteredTasks.filter(t => t.status === 'in_progress'),
+    blocked: filteredTasks.filter(t => t.status === 'blocked'),
+    waiting_clarification: filteredTasks.filter(t => t.status === 'waiting_clarification'),
+    completed: filteredTasks.filter(t => t.status === 'completed')
   };
 
   const stats = {
@@ -117,12 +125,12 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <button
             onClick={() => navigate('/projects')}
-            className="btn-secondary flex items-center gap-2 mb-4"
+            className="btn-secondary flex items-center gap-2 mb-3"
           >
             <ArrowLeft className="w-4 h-4" />
             Torna ai Progetti
@@ -130,11 +138,11 @@ export default function ProjectDetailPage() {
 
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
               {project.description && (
-                <p className="text-gray-600 mt-2">{project.description}</p>
+                <p className="text-gray-600 mt-1 text-sm">{project.description}</p>
               )}
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 mt-1">
                 Creato da {project.creator_name} il {new Date(project.created_at).toLocaleDateString('it-IT')}
               </p>
             </div>
@@ -166,41 +174,41 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <div className="card text-center">
-            <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
-            <div className="text-sm text-gray-500">Task Totali</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+            <div className="text-xs text-gray-500">Task Totali</div>
           </div>
 
           <div className="card text-center bg-green-50 border-green-200">
-            <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-1" />
-            <div className="text-3xl font-bold text-green-600">{stats.completed}</div>
-            <div className="text-sm text-green-600">Completati</div>
+            <CheckCircle className="w-5 h-5 text-green-600 mx-auto mb-0.5" />
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-xs text-green-600">Completati</div>
           </div>
 
           <div className="card text-center bg-blue-50 border-blue-200">
-            <div className="text-3xl font-bold text-blue-600">{stats.in_progress}</div>
-            <div className="text-sm text-blue-600">In Corso</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.in_progress}</div>
+            <div className="text-xs text-blue-600">In Corso</div>
           </div>
 
           <div className="card text-center bg-red-50 border-red-200">
-            <AlertCircle className="w-6 h-6 text-red-600 mx-auto mb-1" />
-            <div className="text-3xl font-bold text-red-600">{stats.blocked}</div>
-            <div className="text-sm text-red-600">Bloccati</div>
+            <AlertCircle className="w-5 h-5 text-red-600 mx-auto mb-0.5" />
+            <div className="text-2xl font-bold text-red-600">{stats.blocked}</div>
+            <div className="text-xs text-red-600">Bloccati</div>
           </div>
 
           <div className="card text-center">
-            <Clock className="w-6 h-6 text-gray-500 mx-auto mb-1" />
-            <div className="text-3xl font-bold text-gray-900">
+            <Clock className="w-5 h-5 text-gray-500 mx-auto mb-0.5" />
+            <div className="text-2xl font-bold text-gray-900">
               {formatTime(stats.total_time)}
             </div>
-            <div className="text-sm text-gray-500">Tempo Totale</div>
+            <div className="text-xs text-gray-500">Tempo Totale</div>
           </div>
         </div>
 
         {/* Progress Bar */}
         {stats.total > 0 && (
-          <div className="card mb-8">
+          <div className="card mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-gray-900">Progresso Complessivo</h3>
               <span className="text-2xl font-bold text-primary-600">{completionRate}%</span>
@@ -218,10 +226,10 @@ export default function ProjectDetailPage() {
         )}
 
         {/* Milestones Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Target className="w-6 h-6 text-primary-600" />
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary-600" />
               Milestone
             </h3>
             <button
@@ -370,6 +378,30 @@ export default function ProjectDetailPage() {
           )}
         </div>
 
+        {/* Milestone Filter */}
+        {tasks.length > 0 && milestones.length > 0 && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filtra task per milestone
+            </label>
+            <select
+              className="input max-w-md"
+              value={milestoneFilter}
+              onChange={(e) => setMilestoneFilter(e.target.value)}
+            >
+              <option value="all">Tutte le attività ({tasks.length})</option>
+              <option value="none">
+                Senza milestone ({tasks.filter(t => !t.milestone_id).length})
+              </option>
+              {milestones.map(milestone => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.name} ({tasks.filter(t => t.milestone_id === milestone.id).length})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Tasks by Status */}
         {tasks.length === 0 ? (
           <div className="text-center py-12">
@@ -381,16 +413,20 @@ export default function ProjectDetailPage() {
               Crea il primo task
             </button>
           </div>
+        ) : filteredTasks.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 mb-4">Nessun task in questa milestone</p>
+          </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* In Progress */}
             {groupedTasks.in_progress.length > 0 && (
               <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-blue-500 rounded-full"></span>
                   In Corso ({groupedTasks.in_progress.length})
                 </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {groupedTasks.in_progress.map(task => (
                     <TaskCard
                       key={task.id}
@@ -407,11 +443,11 @@ export default function ProjectDetailPage() {
             {/* Blocked */}
             {groupedTasks.blocked.length > 0 && (
               <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-red-500 rounded-full"></span>
                   Bloccati ({groupedTasks.blocked.length})
                 </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {groupedTasks.blocked.map(task => (
                     <TaskCard
                       key={task.id}
@@ -428,11 +464,11 @@ export default function ProjectDetailPage() {
             {/* Waiting */}
             {groupedTasks.waiting_clarification.length > 0 && (
               <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-yellow-500 rounded-full"></span>
                   In Attesa ({groupedTasks.waiting_clarification.length})
                 </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {groupedTasks.waiting_clarification.map(task => (
                     <TaskCard
                       key={task.id}
@@ -449,11 +485,11 @@ export default function ProjectDetailPage() {
             {/* Todo */}
             {groupedTasks.todo.length > 0 && (
               <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-gray-500 rounded-full"></span>
                   Da Fare ({groupedTasks.todo.length})
                 </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {groupedTasks.todo.map(task => (
                     <TaskCard
                       key={task.id}
@@ -470,11 +506,11 @@ export default function ProjectDetailPage() {
             {/* Completed */}
             {groupedTasks.completed.length > 0 && (
               <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
                   Completati ({groupedTasks.completed.length})
                 </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {groupedTasks.completed.slice(0, 6).map(task => (
                     <TaskCard
                       key={task.id}
