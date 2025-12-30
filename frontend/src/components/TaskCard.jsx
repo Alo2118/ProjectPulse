@@ -1,4 +1,4 @@
-import { Clock, MessageSquare, Play, AlertCircle, HelpCircle } from 'lucide-react';
+import { Clock, MessageSquare, Play, AlertCircle, HelpCircle, Calendar } from 'lucide-react';
 import { timeApi } from '../services/api';
 
 const statusColors = {
@@ -41,6 +41,52 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
     return `${minutes}m`;
   };
 
+  const getDeadlineInfo = () => {
+    if (!task.deadline || task.status === 'completed') return null;
+
+    const deadline = new Date(task.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadline.setHours(0, 0, 0, 0);
+
+    const diffTime = deadline - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return {
+        text: `In ritardo di ${Math.abs(diffDays)} gg`,
+        color: 'text-red-600 font-semibold',
+        icon: AlertCircle
+      };
+    } else if (diffDays === 0) {
+      return {
+        text: 'Scade oggi',
+        color: 'text-orange-600 font-semibold',
+        icon: Calendar
+      };
+    } else if (diffDays <= 3) {
+      return {
+        text: `Scade tra ${diffDays} gg`,
+        color: 'text-orange-500 font-medium',
+        icon: Calendar
+      };
+    } else if (diffDays <= 7) {
+      return {
+        text: `Scade tra ${diffDays} gg`,
+        color: 'text-yellow-600',
+        icon: Calendar
+      };
+    } else {
+      return {
+        text: deadline.toLocaleDateString('it-IT'),
+        color: 'text-gray-500',
+        icon: Calendar
+      };
+    }
+  };
+
+  const deadlineInfo = getDeadlineInfo();
+
   return (
     <div
       onClick={onClick}
@@ -78,11 +124,18 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
         )}
       </div>
 
-      <div className="flex items-center gap-4 text-sm text-gray-500 pt-3 border-t border-gray-100">
+      <div className="flex items-center gap-4 text-sm text-gray-500 pt-3 border-t border-gray-100 flex-wrap">
         {task.time_spent > 0 && (
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
             {formatTime(task.time_spent)}
+          </div>
+        )}
+
+        {deadlineInfo && (
+          <div className={`flex items-center gap-1 ${deadlineInfo.color}`}>
+            <deadlineInfo.icon className="w-4 h-4" />
+            {deadlineInfo.text}
           </div>
         )}
 

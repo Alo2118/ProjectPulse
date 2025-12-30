@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FileText } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, projectsApi } from '../services/api';
 import Navbar from '../components/Navbar';
@@ -64,6 +64,32 @@ export default function DipendenteDashboard() {
     return `${minutes}m`;
   };
 
+  // Calculate alerts for deadlines
+  const getAlerts = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const overdueTasks = tasks.filter(task => {
+      if (!task.deadline || task.status === 'completed') return false;
+      const deadline = new Date(task.deadline);
+      deadline.setHours(0, 0, 0, 0);
+      return deadline < today;
+    });
+
+    const dueSoonTasks = tasks.filter(task => {
+      if (!task.deadline || task.status === 'completed') return false;
+      const deadline = new Date(task.deadline);
+      deadline.setHours(0, 0, 0, 0);
+      const diffTime = deadline - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 3;
+    });
+
+    return { overdueTasks, dueSoonTasks };
+  };
+
+  const { overdueTasks, dueSoonTasks } = getAlerts();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navbar />
@@ -117,6 +143,83 @@ export default function DipendenteDashboard() {
               <div className="text-2xl font-bold text-purple-700">{formatTime(stats.totalTime)}</div>
             </div>
           </div>
+
+          {/* Alerts for deadlines */}
+          {(overdueTasks.length > 0 || dueSoonTasks.length > 0) && (
+            <div className="mb-6 space-y-3">
+              {overdueTasks.length > 0 && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg animate-fade-in">
+                  <div className="flex items-start">
+                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-red-800 mb-1">
+                        {overdueTasks.length} attività in ritardo
+                      </h4>
+                      <div className="text-sm text-red-700 space-y-1">
+                        {overdueTasks.slice(0, 3).map(task => (
+                          <div key={task.id} className="flex items-center gap-2">
+                            <span>•</span>
+                            <button
+                              onClick={() => setSelectedTask(task)}
+                              className="hover:underline text-left"
+                            >
+                              {task.title}
+                            </button>
+                          </div>
+                        ))}
+                        {overdueTasks.length > 3 && (
+                          <p className="text-xs text-red-600 italic">
+                            ... e altre {overdueTasks.length - 3} attività
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {dueSoonTasks.length > 0 && (
+                <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-lg animate-fade-in">
+                  <div className="flex items-start">
+                    <Calendar className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-orange-800 mb-1">
+                        {dueSoonTasks.length} attività in scadenza (prossimi 3 giorni)
+                      </h4>
+                      <div className="text-sm text-orange-700 space-y-1">
+                        {dueSoonTasks.slice(0, 3).map(task => {
+                          const deadline = new Date(task.deadline);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          deadline.setHours(0, 0, 0, 0);
+                          const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+                          return (
+                            <div key={task.id} className="flex items-center gap-2">
+                              <span>•</span>
+                              <button
+                                onClick={() => setSelectedTask(task)}
+                                className="hover:underline text-left"
+                              >
+                                {task.title}
+                              </button>
+                              <span className="text-xs">
+                                ({diffDays === 0 ? 'oggi' : `${diffDays} gg`})
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {dueSoonTasks.length > 3 && (
+                          <p className="text-xs text-orange-600 italic">
+                            ... e altre {dueSoonTasks.length - 3} attività
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <Timer onTimerChange={loadData} />
         </div>

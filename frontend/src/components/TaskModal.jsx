@@ -183,8 +183,8 @@ export default function TaskModal({ task, onClose, onUpdate }) {
             </div>
           )}
 
-          {/* Status and Priority */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Status, Priority and Deadline */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Stato
@@ -215,6 +215,19 @@ export default function TaskModal({ task, onClose, onUpdate }) {
                 <option value="medium">Media</option>
                 <option value="high">Alta</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Scadenza
+              </label>
+              <input
+                type="date"
+                className="input"
+                value={editedTask.deadline || ''}
+                onChange={(e) => setEditedTask({ ...editedTask, deadline: e.target.value })}
+                disabled={isDirezione}
+              />
             </div>
           </div>
 
