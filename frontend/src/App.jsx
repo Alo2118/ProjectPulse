@@ -6,6 +6,7 @@ import DirezioneDashboard from './pages/DirezioneDashboard';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import GanttPage from './pages/GanttPage';
+import CalendarPage from './pages/CalendarPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -66,6 +67,14 @@ function App() {
             element={
               <PrivateRoute>
                 <GanttPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/calendar"
+            element={
+              <PrivateRoute>
+                <CalendarPage />
               </PrivateRoute>
             }
           />
