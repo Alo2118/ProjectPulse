@@ -308,10 +308,7 @@ class TimeEntry {
     const values = [];
 
     if (filters.project_id) {
-      query += ' AND EXISTS (
-        SELECT 1 FROM tasks t
-        WHERE t.id = te.task_id AND t.project_id = ?
-      )';
+      query += ' AND EXISTS (SELECT 1 FROM tasks t WHERE t.id = te.task_id AND t.project_id = ?)';
       values.push(filters.project_id);
     }
     if (filters.from_date) {
