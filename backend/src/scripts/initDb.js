@@ -7,6 +7,14 @@ console.log('🚀 Initializing database with sample data...');
 
 try {
   // Create users
+  const amministratore = User.create({
+    email: 'admin@orthotech.com',
+    password: 'password123',
+    name: 'Admin Sistema',
+    role: 'amministratore'
+  });
+  console.log('✅ Created amministratore user');
+
   const direzione = User.create({
     email: 'direzione@orthotech.com',
     password: 'password123',

@@ -35,6 +35,11 @@ export const requireRole = (...roles) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Amministratore has access to everything
+    if (req.user.role === 'amministratore') {
+      return next();
+    }
+
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }

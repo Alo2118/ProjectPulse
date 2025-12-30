@@ -33,7 +33,7 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    if (!['dipendente', 'direzione'].includes(role)) {
+    if (!['dipendente', 'direzione', 'amministratore'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
@@ -65,7 +65,7 @@ export const updateUser = async (req, res) => {
     }
 
     // Validate role if provided
-    if (role && !['dipendente', 'direzione'].includes(role)) {
+    if (role && !['dipendente', 'direzione', 'amministratore'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
@@ -77,8 +77,8 @@ export const updateUser = async (req, res) => {
       }
     }
 
-    // Prevent user from removing their own admin role
-    if (req.user.id === parseInt(id) && role && role !== 'direzione') {
+    // Prevent user from removing their own amministratore role
+    if (req.user.id === parseInt(id) && role && role !== 'amministratore') {
       return res.status(403).json({ error: 'Cannot change your own role' });
     }
 

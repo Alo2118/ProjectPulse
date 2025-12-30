@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Archive, Clock, CheckCircle, AlertCircle, Target, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Archive, Clock, CheckCircle, AlertCircle, Target, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
@@ -20,7 +20,8 @@ export default function ProjectDetailPage() {
   const [showEditProject, setShowEditProject] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
-  const [milestoneFilter, setMilestoneFilter] = useState('all'); // 'all', 'none', or milestone ID
+  const [expandedMilestones, setExpandedMilestones] = useState(new Set());
+  const [showUnassignedTasks, setShowUnassignedTasks] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,26 +77,31 @@ export default function ProjectDetailPage() {
     }
   };
 
-  // Filter tasks based on milestone selection
-  const filteredTasks = tasks.filter(task => {
-    if (milestoneFilter === 'all') return true;
-    if (milestoneFilter === 'none') return !task.milestone_id;
-    return task.milestone_id === parseInt(milestoneFilter);
-  });
+  const toggleMilestone = (milestoneId) => {
+    setExpandedMilestones(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(milestoneId)) {
+        newSet.delete(milestoneId);
+      } else {
+        newSet.add(milestoneId);
+      }
+      return newSet;
+    });
+  };
 
-  const groupedTasks = {
-    todo: filteredTasks.filter(t => t.status === 'todo'),
-    in_progress: filteredTasks.filter(t => t.status === 'in_progress'),
-    blocked: filteredTasks.filter(t => t.status === 'blocked'),
-    waiting_clarification: filteredTasks.filter(t => t.status === 'waiting_clarification'),
-    completed: filteredTasks.filter(t => t.status === 'completed')
+  const getTasksForMilestone = (milestoneId) => {
+    return tasks.filter(t => t.milestone_id === milestoneId);
+  };
+
+  const getUnassignedTasks = () => {
+    return tasks.filter(t => !t.milestone_id);
   };
 
   const stats = {
     total: tasks.length,
-    completed: groupedTasks.completed.length,
-    in_progress: groupedTasks.in_progress.length,
-    blocked: groupedTasks.blocked.length,
+    completed: tasks.filter(t => t.status === 'completed').length,
+    in_progress: tasks.filter(t => t.status === 'in_progress').length,
+    blocked: tasks.filter(t => t.status === 'blocked').length,
     total_time: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
   };
 

@@ -10,9 +10,9 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All user management routes require authentication and direzione role
+// All user management routes require authentication and amministratore role
 router.use(authenticate);
-router.use(requireRole('direzione'));
+router.use(requireRole('amministratore'));
 
 router.get('/', getAllUsers);
 router.get('/:id', getUserById);

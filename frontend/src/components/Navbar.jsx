@@ -64,7 +64,7 @@ export default function Navbar() {
                 <BarChart3 className="w-4 h-4" />
                 Gantt
               </Link>
-              {user?.role === 'direzione' && (
+              {user?.role === 'amministratore' && (
                 <Link
                   to="/users"
                   className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${

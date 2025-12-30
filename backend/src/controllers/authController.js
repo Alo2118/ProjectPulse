@@ -9,7 +9,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    if (!['dipendente', 'direzione'].includes(role)) {
+    if (!['dipendente', 'direzione', 'amministratore'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 

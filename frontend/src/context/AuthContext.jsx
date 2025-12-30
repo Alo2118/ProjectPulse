@@ -60,6 +60,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     loading,
     isAuthenticated: !!user,
+    isAmministratore: user?.role === 'amministratore',
     isDirezione: user?.role === 'direzione',
     isDipendente: user?.role === 'dipendente',
   };

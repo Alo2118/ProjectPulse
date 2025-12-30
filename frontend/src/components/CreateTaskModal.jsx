@@ -4,7 +4,7 @@ import { tasksApi, projectsApi, milestonesApi, usersApi } from '../services/api'
 import { useAuth } from '../context/AuthContext';
 
 export default function CreateTaskModal({ projects, onClose, onCreate }) {
-  const { user, isDirezione } = useAuth();
+  const { user, isAmministratore } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,7 +21,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isDirezione) {
+    if (isAmministratore) {
       loadUsers();
     }
   }, []);
@@ -183,8 +183,8 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
             </div>
           )}
 
-          {/* Assigned User (only for direzione) */}
-          {isDirezione && users.length > 0 && (
+          {/* Assigned User (only for amministratore) */}
+          {isAmministratore && users.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                 <User className="w-4 h-4" />

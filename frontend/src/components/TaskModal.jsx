@@ -12,7 +12,7 @@ const statusLabels = {
 };
 
 export default function TaskModal({ task, onClose, onUpdate }) {
-  const { user, isDirezione } = useAuth();
+  const { user, isDirezione, isAmministratore } = useAuth();
   const [editedTask, setEditedTask] = useState(task);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -24,7 +24,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   useEffect(() => {
     loadComments();
     loadProjects();
-    if (isDirezione) {
+    if (isAmministratore) {
       loadUsers();
     }
   }, [task.id]);
@@ -196,8 +196,8 @@ export default function TaskModal({ task, onClose, onUpdate }) {
             </div>
           )}
 
-          {/* Assigned User (only for direzione) */}
-          {isDirezione && users.length > 0 && (
+          {/* Assigned User (only for amministratore) */}
+          {isAmministratore && users.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                 <User className="w-4 h-4" />
@@ -369,12 +369,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             {!isDirezione && (
               <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
-                {loading ? 'Salvataggio...' : 'Salva modifiche'}
-              </button>
-            )}
-            {isDirezione && (
-              <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
-                {loading ? 'Salvataggio...' : 'Salva assegnazione'}
+                {loading ? 'Salvataggio...' : isAmministratore ? 'Salva assegnazione' : 'Salva modifiche'}
               </button>
             )}
             <button onClick={onClose} className="btn-secondary">

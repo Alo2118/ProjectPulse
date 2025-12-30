@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Users, Shield, User as UserIcon, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, Shield, User as UserIcon, X, Crown } from 'lucide-react';
 import { usersApi } from '../services/api';
 import Navbar from '../components/Navbar';
 
@@ -137,15 +137,21 @@ export default function UserManagementPage() {
   };
 
   const getRoleBadgeColor = (role) => {
-    return role === 'direzione' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
+    if (role === 'amministratore') return 'bg-red-100 text-red-800';
+    if (role === 'direzione') return 'bg-purple-100 text-purple-800';
+    return 'bg-blue-100 text-blue-800';
   };
 
   const getRoleIcon = (role) => {
-    return role === 'direzione' ? Shield : UserIcon;
+    if (role === 'amministratore') return Crown;
+    if (role === 'direzione') return Shield;
+    return UserIcon;
   };
 
   const getRoleLabel = (role) => {
-    return role === 'direzione' ? 'Direzione' : 'Dipendente';
+    if (role === 'amministratore') return 'Amministratore';
+    if (role === 'direzione') return 'Direzione';
+    return 'Dipendente';
   };
 
   if (loading) {
@@ -330,10 +336,13 @@ export default function UserManagementPage() {
                   >
                     <option value="dipendente">Dipendente</option>
                     <option value="direzione">Direzione</option>
+                    <option value="amministratore">Amministratore</option>
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    {formData.role === 'direzione'
-                      ? 'Accesso completo a tutti i progetti e gestione utenti'
+                    {formData.role === 'amministratore'
+                      ? 'Accesso completo a tutte le funzionalità e gestione utenti'
+                      : formData.role === 'direzione'
+                      ? 'Può consultare progetti e inserire richieste/commenti'
                       : 'Accesso ai propri task e progetti assegnati'}
                   </p>
                 </div>
