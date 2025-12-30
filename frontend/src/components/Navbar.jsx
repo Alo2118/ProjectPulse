@@ -16,7 +16,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-8">
             <Link to="/">
-              <h1 className="text-2xl font-bold text-primary-600">OrthoTrack R&D</h1>
+              <h1 className="text-2xl font-bold text-primary-600">ProjectPulse</h1>
             </Link>
 
             <div className="flex items-center gap-1">
