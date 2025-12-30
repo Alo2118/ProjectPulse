@@ -46,59 +46,115 @@ export default function DipendenteDashboard() {
     completed: tasks.filter(t => t.status === 'completed')
   };
 
+  const stats = {
+    total: tasks.length,
+    in_progress: groupedTasks.in_progress.length,
+    blocked: groupedTasks.blocked.length,
+    waiting: groupedTasks.waiting_clarification.length,
+    completed: groupedTasks.completed.length,
+    totalTime: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
+  };
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            I miei Task
-          </h2>
+        <div className="mb-8 animate-fade-in">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold text-gray-900">
+              I miei Task
+            </h2>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="btn-secondary flex items-center gap-2 hover:scale-105 transition-transform"
+              >
+                <FileText className="w-5 h-5" />
+                Report Giornaliero
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary flex items-center gap-2 hover:scale-105 transition-transform shadow-lg"
+              >
+                <Plus className="w-5 h-5" />
+                Nuovo Task
+              </button>
+            </div>
+          </div>
 
-          <div className="flex gap-4 mb-6">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn-primary flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Nuovo Task
-            </button>
-
-            <button
-              onClick={() => setShowReportModal(true)}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <FileText className="w-5 h-5" />
-              Report Giornaliero
-            </button>
+          {/* Stats Overview */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="text-sm text-gray-500 mb-1">Totali</div>
+              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-md p-4 border border-blue-200 hover:shadow-lg transition-shadow">
+              <div className="text-sm text-blue-600 mb-1">In Corso</div>
+              <div className="text-2xl font-bold text-blue-700">{stats.in_progress}</div>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md p-4 border border-green-200 hover:shadow-lg transition-shadow">
+              <div className="text-sm text-green-600 mb-1">Completati</div>
+              <div className="text-2xl font-bold text-green-700">{stats.completed}</div>
+            </div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-md p-4 border border-purple-200 hover:shadow-lg transition-shadow">
+              <div className="text-sm text-purple-600 mb-1">Tempo Totale</div>
+              <div className="text-2xl font-bold text-purple-700">{formatTime(stats.totalTime)}</div>
+            </div>
           </div>
 
           <Timer onTimerChange={loadData} />
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="text-gray-500">Caricamento...</div>
+          <div className="space-y-8">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="animate-pulse">
+                <div className="h-6 bg-gray-300 rounded w-48 mb-4"></div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map(j => (
+                    <div key={j} className="bg-white rounded-lg p-4 shadow">
+                      <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-8">
             {/* In Progress */}
             {groupedTasks.in_progress.length > 0 && (
-              <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                  In Corso ({groupedTasks.in_progress.length})
-                </h3>
+              <section className="animate-slide-up">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-full">
+                    <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                    <h3 className="text-lg font-semibold text-blue-900">
+                      In Corso ({groupedTasks.in_progress.length})
+                    </h3>
+                  </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.in_progress.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                    />
+                  {groupedTasks.in_progress.map((task, index) => (
+                    <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
+                      <TaskCard
+                        task={task}
+                        onClick={() => setSelectedTask(task)}
+                        onTimerStart={loadData}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
@@ -106,19 +162,24 @@ export default function DipendenteDashboard() {
 
             {/* Blocked */}
             {groupedTasks.blocked.length > 0 && (
-              <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                  Bloccati ({groupedTasks.blocked.length})
-                </h3>
+              <section className="animate-slide-up" style={{ animationDelay: '100ms' }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-red-100 px-4 py-2 rounded-full">
+                    <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                    <h3 className="text-lg font-semibold text-red-900">
+                      Bloccati ({groupedTasks.blocked.length})
+                    </h3>
+                  </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.blocked.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                    />
+                  {groupedTasks.blocked.map((task, index) => (
+                    <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
+                      <TaskCard
+                        task={task}
+                        onClick={() => setSelectedTask(task)}
+                        onTimerStart={loadData}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
@@ -126,19 +187,24 @@ export default function DipendenteDashboard() {
 
             {/* Waiting Clarification */}
             {groupedTasks.waiting_clarification.length > 0 && (
-              <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                  In Attesa di Chiarimenti ({groupedTasks.waiting_clarification.length})
-                </h3>
+              <section className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-yellow-100 px-4 py-2 rounded-full">
+                    <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                    <h3 className="text-lg font-semibold text-yellow-900">
+                      In Attesa di Chiarimenti ({groupedTasks.waiting_clarification.length})
+                    </h3>
+                  </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.waiting_clarification.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                    />
+                  {groupedTasks.waiting_clarification.map((task, index) => (
+                    <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
+                      <TaskCard
+                        task={task}
+                        onClick={() => setSelectedTask(task)}
+                        onTimerStart={loadData}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
@@ -146,19 +212,24 @@ export default function DipendenteDashboard() {
 
             {/* Todo */}
             {groupedTasks.todo.length > 0 && (
-              <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
-                  Da Fare ({groupedTasks.todo.length})
-                </h3>
+              <section className="animate-slide-up" style={{ animationDelay: '300ms' }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full">
+                    <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Da Fare ({groupedTasks.todo.length})
+                    </h3>
+                  </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.todo.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                    />
+                  {groupedTasks.todo.map((task, index) => (
+                    <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
+                      <TaskCard
+                        task={task}
+                        onClick={() => setSelectedTask(task)}
+                        onTimerStart={loadData}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
@@ -166,33 +237,55 @@ export default function DipendenteDashboard() {
 
             {/* Completed */}
             {groupedTasks.completed.length > 0 && (
-              <section>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                  Completati ({groupedTasks.completed.length})
-                </h3>
+              <section className="animate-slide-up" style={{ animationDelay: '400ms' }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-green-100 px-4 py-2 rounded-full">
+                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    <h3 className="text-lg font-semibold text-green-900">
+                      Completati ({groupedTasks.completed.length})
+                    </h3>
+                  </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.completed.slice(0, 6).map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                    />
+                  {groupedTasks.completed.slice(0, 6).map((task, index) => (
+                    <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
+                      <TaskCard
+                        task={task}
+                        onClick={() => setSelectedTask(task)}
+                        onTimerStart={loadData}
+                      />
+                    </div>
                   ))}
                 </div>
+                {groupedTasks.completed.length > 6 && (
+                  <div className="text-center mt-4">
+                    <p className="text-sm text-gray-500">
+                      Mostrati 6 di {groupedTasks.completed.length} task completati
+                    </p>
+                  </div>
+                )}
               </section>
             )}
 
             {tasks.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-4">Nessun task presente</p>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="btn-primary"
-                >
-                  Crea il tuo primo task
-                </button>
+              <div className="text-center py-16 animate-fade-in">
+                <div className="max-w-md mx-auto">
+                  <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Plus className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Nessun task presente
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    Inizia creando il tuo primo task per organizzare il lavoro
+                  </p>
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="btn-primary hover:scale-105 transition-transform shadow-lg"
+                  >
+                    Crea il tuo primo task
+                  </button>
+                </div>
               </div>
             )}
           </div>
