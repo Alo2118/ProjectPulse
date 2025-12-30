@@ -87,10 +87,23 @@ const createTables = () => {
       started_at DATETIME NOT NULL,
       ended_at DATETIME,
       duration INTEGER DEFAULT 0,
+      notes TEXT DEFAULT '',
       FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  // Migration: Add notes column if it doesn't exist
+  try {
+    const checkColumn = db.prepare("PRAGMA table_info(time_entries)").all();
+    const hasNotes = checkColumn.some(col => col.name === 'notes');
+    if (!hasNotes) {
+      db.exec("ALTER TABLE time_entries ADD COLUMN notes TEXT DEFAULT ''");
+      console.log('✅ Added notes column to time_entries table');
+    }
+  } catch (error) {
+    console.error('Migration error:', error.message);
+  }
 
   // Comments table
   db.exec(`

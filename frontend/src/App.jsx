@@ -8,6 +8,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import GanttPage from './pages/GanttPage';
 import CalendarPage from './pages/CalendarPage';
 import UserManagementPage from './pages/UserManagementPage';
+import TimeTrackingPage from './pages/TimeTrackingPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -76,6 +77,14 @@ function App() {
             element={
               <PrivateRoute>
                 <CalendarPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/time-tracking"
+            element={
+              <PrivateRoute>
+                <TimeTrackingPage />
               </PrivateRoute>
             }
           />

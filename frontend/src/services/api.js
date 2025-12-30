@@ -63,6 +63,10 @@ export const timeApi = {
   stop: (id) => api.post(`/time/${id}/stop`),
   getActive: () => api.get('/time/active'),
   getEntries: (params) => api.get('/time', { params }),
+  createManual: (data) => api.post('/time/manual', data),
+  update: (id, data) => api.put(`/time/${id}`, data),
+  delete: (id) => api.delete(`/time/${id}`),
+  getStatistics: (params) => api.get('/time/statistics', { params }),
 };
 
 // Comments
