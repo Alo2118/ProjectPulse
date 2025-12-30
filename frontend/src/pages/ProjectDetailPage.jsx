@@ -231,44 +231,53 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {/* Milestones Section */}
+        {/* Milestones and Tasks Accordion View */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Target className="w-5 h-5 text-primary-600" />
-              Milestone
+              Milestone e Attività
             </h3>
-            <button
-              onClick={() => {
-                setSelectedMilestone(null);
-                setShowMilestoneModal(true);
-              }}
-              className="btn-primary flex items-center gap-2 hover:scale-105 transition-transform"
-            >
-              <Plus className="w-4 h-4" />
-              Nuova Milestone
-            </button>
-          </div>
-
-          {milestones.length === 0 ? (
-            <div className="card text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100">
-              <Target className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 mb-4">Nessuna milestone definita</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowCreateTask(true)}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nuova Attività
+              </button>
               <button
                 onClick={() => {
                   setSelectedMilestone(null);
                   setShowMilestoneModal(true);
                 }}
-                className="btn-secondary"
+                className="btn-primary flex items-center gap-2"
               >
-                Crea la prima milestone
+                <Plus className="w-4 h-4" />
+                Nuova Milestone
+              </button>
+            </div>
+          </div>
+
+          {tasks.length === 0 ? (
+            <div className="text-center py-12 card">
+              <Target className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500 mb-4">Nessun task in questo progetto</p>
+              <button
+                onClick={() => setShowCreateTask(true)}
+                className="btn-primary"
+              >
+                Crea il primo task
               </button>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {milestones.map((milestone, index) => {
-                const milestoneProgress = milestone.task_count > 0
-                  ? Math.round((milestone.completed_count / milestone.task_count) * 100)
+            <div className="space-y-3">
+              {/* Milestone Accordion Items */}
+              {milestones.map((milestone) => {
+                const milestoneTasks = getTasksForMilestone(milestone.id);
+                const isExpanded = expandedMilestones.has(milestone.id);
+                const milestoneProgress = milestoneTasks.length > 0
+                  ? Math.round((milestoneTasks.filter(t => t.status === 'completed').length / milestoneTasks.length) * 100)
                   : 0;
                 const isCompleted = milestone.status === 'completed';
                 const isCancelled = milestone.status === 'cancelled';
@@ -276,266 +285,203 @@ export default function ProjectDetailPage() {
                 const isOverdue = dueDate && dueDate < new Date() && !isCompleted;
 
                 return (
-                  <div
-                    key={milestone.id}
-                    style={{ animationDelay: `${index * 50}ms` }}
-                    className={`card hover:shadow-lg transition-all hover:-translate-y-1 animate-fade-in ${
-                      isCompleted ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200' :
-                      isCancelled ? 'bg-gray-100 opacity-60' :
-                      isOverdue ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' :
-                      'bg-white'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
+                  <div key={milestone.id} className={`card ${
+                    isCompleted ? 'bg-green-50 border-green-200' :
+                    isCancelled ? 'bg-gray-100 opacity-70' :
+                    isOverdue ? 'bg-red-50 border-red-200' :
+                    'bg-white'
+                  }`}>
+                    {/* Milestone Header */}
+                    <div
+                      className="flex items-center gap-3 cursor-pointer hover:bg-gray-50/50 -m-4 p-4 rounded-lg transition-colors"
+                      onClick={() => toggleMilestone(milestone.id)}
+                    >
+                      <button className="text-gray-500 hover:text-gray-700">
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5" />
+                        )}
+                      </button>
+
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-                          {milestone.name}
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900">
+                            {milestone.name}
+                          </h4>
                           {isCompleted && (
                             <CheckCircle className="w-4 h-4 text-green-600" />
                           )}
-                        </h4>
-                        {milestone.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                          <span className="text-sm text-gray-500">
+                            ({milestoneTasks.length} task)
+                          </span>
+                        </div>
+
+                        {milestone.description && !isExpanded && (
+                          <p className="text-sm text-gray-600 line-clamp-1">
                             {milestone.description}
                           </p>
+                        )}
+
+                        <div className="flex items-center gap-4 mt-2">
+                          {/* Progress */}
+                          <div className="flex items-center gap-2">
+                            <div className="w-32 bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  isCompleted ? 'bg-green-600' : 'bg-primary-600'
+                                }`}
+                                style={{ width: `${milestoneProgress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-600">{milestoneProgress}%</span>
+                          </div>
+
+                          {/* Due Date */}
+                          {dueDate && (
+                            <div className={`flex items-center gap-1 text-xs ${
+                              isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'
+                            }`}>
+                              <Calendar className="w-3.5 h-3.5" />
+                              {dueDate.toLocaleDateString('it-IT')}
+                              {isOverdue && ' (In ritardo)'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        {!isCompleted && !isCancelled && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedMilestone(milestone);
+                                setShowMilestoneModal(true);
+                              }}
+                              className="btn-secondary text-xs px-2 py-1"
+                              title="Modifica milestone"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleMilestoneComplete(milestone.id)}
+                              className="btn-primary text-xs px-2 py-1"
+                              title="Completa milestone"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                        {(isCompleted || isCancelled) && (
+                          <button
+                            onClick={() => handleMilestoneDelete(milestone.id)}
+                            className="btn-secondary text-xs px-2 py-1"
+                            title="Elimina milestone"
+                          >
+                            Elimina
+                          </button>
                         )}
                       </div>
                     </div>
 
-                    {/* Progress bar */}
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-gray-600">Progresso</span>
-                        <span className="font-semibold text-gray-900">{milestoneProgress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${
-                            isCompleted ? 'bg-green-600' : 'bg-primary-600'
-                          }`}
-                          style={{ width: `${milestoneProgress}%` }}
-                        />
-                      </div>
-                    </div>
+                    {/* Expanded Tasks */}
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                        {milestone.description && (
+                          <p className="text-sm text-gray-600 mb-3">
+                            {milestone.description}
+                          </p>
+                        )}
 
-                    {/* Stats */}
-                    <div className="flex items-center justify-between text-sm mb-3 pb-3 border-b border-gray-200">
-                      <div className="flex items-center gap-1 text-gray-600">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>{milestone.completed_count || 0}/{milestone.task_count || 0} task</span>
-                      </div>
-                      {milestone.total_time > 0 && (
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <Clock className="w-4 h-4" />
-                          <span>{formatTime(milestone.total_time)}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Due date */}
-                    {dueDate && (
-                      <div className={`flex items-center gap-1 text-sm mb-3 ${
-                        isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'
-                      }`}>
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          Scadenza: {dueDate.toLocaleDateString('it-IT')}
-                          {isOverdue && ' (In ritardo)'}
-                        </span>
+                        {milestoneTasks.length === 0 ? (
+                          <p className="text-center text-gray-500 text-sm py-4">
+                            Nessun task assegnato a questa milestone
+                          </p>
+                        ) : (
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                            {milestoneTasks.map(task => (
+                              <TaskCard
+                                key={task.id}
+                                task={task}
+                                onClick={() => setSelectedTask(task)}
+                                onTimerStart={loadData}
+                                showProject={false}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      {!isCompleted && !isCancelled && (
-                        <>
-                          <button
-                            onClick={() => {
-                              setSelectedMilestone(milestone);
-                              setShowMilestoneModal(true);
-                            }}
-                            className="btn-secondary flex-1 text-sm py-1.5"
-                          >
-                            <Edit className="w-3 h-3 inline mr-1" />
-                            Modifica
-                          </button>
-                          <button
-                            onClick={() => handleMilestoneComplete(milestone.id)}
-                            className="btn-primary flex-1 text-sm py-1.5"
-                          >
-                            <CheckCircle className="w-3 h-3 inline mr-1" />
-                            Completa
-                          </button>
-                        </>
-                      )}
-                      {(isCompleted || isCancelled) && (
-                        <button
-                          onClick={() => handleMilestoneDelete(milestone.id)}
-                          className="btn-secondary flex-1 text-sm py-1.5"
-                        >
-                          Elimina
-                        </button>
-                      )}
-                    </div>
                   </div>
                 );
               })}
+
+              {/* Unassigned Tasks Section */}
+              {getUnassignedTasks().length > 0 && (
+                <div className="card bg-gray-50">
+                  <div
+                    className="flex items-center gap-3 cursor-pointer hover:bg-gray-100/50 -m-4 p-4 rounded-lg transition-colors"
+                    onClick={() => setShowUnassignedTasks(!showUnassignedTasks)}
+                  >
+                    <button className="text-gray-500 hover:text-gray-700">
+                      {showUnassignedTasks ? (
+                        <ChevronDown className="w-5 h-5" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5" />
+                      )}
+                    </button>
+
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-700">
+                        Task senza milestone ({getUnassignedTasks().length})
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        Attività non ancora assegnate a una fase specifica
+                      </p>
+                    </div>
+                  </div>
+
+                  {showUnassignedTasks && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {getUnassignedTasks().map(task => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            onClick={() => setSelectedTask(task)}
+                            onTimerStart={loadData}
+                            showProject={false}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Empty State for No Milestones */}
+              {milestones.length === 0 && (
+                <div className="card text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100">
+                  <Target className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500 mb-2">Nessuna milestone definita</p>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Organizza i task in fasi (milestone) per una migliore pianificazione
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedMilestone(null);
+                      setShowMilestoneModal(true);
+                    }}
+                    className="btn-secondary"
+                  >
+                    Crea la prima milestone
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {/* Milestone Filter */}
-        {tasks.length > 0 && milestones.length > 0 && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filtra task per milestone
-            </label>
-            <select
-              className="input max-w-md"
-              value={milestoneFilter}
-              onChange={(e) => setMilestoneFilter(e.target.value)}
-            >
-              <option value="all">Tutte le attività ({tasks.length})</option>
-              <option value="none">
-                Senza milestone ({tasks.filter(t => !t.milestone_id).length})
-              </option>
-              {milestones.map(milestone => (
-                <option key={milestone.id} value={milestone.id}>
-                  {milestone.name} ({tasks.filter(t => t.milestone_id === milestone.id).length})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Tasks by Status */}
-        {tasks.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Nessun task in questo progetto</p>
-            <button
-              onClick={() => setShowCreateTask(true)}
-              className="btn-primary"
-            >
-              Crea il primo task
-            </button>
-          </div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Nessun task in questa milestone</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* In Progress */}
-            {groupedTasks.in_progress.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-blue-500 rounded-full"></span>
-                  In Corso ({groupedTasks.in_progress.length})
-                </h3>
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.in_progress.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                      showProject={false}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Blocked */}
-            {groupedTasks.blocked.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-red-500 rounded-full"></span>
-                  Bloccati ({groupedTasks.blocked.length})
-                </h3>
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.blocked.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                      showProject={false}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Waiting */}
-            {groupedTasks.waiting_clarification.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-yellow-500 rounded-full"></span>
-                  In Attesa ({groupedTasks.waiting_clarification.length})
-                </h3>
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.waiting_clarification.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                      showProject={false}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Todo */}
-            {groupedTasks.todo.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-gray-500 rounded-full"></span>
-                  Da Fare ({groupedTasks.todo.length})
-                </h3>
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.todo.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                      showProject={false}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Completed */}
-            {groupedTasks.completed.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
-                  Completati ({groupedTasks.completed.length})
-                </h3>
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedTasks.completed.slice(0, 6).map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => setSelectedTask(task)}
-                      onTimerStart={loadData}
-                      showProject={false}
-                    />
-                  ))}
-                </div>
-                {groupedTasks.completed.length > 6 && (
-                  <p className="text-center text-gray-500 mt-4">
-                    ... e altri {groupedTasks.completed.length - 6} task completati
-                  </p>
-                )}
-              </section>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Modals */}
