@@ -20,10 +20,42 @@ const createTables = () => {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       name TEXT NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione')),
+      role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Migration: Update users table to support amministratore role
+  try {
+    // Check if we need to migrate by trying to insert a test amministratore
+    const testMigration = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+    if (testMigration && testMigration.sql.includes("CHECK(role IN ('dipendente', 'direzione'))")) {
+      console.log('🔄 Migrating users table to support amministratore role...');
+
+      // Create new table with updated constraint
+      db.exec(`
+        CREATE TABLE users_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          name TEXT NOT NULL,
+          role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Copy data from old table
+      db.exec(`INSERT INTO users_new SELECT * FROM users`);
+
+      // Drop old table and rename new one
+      db.exec(`DROP TABLE users`);
+      db.exec(`ALTER TABLE users_new RENAME TO users`);
+
+      console.log('✅ Successfully migrated users table');
+    }
+  } catch (error) {
+    console.error('Migration error:', error.message);
+  }
 
   // Projects table
   db.exec(`
