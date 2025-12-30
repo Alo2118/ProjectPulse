@@ -5,6 +5,7 @@ import DipendenteDashboard from './pages/DipendenteDashboard';
 import DirezioneDashboard from './pages/DirezioneDashboard';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
+import GanttPage from './pages/GanttPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -57,6 +58,14 @@ function App() {
             element={
               <PrivateRoute>
                 <ProjectDetailPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/gantt"
+            element={
+              <PrivateRoute>
+                <GanttPage />
               </PrivateRoute>
             }
           />

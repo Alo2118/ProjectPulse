@@ -92,15 +92,15 @@ export default function ProjectsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Progetti</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Progetti R&D</h1>
             <p className="text-gray-600 mt-1">
-              Gestisci e monitora tutti i tuoi progetti
+              Sviluppo dispositivi ortopedici, protesi e strumenti chirurgici
             </p>
           </div>
 
           <button
             onClick={handleCreate}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center gap-2 hover:scale-105 transition-transform shadow-lg"
           >
             <Plus className="w-5 h-5" />
             Nuovo Progetto
@@ -146,9 +146,12 @@ export default function ProjectsPage() {
         ) : projects.length === 0 ? (
           <div className="text-center py-12">
             <FolderOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">Nessun progetto presente</p>
-            <button onClick={handleCreate} className="btn-primary">
-              Crea il tuo primo progetto
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Nessun progetto R&D</h3>
+            <p className="text-gray-500 mb-4">
+              Inizia creando un progetto per lo sviluppo di dispositivi medici o strumentario
+            </p>
+            <button onClick={handleCreate} className="btn-primary hover:scale-105 transition-transform shadow-lg">
+              Crea il primo progetto
             </button>
           </div>
         ) : (

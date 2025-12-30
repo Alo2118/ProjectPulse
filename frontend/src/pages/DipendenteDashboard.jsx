@@ -72,9 +72,14 @@ export default function DipendenteDashboard() {
         {/* Header */}
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold text-gray-900">
-              I miei Task
-            </h2>
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">
+                Le mie Attività R&D
+              </h2>
+              <p className="text-gray-600 mt-1 text-sm">
+                Sviluppo dispositivi ortopedici e strumenti chirurgici
+              </p>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowReportModal(true)}
@@ -88,7 +93,7 @@ export default function DipendenteDashboard() {
                 className="btn-primary flex items-center gap-2 hover:scale-105 transition-transform shadow-lg"
               >
                 <Plus className="w-5 h-5" />
-                Nuovo Task
+                Nuova Attività
               </button>
             </div>
           </div>
@@ -274,16 +279,16 @@ export default function DipendenteDashboard() {
                     <Plus className="w-12 h-12 text-gray-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Nessun task presente
+                    Nessuna attività presente
                   </h3>
                   <p className="text-gray-500 mb-6">
-                    Inizia creando il tuo primo task per organizzare il lavoro
+                    Inizia creando la tua prima attività di sviluppo, testing o documentazione
                   </p>
                   <button
                     onClick={() => setShowCreateModal(true)}
                     className="btn-primary hover:scale-105 transition-transform shadow-lg"
                   >
-                    Crea il tuo primo task
+                    Crea la prima attività
                   </button>
                 </div>
               </div>
