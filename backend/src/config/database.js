@@ -21,7 +21,7 @@ const createTables = () => {
       password TEXT NOT NULL,
       name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT (datetime('now', 'localtime'))
     )
   `);
 
@@ -46,7 +46,7 @@ const createTables = () => {
             password TEXT NOT NULL,
             name TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME DEFAULT (datetime('now', 'localtime'))
           )
         `);
 
@@ -80,7 +80,7 @@ const createTables = () => {
       name TEXT NOT NULL,
       description TEXT,
       created_by INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT (datetime('now', 'localtime')),
       archived BOOLEAN DEFAULT 0,
       FOREIGN KEY (created_by) REFERENCES users(id)
     )
@@ -95,7 +95,7 @@ const createTables = () => {
       project_id INTEGER NOT NULL,
       due_date DATE,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'completed', 'cancelled')),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT (datetime('now', 'localtime')),
       completed_at DATETIME,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
     )
@@ -117,7 +117,7 @@ const createTables = () => {
       blocked_reason TEXT,
       clarification_needed TEXT,
       deadline DATE,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT (datetime('now', 'localtime')),
       completed_at DATETIME,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (milestone_id) REFERENCES milestones(id) ON DELETE SET NULL,
@@ -161,7 +161,7 @@ const createTables = () => {
       user_id INTEGER NOT NULL,
       message TEXT NOT NULL,
       is_from_direction BOOLEAN DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )

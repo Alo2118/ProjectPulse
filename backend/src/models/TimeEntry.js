@@ -10,7 +10,7 @@ class TimeEntry {
 
     const stmt = db.prepare(`
       INSERT INTO time_entries (task_id, user_id, started_at)
-      VALUES (?, ?, datetime('now'))
+      VALUES (?, ?, datetime('now', 'localtime'))
     `);
     const result = stmt.run(task_id, user_id);
     return this.findById(result.lastInsertRowid);
@@ -27,8 +27,8 @@ class TimeEntry {
 
     const stmt = db.prepare(`
       UPDATE time_entries
-      SET ended_at = datetime('now'),
-          duration = (julianday(datetime('now')) - julianday(started_at)) * 86400
+      SET ended_at = datetime('now', 'localtime'),
+          duration = (julianday(datetime('now', 'localtime')) - julianday(started_at)) * 86400
       WHERE id = ?
     `);
     stmt.run(id);

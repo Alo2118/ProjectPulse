@@ -67,7 +67,7 @@ class Milestone {
   static complete(id) {
     const stmt = db.prepare(`
       UPDATE milestones
-      SET status = 'completed', completed_at = datetime('now')
+      SET status = 'completed', completed_at = datetime('now', 'localtime')
       WHERE id = ?
     `);
     stmt.run(id);
