@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle } from 'lucide-react';
+import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle, TrendingUp, TrendingDown, Users, Calendar } from 'lucide-react';
 import { tasksApi, projectsApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
@@ -53,6 +53,62 @@ export default function DirezioneDashboard() {
     return `${hours}h`;
   };
 
+  // Calculate advanced metrics
+  const calculateMetrics = () => {
+    const completedTasks = tasks.filter(t => t.status === 'completed');
+
+    // Average time to complete (in hours)
+    const avgCompletionTime = completedTasks.length > 0
+      ? completedTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0) / completedTasks.length / 3600
+      : 0;
+
+    // Tasks with deadline
+    const tasksWithDeadline = tasks.filter(t => t.deadline && t.status !== 'completed');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const overdueTasks = tasksWithDeadline.filter(t => {
+      const deadline = new Date(t.deadline);
+      deadline.setHours(0, 0, 0, 0);
+      return deadline < today;
+    });
+
+    const overdueRate = tasksWithDeadline.length > 0
+      ? (overdueTasks.length / tasksWithDeadline.length) * 100
+      : 0;
+
+    // Tasks completed this week vs last week
+    const oneWeekAgo = new Date(today);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const twoWeeksAgo = new Date(today);
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    const thisWeekCompleted = completedTasks.filter(t => {
+      const completedDate = new Date(t.completed_at);
+      return completedDate >= oneWeekAgo;
+    }).length;
+
+    const lastWeekCompleted = completedTasks.filter(t => {
+      const completedDate = new Date(t.completed_at);
+      return completedDate >= twoWeeksAgo && completedDate < oneWeekAgo;
+    }).length;
+
+    const weeklyTrend = lastWeekCompleted > 0
+      ? ((thisWeekCompleted - lastWeekCompleted) / lastWeekCompleted) * 100
+      : thisWeekCompleted > 0 ? 100 : 0;
+
+    return {
+      avgCompletionTime,
+      overdueRate,
+      overdueTasks: overdueTasks.length,
+      thisWeekCompleted,
+      lastWeekCompleted,
+      weeklyTrend
+    };
+  };
+
+  const metrics = calculateMetrics();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navbar />
@@ -104,6 +160,72 @@ export default function DirezioneDashboard() {
               <Clock className="w-6 h-6 text-gray-500 mx-auto mb-2" />
               <div className="text-2xl font-bold text-gray-900">{formatTime(stats.totalTime)}</div>
               <div className="text-sm text-gray-500">Tempo Totale</div>
+            </div>
+          </div>
+
+          {/* Advanced Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Average Completion Time */}
+            <div className="card bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <Clock className="w-5 h-5 text-indigo-600" />
+                <span className="text-xs text-indigo-600 font-medium">MEDIA</span>
+              </div>
+              <div className="text-2xl font-bold text-indigo-900">
+                {metrics.avgCompletionTime.toFixed(1)}h
+              </div>
+              <div className="text-sm text-indigo-700">Tempo medio completamento</div>
+            </div>
+
+            {/* Overdue Tasks */}
+            <div className={`card border-2 hover:shadow-lg transition-shadow ${
+              metrics.overdueTasks > 0
+                ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-300'
+                : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <Calendar className={`w-5 h-5 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
+                <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  SCADENZE
+                </span>
+              </div>
+              <div className={`text-2xl font-bold ${metrics.overdueTasks > 0 ? 'text-red-900' : 'text-green-900'}`}>
+                {metrics.overdueTasks > 0 ? metrics.overdueTasks : '0'}
+              </div>
+              <div className={`text-sm ${metrics.overdueTasks > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                {metrics.overdueTasks > 0
+                  ? `In ritardo (${metrics.overdueRate.toFixed(0)}%)`
+                  : 'Nessun ritardo'
+                }
+              </div>
+            </div>
+
+            {/* Weekly Trend */}
+            <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                {metrics.weeklyTrend >= 0 ? (
+                  <TrendingUp className="w-5 h-5 text-purple-600" />
+                ) : (
+                  <TrendingDown className="w-5 h-5 text-purple-600" />
+                )}
+                <span className="text-xs text-purple-600 font-medium">TREND</span>
+              </div>
+              <div className="text-2xl font-bold text-purple-900">
+                {metrics.weeklyTrend >= 0 ? '+' : ''}{metrics.weeklyTrend.toFixed(0)}%
+              </div>
+              <div className="text-sm text-purple-700">
+                vs settimana scorsa ({metrics.thisWeekCompleted} vs {metrics.lastWeekCompleted})
+              </div>
+            </div>
+
+            {/* Active Projects */}
+            <div className="card bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <Briefcase className="w-5 h-5 text-cyan-600" />
+                <span className="text-xs text-cyan-600 font-medium">PROGETTI</span>
+              </div>
+              <div className="text-2xl font-bold text-cyan-900">{projects.length}</div>
+              <div className="text-sm text-cyan-700">Progetti R&D attivi</div>
             </div>
           </div>
 
