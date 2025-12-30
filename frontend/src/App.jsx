@@ -7,6 +7,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import GanttPage from './pages/GanttPage';
 import CalendarPage from './pages/CalendarPage';
+import UserManagementPage from './pages/UserManagementPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -75,6 +76,14 @@ function App() {
             element={
               <PrivateRoute>
                 <CalendarPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <PrivateRoute>
+                <UserManagementPage />
               </PrivateRoute>
             }
           />
