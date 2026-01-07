@@ -8,11 +8,11 @@ export default function Login() {
     email: '',
     password: '',
     first_name: '',
-    last_name: '',
-    role: 'dipendente'
+    last_name: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -20,15 +20,24 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
       if (isLogin) {
         await login({ email: formData.email, password: formData.password });
+        navigate('/');
       } else {
-        await register(formData);
+        const response = await register(formData);
+        // Registration successful, show message and switch to login
+        setSuccessMessage(response.message || 'Registrazione completata! In attesa di approvazione.');
+        setFormData({ email: '', password: '', first_name: '', last_name: '' });
+        // Auto-switch to login after 3 seconds
+        setTimeout(() => {
+          setIsLogin(true);
+          setSuccessMessage('');
+        }, 5000);
       }
-      navigate('/');
     } catch (err) {
       setError(err.response?.data?.error || 'Si è verificato un errore');
     } finally {
@@ -49,6 +58,12 @@ export default function Login() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
             {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+            {successMessage}
           </div>
         )}
 
@@ -109,23 +124,6 @@ export default function Login() {
               required
             />
           </div>
-
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ruolo
-              </label>
-              <select
-                className="input"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                required
-              >
-                <option value="dipendente">Dipendente</option>
-                <option value="direzione">Direzione</option>
-              </select>
-            </div>
-          )}
 
           <button
             type="submit"

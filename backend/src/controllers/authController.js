@@ -3,37 +3,35 @@ import User from '../models/User.js';
 
 export const register = async (req, res) => {
   try {
-    const { email, password, first_name, last_name, role } = req.body;
+    const { email, password, first_name, last_name } = req.body;
 
-    if (!email || !password || !first_name || !last_name || !role) {
-      return res.status(400).json({ error: 'All fields are required' });
-    }
-
-    if (!['dipendente', 'direzione', 'amministratore'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+    if (!email || !password || !first_name || !last_name) {
+      return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
     const existingUser = User.findByEmail(email);
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({ error: 'Email già registrata' });
     }
 
-    const user = User.create({ email, password, first_name, last_name, role });
+    // Create user with default role 'dipendente' and active=false (pending approval)
+    const user = User.create({
+      email,
+      password,
+      first_name,
+      last_name,
+      role: 'dipendente',
+      active: false
+    });
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
+    // Don't auto-login, user must wait for admin approval
     res.status(201).json({
-      token,
+      message: 'Registrazione completata. Il tuo account è in attesa di approvazione da parte di un amministratore.',
       user: {
         id: user.id,
         email: user.email,
         first_name: user.first_name,
-        last_name: user.last_name,
-        role: user.role
+        last_name: user.last_name
       }
     });
   } catch (error) {
@@ -51,17 +49,19 @@ export const login = async (req, res) => {
 
     const user = User.findByEmail(email);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Check if user is active
-    if (!user.active) {
-      return res.status(401).json({ error: 'Account disattivato. Contatta un amministratore.' });
+      return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
     const isValidPassword = User.verifyPassword(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Credenziali non valide' });
+    }
+
+    // Check if user is active (approved by admin)
+    if (!user.active) {
+      return res.status(403).json({
+        error: 'Account in attesa di approvazione. Un amministratore deve approvare il tuo account prima che tu possa accedere.'
+      });
     }
 
     const token = jwt.sign(

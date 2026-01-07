@@ -38,13 +38,8 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     const response = await authApi.register(userData);
-    const { token, user } = response.data;
-
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
-
-    return user;
+    // Registration doesn't auto-login anymore, returns message instead
+    return response.data;
   };
 
   const logout = () => {

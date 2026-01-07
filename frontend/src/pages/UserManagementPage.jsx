@@ -8,6 +8,7 @@ export default function UserManagementPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'pending'
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -107,6 +108,27 @@ export default function UserManagementPage() {
       alert(error.response?.data?.error || `Errore durante la ${action}zione`);
     }
   };
+
+  const handleApprove = async (user) => {
+    const userName = `${user.first_name} ${user.last_name}`;
+    if (!confirm(`Approvi la registrazione di "${userName}" e gli concedi l'accesso?`)) {
+      return;
+    }
+
+    try {
+      // Activate the user (approve registration)
+      await usersApi.reactivate(user.id);
+      loadUsers();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Errore durante l\'approvazione');
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    if (filterStatus === 'active') return user.active;
+    if (filterStatus === 'pending') return !user.active;
+    return true; // 'all'
+  });
 
   const validateForm = () => {
     const newErrors = {};
@@ -208,7 +230,7 @@ export default function UserManagementPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
             <p className="text-gray-600 mt-1">
@@ -218,6 +240,40 @@ export default function UserManagementPage() {
           <button onClick={handleCreate} className="btn btn-primary">
             <Plus className="w-4 h-4" />
             Nuovo Utente
+          </button>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => setFilterStatus('all')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              filterStatus === 'all'
+                ? 'bg-primary-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Tutti ({users.length})
+          </button>
+          <button
+            onClick={() => setFilterStatus('active')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              filterStatus === 'active'
+                ? 'bg-primary-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Attivi ({users.filter(u => u.active).length})
+          </button>
+          <button
+            onClick={() => setFilterStatus('pending')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              filterStatus === 'pending'
+                ? 'bg-primary-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            In attesa di approvazione ({users.filter(u => !u.active).length})
           </button>
         </div>
 
@@ -248,10 +304,11 @@ export default function UserManagementPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const RoleIcon = getRoleIcon(user.role);
+                  const isPending = !user.active;
                   return (
-                    <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${!user.active ? 'opacity-60' : ''}`}>
+                    <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${isPending ? 'bg-yellow-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
@@ -279,38 +336,56 @@ export default function UserManagementPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${user.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
                           {user.active ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
-                          {user.active ? 'Attivo' : 'Disattivato'}
+                          {user.active ? 'Attivo' : 'In attesa di approvazione'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.created_at).toLocaleDateString('it-IT')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="text-primary-600 hover:text-primary-900 mr-3"
-                          title="Modifica utente"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(user)}
-                          className={`${user.active ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'} mr-3`}
-                          title={user.active ? 'Disattiva utente' : 'Attiva utente'}
-                          disabled={user.id === currentUser.id && user.active}
-                        >
-                          {user.active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Disattiva utente"
-                          disabled={user.id === currentUser.id}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isPending ? (
+                          <>
+                            <button
+                              onClick={() => handleApprove(user)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium mr-3"
+                              title="Approva registrazione"
+                            >
+                              <UserCheck className="w-4 h-4" />
+                              Approva
+                            </button>
+                            <button
+                              onClick={() => handleEdit(user)}
+                              className="text-primary-600 hover:text-primary-900 mr-3"
+                              title="Modifica utente e approva"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEdit(user)}
+                              className="text-primary-600 hover:text-primary-900 mr-3"
+                              title="Modifica utente"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleActive(user)}
+                              className="text-orange-600 hover:text-orange-900 mr-3"
+                              title="Disattiva utente"
+                              disabled={user.id === currentUser.id}
+                            >
+                              <UserX className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   );
@@ -319,11 +394,23 @@ export default function UserManagementPage() {
             </table>
           </div>
 
-          {users.length === 0 && (
+          {filteredUsers.length === 0 && (
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun utente</h3>
-              <p className="text-gray-500">Crea il primo utente per iniziare</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {filterStatus === 'pending'
+                  ? 'Nessun utente in attesa'
+                  : filterStatus === 'active'
+                  ? 'Nessun utente attivo'
+                  : 'Nessun utente'}
+              </h3>
+              <p className="text-gray-500">
+                {filterStatus === 'pending'
+                  ? 'Non ci sono utenti in attesa di approvazione'
+                  : filterStatus === 'active'
+                  ? 'Non ci sono utenti attivi'
+                  : 'Crea il primo utente per iniziare'}
+              </p>
             </div>
           )}
         </div>
