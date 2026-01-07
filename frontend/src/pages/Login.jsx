@@ -7,7 +7,8 @@ export default function Login() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: '',
+    first_name: '',
+    last_name: '',
     role: 'dipendente'
   });
   const [error, setError] = useState('');
@@ -53,18 +54,34 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome
-              </label>
-              <input
-                type="text"
-                className="input"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  placeholder="Es: Mario"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cognome
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                  placeholder="Es: Rossi"
+                  required
+                />
+              </div>
+            </>
           )}
 
           <div>
@@ -131,10 +148,7 @@ export default function Login() {
         <div className="mt-6 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-500 text-center mb-2">Account di test:</p>
           <p className="text-xs text-gray-600 text-center">
-            Direzione: direzione@company.com / password123
-          </p>
-          <p className="text-xs text-gray-600 text-center">
-            Dipendente: dipendente@company.com / password123
+            Amministratore: nicola@admin.it / password123
           </p>
         </div>
       </div>
