@@ -62,6 +62,31 @@ class User {
   }
 
   static delete(id) {
+    // Check if user has related data
+    const checksQueries = [
+      { query: 'SELECT COUNT(*) as count FROM projects WHERE created_by = ?', entity: 'progetti' },
+      { query: 'SELECT COUNT(*) as count FROM tasks WHERE assigned_to = ? OR created_by = ?', entity: 'task', params: [id, id] },
+      { query: 'SELECT COUNT(*) as count FROM time_entries WHERE user_id = ?', entity: 'registrazioni tempo' },
+      { query: 'SELECT COUNT(*) as count FROM comments WHERE user_id = ?', entity: 'commenti' }
+    ];
+
+    const relatedData = [];
+
+    for (const check of checksQueries) {
+      const stmt = db.prepare(check.query);
+      const result = check.params ? stmt.get(...check.params) : stmt.get(id);
+      if (result.count > 0) {
+        relatedData.push(`${result.count} ${check.entity}`);
+      }
+    }
+
+    if (relatedData.length > 0) {
+      throw new Error(
+        `Impossibile eliminare l'utente. Ha dati collegati: ${relatedData.join(', ')}. ` +
+        `Riassegna o elimina prima questi dati.`
+      );
+    }
+
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
     return stmt.run(id);
   }
