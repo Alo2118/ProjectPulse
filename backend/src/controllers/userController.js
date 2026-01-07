@@ -15,7 +15,7 @@ export const getUserById = async (req, res) => {
   try {
     const user = User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Utente non trovato' });
     }
 
     // Don't send password
@@ -32,17 +32,17 @@ export const createUser = async (req, res) => {
 
     // Validation
     if (!email || !password || !first_name || !last_name || !role) {
-      return res.status(400).json({ error: 'All fields are required' });
+      return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
     if (!['dipendente', 'direzione', 'amministratore'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+      return res.status(400).json({ error: 'Ruolo non valido' });
     }
 
     // Check if email already exists
     const existingUser = User.findByEmail(email);
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({ error: 'Email già registrata' });
     }
 
     const user = User.create({ email, password, first_name, last_name, role, active });
@@ -63,30 +63,30 @@ export const updateUser = async (req, res) => {
     // Check if user exists
     const existingUser = User.findById(id);
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Utente non trovato' });
     }
 
     // Validate role if provided
     if (role && !['dipendente', 'direzione', 'amministratore'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+      return res.status(400).json({ error: 'Ruolo non valido' });
     }
 
     // Check if email is already taken by another user
     if (email && email !== existingUser.email) {
       const emailTaken = User.findByEmail(email);
       if (emailTaken) {
-        return res.status(400).json({ error: 'Email already registered' });
+        return res.status(400).json({ error: 'Email già registrata' });
       }
     }
 
     // Prevent user from removing their own amministratore role
     if (req.user.id === parseInt(id) && role && role !== 'amministratore') {
-      return res.status(403).json({ error: 'Cannot change your own role' });
+      return res.status(403).json({ error: 'Non puoi modificare il tuo ruolo' });
     }
 
     // Prevent user from deactivating themselves
     if (req.user.id === parseInt(id) && active === false) {
-      return res.status(403).json({ error: 'Cannot deactivate your own account' });
+      return res.status(403).json({ error: 'Non puoi disattivare il tuo account' });
     }
 
     const updatedUser = User.update(id, { email, first_name, last_name, role, password, active });
@@ -106,19 +106,19 @@ export const deleteUser = async (req, res) => {
     // Check if user exists
     const existingUser = User.findById(id);
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Utente non trovato' });
     }
 
     // Prevent user from deleting themselves
     if (req.user.id === parseInt(id)) {
-      return res.status(403).json({ error: 'Cannot delete your own account' });
+      return res.status(403).json({ error: 'Non puoi eliminare il tuo account' });
     }
 
     // Soft delete (deactivate)
     const deactivatedUser = User.delete(id);
     const { password, ...userWithoutPassword } = deactivatedUser;
     res.json({
-      message: 'User deactivated successfully',
+      message: 'Utente disattivato con successo',
       user: userWithoutPassword
     });
   } catch (error) {
@@ -133,17 +133,17 @@ export const reactivateUser = async (req, res) => {
     // Check if user exists
     const existingUser = User.findById(id);
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Utente non trovato' });
     }
 
     if (existingUser.active) {
-      return res.status(400).json({ error: 'User is already active' });
+      return res.status(400).json({ error: 'L\'utente è già attivo' });
     }
 
     const reactivatedUser = User.reactivate(id);
     const { password, ...userWithoutPassword } = reactivatedUser;
     res.json({
-      message: 'User reactivated successfully',
+      message: 'Utente riattivato con successo',
       user: userWithoutPassword
     });
   } catch (error) {
