@@ -4,7 +4,8 @@ import {
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  reactivateUser
 } from '../controllers/userController.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 
@@ -19,5 +20,6 @@ router.get('/:id', getUserById);
 router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
+router.post('/:id/reactivate', reactivateUser);
 
 export default router;
