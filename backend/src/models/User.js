@@ -2,12 +2,12 @@ import db from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
 class User {
-  static create({ email, password, name, role }) {
+  static create({ email, password, first_name, last_name, role, active = true }) {
     const hashedPassword = bcrypt.hashSync(password, 10);
     const stmt = db.prepare(
-      'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)'
+      'INSERT INTO users (email, password, first_name, last_name, role, active) VALUES (?, ?, ?, ?, ?, ?)'
     );
-    const result = stmt.run(email, hashedPassword, name, role);
+    const result = stmt.run(email, hashedPassword, first_name, last_name, role, active ? 1 : 0);
     return this.findById(result.lastInsertRowid);
   }
 
@@ -22,11 +22,16 @@ class User {
   }
 
   static getAll() {
-    const stmt = db.prepare('SELECT id, email, name, role, created_at FROM users');
+    const stmt = db.prepare('SELECT id, email, first_name, last_name, role, active, created_at FROM users');
     return stmt.all();
   }
 
-  static update(id, { email, name, role, password }) {
+  static getActive() {
+    const stmt = db.prepare('SELECT id, email, first_name, last_name, role, active, created_at FROM users WHERE active = 1');
+    return stmt.all();
+  }
+
+  static update(id, { email, first_name, last_name, role, password, active }) {
     let query = 'UPDATE users SET ';
     const params = [];
     const updates = [];
@@ -35,13 +40,21 @@ class User {
       updates.push('email = ?');
       params.push(email);
     }
-    if (name !== undefined) {
-      updates.push('name = ?');
-      params.push(name);
+    if (first_name !== undefined) {
+      updates.push('first_name = ?');
+      params.push(first_name);
+    }
+    if (last_name !== undefined) {
+      updates.push('last_name = ?');
+      params.push(last_name);
     }
     if (role !== undefined) {
       updates.push('role = ?');
       params.push(role);
+    }
+    if (active !== undefined) {
+      updates.push('active = ?');
+      params.push(active ? 1 : 0);
     }
     if (password !== undefined) {
       const hashedPassword = bcrypt.hashSync(password, 10);
@@ -61,7 +74,26 @@ class User {
     return this.findById(id);
   }
 
+  static deactivate(id) {
+    const stmt = db.prepare('UPDATE users SET active = 0 WHERE id = ?');
+    stmt.run(id);
+    return this.findById(id);
+  }
+
+  static reactivate(id) {
+    const stmt = db.prepare('UPDATE users SET active = 1 WHERE id = ?');
+    stmt.run(id);
+    return this.findById(id);
+  }
+
   static delete(id) {
+    // Soft delete: just deactivate the user instead of deleting
+    // This preserves data integrity and historical records
+    return this.deactivate(id);
+  }
+
+  static hardDelete(id) {
+    // Hard delete: only for cases where physical deletion is absolutely necessary
     // Check if user has related data
     const checksQueries = [
       { query: 'SELECT COUNT(*) as count FROM projects WHERE created_by = ?', entity: 'progetti' },
@@ -82,7 +114,7 @@ class User {
 
     if (relatedData.length > 0) {
       throw new Error(
-        `Impossibile eliminare l'utente. Ha dati collegati: ${relatedData.join(', ')}. ` +
+        `Impossibile eliminare definitivamente l'utente. Ha dati collegati: ${relatedData.join(', ')}. ` +
         `Riassegna o elimina prima questi dati.`
       );
     }

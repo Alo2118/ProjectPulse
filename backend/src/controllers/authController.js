@@ -3,9 +3,9 @@ import User from '../models/User.js';
 
 export const register = async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { email, password, first_name, last_name, role } = req.body;
 
-    if (!email || !password || !name || !role) {
+    if (!email || !password || !first_name || !last_name || !role) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -18,7 +18,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const user = User.create({ email, password, name, role });
+    const user = User.create({ email, password, first_name, last_name, role });
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
@@ -31,7 +31,8 @@ export const register = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
         role: user.role
       }
     });
@@ -53,6 +54,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Check if user is active
+    if (!user.active) {
+      return res.status(401).json({ error: 'Account disattivato. Contatta un amministratore.' });
+    }
+
     const isValidPassword = User.verifyPassword(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -69,7 +75,8 @@ export const login = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
         role: user.role
       }
     });
@@ -81,10 +88,17 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = User.findById(req.user.id);
+
+    // Check if user is still active
+    if (!user.active) {
+      return res.status(401).json({ error: 'Account disattivato' });
+    }
+
     res.json({
       id: user.id,
       email: user.email,
-      name: user.name,
+      first_name: user.first_name,
+      last_name: user.last_name,
       role: user.role
     });
   } catch (error) {

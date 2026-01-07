@@ -20,17 +20,25 @@ const createTables = () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
-      name TEXT NOT NULL,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
+      active BOOLEAN DEFAULT 1,
       created_at DATETIME DEFAULT (datetime('now', '+1 hour'))
     )
   `);
 
-  // Migration: Update users table to support amministratore role
+  // Migration: Update users table structure
   try {
-    const testMigration = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
-    if (testMigration && testMigration.sql.includes("CHECK(role IN ('dipendente', 'direzione'))")) {
-      console.log('🔄 Migrating users table to support amministratore role...');
+    const tableInfo = db.prepare("PRAGMA table_info(users)").all();
+    const columns = tableInfo.map(col => col.name);
+
+    const needsMigration =
+      columns.includes('name') && !columns.includes('first_name') ||
+      !columns.includes('active');
+
+    if (needsMigration) {
+      console.log('🔄 Migrating users table to new structure...');
 
       // Temporarily disable foreign keys for migration
       db.pragma('foreign_keys = OFF');
@@ -39,27 +47,50 @@ const createTables = () => {
       db.exec('BEGIN TRANSACTION');
 
       try {
-        // Create new table with updated constraint
+        // Create new table with updated structure
         db.exec(`
           CREATE TABLE users_new (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            name TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
+            active BOOLEAN DEFAULT 1,
             created_at DATETIME DEFAULT (datetime('now', '+1 hour'))
           )
         `);
 
-        // Copy data from old table
-        db.exec(`INSERT INTO users_new SELECT * FROM users`);
+        // Migrate data with name splitting
+        const oldUsers = db.prepare('SELECT * FROM users').all();
+        const insertStmt = db.prepare(`
+          INSERT INTO users_new (id, email, password, first_name, last_name, role, active, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+        `);
+
+        for (const user of oldUsers) {
+          // Split name into first_name and last_name
+          const nameParts = (user.name || '').trim().split(' ');
+          const firstName = nameParts[0] || 'Nome';
+          const lastName = nameParts.slice(1).join(' ') || 'Cognome';
+
+          insertStmt.run(
+            user.id,
+            user.email,
+            user.password,
+            firstName,
+            lastName,
+            user.role,
+            user.created_at
+          );
+        }
 
         // Drop old table and rename new one
         db.exec(`DROP TABLE users`);
         db.exec(`ALTER TABLE users_new RENAME TO users`);
 
         db.exec('COMMIT');
-        console.log('✅ Successfully migrated users table');
+        console.log('✅ Successfully migrated users table to new structure');
       } catch (migrationError) {
         db.exec('ROLLBACK');
         throw migrationError;
@@ -178,20 +209,20 @@ const ensureAdminUser = () => {
     const existingUser = checkStmt.get('nicola.mussolin@mikai.it');
 
     if (existingUser) {
-      // User exists, ensure they have admin role
-      if (existingUser.role !== 'amministratore') {
-        const updateStmt = db.prepare('UPDATE users SET role = ? WHERE email = ?');
+      // User exists, ensure they have admin role and are active
+      if (existingUser.role !== 'amministratore' || existingUser.active !== 1) {
+        const updateStmt = db.prepare('UPDATE users SET role = ?, active = 1 WHERE email = ?');
         updateStmt.run('amministratore', 'nicola.mussolin@mikai.it');
-        console.log('✅ Updated nicola.mussolin@mikai.it to amministratore role');
+        console.log('✅ Updated nicola.mussolin@mikai.it to amministratore role and activated');
       }
     } else {
       // Create admin user
       const hashedPassword = bcryptjs.hashSync('password123', 10);
       const insertStmt = db.prepare(`
-        INSERT INTO users (email, password, name, role, created_at)
-        VALUES (?, ?, ?, ?, datetime('now', '+1 hour'))
+        INSERT INTO users (email, password, first_name, last_name, role, active, created_at)
+        VALUES (?, ?, ?, ?, ?, 1, datetime('now', '+1 hour'))
       `);
-      insertStmt.run('nicola.mussolin@mikai.it', hashedPassword, 'Nicola Mussolin', 'amministratore');
+      insertStmt.run('nicola.mussolin@mikai.it', hashedPassword, 'Nicola', 'Mussolin', 'amministratore');
       console.log('✅ Created administrator user: nicola.mussolin@mikai.it');
       console.log('   Password: password123');
     }
