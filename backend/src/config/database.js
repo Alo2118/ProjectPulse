@@ -206,14 +206,14 @@ const createTables = () => {
 const ensureAdminUser = () => {
   try {
     const checkStmt = db.prepare('SELECT * FROM users WHERE email = ?');
-    const existingUser = checkStmt.get('nicola.mussolin@mikai.it');
+    const existingUser = checkStmt.get('nicola@admin.it');
 
     if (existingUser) {
       // User exists, ensure they have admin role and are active
       if (existingUser.role !== 'amministratore' || existingUser.active !== 1) {
         const updateStmt = db.prepare('UPDATE users SET role = ?, active = 1 WHERE email = ?');
-        updateStmt.run('amministratore', 'nicola.mussolin@mikai.it');
-        console.log('✅ Updated nicola.mussolin@mikai.it to amministratore role and activated');
+        updateStmt.run('amministratore', 'nicola@admin.it');
+        console.log('✅ Updated nicola@admin.it to amministratore role and activated');
       }
     } else {
       // Create admin user
@@ -222,8 +222,8 @@ const ensureAdminUser = () => {
         INSERT INTO users (email, password, first_name, last_name, role, active, created_at)
         VALUES (?, ?, ?, ?, ?, 1, datetime('now', '+1 hour'))
       `);
-      insertStmt.run('nicola.mussolin@mikai.it', hashedPassword, 'Nicola', 'Mussolin', 'amministratore');
-      console.log('✅ Created administrator user: nicola.mussolin@mikai.it');
+      insertStmt.run('nicola@admin.it', hashedPassword, 'Nicola', 'Admin', 'amministratore');
+      console.log('✅ Created administrator user: nicola@admin.it');
       console.log('   Password: password123');
     }
   } catch (error) {

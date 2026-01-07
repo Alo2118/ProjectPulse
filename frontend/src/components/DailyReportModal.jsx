@@ -35,7 +35,7 @@ export default function DailyReportModal({ onClose }) {
     if (!report) return;
 
     let text = `REPORT GIORNALIERO - ${new Date(date).toLocaleDateString('it-IT')}\n`;
-    text += `Dipendente: ${user.name}\n`;
+    text += `Dipendente: ${user.first_name} ${user.last_name}\n`;
     text += `Tempo totale: ${formatTime(report.total_time_seconds)}\n\n`;
 
     text += `=== TASK COMPLETATI (${report.completed_tasks.length}) ===\n`;

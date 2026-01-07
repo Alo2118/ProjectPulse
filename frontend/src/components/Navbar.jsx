@@ -97,7 +97,7 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <User className="w-5 h-5 text-gray-500" />
               <div className="text-sm">
-                <div className="font-medium text-gray-900">{user?.name}</div>
+                <div className="font-medium text-gray-900">{user?.first_name} {user?.last_name}</div>
                 <div className="text-gray-500 capitalize">{user?.role}</div>
               </div>
             </div>

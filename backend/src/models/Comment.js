@@ -12,7 +12,7 @@ class Comment {
 
   static findById(id) {
     const stmt = db.prepare(`
-      SELECT c.*, u.name as user_name, u.role as user_role
+      SELECT c.*, (u.first_name || ' ' || u.last_name) as user_name, u.role as user_role
       FROM comments c
       LEFT JOIN users u ON c.user_id = u.id
       WHERE c.id = ?
@@ -22,7 +22,7 @@ class Comment {
 
   static getByTask(task_id) {
     const stmt = db.prepare(`
-      SELECT c.*, u.name as user_name, u.role as user_role
+      SELECT c.*, (u.first_name || ' ' || u.last_name) as user_name, u.role as user_role
       FROM comments c
       LEFT JOIN users u ON c.user_id = u.id
       WHERE c.task_id = ?

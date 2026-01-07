@@ -26,8 +26,8 @@ class Task {
         t.*,
         p.name as project_name,
         m.name as milestone_name,
-        u1.name as assigned_to_name,
-        u2.name as created_by_name
+        (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+        (u2.first_name || ' ' || u2.last_name) as created_by_name
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN milestones m ON t.milestone_id = m.id
@@ -44,8 +44,8 @@ class Task {
         t.*,
         p.name as project_name,
         m.name as milestone_name,
-        u1.name as assigned_to_name,
-        u2.name as created_by_name
+        (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+        (u2.first_name || ' ' || u2.last_name) as created_by_name
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN milestones m ON t.milestone_id = m.id

@@ -44,7 +44,7 @@ export default function TimeTrackingPage() {
 
   const loadUsers = async () => {
     try {
-      const response = await usersApi.getAll();
+      const response = await usersApi.getAll({ active: true });
       setUsers(response.data.filter(u => u.role !== 'direzione'));
     } catch (error) {
       console.error('Error loading users:', error);
@@ -110,7 +110,7 @@ export default function TimeTrackingPage() {
       entry.duration ? formatDuration(entry.duration) : '-',
       entry.task_title || '-',
       entry.project_name || '-',
-      entry.user_name || user.name,
+      entry.user_name || `${user.first_name} ${user.last_name}`,
       entry.notes || ''
     ]);
 
@@ -472,7 +472,7 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
 
   const loadUsers = async () => {
     try {
-      const response = await usersApi.getAll();
+      const response = await usersApi.getAll({ active: true });
       setUsers(response.data.filter(u => u.role !== 'direzione'));
     } catch (error) {
       console.error('Error loading users:', error);

@@ -4,30 +4,31 @@ console.log('🔐 Creating administrator user...');
 
 try {
   // Check if user already exists
-  const existing = User.findByEmail('nicola.mussolin@mikai.it');
+  const existing = User.findByEmail('nicola@admin.it');
 
   if (existing) {
     console.log('ℹ️  User already exists');
     console.log('   Email:', existing.email);
     console.log('   Role:', existing.role);
 
-    if (existing.role !== 'amministratore') {
-      console.log('🔄 Updating role to amministratore...');
-      User.update(existing.id, { role: 'amministratore' });
-      console.log('✅ Role updated successfully');
+    if (existing.role !== 'amministratore' || !existing.active) {
+      console.log('🔄 Updating role to amministratore and activating...');
+      User.update(existing.id, { role: 'amministratore', active: true });
+      console.log('✅ Role updated and user activated successfully');
     }
   } else {
     const user = User.create({
-      email: 'nicola.mussolin@mikai.it',
+      email: 'nicola@admin.it',
       password: 'password123',
-      name: 'Nicola Mussolin',
+      first_name: 'Nicola',
+      last_name: 'Admin',
       role: 'amministratore'
     });
 
     console.log('✅ Administrator user created successfully');
-    console.log('   Email: nicola.mussolin@mikai.it');
+    console.log('   Email: nicola@admin.it');
     console.log('   Password: password123');
-    console.log('   Name: Nicola Mussolin');
+    console.log('   Name: Nicola Admin');
     console.log('   Role: amministratore');
     console.log('');
     console.log('⚠️  IMPORTANT: Change the password after first login!');

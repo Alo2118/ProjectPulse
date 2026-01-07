@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Users, Shield, User as UserIcon, X, Crown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, Shield, User as UserIcon, X, Crown, UserCheck, UserX } from 'lucide-react';
 import { usersApi } from '../services/api';
 import Navbar from '../components/Navbar';
 
@@ -9,10 +9,12 @@ export default function UserManagementPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     role: 'dipendente',
-    password: ''
+    password: '',
+    active: true
   });
   const [errors, setErrors] = useState({});
 
@@ -38,10 +40,12 @@ export default function UserManagementPage() {
   const handleCreate = () => {
     setSelectedUser(null);
     setFormData({
-      name: '',
+      first_name: '',
+      last_name: '',
       email: '',
       role: 'dipendente',
-      password: ''
+      password: '',
+      active: true
     });
     setErrors({});
     setShowModal(true);
@@ -50,10 +54,12 @@ export default function UserManagementPage() {
   const handleEdit = (user) => {
     setSelectedUser(user);
     setFormData({
-      name: user.name,
+      first_name: user.first_name,
+      last_name: user.last_name,
       email: user.email,
       role: user.role,
-      password: '' // Don't pre-fill password
+      password: '', // Don't pre-fill password
+      active: user.active
     });
     setErrors({});
     setShowModal(true);
@@ -65,7 +71,8 @@ export default function UserManagementPage() {
       return;
     }
 
-    if (!confirm(`Eliminare l'utente "${user.name}"?\n\nQuesta azione non può essere annullata.`)) {
+    const userName = `${user.first_name} ${user.last_name}`;
+    if (!confirm(`Disattivare l'utente "${userName}"?\n\nL'utente non potrà più accedere ma i suoi dati saranno preservati.`)) {
       return;
     }
 
@@ -73,15 +80,43 @@ export default function UserManagementPage() {
       await usersApi.delete(user.id);
       loadUsers();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante l\'eliminazione');
+      alert(error.response?.data?.error || 'Errore durante la disattivazione');
+    }
+  };
+
+  const handleToggleActive = async (user) => {
+    if (user.id === currentUser.id && user.active) {
+      alert('Non puoi disattivare il tuo account!');
+      return;
+    }
+
+    const userName = `${user.first_name} ${user.last_name}`;
+    const action = user.active ? 'disattivare' : 'riattivare';
+    if (!confirm(`Confermi di voler ${action} l'utente "${userName}"?`)) {
+      return;
+    }
+
+    try {
+      if (user.active) {
+        await usersApi.delete(user.id);
+      } else {
+        await usersApi.reactivate(user.id);
+      }
+      loadUsers();
+    } catch (error) {
+      alert(error.response?.data?.error || `Errore durante la ${action}zione`);
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Nome richiesto';
+    if (!formData.first_name.trim()) {
+      newErrors.first_name = 'Nome richiesto';
+    }
+
+    if (!formData.last_name.trim()) {
+      newErrors.last_name = 'Cognome richiesto';
     }
 
     if (!formData.email.trim()) {
@@ -113,9 +148,11 @@ export default function UserManagementPage() {
 
     try {
       const dataToSend = {
-        name: formData.name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         email: formData.email,
-        role: formData.role
+        role: formData.role,
+        active: formData.active
       };
 
       // Only include password if it's provided
@@ -200,6 +237,9 @@ export default function UserManagementPage() {
                     Ruolo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stato
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Registrato
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -211,17 +251,17 @@ export default function UserManagementPage() {
                 {users.map((user) => {
                   const RoleIcon = getRoleIcon(user.role);
                   return (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${!user.active ? 'opacity-60' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
                             <span className="text-white font-semibold text-sm">
-                              {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              {user.first_name[0]}{user.last_name[0]}
                             </span>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {user.name}
+                              {user.first_name} {user.last_name}
                               {user.id === currentUser.id && (
                                 <span className="ml-2 text-xs text-gray-500">(Tu)</span>
                               )}
@@ -238,21 +278,35 @@ export default function UserManagementPage() {
                           {getRoleLabel(user.role)}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${user.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {user.active ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
+                          {user.active ? 'Attivo' : 'Disattivato'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.created_at).toLocaleDateString('it-IT')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleEdit(user)}
-                          className="text-primary-600 hover:text-primary-900 mr-4"
+                          className="text-primary-600 hover:text-primary-900 mr-3"
                           title="Modifica utente"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => handleToggleActive(user)}
+                          className={`${user.active ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'} mr-3`}
+                          title={user.active ? 'Disattiva utente' : 'Attiva utente'}
+                          disabled={user.id === currentUser.id && user.active}
+                        >
+                          {user.active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        </button>
+                        <button
                           onClick={() => handleDelete(user)}
                           className="text-red-600 hover:text-red-900"
-                          title="Elimina utente"
+                          title="Disattiva utente"
                           disabled={user.id === currentUser.id}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -293,20 +347,37 @@ export default function UserManagementPage() {
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome completo
-                  </label>
-                  <input
-                    type="text"
-                    className={`input ${errors.name ? 'border-red-500' : ''}`}
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Es: Mario Rossi"
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                  )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nome
+                    </label>
+                    <input
+                      type="text"
+                      className={`input ${errors.first_name ? 'border-red-500' : ''}`}
+                      value={formData.first_name}
+                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                      placeholder="Es: Mario"
+                    />
+                    {errors.first_name && (
+                      <p className="text-red-500 text-xs mt-1">{errors.first_name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cognome
+                    </label>
+                    <input
+                      type="text"
+                      className={`input ${errors.last_name ? 'border-red-500' : ''}`}
+                      value={formData.last_name}
+                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                      placeholder="Es: Rossi"
+                    />
+                    {errors.last_name && (
+                      <p className="text-red-500 text-xs mt-1">{errors.last_name}</p>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -344,6 +415,21 @@ export default function UserManagementPage() {
                       : formData.role === 'direzione'
                       ? 'Può consultare progetti e inserire richieste/commenti'
                       : 'Accesso ai propri task e progetti assegnati'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={formData.active}
+                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    Utente attivo
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1 ml-6">
+                    Gli utenti disattivati non possono accedere e non vengono proposti per assegnazioni
                   </p>
                 </div>
 

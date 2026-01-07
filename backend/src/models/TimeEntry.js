@@ -64,7 +64,7 @@ class TimeEntry {
 
   static getByTask(task_id) {
     const stmt = db.prepare(`
-      SELECT te.*, u.name as user_name
+      SELECT te.*, (u.first_name || ' ' || u.last_name) as user_name
       FROM time_entries te
       LEFT JOIN users u ON te.user_id = u.id
       WHERE te.task_id = ?
@@ -100,7 +100,7 @@ class TimeEntry {
 
   static getAll(filters = {}) {
     let query = `
-      SELECT te.*, t.title as task_title, p.name as project_name, u.name as user_name
+      SELECT te.*, t.title as task_title, p.name as project_name, (u.first_name || ' ' || u.last_name) as user_name
       FROM time_entries te
       LEFT JOIN tasks t ON te.task_id = t.id
       LEFT JOIN projects p ON t.project_id = p.id
@@ -298,7 +298,7 @@ class TimeEntry {
     let query = `
       SELECT
         u.id as user_id,
-        u.name as user_name,
+        (u.first_name || ' ' || u.last_name) as user_name,
         COUNT(*) as entry_count,
         COALESCE(SUM(te.duration), 0) as total_seconds
       FROM time_entries te

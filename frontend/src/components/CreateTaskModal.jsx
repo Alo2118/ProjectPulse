@@ -37,7 +37,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
 
   const loadUsers = async () => {
     try {
-      const response = await usersApi.getAll();
+      const response = await usersApi.getAll({ active: true });
       setUsers(response.data.filter(u => u.role === 'dipendente'));
     } catch (error) {
       console.error('Error loading users:', error);
