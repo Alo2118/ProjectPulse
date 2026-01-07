@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcryptjs from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -170,6 +171,36 @@ const createTables = () => {
   console.log('✅ Database tables created successfully');
 };
 
+// Create admin user if it doesn't exist
+const ensureAdminUser = () => {
+  try {
+    const checkStmt = db.prepare('SELECT * FROM users WHERE email = ?');
+    const existingUser = checkStmt.get('nicola.mussolin@mikai.it');
+
+    if (existingUser) {
+      // User exists, ensure they have admin role
+      if (existingUser.role !== 'amministratore') {
+        const updateStmt = db.prepare('UPDATE users SET role = ? WHERE email = ?');
+        updateStmt.run('amministratore', 'nicola.mussolin@mikai.it');
+        console.log('✅ Updated nicola.mussolin@mikai.it to amministratore role');
+      }
+    } else {
+      // Create admin user
+      const hashedPassword = bcryptjs.hashSync('password123', 10);
+      const insertStmt = db.prepare(`
+        INSERT INTO users (email, password, name, role, created_at)
+        VALUES (?, ?, ?, ?, datetime('now', '+1 hour'))
+      `);
+      insertStmt.run('nicola.mussolin@mikai.it', hashedPassword, 'Nicola Mussolin', 'amministratore');
+      console.log('✅ Created administrator user: nicola.mussolin@mikai.it');
+      console.log('   Password: password123');
+    }
+  } catch (error) {
+    console.error('❌ Error ensuring admin user:', error.message);
+  }
+};
+
 createTables();
+ensureAdminUser();
 
 export default db;
