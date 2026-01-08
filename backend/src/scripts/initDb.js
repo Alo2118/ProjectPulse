@@ -10,7 +10,8 @@ try {
   const amministratore = User.create({
     email: 'admin@orthotech.com',
     password: 'password123',
-    name: 'Admin Sistema',
+    first_name: 'Admin',
+    last_name: 'Sistema',
     role: 'amministratore'
   });
   console.log('✅ Created amministratore user');
@@ -18,7 +19,8 @@ try {
   const direzione = User.create({
     email: 'direzione@orthotech.com',
     password: 'password123',
-    name: 'Dr. Laura Bianchi',
+    first_name: 'Laura',
+    last_name: 'Bianchi',
     role: 'direzione'
   });
   console.log('✅ Created direzione user');
@@ -26,7 +28,8 @@ try {
   const dipendente = User.create({
     email: 'ingegnere@orthotech.com',
     password: 'password123',
-    name: 'Ing. Marco Ferretti',
+    first_name: 'Marco',
+    last_name: 'Ferretti',
     role: 'dipendente'
   });
   console.log('✅ Created dipendente user');
