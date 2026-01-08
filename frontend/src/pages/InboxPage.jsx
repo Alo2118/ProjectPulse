@@ -3,8 +3,12 @@ import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import {
+  Card, Button, Badge, StatusBadge, PriorityBadge,
+  StatCard, StatCardGrid, Modal, ModalFooter
+} from '../components/ui';
+import {
   Inbox, Plus, Filter, Search, AlertCircle, CheckCircle, X,
-  Clock, ArrowRight, FileText, FolderPlus, ListTodo
+  Clock, ArrowRight, FileText, FolderPlus, ListTodo, Edit
 } from 'lucide-react';
 
 const InboxPage = () => {
@@ -214,32 +218,7 @@ const InboxPage = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      new: { label: 'Nuova', className: 'bg-blue-100 text-blue-800' },
-      reviewing: { label: 'In Valutazione', className: 'bg-yellow-100 text-yellow-800' },
-      approved: { label: 'Approvata', className: 'bg-green-100 text-green-800' },
-      rejected: { label: 'Rifiutata', className: 'bg-red-100 text-red-800' },
-      converted_to_task: { label: 'Convertita in Task', className: 'bg-purple-100 text-purple-800' },
-      converted_to_project: { label: 'Convertita in Progetto', className: 'bg-indigo-100 text-indigo-800' },
-      archived: { label: 'Archiviata', className: 'bg-gray-100 text-gray-800' }
-    };
-    const badge = badges[status] || badges.new;
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.className}`}>{badge.label}</span>;
-  };
-
-  const getPriorityBadge = (priority) => {
-    const badges = {
-      urgent: { label: 'Urgente', className: 'bg-red-100 text-red-800' },
-      high: { label: 'Alta', className: 'bg-orange-100 text-orange-800' },
-      normal: { label: 'Normale', className: 'bg-blue-100 text-blue-800' },
-      low: { label: 'Bassa', className: 'bg-gray-100 text-gray-800' }
-    };
-    const badge = badges[priority] || badges.normal;
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.className}`}>{badge.label}</span>;
-  };
-
-  const getTypeBadge = (type) => {
+  const getTypeName = (type) => {
     const types = {
       bug: 'Bug',
       feature: 'Feature',
@@ -252,7 +231,7 @@ const InboxPage = () => {
     return types[type] || type;
   };
 
-  const getSourceBadge = (source) => {
+  const getSourceName = (source) => {
     const sources = {
       customer: 'Cliente',
       internal: 'Interno',
@@ -291,34 +270,28 @@ const InboxPage = () => {
               Gestisci tutte le richieste e input ricevuti quotidianamente
             </p>
           </div>
-          <button
-            onClick={() => setShowNewRequestModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
+          <Button onClick={() => setShowNewRequestModal(true)}>
             <Plus className="w-5 h-5" />
             Nuova Richiesta
-          </button>
+          </Button>
         </div>
 
         {/* Stats */}
         {stats && stats.byStatus && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatCardGrid columns={4} className="mb-6">
             {stats.byStatus.map(stat => (
-              <div key={stat.status} className="bg-white p-4 rounded-lg shadow">
-                <div className="text-2xl font-bold">{stat.count}</div>
-                <div className="text-sm text-gray-600">{getStatusBadge(stat.status)}</div>
-                {stat.avg_resolution_hours && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    Media: {Math.round(stat.avg_resolution_hours)}h
-                  </div>
-                )}
-              </div>
+              <StatCard
+                key={stat.status}
+                title={<StatusBadge status={stat.status} />}
+                value={stat.count}
+                subtitle={stat.avg_resolution_hours ? `Media: ${Math.round(stat.avg_resolution_hours)}h` : null}
+              />
             ))}
-          </div>
+          </StatCardGrid>
         )}
 
         {/* Filters */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <Card className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="w-5 h-5" />
             <span className="font-semibold">Filtri</span>
@@ -385,29 +358,29 @@ const InboxPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Requests List */}
       <div className="space-y-4">
         {requests.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg shadow text-center text-gray-500">
+          <Card className="text-center text-gray-500" padding="lg">
             Nessuna richiesta trovata
-          </div>
+          </Card>
         ) : (
           requests.map(request => (
-            <div key={request.id} className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+            <Card key={request.id} hover padding="lg">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-lg font-semibold">{request.title}</h3>
-                    {getStatusBadge(request.status)}
-                    {getPriorityBadge(request.priority)}
+                    <StatusBadge status={request.status} />
+                    <PriorityBadge priority={request.priority} />
                   </div>
                   <p className="text-gray-700 mb-3">{request.description}</p>
                   <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <span><strong>Tipo:</strong> {getTypeBadge(request.type)}</span>
-                    <span><strong>Provenienza:</strong> {getSourceBadge(request.source)}</span>
+                    <span><strong>Tipo:</strong> {getTypeName(request.type)}</span>
+                    <span><strong>Provenienza:</strong> {getSourceName(request.source)}</span>
                     {request.source_contact && <span><strong>Contatto:</strong> {request.source_contact}</span>}
                     {request.assigned_to_name && <span><strong>Assegnato a:</strong> {request.assigned_to_name}</span>}
                     {request.project_name && <span><strong>Progetto:</strong> {request.project_name}</span>}
@@ -423,77 +396,85 @@ const InboxPage = () => {
                 <div className="flex flex-col gap-2 ml-4">
                   {(request.status === 'new' || request.status === 'reviewing') && (
                     <>
-                      <button
+                      <Button
+                        variant="success"
+                        size="sm"
                         onClick={() => handleReview(request, 'approved')}
-                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Approva
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
                         onClick={() => handleReview(request, 'rejected')}
-                        className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
                       >
                         <X className="w-4 h-4" />
                         Rifiuta
-                      </button>
+                      </Button>
                     </>
                   )}
                   {request.status === 'approved' && (
                     <>
-                      <button
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => {
                           setSelectedRequest(request);
                           setShowConvertTaskModal(true);
                         }}
-                        className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 flex items-center gap-1"
                       >
                         <ListTodo className="w-4 h-4" />
                         → Task
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => {
                           setSelectedRequest(request);
                           setShowConvertProjectModal(true);
                         }}
-                        className="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 flex items-center gap-1"
                       >
                         <FolderPlus className="w-4 h-4" />
                         → Progetto
-                      </button>
+                      </Button>
                     </>
                   )}
                   {/* Edit button - available for all non-converted requests */}
                   {!['converted_to_task', 'converted_to_project'].includes(request.status) && (
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={() => handleEdit(request)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
                     >
-                      <FileText className="w-4 h-4" />
+                      <Edit className="w-4 h-4" />
                       Modifica
-                    </button>
+                    </Button>
                   )}
                   {user?.role === 'amministratore' && (
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => handleDelete(request.id)}
-                      className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
                     >
                       Elimina
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           ))
         )}
       </div>
 
       {/* New Request Modal */}
-      {showNewRequestModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Nuova Richiesta</h2>
-            <form onSubmit={handleCreateRequest}>
+      <Modal
+        isOpen={showNewRequestModal}
+        onClose={() => setShowNewRequestModal(false)}
+        title="Nuova Richiesta"
+        size="lg"
+      >
+        <form onSubmit={handleCreateRequest}>
               <div className="space-y-4">
                 <div>
                   <label className="block font-medium mb-1">Titolo *</label>
@@ -615,32 +596,32 @@ const InboxPage = () => {
                   />
                 </div>
               </div>
-              <div className="flex gap-4 mt-6">
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
+              <div className="flex gap-3 mt-6">
+                <Button type="submit" fullWidth>
                   Crea Richiesta
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setShowNewRequestModal(false)}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
                 >
                   Annulla
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Edit Request Modal */}
-      {showEditRequestModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Modifica Richiesta</h2>
-            <form onSubmit={handleUpdateRequest}>
+      <Modal
+        isOpen={showEditRequestModal && selectedRequest}
+        onClose={() => {
+          setShowEditRequestModal(false);
+          setSelectedRequest(null);
+        }}
+        title="Modifica Richiesta"
+        size="lg"
+      >
+        <form onSubmit={handleUpdateRequest}>
               <div className="space-y-4">
                 <div>
                   <label className="block font-medium mb-1">Titolo *</label>
@@ -762,35 +743,35 @@ const InboxPage = () => {
                   />
                 </div>
               </div>
-              <div className="flex gap-4 mt-6">
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
+              <div className="flex gap-3 mt-6">
+                <Button type="submit" fullWidth>
                   Salva Modifiche
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => {
                     setShowEditRequestModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
                 >
                   Annulla
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Convert to Task Modal */}
-      {showConvertTaskModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
-            <h2 className="text-2xl font-bold mb-4">Converti in Task</h2>
-            <form onSubmit={handleConvertToTask}>
+      <Modal
+        isOpen={showConvertTaskModal && selectedRequest}
+        onClose={() => {
+          setShowConvertTaskModal(false);
+          setSelectedRequest(null);
+        }}
+        title="Converti in Task"
+        size="md"
+      >
+        <form onSubmit={handleConvertToTask}>
               <div className="space-y-4">
                 <div>
                   <label className="block font-medium mb-1">Progetto</label>
@@ -816,32 +797,35 @@ const InboxPage = () => {
                   <input type="date" name="deadline" className="w-full p-2 border rounded" defaultValue={selectedRequest.due_date || ''} />
                 </div>
               </div>
-              <div className="flex gap-4 mt-6">
-                <button type="submit" className="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+              <div className="flex gap-3 mt-6">
+                <Button type="submit" fullWidth>
                   Converti in Task
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => {
                     setShowConvertTaskModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
                 >
                   Annulla
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Convert to Project Modal */}
-      {showConvertProjectModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
-            <h2 className="text-2xl font-bold mb-4">Converti in Progetto</h2>
-            <form onSubmit={handleConvertToProject}>
+      <Modal
+        isOpen={showConvertProjectModal && selectedRequest}
+        onClose={() => {
+          setShowConvertProjectModal(false);
+          setSelectedRequest(null);
+        }}
+        title="Converti in Progetto"
+        size="md"
+      >
+        <form onSubmit={handleConvertToProject}>
               <div className="space-y-4">
                 <div>
                   <label className="block font-medium mb-1">Nome Progetto *</label>
@@ -864,25 +848,23 @@ const InboxPage = () => {
                   />
                 </div>
               </div>
-              <div className="flex gap-4 mt-6">
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+              <div className="flex gap-3 mt-6">
+                <Button type="submit" fullWidth>
                   Converti in Progetto
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => {
                     setShowConvertProjectModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
                 >
                   Annulla
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
       </div>
     </>
   );
