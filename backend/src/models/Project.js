@@ -11,7 +11,7 @@ class Project {
 
   static findById(id) {
     const stmt = db.prepare(`
-      SELECT p.*, u.name as creator_name
+      SELECT p.*, (u.first_name || ' ' || u.last_name) as creator_name
       FROM projects p
       LEFT JOIN users u ON p.created_by = u.id
       WHERE p.id = ?
@@ -21,8 +21,8 @@ class Project {
 
   static getAll(includeArchived = false) {
     const query = includeArchived
-      ? 'SELECT p.*, u.name as creator_name FROM projects p LEFT JOIN users u ON p.created_by = u.id ORDER BY p.created_at DESC'
-      : 'SELECT p.*, u.name as creator_name FROM projects p LEFT JOIN users u ON p.created_by = u.id WHERE p.archived = 0 ORDER BY p.created_at DESC';
+      ? 'SELECT p.*, (u.first_name || \' \' || u.last_name) as creator_name FROM projects p LEFT JOIN users u ON p.created_by = u.id ORDER BY p.created_at DESC'
+      : 'SELECT p.*, (u.first_name || \' \' || u.last_name) as creator_name FROM projects p LEFT JOIN users u ON p.created_by = u.id WHERE p.archived = 0 ORDER BY p.created_at DESC';
     const stmt = db.prepare(query);
     return stmt.all();
   }
@@ -61,7 +61,7 @@ class Project {
     const stmt = db.prepare(`
       SELECT
         p.*,
-        u.name as creator_name,
+        (u.first_name || ' ' || u.last_name) as creator_name,
         COUNT(DISTINCT t.id) as task_count,
         COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END) as completed_count
       FROM projects p

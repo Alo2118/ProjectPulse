@@ -320,7 +320,7 @@ class TimeEntry {
       values.push(filters.to_date);
     }
 
-    query += ' GROUP BY u.id, u.name ORDER BY total_seconds DESC';
+    query += ' GROUP BY u.id, (u.first_name || \' \' || u.last_name) ORDER BY total_seconds DESC';
 
     const stmt = db.prepare(query);
     return stmt.all(...values);
