@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
 import {
   Inbox, Plus, Filter, Search, AlertCircle, CheckCircle, X,
   Clock, ArrowRight, FileText, FolderPlus, ListTodo
@@ -74,7 +75,16 @@ const InboxPage = () => {
   const handleCreateRequest = async (e) => {
     e.preventDefault();
     try {
-      await requestsApi.create(newRequestData);
+      // Convert empty strings to null for foreign key fields
+      const requestData = {
+        ...newRequestData,
+        project_id: newRequestData.project_id || null,
+        assigned_to: newRequestData.assigned_to || null,
+        source_contact: newRequestData.source_contact || null,
+        due_date: newRequestData.due_date || null
+      };
+
+      await requestsApi.create(requestData);
       alert('Richiesta creata con successo!');
       setShowNewRequestModal(false);
       setNewRequestData({
@@ -205,15 +215,20 @@ const InboxPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Caricamento...</div>
-      </div>
+      <>
+        <Navbar />
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-lg">Caricamento...</div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
+    <>
+      <Navbar />
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -657,7 +672,8 @@ const InboxPage = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
