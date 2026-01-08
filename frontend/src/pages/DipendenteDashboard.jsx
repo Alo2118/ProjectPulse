@@ -29,7 +29,9 @@ export default function DipendenteDashboard() {
         tasksApi.getAll({ assigned_to: user.id }),
         projectsApi.getAll()
       ]);
-      setTasks(tasksRes.data);
+      // Handle paginated response from tasks API
+      const tasksData = tasksRes.data.data || tasksRes.data;
+      setTasks(tasksData);
       setProjects(projectsRes.data);
     } catch (error) {
       console.error('Error loading data:', error);

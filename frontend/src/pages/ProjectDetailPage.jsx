@@ -37,7 +37,9 @@ export default function ProjectDetailPage() {
         milestonesApi.getByProject(id)
       ]);
       setProject(projectRes.data);
-      setTasks(tasksRes.data);
+      // Handle paginated response from tasks API
+      const tasksData = tasksRes.data.data || tasksRes.data;
+      setTasks(tasksData);
       setMilestones(milestonesRes.data);
     } catch (error) {
       console.error('Error loading project:', error);

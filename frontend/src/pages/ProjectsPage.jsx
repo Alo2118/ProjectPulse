@@ -26,7 +26,8 @@ export default function ProjectsPage() {
       ]);
 
       const projects = projectsRes.data;
-      const tasks = tasksRes.data;
+      // Handle paginated response from tasks API
+      const tasks = tasksRes.data.data || tasksRes.data;
 
       // Calculate stats for each project
       const stats = {};

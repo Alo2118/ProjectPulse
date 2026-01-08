@@ -18,8 +18,9 @@ export default function CalendarPage() {
     setLoading(true);
     try {
       const response = await tasksApi.getAll();
-      // Filter only tasks with deadlines
-      setTasks(response.data.filter(t => t.deadline));
+      // Handle paginated response and filter only tasks with deadlines
+      const tasksData = response.data.data || response.data;
+      setTasks(tasksData.filter(t => t.deadline));
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {

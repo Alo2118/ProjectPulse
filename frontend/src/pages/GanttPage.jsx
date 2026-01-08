@@ -29,7 +29,9 @@ export default function GanttPage() {
       ]);
 
       setProjects(projectsRes.data);
-      setAllTasks(tasksRes.data);
+      // Handle paginated response from tasks API
+      const tasksData = tasksRes.data.data || tasksRes.data;
+      setAllTasks(tasksData);
 
       // Load milestones for all projects
       const milestonesPromises = projectsRes.data.map(p =>

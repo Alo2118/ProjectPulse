@@ -464,7 +464,9 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
   const loadTasks = async () => {
     try {
       const response = await tasksApi.getAll();
-      setTasks(response.data);
+      // Handle paginated response from tasks API
+      const tasksData = response.data.data || response.data;
+      setTasks(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
     }
