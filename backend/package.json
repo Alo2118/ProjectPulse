@@ -8,7 +8,10 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "init-db": "node src/scripts/initDb.js",
-    "create-admin": "node src/scripts/createAdmin.js"
+    "create-admin": "node src/scripts/createAdmin.js",
+    "inspect-db": "node src/scripts/inspectDb.js",
+    "query-db": "node src/scripts/queryDb.js",
+    "manage-db": "node src/scripts/manageDb.js"
   },
   "keywords": ["task-management", "api"],
   "author": "",
