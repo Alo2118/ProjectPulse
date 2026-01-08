@@ -96,4 +96,17 @@ export const usersApi = {
   reactivate: (id) => api.post(`/users/${id}/reactivate`),
 };
 
+// Requests (Inbox)
+export const requestsApi = {
+  getAll: (params) => api.get('/requests', { params }),
+  getById: (id) => api.get(`/requests/${id}`),
+  create: (data) => api.post('/requests', data),
+  update: (id, data) => api.put(`/requests/${id}`, data),
+  review: (id, data) => api.post(`/requests/${id}/review`, data),
+  convertToTask: (id, data) => api.post(`/requests/${id}/convert-to-task`, data),
+  convertToProject: (id, data) => api.post(`/requests/${id}/convert-to-project`, data),
+  delete: (id) => api.delete(`/requests/${id}`),
+  getStats: () => api.get('/requests/stats'),
+};
+
 export default api;

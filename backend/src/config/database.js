@@ -199,7 +199,95 @@ const createTables = () => {
     )
   `);
 
+  // Requests table (Inbox system)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('bug', 'feature', 'question', 'technical_issue', 'customer_complaint', 'internal_request', 'other')),
+      source TEXT NOT NULL CHECK(source IN ('customer', 'internal', 'support', 'management', 'sales', 'production')),
+      source_contact TEXT,
+      status TEXT DEFAULT 'new' CHECK(status IN ('new', 'reviewing', 'approved', 'rejected', 'converted_to_task', 'converted_to_project', 'archived')),
+      priority TEXT DEFAULT 'normal' CHECK(priority IN ('low', 'normal', 'high', 'urgent')),
+      project_id INTEGER,
+      converted_to_task_id INTEGER,
+      converted_to_project_id INTEGER,
+      assigned_to INTEGER,
+      reviewed_by INTEGER,
+      created_by INTEGER NOT NULL,
+      received_at DATETIME DEFAULT (datetime('now', '+1 hour')),
+      reviewed_at DATETIME,
+      resolved_at DATETIME,
+      due_date DATE,
+      tags TEXT,
+      notes TEXT,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+      FOREIGN KEY (assigned_to) REFERENCES users(id),
+      FOREIGN KEY (reviewed_by) REFERENCES users(id),
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (converted_to_task_id) REFERENCES tasks(id) ON DELETE SET NULL,
+      FOREIGN KEY (converted_to_project_id) REFERENCES projects(id) ON DELETE SET NULL
+    )
+  `);
+
   console.log('✅ Database tables created successfully');
+};
+
+// Create performance indexes
+const createIndexes = () => {
+  try {
+    // Users indexes
+    db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_users_active ON users(active)');
+
+    // Projects indexes
+    db.exec('CREATE INDEX IF NOT EXISTS idx_projects_created_by ON projects(created_by)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_projects_archived ON projects(archived)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at)');
+
+    // Milestones indexes
+    db.exec('CREATE INDEX IF NOT EXISTS idx_milestones_project_id ON milestones(project_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_milestones_status ON milestones(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_milestones_due_date ON milestones(due_date)');
+
+    // Tasks indexes (CRITICAL for performance)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_milestone_id ON tasks(milestone_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON tasks(created_by)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at)');
+
+    // Time entries indexes (CRITICAL for performance)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_task_id ON time_entries(task_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_user_id ON time_entries(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_started_at ON time_entries(started_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_ended_at ON time_entries(ended_at)');
+
+    // Comments indexes
+    db.exec('CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at)');
+
+    // Requests indexes (for inbox system)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_priority ON requests(priority)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_type ON requests(type)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_source ON requests(source)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_assigned_to ON requests(assigned_to)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_created_by ON requests(created_by)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_project_id ON requests(project_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_received_at ON requests(received_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_due_date ON requests(due_date)');
+
+    console.log('✅ Database indexes created successfully');
+  } catch (error) {
+    console.error('❌ Error creating indexes:', error.message);
+  }
 };
 
 // Create admin user if it doesn't exist
@@ -232,6 +320,7 @@ const ensureAdminUser = () => {
 };
 
 createTables();
+createIndexes();
 ensureAdminUser();
 
 export default db;

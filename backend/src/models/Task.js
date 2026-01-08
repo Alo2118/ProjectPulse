@@ -74,8 +74,39 @@ class Task {
 
     query += ' ORDER BY t.created_at DESC';
 
+    // Add pagination
+    const limit = filters.limit || 100;
+    const offset = filters.offset || 0;
+    query += ' LIMIT ? OFFSET ?';
+    values.push(limit, offset);
+
     const stmt = db.prepare(query);
     return stmt.all(...values);
+  }
+
+  static getCount(filters = {}) {
+    let query = 'SELECT COUNT(*) as count FROM tasks t WHERE 1=1';
+    const values = [];
+
+    if (filters.assigned_to) {
+      query += ' AND t.assigned_to = ?';
+      values.push(filters.assigned_to);
+    }
+    if (filters.status) {
+      query += ' AND t.status = ?';
+      values.push(filters.status);
+    }
+    if (filters.project_id) {
+      query += ' AND t.project_id = ?';
+      values.push(filters.project_id);
+    }
+    if (filters.milestone_id) {
+      query += ' AND t.milestone_id = ?';
+      values.push(filters.milestone_id);
+    }
+
+    const stmt = db.prepare(query);
+    return stmt.get(...values).count;
   }
 
   static update(id, data) {

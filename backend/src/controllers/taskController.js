@@ -28,15 +28,28 @@ export const createTask = async (req, res) => {
 
 export const getTasks = async (req, res) => {
   try {
-    const { assigned_to, status, project_id } = req.query;
+    const { assigned_to, status, project_id, milestone_id, limit, offset } = req.query;
 
     const filters = {};
     if (assigned_to) filters.assigned_to = parseInt(assigned_to);
     if (status) filters.status = status;
     if (project_id) filters.project_id = parseInt(project_id);
+    if (milestone_id) filters.milestone_id = parseInt(milestone_id);
+    if (limit) filters.limit = parseInt(limit);
+    if (offset) filters.offset = parseInt(offset);
 
     const tasks = Task.getAll(filters);
-    res.json(tasks);
+    const total = Task.getCount(filters);
+
+    res.json({
+      data: tasks,
+      pagination: {
+        total,
+        limit: filters.limit || 100,
+        offset: filters.offset || 0,
+        hasMore: (filters.offset || 0) + (filters.limit || 100) < total
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

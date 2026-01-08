@@ -9,6 +9,7 @@ import timeRoutes from './routes/time.js';
 import commentRoutes from './routes/comments.js';
 import milestoneRoutes from './routes/milestones.js';
 import userRoutes from './routes/users.js';
+import requestRoutes from './routes/requests.js';
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +49,7 @@ app.use('/api/time', timeRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/milestones', milestoneRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/requests', requestRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

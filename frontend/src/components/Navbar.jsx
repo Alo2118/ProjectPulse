@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, User, LayoutDashboard, FolderKanban, BarChart3, Calendar, Users, Clock } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, FolderKanban, BarChart3, Calendar, Users, Clock, Inbox } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -52,6 +52,17 @@ export default function Navbar() {
               >
                 <Calendar className="w-4 h-4" />
                 Calendario
+              </Link>
+              <Link
+                to="/inbox"
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive('/inbox')
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Inbox className="w-4 h-4" />
+                Inbox
               </Link>
               {user?.role !== 'direzione' && (
                 <Link

@@ -9,6 +9,7 @@ import GanttPage from './pages/GanttPage';
 import CalendarPage from './pages/CalendarPage';
 import UserManagementPage from './pages/UserManagementPage';
 import TimeTrackingPage from './pages/TimeTrackingPage';
+import InboxPage from './pages/InboxPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -85,6 +86,14 @@ function App() {
             element={
               <PrivateRoute>
                 <TimeTrackingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/inbox"
+            element={
+              <PrivateRoute>
+                <InboxPage />
               </PrivateRoute>
             }
           />
