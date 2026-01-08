@@ -23,12 +23,25 @@ const InboxPage = () => {
 
   // Modals
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
+  const [showEditRequestModal, setShowEditRequestModal] = useState(false);
   const [showConvertTaskModal, setShowConvertTaskModal] = useState(false);
   const [showConvertProjectModal, setShowConvertProjectModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   // Form states
   const [newRequestData, setNewRequestData] = useState({
+    title: '',
+    description: '',
+    type: 'question',
+    source: 'internal',
+    source_contact: '',
+    priority: 'normal',
+    project_id: '',
+    assigned_to: '',
+    due_date: ''
+  });
+
+  const [editRequestData, setEditRequestData] = useState({
     title: '',
     description: '',
     type: 'question',
@@ -160,6 +173,44 @@ const InboxPage = () => {
       loadData();
     } catch (error) {
       alert('Errore: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleEdit = (request) => {
+    setSelectedRequest(request);
+    setEditRequestData({
+      title: request.title || '',
+      description: request.description || '',
+      type: request.type || 'question',
+      source: request.source || 'internal',
+      source_contact: request.source_contact || '',
+      priority: request.priority || 'normal',
+      project_id: request.project_id || '',
+      assigned_to: request.assigned_to || '',
+      due_date: request.due_date || ''
+    });
+    setShowEditRequestModal(true);
+  };
+
+  const handleUpdateRequest = async (e) => {
+    e.preventDefault();
+    try {
+      // Convert empty strings to null for foreign key fields
+      const requestData = {
+        ...editRequestData,
+        project_id: editRequestData.project_id || null,
+        assigned_to: editRequestData.assigned_to || null,
+        source_contact: editRequestData.source_contact || null,
+        due_date: editRequestData.due_date || null
+      };
+
+      await requestsApi.update(selectedRequest.id, requestData);
+      alert('Richiesta aggiornata con successo!');
+      setShowEditRequestModal(false);
+      setSelectedRequest(null);
+      loadData();
+    } catch (error) {
+      alert('Errore nell\'aggiornamento: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -412,6 +463,16 @@ const InboxPage = () => {
                       </button>
                     </>
                   )}
+                  {/* Edit button - available for all non-converted requests */}
+                  {!['converted_to_task', 'converted_to_project'].includes(request.status) && (
+                    <button
+                      onClick={() => handleEdit(request)}
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Modifica
+                    </button>
+                  )}
                   {user?.role === 'amministratore' && (
                     <button
                       onClick={() => handleDelete(request.id)}
@@ -564,6 +625,156 @@ const InboxPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowNewRequestModal(false)}
+                  className="px-4 py-2 border rounded hover:bg-gray-100"
+                >
+                  Annulla
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Request Modal */}
+      {showEditRequestModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Modifica Richiesta</h2>
+            <form onSubmit={handleUpdateRequest}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block font-medium mb-1">Titolo *</label>
+                  <input
+                    type="text"
+                    value={editRequestData.title}
+                    onChange={(e) => setEditRequestData({ ...editRequestData, title: e.target.value })}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Descrizione *</label>
+                  <textarea
+                    value={editRequestData.description}
+                    onChange={(e) => setEditRequestData({ ...editRequestData, description: e.target.value })}
+                    className="w-full p-2 border rounded"
+                    rows="4"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium mb-1">Tipo *</label>
+                    <select
+                      value={editRequestData.type}
+                      onChange={(e) => setEditRequestData({ ...editRequestData, type: e.target.value })}
+                      className="w-full p-2 border rounded"
+                      required
+                    >
+                      <option value="question">Domanda</option>
+                      <option value="bug">Bug</option>
+                      <option value="feature">Feature</option>
+                      <option value="technical_issue">Problema Tecnico</option>
+                      <option value="customer_complaint">Reclamo Cliente</option>
+                      <option value="internal_request">Richiesta Interna</option>
+                      <option value="other">Altro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-1">Provenienza *</label>
+                    <select
+                      value={editRequestData.source}
+                      onChange={(e) => setEditRequestData({ ...editRequestData, source: e.target.value })}
+                      className="w-full p-2 border rounded"
+                      required
+                    >
+                      <option value="internal">Interno</option>
+                      <option value="customer">Cliente</option>
+                      <option value="support">Supporto</option>
+                      <option value="management">Direzione</option>
+                      <option value="sales">Commerciale</option>
+                      <option value="production">Produzione</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium mb-1">Priorità</label>
+                    <select
+                      value={editRequestData.priority}
+                      onChange={(e) => setEditRequestData({ ...editRequestData, priority: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="low">Bassa</option>
+                      <option value="normal">Normale</option>
+                      <option value="high">Alta</option>
+                      <option value="urgent">Urgente</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-1">Contatto Fonte</label>
+                    <input
+                      type="text"
+                      value={editRequestData.source_contact}
+                      onChange={(e) => setEditRequestData({ ...editRequestData, source_contact: e.target.value })}
+                      className="w-full p-2 border rounded"
+                      placeholder="Nome/Email/Telefono"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium mb-1">Progetto Collegato</label>
+                    <select
+                      value={editRequestData.project_id}
+                      onChange={(e) => setEditRequestData({ ...editRequestData, project_id: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="">Nessuno</option>
+                      {projects.map(project => (
+                        <option key={project.id} value={project.id}>{project.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-1">Assegnato a</label>
+                    <select
+                      value={editRequestData.assigned_to}
+                      onChange={(e) => setEditRequestData({ ...editRequestData, assigned_to: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="">Nessuno</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.first_name} {u.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Scadenza</label>
+                  <input
+                    type="date"
+                    value={editRequestData.due_date}
+                    onChange={(e) => setEditRequestData({ ...editRequestData, due_date: e.target.value })}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4 mt-6">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Salva Modifiche
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditRequestModal(false);
+                    setSelectedRequest(null);
+                  }}
                   className="px-4 py-2 border rounded hover:bg-gray-100"
                 >
                   Annulla
