@@ -4,6 +4,7 @@ import { tasksApi, projectsApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
 import TaskModal from '../components/TaskModal';
+import { Card, StatCard, StatCardGrid } from '../components/ui';
 
 export default function DirezioneDashboard() {
   const [tasks, setTasks] = useState([]);
@@ -129,62 +130,62 @@ export default function DirezioneDashboard() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            <div className="card text-center hover:shadow-lg transition-shadow">
-              <Briefcase className="w-6 h-6 text-gray-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <div className="text-sm text-gray-500">Task Totali</div>
-            </div>
-
-            <div className="card text-center bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow">
-              <div className="text-2xl font-bold text-blue-700">{stats.in_progress}</div>
-              <div className="text-sm text-blue-600">In Corso</div>
-            </div>
-
-            <div className="card text-center bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-shadow">
-              <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-red-700">{stats.blocked}</div>
-              <div className="text-sm text-red-600">Bloccati</div>
-            </div>
-
-            <div className="card text-center bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-lg transition-shadow">
-              <HelpCircle className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-yellow-700">{stats.waiting}</div>
-              <div className="text-sm text-yellow-600">In Attesa</div>
-            </div>
-
-            <div className="card text-center bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow">
-              <CheckCircle className="w-6 h-6 text-green-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-green-700">{stats.completed}</div>
-              <div className="text-sm text-green-600">Completati</div>
-            </div>
-
-            <div className="card text-center hover:shadow-lg transition-shadow">
-              <Clock className="w-6 h-6 text-gray-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900">{formatTime(stats.totalTime)}</div>
-              <div className="text-sm text-gray-500">Tempo Totale</div>
-            </div>
+            <StatCard
+              title="Task Totali"
+              value={stats.total}
+              icon={Briefcase}
+              variant="default"
+            />
+            <StatCard
+              title="In Corso"
+              value={stats.in_progress}
+              variant="flat"
+              iconBg="bg-blue-100"
+              iconColor="text-blue-600"
+            />
+            <StatCard
+              title="Bloccati"
+              value={stats.blocked}
+              icon={AlertCircle}
+              variant="flat"
+              iconBg="bg-red-100"
+              iconColor="text-red-600"
+            />
+            <StatCard
+              title="In Attesa"
+              value={stats.waiting}
+              icon={HelpCircle}
+              variant="flat"
+              iconBg="bg-yellow-100"
+              iconColor="text-yellow-600"
+            />
+            <StatCard
+              title="Completati"
+              value={stats.completed}
+              icon={CheckCircle}
+              variant="flat"
+              iconBg="bg-green-100"
+              iconColor="text-green-600"
+            />
+            <StatCard
+              title="Tempo Totale"
+              value={formatTime(stats.totalTime)}
+              icon={Clock}
+              variant="default"
+            />
           </div>
 
           {/* Advanced Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {/* Average Completion Time */}
-            <div className="card bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                <Clock className="w-5 h-5 text-indigo-600" />
-                <span className="text-xs text-indigo-600 font-medium">MEDIA</span>
-              </div>
-              <div className="text-2xl font-bold text-indigo-900">
-                {metrics.avgCompletionTime.toFixed(1)}h
-              </div>
-              <div className="text-sm text-indigo-700">Tempo medio completamento</div>
-            </div>
-
-            {/* Overdue Tasks */}
-            <div className={`card border-2 hover:shadow-lg transition-shadow ${
-              metrics.overdueTasks > 0
-                ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-300'
-                : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
-            }`}>
+          <StatCardGrid columns={4} className="mb-8">
+            <StatCard
+              title="Tempo medio completamento"
+              value={`${metrics.avgCompletionTime.toFixed(1)}h`}
+              icon={Clock}
+              variant="flat"
+              iconBg="bg-indigo-100"
+              iconColor="text-indigo-600"
+            />
+            <Card className={metrics.overdueTasks > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}>
               <div className="flex items-center justify-between mb-2">
                 <Calendar className={`w-5 h-5 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
                 <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -200,39 +201,28 @@ export default function DirezioneDashboard() {
                   : 'Nessun ritardo'
                 }
               </div>
-            </div>
-
-            {/* Weekly Trend */}
-            <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                {metrics.weeklyTrend >= 0 ? (
-                  <TrendingUp className="w-5 h-5 text-purple-600" />
-                ) : (
-                  <TrendingDown className="w-5 h-5 text-purple-600" />
-                )}
-                <span className="text-xs text-purple-600 font-medium">TREND</span>
-              </div>
-              <div className="text-2xl font-bold text-purple-900">
-                {metrics.weeklyTrend >= 0 ? '+' : ''}{metrics.weeklyTrend.toFixed(0)}%
-              </div>
-              <div className="text-sm text-purple-700">
-                vs settimana scorsa ({metrics.thisWeekCompleted} vs {metrics.lastWeekCompleted})
-              </div>
-            </div>
-
-            {/* Active Projects */}
-            <div className="card bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                <Briefcase className="w-5 h-5 text-cyan-600" />
-                <span className="text-xs text-cyan-600 font-medium">PROGETTI</span>
-              </div>
-              <div className="text-2xl font-bold text-cyan-900">{projects.length}</div>
-              <div className="text-sm text-cyan-700">Progetti R&D attivi</div>
-            </div>
-          </div>
+            </Card>
+            <StatCard
+              title={`vs settimana scorsa (${metrics.thisWeekCompleted} vs ${metrics.lastWeekCompleted})`}
+              value={`${metrics.weeklyTrend >= 0 ? '+' : ''}${metrics.weeklyTrend.toFixed(0)}%`}
+              icon={metrics.weeklyTrend >= 0 ? TrendingUp : TrendingDown}
+              variant="flat"
+              iconBg="bg-purple-100"
+              iconColor="text-purple-600"
+              trendDirection={metrics.weeklyTrend >= 0 ? 'up' : 'down'}
+            />
+            <StatCard
+              title="Progetti R&D attivi"
+              value={projects.length}
+              icon={Briefcase}
+              variant="flat"
+              iconBg="bg-cyan-100"
+              iconColor="text-cyan-600"
+            />
+          </StatCardGrid>
 
           {/* Filters */}
-          <div className="card shadow-md hover:shadow-lg transition-shadow">
+          <Card>
             <div className="flex flex-wrap gap-4">
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -270,7 +260,7 @@ export default function DirezioneDashboard() {
                 </select>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Tasks */}
@@ -335,10 +325,11 @@ export default function DirezioneDashboard() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project, index) => (
-                  <div
+                  <Card
                     key={project.id}
+                    hover
+                    className="animate-fade-in"
                     style={{ animationDelay: `${index * 50}ms` }}
-                    className="card hover:shadow-lg transition-all hover:-translate-y-1 animate-fade-in"
                   >
                     <h4 className="font-semibold text-gray-900 mb-2">{project.name}</h4>
                     {project.description && (
@@ -352,7 +343,7 @@ export default function DirezioneDashboard() {
                         {project.completed_count || 0} completati
                       </span>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             )}

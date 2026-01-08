@@ -8,6 +8,7 @@ import TaskCard from '../components/TaskCard';
 import TaskModal from '../components/TaskModal';
 import CreateTaskModal from '../components/CreateTaskModal';
 import DailyReportModal from '../components/DailyReportModal';
+import { Button, StatCard, StatCardGrid } from '../components/ui';
 
 export default function DipendenteDashboard() {
   const { user } = useAuth();
@@ -109,42 +110,46 @@ export default function DipendenteDashboard() {
               </p>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowReportModal(true)}
-                className="btn-secondary flex items-center gap-2 hover:scale-105 transition-transform"
-              >
+              <Button variant="secondary" onClick={() => setShowReportModal(true)}>
                 <FileText className="w-5 h-5" />
                 Report Giornaliero
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary flex items-center gap-2 hover:scale-105 transition-transform shadow-lg"
-              >
+              </Button>
+              <Button onClick={() => setShowCreateModal(true)}>
                 <Plus className="w-5 h-5" />
                 Nuova Attività
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
-              <div className="text-sm text-gray-500 mb-1">Totali</div>
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-            </div>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-md p-4 border border-blue-200 hover:shadow-lg transition-shadow">
-              <div className="text-sm text-blue-600 mb-1">In Corso</div>
-              <div className="text-2xl font-bold text-blue-700">{stats.in_progress}</div>
-            </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md p-4 border border-green-200 hover:shadow-lg transition-shadow">
-              <div className="text-sm text-green-600 mb-1">Completati</div>
-              <div className="text-2xl font-bold text-green-700">{stats.completed}</div>
-            </div>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-md p-4 border border-purple-200 hover:shadow-lg transition-shadow">
-              <div className="text-sm text-purple-600 mb-1">Tempo Totale</div>
-              <div className="text-2xl font-bold text-purple-700">{formatTime(stats.totalTime)}</div>
-            </div>
-          </div>
+          <StatCardGrid columns={4} className="mb-6">
+            <StatCard
+              title="Totali"
+              value={stats.total}
+              variant="default"
+            />
+            <StatCard
+              title="In Corso"
+              value={stats.in_progress}
+              variant="flat"
+              iconBg="bg-blue-100"
+              iconColor="text-blue-600"
+            />
+            <StatCard
+              title="Completati"
+              value={stats.completed}
+              variant="flat"
+              iconBg="bg-green-100"
+              iconColor="text-green-600"
+            />
+            <StatCard
+              title="Tempo Totale"
+              value={formatTime(stats.totalTime)}
+              variant="flat"
+              iconBg="bg-purple-100"
+              iconColor="text-purple-600"
+            />
+          </StatCardGrid>
 
           {/* Alerts for deadlines */}
           {(overdueTasks.length > 0 || dueSoonTasks.length > 0) && (
@@ -389,12 +394,9 @@ export default function DipendenteDashboard() {
                   <p className="text-gray-500 mb-6">
                     Inizia creando la tua prima attività di sviluppo, testing o documentazione
                   </p>
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="btn-primary hover:scale-105 transition-transform shadow-lg"
-                  >
+                  <Button onClick={() => setShowCreateModal(true)}>
                     Crea la prima attività
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
