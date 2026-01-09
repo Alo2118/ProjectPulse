@@ -3,8 +3,7 @@ import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import {
-  Card, Button, Badge, StatusBadge, PriorityBadge,
-  StatCard, StatCardGrid, Modal, ModalFooter
+  Card, Button, StatusBadge, PriorityBadge, Modal
 } from '../components/ui';
 import {
   Inbox, Plus, Filter, Search, AlertCircle, CheckCircle, X,
@@ -278,16 +277,21 @@ const InboxPage = () => {
 
         {/* Stats */}
         {stats && stats.byStatus && (
-          <StatCardGrid columns={4} className="mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {stats.byStatus.map(stat => (
-              <StatCard
-                key={stat.status}
-                title={<StatusBadge status={stat.status} />}
-                value={stat.count}
-                subtitle={stat.avg_resolution_hours ? `Media: ${Math.round(stat.avg_resolution_hours)}h` : null}
-              />
+              <Card key={stat.status} padding="md" shadow="sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <StatusBadge status={stat.status} size="sm" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{stat.count}</div>
+                {stat.avg_resolution_hours && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Media: {Math.round(stat.avg_resolution_hours)}h
+                  </div>
+                )}
+              </Card>
             ))}
-          </StatCardGrid>
+          </div>
         )}
 
         {/* Filters */}
