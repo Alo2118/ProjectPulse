@@ -22,6 +22,13 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Sync editedTask with task prop changes
+  useEffect(() => {
+    if (task) {
+      setEditedTask(task);
+    }
+  }, [task]);
+
   useEffect(() => {
     if (task && task.id) {
       loadComments();
@@ -68,6 +75,8 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   };
 
   const loadComments = async () => {
+    if (!task || !task.id) return;
+
     try {
       const response = await commentsApi.getByTask(task.id);
       setComments(response.data);
@@ -77,6 +86,8 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   };
 
   const handleSave = async () => {
+    if (!task || !task.id || !editedTask) return;
+
     setLoading(true);
     try {
       await tasksApi.update(task.id, editedTask);
@@ -91,7 +102,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !task || !task.id) return;
 
     try {
       await commentsApi.create({
@@ -110,6 +121,11 @@ export default function TaskModal({ task, onClose, onUpdate }) {
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   };
+
+  // Safety check - prevent rendering if task is null
+  if (!task || !editedTask) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
