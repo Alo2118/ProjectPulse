@@ -3,7 +3,7 @@ import { X, Plus, User } from 'lucide-react';
 import { tasksApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-export default function CreateTaskModal({ projects, onClose, onCreate }) {
+export default function CreateTaskModal({ projects, onClose, onCreate, parentTaskId = null }) {
   const { user, isAmministratore } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
@@ -12,7 +12,8 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
     milestone_id: '',
     priority: 'medium',
     deadline: '',
-    assigned_to: ''
+    assigned_to: '',
+    parent_task_id: parentTaskId
   });
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');

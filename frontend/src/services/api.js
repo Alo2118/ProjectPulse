@@ -55,6 +55,10 @@ export const tasksApi = {
   update: (id, data) => api.put(`/tasks/${id}`, data),
   delete: (id) => api.delete(`/tasks/${id}`),
   getDailyReport: (params) => api.get('/tasks/daily-report', { params }),
+  // Subtask methods
+  getSubtasks: (parentTaskId) => api.get(`/tasks/${parentTaskId}/subtasks`),
+  getTaskTree: (taskId) => api.get(`/tasks/${taskId}/tree`),
+  getSubtasksStats: (parentTaskId) => api.get(`/tasks/${parentTaskId}/subtasks-stats`),
 };
 
 // Time entries

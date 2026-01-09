@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Clock, MessageSquare, Send, User } from 'lucide-react';
 import { tasksApi, commentsApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import SubtaskList from './SubtaskList';
 
 const statusLabels = {
   todo: 'Da fare',
@@ -364,6 +365,19 @@ export default function TaskModal({ task, onClose, onUpdate }) {
               </button>
             </form>
           </div>
+
+          {/* Subtasks */}
+          <SubtaskList
+            parentTask={task}
+            onSubtaskClick={(subtask) => {
+              // Reload task when clicking on subtask
+              onUpdate();
+            }}
+            onUpdate={() => {
+              // Reload parent task when subtasks change
+              onUpdate();
+            }}
+          />
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
