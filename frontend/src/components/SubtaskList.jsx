@@ -15,6 +15,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
   });
 
   useEffect(() => {
+    console.log('[SubtaskList] useEffect [parentTask?.id] - parentTask:', parentTask?.id, 'project_id:', parentTask?.project_id);
     if (parentTask && parentTask.id) {
       loadSubtasks();
     }
@@ -66,8 +67,11 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
   // Early return if no parent task
   if (!parentTask) {
+    console.log('[SubtaskList] Prevented render: parentTask is null');
     return null;
   }
+
+  console.log('[SubtaskList] Rendering with parentTask:', parentTask?.id, 'project_id:', parentTask?.project_id);
 
   if (loading) {
     return (

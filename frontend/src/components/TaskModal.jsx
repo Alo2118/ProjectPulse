@@ -24,6 +24,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
   // Sync editedTask with task prop changes
   useEffect(() => {
+    console.log('[TaskModal] useEffect [task] - Syncing editedTask. task:', task?.id);
     if (task) {
       setEditedTask(task);
     }
@@ -40,6 +41,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   }, [task?.id, isAmministratore]);
 
   useEffect(() => {
+    console.log('[TaskModal] useEffect [editedTask?.project_id] - editedTask:', editedTask?.id, 'project_id:', editedTask?.project_id);
     if (editedTask && editedTask.project_id) {
       loadMilestones(editedTask.project_id);
     } else {
@@ -124,8 +126,11 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
   // Safety check - prevent rendering if task is null
   if (!task || !editedTask) {
+    console.log('[TaskModal] Prevented render: task or editedTask is null', { task, editedTask });
     return null;
   }
+
+  console.log('[TaskModal] Rendering with task:', task?.id, 'editedTask:', editedTask?.id);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -160,8 +165,8 @@ export default function TaskModal({ task, onClose, onUpdate }) {
             <textarea
               className="input"
               rows="3"
-              value={editedTask.description || ''}
-              onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+              value={editedTask?.description || ''}
+              onChange={(e) => editedTask && setEditedTask({ ...editedTask, description: e.target.value })}
               disabled={isDirezione}
             />
           </div>
