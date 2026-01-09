@@ -11,15 +11,17 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All user management routes require authentication and amministratore role
+// All routes require authentication
 router.use(authenticate);
-router.use(requireRole('amministratore'));
 
+// Read operations - accessible to all authenticated users
 router.get('/', getAllUsers);
 router.get('/:id', getUserById);
-router.post('/', createUser);
-router.put('/:id', updateUser);
-router.delete('/:id', deleteUser);
-router.post('/:id/reactivate', reactivateUser);
+
+// Write operations - only amministratore
+router.post('/', requireRole('amministratore'), createUser);
+router.put('/:id', requireRole('amministratore'), updateUser);
+router.delete('/:id', requireRole('amministratore'), deleteUser);
+router.post('/:id/reactivate', requireRole('amministratore'), reactivateUser);
 
 export default router;

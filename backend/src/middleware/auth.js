@@ -19,7 +19,7 @@ export const authenticate = (req, res, next) => {
     req.user = {
       id: user.id,
       email: user.email,
-      name: user.name,
+      name: `${user.first_name} ${user.last_name}`,
       role: user.role
     };
 
