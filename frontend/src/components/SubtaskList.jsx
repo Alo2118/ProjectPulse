@@ -15,10 +15,14 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
   });
 
   useEffect(() => {
-    loadSubtasks();
-  }, [parentTask.id]);
+    if (parentTask && parentTask.id) {
+      loadSubtasks();
+    }
+  }, [parentTask?.id]);
 
   const loadSubtasks = async () => {
+    if (!parentTask || !parentTask.id) return;
+
     try {
       setLoading(true);
       const [subtasksRes, statsRes] = await Promise.all([
@@ -36,11 +40,13 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
   const handleCreateSubtask = async (e) => {
     e.preventDefault();
+    if (!parentTask || !parentTask.id) return;
+
     try {
       await tasksApi.create({
         ...newSubtask,
         parent_task_id: parentTask.id,
-        project_id: parentTask.project_id,
+        project_id: parentTask.project_id || null,
         assigned_to: parentTask.assigned_to,
         status: 'todo'
       });
@@ -57,6 +63,11 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
     if (!stats || stats.total === 0) return 0;
     return Math.round((stats.completed / stats.total) * 100);
   };
+
+  // Early return if no parent task
+  if (!parentTask) {
+    return null;
+  }
 
   if (loading) {
     return (
