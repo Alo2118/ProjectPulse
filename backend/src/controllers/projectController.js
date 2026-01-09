@@ -67,3 +67,42 @@ export const deleteProject = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Management Dashboard controllers
+
+export const getProjectsWithHealth = async (req, res) => {
+  try {
+    const projects = Project.getAllWithHealthScores();
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getProjectHealth = async (req, res) => {
+  try {
+    const health = Project.calculateHealthScore(req.params.id);
+    res.json(health);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getProjectVelocity = async (req, res) => {
+  try {
+    const weeks = parseInt(req.query.weeks) || 4;
+    const velocity = Project.getProjectVelocity(req.params.id, weeks);
+    res.json(velocity);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getTimeline = async (req, res) => {
+  try {
+    const timeline = Project.getTimeline();
+    res.json(timeline);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

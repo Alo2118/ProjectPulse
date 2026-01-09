@@ -267,3 +267,24 @@ export const bulkDeleteSubtasks = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Management Dashboard controllers
+
+export const getManagementAlerts = async (req, res) => {
+  try {
+    const alerts = Task.getManagementAlerts();
+    res.json(alerts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getVelocityMetrics = async (req, res) => {
+  try {
+    const weeks = parseInt(req.query.weeks) || 4;
+    const metrics = Task.getVelocityMetrics(weeks);
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

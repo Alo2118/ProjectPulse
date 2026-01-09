@@ -15,13 +15,19 @@ import {
   promoteToTask,
   toggleTaskComplete,
   bulkCompleteSubtasks,
-  bulkDeleteSubtasks
+  bulkDeleteSubtasks,
+  getManagementAlerts,
+  getVelocityMetrics
 } from '../controllers/taskController.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.use(authenticate);
+
+// Management Dashboard routes
+router.get('/management/alerts', getManagementAlerts);
+router.get('/management/velocity', getVelocityMetrics);
 
 router.get('/daily-report', getDailyReport);
 router.post('/', createTask);

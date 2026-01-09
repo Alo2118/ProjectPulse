@@ -364,6 +364,118 @@ class Task {
 
     return this.getSubtasks(parentTaskId);
   }
+
+  // Management Dashboard methods
+
+  // Get all blocked tasks with details
+  static getBlockedTasks() {
+    const stmt = db.prepare(`
+      SELECT
+        t.*,
+        p.name as project_name,
+        (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+        CAST((julianday('now', '+1 hour') - julianday(t.created_at)) AS INTEGER) as days_blocked
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN users u1 ON t.assigned_to = u1.id
+      WHERE t.status = 'blocked'
+      ORDER BY days_blocked DESC
+    `);
+    return stmt.all();
+  }
+
+  // Get tasks waiting for clarification
+  static getWaitingClarification() {
+    const stmt = db.prepare(`
+      SELECT
+        t.*,
+        p.name as project_name,
+        (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+        CAST((julianday('now', '+1 hour') - julianday(t.created_at)) AS INTEGER) as days_waiting
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN users u1 ON t.assigned_to = u1.id
+      WHERE t.status = 'waiting_clarification'
+      ORDER BY days_waiting DESC
+    `);
+    return stmt.all();
+  }
+
+  // Get overdue tasks
+  static getOverdueTasks() {
+    const stmt = db.prepare(`
+      SELECT
+        t.*,
+        p.name as project_name,
+        (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+        CAST((julianday('now', '+1 hour') - julianday(t.deadline)) AS INTEGER) as days_overdue
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN users u1 ON t.assigned_to = u1.id
+      WHERE t.deadline IS NOT NULL
+        AND date(t.deadline) < date('now', '+1 hour')
+        AND t.status != 'completed'
+      ORDER BY days_overdue DESC
+    `);
+    return stmt.all();
+  }
+
+  // Get tasks approaching deadline (within 3 days)
+  static getApproachingDeadline() {
+    const stmt = db.prepare(`
+      SELECT
+        t.*,
+        p.name as project_name,
+        (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+        CAST((julianday(t.deadline) - julianday('now', '+1 hour')) AS INTEGER) as days_until_deadline
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN users u1 ON t.assigned_to = u1.id
+      WHERE t.deadline IS NOT NULL
+        AND date(t.deadline) BETWEEN date('now', '+1 hour') AND date('now', '+4 days')
+        AND t.status != 'completed'
+      ORDER BY days_until_deadline ASC
+    `);
+    return stmt.all();
+  }
+
+  // Get comprehensive alerts for management dashboard
+  static getManagementAlerts() {
+    const blocked = this.getBlockedTasks();
+    const waiting = this.getWaitingClarification();
+    const overdue = this.getOverdueTasks();
+    const approaching = this.getApproachingDeadline();
+
+    return {
+      blocked: blocked.slice(0, 10), // Top 10
+      waiting_clarification: waiting.slice(0, 10),
+      overdue: overdue.slice(0, 10),
+      approaching_deadline: approaching.slice(0, 10),
+      summary: {
+        total_alerts: blocked.length + waiting.length + overdue.length,
+        blocked_count: blocked.length,
+        waiting_count: waiting.length,
+        overdue_count: overdue.length,
+        approaching_count: approaching.length
+      }
+    };
+  }
+
+  // Get velocity metrics (tasks completed per week)
+  static getVelocityMetrics(weeks = 4) {
+    const stmt = db.prepare(`
+      SELECT
+        strftime('%Y-W%W', completed_at) as week,
+        COUNT(*) as completed_count,
+        SUM(time_spent) as total_time_spent
+      FROM tasks
+      WHERE completed_at IS NOT NULL
+        AND completed_at >= date('now', '-${weeks * 7} days')
+      GROUP BY week
+      ORDER BY week DESC
+    `);
+    return stmt.all();
+  }
 }
 
 export default Task;
