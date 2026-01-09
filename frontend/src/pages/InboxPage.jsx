@@ -132,6 +132,8 @@ const InboxPage = () => {
 
   const handleConvertToTask = async (e) => {
     e.preventDefault();
+    if (!selectedRequest) return;
+
     try {
       const taskData = {
         title: selectedRequest.title,
@@ -153,6 +155,8 @@ const InboxPage = () => {
 
   const handleConvertToProject = async (e) => {
     e.preventDefault();
+    if (!selectedRequest) return;
+
     try {
       const projectData = {
         name: e.target.name.value,
@@ -197,6 +201,8 @@ const InboxPage = () => {
 
   const handleUpdateRequest = async (e) => {
     e.preventDefault();
+    if (!selectedRequest) return;
+
     try {
       // Convert empty strings to null for foreign key fields
       const requestData = {
@@ -779,7 +785,7 @@ const InboxPage = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block font-medium mb-1">Progetto</label>
-                  <select name="project_id" className="w-full p-2 border rounded" defaultValue={selectedRequest.project_id || ''}>
+                  <select name="project_id" className="w-full p-2 border rounded" defaultValue={selectedRequest?.project_id || ''}>
                     <option value="">Nessuno</option>
                     {projects.map(project => (
                       <option key={project.id} value={project.id}>{project.name}</option>
@@ -788,7 +794,7 @@ const InboxPage = () => {
                 </div>
                 <div>
                   <label className="block font-medium mb-1">Assegna a</label>
-                  <select name="assigned_to" className="w-full p-2 border rounded" defaultValue={selectedRequest.assigned_to || ''} required>
+                  <select name="assigned_to" className="w-full p-2 border rounded" defaultValue={selectedRequest?.assigned_to || ''} required>
                     {users.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.first_name} {u.last_name}
@@ -798,7 +804,7 @@ const InboxPage = () => {
                 </div>
                 <div>
                   <label className="block font-medium mb-1">Deadline</label>
-                  <input type="date" name="deadline" className="w-full p-2 border rounded" defaultValue={selectedRequest.due_date || ''} />
+                  <input type="date" name="deadline" className="w-full p-2 border rounded" defaultValue={selectedRequest?.due_date || ''} />
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
@@ -836,7 +842,7 @@ const InboxPage = () => {
                   <input
                     type="text"
                     name="name"
-                    defaultValue={selectedRequest.title}
+                    defaultValue={selectedRequest?.title || ''}
                     className="w-full p-2 border rounded"
                     required
                   />
@@ -845,7 +851,7 @@ const InboxPage = () => {
                   <label className="block font-medium mb-1">Descrizione *</label>
                   <textarea
                     name="description"
-                    defaultValue={selectedRequest.description}
+                    defaultValue={selectedRequest?.description || ''}
                     className="w-full p-2 border rounded"
                     rows="4"
                     required
