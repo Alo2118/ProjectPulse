@@ -172,6 +172,25 @@ const createTables = () => {
     console.error('Migration error (parent_task_id):', error.message);
   }
 
+  // Migration: Add order_index and depends_on_task_id columns for advanced subtask features
+  try {
+    const checkTasksColumns = db.prepare("PRAGMA table_info(tasks)").all();
+    const hasOrderIndex = checkTasksColumns.some(col => col.name === 'order_index');
+    const hasDependsOn = checkTasksColumns.some(col => col.name === 'depends_on_task_id');
+
+    if (!hasOrderIndex) {
+      db.exec("ALTER TABLE tasks ADD COLUMN order_index INTEGER DEFAULT 0");
+      console.log('✅ Added order_index column to tasks table for subtask ordering');
+    }
+
+    if (!hasDependsOn) {
+      db.exec("ALTER TABLE tasks ADD COLUMN depends_on_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL");
+      console.log('✅ Added depends_on_task_id column to tasks table for subtask dependencies');
+    }
+  } catch (error) {
+    console.error('Migration error (subtask enhancements):', error.message);
+  }
+
   // Time entries table
   db.exec(`
     CREATE TABLE IF NOT EXISTS time_entries (

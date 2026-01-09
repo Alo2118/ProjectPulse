@@ -1,10 +1,17 @@
 import db from '../config/database.js';
 
 class Task {
-  static create({ title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id }) {
+  static create({ title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id, order_index, depends_on_task_id }) {
+    // Auto-calculate order_index for subtasks
+    let finalOrderIndex = order_index !== undefined ? order_index : 0;
+    if (parent_task_id && order_index === undefined) {
+      const siblings = this.getSubtasks(parent_task_id);
+      finalOrderIndex = siblings.length;
+    }
+
     const stmt = db.prepare(`
-      INSERT INTO tasks (title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id, order_index, depends_on_task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       title,
@@ -16,7 +23,9 @@ class Task {
       created_by,
       priority || 'medium',
       deadline || null,
-      parent_task_id || null
+      parent_task_id || null,
+      finalOrderIndex,
+      depends_on_task_id || null
     );
     return this.findById(result.lastInsertRowid);
   }
@@ -116,7 +125,8 @@ class Task {
 
     const allowedFields = [
       'title', 'description', 'status', 'project_id', 'milestone_id', 'priority',
-      'time_spent', 'blocked_reason', 'clarification_needed', 'deadline', 'completed_at'
+      'time_spent', 'blocked_reason', 'clarification_needed', 'deadline', 'completed_at',
+      'order_index', 'depends_on_task_id', 'parent_task_id'
     ];
 
     allowedFields.forEach(field => {
@@ -174,14 +184,17 @@ class Task {
         p.name as project_name,
         m.name as milestone_name,
         (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
-        (u2.first_name || ' ' || u2.last_name) as created_by_name
+        (u2.first_name || ' ' || u2.last_name) as created_by_name,
+        dep.title as depends_on_task_title,
+        dep.status as depends_on_task_status
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN milestones m ON t.milestone_id = m.id
       LEFT JOIN users u1 ON t.assigned_to = u1.id
       LEFT JOIN users u2 ON t.created_by = u2.id
+      LEFT JOIN tasks dep ON t.depends_on_task_id = dep.id
       WHERE t.parent_task_id = ?
-      ORDER BY t.created_at ASC
+      ORDER BY t.order_index ASC, t.created_at ASC
     `);
     return stmt.all(parentTaskId);
   }
@@ -217,6 +230,139 @@ class Task {
       WHERE parent_task_id = ?
     `);
     return stmt.get(parentTaskId);
+  }
+
+  // Advanced subtask methods
+
+  // Reorder subtasks (for drag & drop)
+  static reorderSubtasks(parentTaskId, subtaskIds) {
+    const updateStmt = db.prepare('UPDATE tasks SET order_index = ? WHERE id = ?');
+
+    subtaskIds.forEach((subtaskId, index) => {
+      updateStmt.run(index, subtaskId);
+    });
+
+    return this.getSubtasks(parentTaskId);
+  }
+
+  // Set dependency between subtasks
+  static setDependency(subtaskId, dependsOnTaskId) {
+    // Validate that both tasks belong to the same parent
+    const subtask = this.findById(subtaskId);
+    const dependsOnTask = dependsOnTaskId ? this.findById(dependsOnTaskId) : null;
+
+    if (dependsOnTask && subtask.parent_task_id !== dependsOnTask.parent_task_id) {
+      throw new Error('Dipendenze possono essere impostate solo tra subtask dello stesso parent');
+    }
+
+    // Check for circular dependencies
+    if (dependsOnTaskId && this.hasCircularDependency(subtaskId, dependsOnTaskId)) {
+      throw new Error('Dipendenza circolare rilevata');
+    }
+
+    return this.update(subtaskId, { depends_on_task_id: dependsOnTaskId });
+  }
+
+  // Check for circular dependencies
+  static hasCircularDependency(subtaskId, dependsOnTaskId) {
+    if (subtaskId === dependsOnTaskId) return true;
+
+    const dependsOnTask = this.findById(dependsOnTaskId);
+    if (!dependsOnTask || !dependsOnTask.depends_on_task_id) return false;
+
+    return this.hasCircularDependency(subtaskId, dependsOnTask.depends_on_task_id);
+  }
+
+  // Convert existing task to subtask of another task
+  static convertToSubtask(taskId, parentTaskId) {
+    const task = this.findById(taskId);
+    const parentTask = this.findById(parentTaskId);
+
+    if (!task || !parentTask) {
+      throw new Error('Task o parent task non trovato');
+    }
+
+    // Prevent converting a parent task to its own subtask (circular reference)
+    if (taskId === parentTaskId) {
+      throw new Error('Un task non può essere subtask di se stesso');
+    }
+
+    // Check if parentTask is a subtask of task (would create circular reference)
+    const parentOfParent = this.getParentTask(parentTaskId);
+    if (parentOfParent && parentOfParent.id === taskId) {
+      throw new Error('Conversione creerebbe una referenza circolare');
+    }
+
+    // Calculate order_index
+    const siblings = this.getSubtasks(parentTaskId);
+    const orderIndex = siblings.length;
+
+    return this.update(taskId, {
+      parent_task_id: parentTaskId,
+      order_index: orderIndex,
+      project_id: parentTask.project_id || task.project_id
+    });
+  }
+
+  // Promote subtask to independent task
+  static promoteToTask(subtaskId) {
+    const subtask = this.findById(subtaskId);
+    if (!subtask) {
+      throw new Error('Subtask non trovato');
+    }
+
+    if (!subtask.parent_task_id) {
+      throw new Error('Il task è già indipendente');
+    }
+
+    return this.update(subtaskId, {
+      parent_task_id: null,
+      order_index: 0,
+      depends_on_task_id: null // Remove dependencies when promoting
+    });
+  }
+
+  // Quick toggle subtask completion
+  static toggleComplete(taskId) {
+    const task = this.findById(taskId);
+    if (!task) {
+      throw new Error('Task non trovato');
+    }
+
+    const newStatus = task.status === 'completed' ? 'todo' : 'completed';
+    const completedAt = newStatus === 'completed' ? new Date().toISOString() : null;
+
+    return this.update(taskId, {
+      status: newStatus,
+      completed_at: completedAt
+    });
+  }
+
+  // Bulk complete all subtasks
+  static bulkCompleteSubtasks(parentTaskId) {
+    const subtasks = this.getSubtasks(parentTaskId);
+    const updateStmt = db.prepare(`
+      UPDATE tasks
+      SET status = 'completed', completed_at = datetime('now', '+1 hour')
+      WHERE id = ? AND status != 'completed'
+    `);
+
+    subtasks.forEach(subtask => {
+      updateStmt.run(subtask.id);
+    });
+
+    return this.getSubtasks(parentTaskId);
+  }
+
+  // Bulk delete subtasks
+  static bulkDeleteSubtasks(parentTaskId, subtaskIds) {
+    const deleteStmt = db.prepare('DELETE FROM tasks WHERE id = ? AND parent_task_id = ?');
+
+    subtaskIds.forEach(subtaskId => {
+      deleteStmt.run(subtaskId, parentTaskId);
+    });
+
+    return this.getSubtasks(parentTaskId);
   }
 }
 

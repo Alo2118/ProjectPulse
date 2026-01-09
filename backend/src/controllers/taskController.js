@@ -3,7 +3,7 @@ import TimeEntry from '../models/TimeEntry.js';
 
 export const createTask = async (req, res) => {
   try {
-    const { title, description, status, project_id, assigned_to, priority, deadline, parent_task_id } = req.body;
+    const { title, description, status, project_id, assigned_to, priority, deadline, parent_task_id, milestone_id, order_index, depends_on_task_id } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Task title is required' });
@@ -14,11 +14,14 @@ export const createTask = async (req, res) => {
       description,
       status,
       project_id,
+      milestone_id,
       assigned_to: assigned_to || req.user.id,
       created_by: req.user.id,
       priority,
       deadline,
-      parent_task_id
+      parent_task_id,
+      order_index,
+      depends_on_task_id
     });
 
     res.status(201).json(task);
@@ -168,6 +171,98 @@ export const getSubtasksStats = async (req, res) => {
     const parentTaskId = req.params.id;
     const stats = Task.getSubtasksStats(parentTaskId);
     res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Advanced subtask controllers
+
+export const reorderSubtasks = async (req, res) => {
+  try {
+    const parentTaskId = req.params.id;
+    const { subtaskIds } = req.body;
+
+    if (!Array.isArray(subtaskIds)) {
+      return res.status(400).json({ error: 'subtaskIds must be an array' });
+    }
+
+    const subtasks = Task.reorderSubtasks(parentTaskId, subtaskIds);
+    res.json(subtasks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const setSubtaskDependency = async (req, res) => {
+  try {
+    const subtaskId = req.params.id;
+    const { dependsOnTaskId } = req.body;
+
+    const subtask = Task.setDependency(subtaskId, dependsOnTaskId || null);
+    res.json(subtask);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const convertToSubtask = async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const { parentTaskId } = req.body;
+
+    if (!parentTaskId) {
+      return res.status(400).json({ error: 'parentTaskId is required' });
+    }
+
+    const task = Task.convertToSubtask(taskId, parentTaskId);
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const promoteToTask = async (req, res) => {
+  try {
+    const subtaskId = req.params.id;
+    const task = Task.promoteToTask(subtaskId);
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const toggleTaskComplete = async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const task = Task.toggleComplete(taskId);
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const bulkCompleteSubtasks = async (req, res) => {
+  try {
+    const parentTaskId = req.params.id;
+    const subtasks = Task.bulkCompleteSubtasks(parentTaskId);
+    res.json(subtasks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const bulkDeleteSubtasks = async (req, res) => {
+  try {
+    const parentTaskId = req.params.id;
+    const { subtaskIds } = req.body;
+
+    if (!Array.isArray(subtaskIds)) {
+      return res.status(400).json({ error: 'subtaskIds must be an array' });
+    }
+
+    const subtasks = Task.bulkDeleteSubtasks(parentTaskId, subtaskIds);
+    res.json(subtasks);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
