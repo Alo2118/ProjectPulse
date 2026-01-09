@@ -28,13 +28,13 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
   }, []);
 
   useEffect(() => {
-    if (formData.project_id) {
+    if (formData && formData.project_id) {
       loadMilestones(formData.project_id);
     } else {
       setMilestones([]);
       setFormData(prev => ({ ...prev, milestone_id: '' }));
     }
-  }, [formData.project_id]);
+  }, [formData?.project_id]);
 
   const loadUsers = async () => {
     try {

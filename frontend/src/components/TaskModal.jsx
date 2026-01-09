@@ -23,20 +23,22 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadComments();
-    loadProjects();
-    if (isAmministratore) {
-      loadUsers();
+    if (task && task.id) {
+      loadComments();
+      loadProjects();
+      if (isAmministratore) {
+        loadUsers();
+      }
     }
-  }, [task.id]);
+  }, [task?.id, isAmministratore]);
 
   useEffect(() => {
-    if (editedTask.project_id) {
+    if (editedTask && editedTask.project_id) {
       loadMilestones(editedTask.project_id);
     } else {
       setMilestones([]);
     }
-  }, [editedTask.project_id]);
+  }, [editedTask?.project_id]);
 
   const loadProjects = async () => {
     try {
