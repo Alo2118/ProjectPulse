@@ -3,7 +3,7 @@ import TimeEntry from '../models/TimeEntry.js';
 
 export const createTask = async (req, res) => {
   try {
-    const { title, description, status, project_id, assigned_to, priority, deadline } = req.body;
+    const { title, description, status, project_id, assigned_to, priority, deadline, parent_task_id } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Task title is required' });
@@ -17,7 +17,8 @@ export const createTask = async (req, res) => {
       assigned_to: assigned_to || req.user.id,
       created_by: req.user.id,
       priority,
-      deadline
+      deadline,
+      parent_task_id
     });
 
     res.status(201).json(task);
@@ -131,6 +132,42 @@ export const getDailyReport = async (req, res) => {
       total_time_hours: (totalTime / 3600).toFixed(2),
       time_entries: timeEntries
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Subtask controllers
+export const getSubtasks = async (req, res) => {
+  try {
+    const parentTaskId = req.params.id;
+    const subtasks = Task.getSubtasks(parentTaskId);
+    res.json(subtasks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getTaskTree = async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const tree = Task.getTaskTree(taskId);
+
+    if (!tree) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(tree);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getSubtasksStats = async (req, res) => {
+  try {
+    const parentTaskId = req.params.id;
+    const stats = Task.getSubtasksStats(parentTaskId);
+    res.json(stats);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

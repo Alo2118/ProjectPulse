@@ -1,10 +1,10 @@
 import db from '../config/database.js';
 
 class Task {
-  static create({ title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline }) {
+  static create({ title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id }) {
     const stmt = db.prepare(`
-      INSERT INTO tasks (title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       title,
@@ -15,7 +15,8 @@ class Task {
       assigned_to,
       created_by,
       priority || 'medium',
-      deadline || null
+      deadline || null,
+      parent_task_id || null
     );
     return this.findById(result.lastInsertRowid);
   }
@@ -163,6 +164,59 @@ class Task {
       ORDER BY t.priority DESC, t.created_at DESC
     `);
     return stmt.all(userId, status);
+  }
+
+  // Subtask methods
+  static getSubtasks(parentTaskId) {
+    const stmt = db.prepare(`
+      SELECT
+        t.*,
+        p.name as project_name,
+        m.name as milestone_name,
+        (u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+        (u2.first_name || ' ' || u2.last_name) as created_by_name
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN milestones m ON t.milestone_id = m.id
+      LEFT JOIN users u1 ON t.assigned_to = u1.id
+      LEFT JOIN users u2 ON t.created_by = u2.id
+      WHERE t.parent_task_id = ?
+      ORDER BY t.created_at ASC
+    `);
+    return stmt.all(parentTaskId);
+  }
+
+  static getParentTask(taskId) {
+    const task = this.findById(taskId);
+    if (!task || !task.parent_task_id) return null;
+    return this.findById(task.parent_task_id);
+  }
+
+  static getTaskTree(taskId) {
+    const task = this.findById(taskId);
+    if (!task) return null;
+
+    const subtasks = this.getSubtasks(taskId);
+    const subtasksWithChildren = subtasks.map(subtask => this.getTaskTree(subtask.id));
+
+    return {
+      ...task,
+      subtasks: subtasksWithChildren
+    };
+  }
+
+  static getSubtasksStats(parentTaskId) {
+    const stmt = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked,
+        SUM(time_spent) as total_time_spent
+      FROM tasks
+      WHERE parent_task_id = ?
+    `);
+    return stmt.get(parentTaskId);
   }
 }
 

@@ -149,14 +149,28 @@ const createTables = () => {
       blocked_reason TEXT,
       clarification_needed TEXT,
       deadline DATE,
+      parent_task_id INTEGER,
       created_at DATETIME DEFAULT (datetime('now', '+1 hour')),
       completed_at DATETIME,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (milestone_id) REFERENCES milestones(id) ON DELETE SET NULL,
       FOREIGN KEY (assigned_to) REFERENCES users(id),
-      FOREIGN KEY (created_by) REFERENCES users(id)
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE
     )
   `);
+
+  // Migration: Add parent_task_id column if it doesn't exist
+  try {
+    const checkTasksColumns = db.prepare("PRAGMA table_info(tasks)").all();
+    const hasParentTaskId = checkTasksColumns.some(col => col.name === 'parent_task_id');
+    if (!hasParentTaskId) {
+      db.exec("ALTER TABLE tasks ADD COLUMN parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE");
+      console.log('✅ Added parent_task_id column to tasks table for subtask support');
+    }
+  } catch (error) {
+    console.error('Migration error (parent_task_id):', error.message);
+  }
 
   // Time entries table
   db.exec(`
