@@ -45,6 +45,12 @@ export const projectsApi = {
   create: (data) => api.post('/projects', data),
   update: (id, data) => api.put(`/projects/${id}`, data),
   delete: (id) => api.delete(`/projects/${id}`),
+
+  // Management Dashboard
+  getAllWithHealth: () => api.get('/projects/management/health'),
+  getHealth: (id) => api.get(`/projects/${id}/health`),
+  getVelocity: (id, weeks = 4) => api.get(`/projects/${id}/velocity`, { params: { weeks } }),
+  getTimeline: () => api.get('/projects/management/timeline'),
 };
 
 // Tasks
@@ -70,6 +76,10 @@ export const tasksApi = {
   promoteToTask: (subtaskId) => api.put(`/tasks/${subtaskId}/promote-to-task`),
   toggleComplete: (taskId) => api.put(`/tasks/${taskId}/toggle-complete`),
   setDependency: (subtaskId, dependsOnTaskId) => api.put(`/tasks/${subtaskId}/set-dependency`, { dependsOnTaskId }),
+
+  // Management Dashboard
+  getManagementAlerts: () => api.get('/tasks/management/alerts'),
+  getVelocityMetrics: (weeks = 4) => api.get('/tasks/management/velocity', { params: { weeks } }),
 };
 
 // Time entries

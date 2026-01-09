@@ -5,6 +5,10 @@ import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
 import TaskModal from '../components/TaskModal';
 import { Card, StatCard, StatCardGrid } from '../components/ui';
+import AlertsPanel from '../components/management/AlertsPanel';
+import ProjectHealthCard from '../components/management/ProjectHealthCard';
+import TimelineView from '../components/management/TimelineView';
+import BurndownChart from '../components/management/BurndownChart';
 
 export default function DirezioneDashboard() {
   const [tasks, setTasks] = useState([]);
@@ -14,25 +18,60 @@ export default function DirezioneDashboard() {
   const [filterProject, setFilterProject] = useState('all');
   const [loading, setLoading] = useState(true);
 
+  // Management dashboard data
+  const [alerts, setAlerts] = useState(null);
+  const [projectsWithHealth, setProjectsWithHealth] = useState([]);
+  const [timelineData, setTimelineData] = useState([]);
+
+  // Burndown chart data
+  const [selectedProjectForBurndown, setSelectedProjectForBurndown] = useState(null);
+  const [burndownData, setBurndownData] = useState(null);
+  const [loadingBurndown, setLoadingBurndown] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (selectedProjectForBurndown) {
+      loadBurndownData(selectedProjectForBurndown);
+    }
+  }, [selectedProjectForBurndown]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [tasksRes, projectsRes] = await Promise.all([
+      const [tasksRes, projectsRes, alertsRes, healthRes, timelineRes] = await Promise.all([
         tasksApi.getAll(),
-        projectsApi.getAll()
+        projectsApi.getAll(),
+        tasksApi.getManagementAlerts(),
+        projectsApi.getAllWithHealth(),
+        projectsApi.getTimeline()
       ]);
       // Handle paginated response from tasks API
       const tasksData = tasksRes.data.data || tasksRes.data;
       setTasks(tasksData);
       setProjects(projectsRes.data);
+      setAlerts(alertsRes.data);
+      setProjectsWithHealth(healthRes.data);
+      setTimelineData(timelineRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBurndownData = async (projectId) => {
+    setLoadingBurndown(true);
+    try {
+      const response = await projectsApi.getVelocity(projectId, 8); // Last 8 weeks
+      setBurndownData(response.data);
+    } catch (error) {
+      console.error('Error loading burndown data:', error);
+      setBurndownData(null);
+    } finally {
+      setLoadingBurndown(false);
     }
   };
 
@@ -220,6 +259,99 @@ export default function DirezioneDashboard() {
               iconColor="text-cyan-600"
             />
           </StatCardGrid>
+
+          {/* Alerts Section */}
+          {!loading && alerts && (
+            <div className="mb-8 animate-fade-in">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Alert & Problemi Critici
+              </h3>
+              <AlertsPanel alerts={alerts} onTaskClick={(task) => setSelectedTask(task)} />
+            </div>
+          )}
+
+          {/* Project Health Overview */}
+          {!loading && projectsWithHealth.length > 0 && (
+            <div className="mb-8 animate-fade-in">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Salute Progetti
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {projectsWithHealth.map((project, index) => (
+                  <div key={project.id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+                    <ProjectHealthCard
+                      project={project}
+                      onClick={() => {
+                        // Could navigate to project details or filter tasks by project
+                        setFilterProject(project.id.toString());
+                        window.scrollTo({ top: document.querySelector('.animate-slide-up')?.offsetTop - 100, behavior: 'smooth' });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Timeline/Roadmap */}
+          {!loading && timelineData.length > 0 && (
+            <div className="mb-8 animate-fade-in">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Roadmap Progetti
+              </h3>
+              <TimelineView
+                projects={timelineData}
+                onProjectClick={(project) => {
+                  setFilterProject(project.id.toString());
+                  window.scrollTo({ top: document.querySelector('.animate-slide-up')?.offsetTop - 100, behavior: 'smooth' });
+                }}
+              />
+            </div>
+          )}
+
+          {/* Burndown Chart */}
+          {!loading && projectsWithHealth.length > 0 && (
+            <div className="mb-8 animate-fade-in">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Burndown Chart - Progresso Progetto
+              </h3>
+              <div className="mb-4">
+                <Card>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Seleziona progetto per visualizzare il burndown chart
+                  </label>
+                  <select
+                    className="input"
+                    value={selectedProjectForBurndown || ''}
+                    onChange={(e) => setSelectedProjectForBurndown(e.target.value ? parseInt(e.target.value) : null)}
+                  >
+                    <option value="">-- Seleziona un progetto --</option>
+                    {projectsWithHealth.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.name} ({project.stats.completed_tasks}/{project.stats.total_tasks} task - {project.health_score}/100)
+                      </option>
+                    ))}
+                  </select>
+                </Card>
+              </div>
+              {loadingBurndown ? (
+                <Card className="text-center py-8">
+                  <div className="animate-pulse">
+                    <div className="h-64 bg-gray-200 rounded"></div>
+                  </div>
+                </Card>
+              ) : selectedProjectForBurndown && burndownData ? (
+                <BurndownChart
+                  projectId={selectedProjectForBurndown}
+                  velocityData={burndownData}
+                />
+              ) : selectedProjectForBurndown ? (
+                <Card className="text-center py-8 text-gray-500">
+                  <p>Nessun dato disponibile per questo progetto</p>
+                </Card>
+              ) : null}
+            </div>
+          )}
 
           {/* Filters */}
           <Card>
