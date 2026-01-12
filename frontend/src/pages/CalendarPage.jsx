@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { tasksApi } from '../services/api';
 import Navbar from '../components/Navbar';
@@ -86,7 +86,7 @@ export default function CalendarPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="mb-6 animate-fade-in">
+        <div className="mb-4 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -100,7 +100,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Month navigation */}
-          <div className="flex items-center justify-between bg-white rounded-xl shadow-md p-3">
+          <div className="flex items-center justify-between bg-white rounded-xl shadow-md p-4">
             <button
               onClick={previousMonth}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -127,7 +127,7 @@ export default function CalendarPage() {
         ) : (
           <div className="bg-white rounded-xl shadow-lg p-4 animate-slide-up">
             {/* Day headers */}
-            <div className="grid grid-cols-7 gap-2 mb-2">
+            <div className="grid grid-cols-7 gap-3 mb-4">
               {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (
                 <div key={day} className="text-center font-semibold text-sm text-gray-700 py-2">
                   {day}
@@ -136,7 +136,7 @@ export default function CalendarPage() {
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-3">
               {calendarDays.map((day, index) => {
                 if (day === null) {
                   return <div key={`empty-${index}`} className="aspect-square" />;
@@ -196,7 +196,7 @@ export default function CalendarPage() {
             </div>
 
             {/* Legend */}
-            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-4 text-xs">
+            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-6 text-xs">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-primary-50 border-2 border-primary-500 rounded"></div>
                 <span>Oggi</span>

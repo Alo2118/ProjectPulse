@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BarChart3, Filter } from 'lucide-react';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
 import Navbar from '../components/Navbar';
@@ -47,13 +47,20 @@ export default function GanttPage() {
     }
   };
 
-  const filteredMilestones = selectedProject === 'all'
-    ? allMilestones
-    : allMilestones.filter(m => m.project_id === parseInt(selectedProject));
+  // Memoize filtered data
+  const filteredMilestones = useMemo(() =>
+    selectedProject === 'all'
+      ? allMilestones
+      : allMilestones.filter(m => m.project_id === parseInt(selectedProject)),
+    [allMilestones, selectedProject]
+  );
 
-  const filteredTasks = selectedProject === 'all'
-    ? allTasks
-    : allTasks.filter(t => t.project_id === parseInt(selectedProject));
+  const filteredTasks = useMemo(() =>
+    selectedProject === 'all'
+      ? allTasks
+      : allTasks.filter(t => t.project_id === parseInt(selectedProject)),
+    [allTasks, selectedProject]
+  );
 
   const handleTaskClick = (task) => {
     const fullTask = allTasks.find(t => t.id === task.id);
@@ -71,14 +78,14 @@ export default function GanttPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8 animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
+        <div className="mb-4 animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <BarChart3 className="w-8 h-8 text-primary-600" />
                 Diagramma di Gantt
               </h2>
-              <p className="text-gray-600 mt-2">
+              <p className="text-gray-600 mt-4">
                 Visualizzazione temporale dei progetti R&D e delle attività
               </p>
             </div>
@@ -86,10 +93,10 @@ export default function GanttPage() {
 
           {/* Filter */}
           <div className="card shadow-md">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Filter className="w-5 h-5 text-gray-500" />
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-4">
                   Filtra per progetto
                 </label>
                 <select
@@ -133,10 +140,10 @@ export default function GanttPage() {
         {/* Info Box */}
         <div className="mt-6 card bg-blue-50 border-blue-200">
           <div className="flex gap-3">
-            <BarChart3 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <BarChart3 className="w-5 h-5 text-blue-600 flex-shrink-0" />
             <div className="text-sm text-blue-900">
-              <p className="font-medium mb-1">Informazioni sul Gantt</p>
-              <ul className="space-y-1 text-blue-800">
+              <p className="font-medium mb-4">Informazioni sul Gantt</p>
+              <ul className="space-y-4 text-blue-800">
                 <li>• Le barre rappresentano la durata delle milestone e attività</li>
                 <li>• La linea rossa verticale indica la data odierna</li>
                 <li>• Clicca su una barra per visualizzare i dettagli</li>

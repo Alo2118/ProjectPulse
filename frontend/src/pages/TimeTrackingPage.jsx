@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Clock, Plus, Edit2, Trash2, Download, BarChart3, TrendingUp, Users as UsersIcon, X } from 'lucide-react';
 import { timeApi, projectsApi, tasksApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import { formatTime, formatDate, formatDateTime } from '../utils/helpers';
 
 export default function TimeTrackingPage() {
   const { user, isAmministratore } = useAuth();
@@ -69,7 +70,7 @@ export default function TimeTrackingPage() {
   };
 
   const handleDelete = async (entry) => {
-    if (!confirm(`Eliminare questa registrazione di ${formatDuration(entry.duration)}?`)) {
+    if (!confirm(`Eliminare questa registrazione di ${formatTime(entry.duration)}?`)) {
       return;
     }
 
@@ -81,33 +82,13 @@ export default function TimeTrackingPage() {
     }
   };
 
-  const formatDuration = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-  };
-
-  const formatDateTime = (dateStr) => {
-    return new Date(dateStr).toLocaleString('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('it-IT');
-  };
-
   const exportToCSV = () => {
     const headers = ['Data', 'Inizio', 'Fine', 'Durata', 'Task', 'Progetto', 'Utente', 'Note'];
     const rows = timeEntries.map(entry => [
       formatDate(entry.started_at),
       new Date(entry.started_at).toLocaleTimeString('it-IT'),
       entry.ended_at ? new Date(entry.ended_at).toLocaleTimeString('it-IT') : 'In corso',
-      entry.duration ? formatDuration(entry.duration) : '-',
+      entry.duration ? formatTime(entry.duration) : '-',
       entry.task_title || '-',
       entry.project_name || '-',
       entry.user_name || `${user.first_name} ${user.last_name}`,
@@ -145,7 +126,7 @@ export default function TimeTrackingPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Monitoraggio Tempo</h1>
             <p className="text-gray-600 mt-1">
@@ -166,13 +147,13 @@ export default function TimeTrackingPage() {
 
         {/* Statistics Cards */}
         {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-4">
             <div className="card bg-gradient-to-br from-primary-50 to-primary-100 border-primary-200">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-medium text-primary-600">Tempo Totale</div>
                   <div className="text-2xl font-bold text-primary-900 mt-1">
-                    {formatDuration(statistics.overall.total_seconds)}
+                    {formatTime(statistics.overall.total_seconds)}
                   </div>
                 </div>
                 <Clock className="w-10 h-10 text-primary-600 opacity-50" />
@@ -196,7 +177,7 @@ export default function TimeTrackingPage() {
                 <div>
                   <div className="text-sm font-medium text-green-600">Media per Sessione</div>
                   <div className="text-2xl font-bold text-green-900 mt-1">
-                    {formatDuration(statistics.overall.avg_seconds)}
+                    {formatTime(statistics.overall.avg_seconds)}
                   </div>
                 </div>
                 <TrendingUp className="w-10 h-10 text-green-600 opacity-50" />
@@ -219,9 +200,9 @@ export default function TimeTrackingPage() {
 
         {/* Time by Project */}
         {statistics?.by_project && statistics.by_project.length > 0 && (
-          <div className="card mb-8">
+          <div className="card mb-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Tempo per Progetto</h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {statistics.by_project.map((project) => {
                 const percentage = statistics.overall.total_seconds > 0
                   ? (project.total_seconds / statistics.overall.total_seconds) * 100
@@ -231,7 +212,7 @@ export default function TimeTrackingPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-gray-700">{project.project_name}</span>
                       <span className="text-sm text-gray-600">
-                        {formatDuration(project.total_seconds)} ({percentage.toFixed(1)}%)
+                        {formatTime(project.total_seconds)} ({percentage.toFixed(1)}%)
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -249,9 +230,9 @@ export default function TimeTrackingPage() {
 
         {/* Time by User (Admin only) */}
         {isAmministratore && statistics?.by_user && statistics.by_user.length > 0 && (
-          <div className="card mb-8">
+          <div className="card mb-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Tempo per Utente</h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {statistics.by_user.map((userStat) => {
                 const percentage = statistics.overall.total_seconds > 0
                   ? (userStat.total_seconds / statistics.overall.total_seconds) * 100
@@ -261,7 +242,7 @@ export default function TimeTrackingPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-gray-700">{userStat.user_name}</span>
                       <span className="text-sm text-gray-600">
-                        {formatDuration(userStat.total_seconds)} ({percentage.toFixed(1)}%)
+                        {formatTime(userStat.total_seconds)} ({percentage.toFixed(1)}%)
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -278,9 +259,9 @@ export default function TimeTrackingPage() {
         )}
 
         {/* Filters */}
-        <div className="card mb-6">
+        <div className="card mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtri</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Da
@@ -394,7 +375,7 @@ export default function TimeTrackingPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {entry.duration ? formatDuration(entry.duration) : '-'}
+                        {entry.duration ? formatTime(entry.duration) : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
                         {entry.notes || '-'}
