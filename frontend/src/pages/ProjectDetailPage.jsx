@@ -98,7 +98,7 @@ export default function ProjectDetailPage() {
   }, [tasks]);
 
   const unassignedTasks = useMemo(() => {
-    return tasks.filter(t => !t.milestone_id);
+    return tasks.filter(t => !t.milestone_id && !t.parent_task_id);
   }, [tasks]);
 
   // Memoize stats calculation

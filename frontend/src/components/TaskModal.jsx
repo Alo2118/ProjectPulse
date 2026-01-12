@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, MessageSquare, Send, User } from 'lucide-react';
+import { X, Clock, MessageSquare, Send, User, Trash2 } from 'lucide-react';
 import { tasksApi, commentsApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SubtaskList from './SubtaskList';
@@ -113,6 +113,24 @@ export default function TaskModal({ task, onClose, onUpdate }) {
       loadComments();
     } catch (error) {
       alert(error.response?.data?.error || 'Errore durante l\'invio del commento');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!task || !task.id) return;
+
+    if (!confirm(`Sei sicuro di voler eliminare il task "${task.title}"?\n\nQuesta azione non può essere annullata.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await tasksApi.delete(task.id);
+      onUpdate();
+      onClose();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Errore durante l\'eliminazione');
+      setLoading(false);
     }
   };
 
@@ -400,9 +418,20 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             {!isDirezione && (
-              <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
-                {loading ? 'Salvataggio...' : isAmministratore ? 'Salva assegnazione' : 'Salva modifiche'}
-              </button>
+              <>
+                <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
+                  {loading ? 'Salvataggio...' : isAmministratore ? 'Salva assegnazione' : 'Salva modifiche'}
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={loading}
+                  className="btn-secondary text-red-600 hover:bg-red-50 hover:border-red-300 flex items-center gap-2"
+                  title="Elimina task"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Elimina
+                </button>
+              </>
             )}
             <button onClick={onClose} className="btn-secondary">
               {isDirezione ? 'Chiudi' : 'Annulla'}
