@@ -68,7 +68,9 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const loadUsers = async () => {
     try {
       const response = await usersApi.getAll({ active: true });
-      setUsers(response.data.filter(u => u.role === 'dipendente'));
+      // API returns array directly, not wrapped in data
+      const usersData = Array.isArray(response.data) ? response.data : [];
+      setUsers(usersData.filter(u => u.role === 'dipendente'));
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -248,7 +250,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
                 <option value="">Nessun assegnatario</option>
                 {users.map(u => (
                   <option key={u.id} value={u.id}>
-                    {u.name} ({u.email})
+                    {u.first_name} {u.last_name} ({u.email})
                   </option>
                 ))}
               </select>
