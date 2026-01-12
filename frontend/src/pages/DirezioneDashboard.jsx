@@ -1,57 +1,72 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle, TrendingUp, TrendingDown, Users, Calendar } from 'lucide-react';
-import { tasksApi, projectsApi } from '../services/api';
+import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle, TrendingUp, TrendingDown, Users, Calendar, LayoutDashboard, FolderKanban, UserCheck, Bell } from 'lucide-react';
+import { tasksApi, projectsApi, usersApi } from '../services/api';
 import Navbar from '../components/Navbar';
-import TaskCard from '../components/TaskCard';
 import TaskModal from '../components/TaskModal';
 import { Card, StatCard, StatCardGrid } from '../components/ui';
 import AlertsPanel from '../components/management/AlertsPanel';
 import ProjectHealthCard from '../components/management/ProjectHealthCard';
 import TimelineView from '../components/management/TimelineView';
 import BurndownChart from '../components/management/BurndownChart';
+import FilterBar from '../components/common/FilterBar';
+import KanbanBoard from '../components/common/KanbanBoard';
+import TaskDistributionChart from '../components/charts/TaskDistributionChart';
+import ProgressChart from '../components/charts/ProgressChart';
+import WorkloadChart from '../components/charts/WorkloadChart';
+import VelocityChart from '../components/charts/VelocityChart';
 
 export default function DirezioneDashboard() {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterProject, setFilterProject] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Filters
+  const [filters, setFilters] = useState({
+    timeRange: 'all',
+    userId: 'all',
+    projectId: 'all',
+    status: 'all'
+  });
 
   // Management dashboard data
   const [alerts, setAlerts] = useState(null);
   const [projectsWithHealth, setProjectsWithHealth] = useState([]);
   const [timelineData, setTimelineData] = useState([]);
 
-  // Burndown chart data
-  const [selectedProjectForBurndown, setSelectedProjectForBurndown] = useState(null);
-  const [burndownData, setBurndownData] = useState(null);
-  const [loadingBurndown, setLoadingBurndown] = useState(false);
+  // Chart data
+  const [progressData, setProgressData] = useState([]);
+  const [workloadData, setWorkloadData] = useState([]);
+  const [velocityData, setVelocityData] = useState([]);
 
   useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
-    if (selectedProjectForBurndown) {
-      loadBurndownData(selectedProjectForBurndown);
+    if (!loading) {
+      prepareChartData();
     }
-  }, [selectedProjectForBurndown]);
+  }, [tasks, users, loading]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [tasksRes, projectsRes, alertsRes, healthRes, timelineRes] = await Promise.all([
+      const [tasksRes, projectsRes, usersRes, alertsRes, healthRes, timelineRes] = await Promise.all([
         tasksApi.getAll(),
         projectsApi.getAll(),
+        usersApi.getAll({ active: true }),
         tasksApi.getManagementAlerts(),
         projectsApi.getAllWithHealth(),
         projectsApi.getTimeline()
       ]);
-      // Handle paginated response from tasks API
+
       const tasksData = tasksRes.data.data || tasksRes.data;
       setTasks(tasksData);
       setProjects(projectsRes.data);
+      setUsers(usersRes.data);
       setAlerts(alertsRes.data);
       setProjectsWithHealth(healthRes.data);
       setTimelineData(timelineRes.data);
@@ -62,32 +77,121 @@ export default function DirezioneDashboard() {
     }
   };
 
-  const loadBurndownData = async (projectId) => {
-    setLoadingBurndown(true);
-    try {
-      const response = await projectsApi.getVelocity(projectId, 8); // Last 8 weeks
-      setBurndownData(response.data);
-    } catch (error) {
-      console.error('Error loading burndown data:', error);
-      setBurndownData(null);
-    } finally {
-      setLoadingBurndown(false);
+  const prepareChartData = () => {
+    // Progress Data - last 7 days
+    const last7Days = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+
+      const dateStr = date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+      const completed = tasks.filter(t => {
+        if (!t.completed_at) return false;
+        const completedDate = new Date(t.completed_at);
+        completedDate.setHours(0, 0, 0, 0);
+        return completedDate.getTime() === date.getTime();
+      }).length;
+
+      const total = tasks.filter(t => {
+        const createdDate = new Date(t.created_at);
+        return createdDate <= date;
+      }).length;
+
+      last7Days.push({ date: dateStr, completed, total });
     }
+    setProgressData(last7Days);
+
+    // Workload Data - by employee
+    const employees = users.filter(u => u.role === 'dipendente');
+    const workload = employees.map(emp => {
+      const empTasks = tasks.filter(t => t.assigned_to === emp.id);
+      return {
+        name: `${emp.first_name} ${emp.last_name}`,
+        todo: empTasks.filter(t => t.status === 'todo').length,
+        in_progress: empTasks.filter(t => t.status === 'in_progress').length,
+        completed: empTasks.filter(t => t.status === 'completed').length
+      };
+    });
+    setWorkloadData(workload);
+
+    // Velocity Data - last 4 weeks
+    const velocityWeeks = [];
+    const totalTasks = tasks.length;
+    for (let i = 3; i >= 0; i--) {
+      const weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() - (i * 7));
+
+      const weekLabel = `S${4 - i}`;
+      const completedUpToWeek = tasks.filter(t => {
+        if (!t.completed_at) return false;
+        return new Date(t.completed_at) <= weekStart;
+      }).length;
+
+      const remaining = totalTasks - completedUpToWeek;
+      const ideal = totalTasks - (totalTasks / 4) * (4 - i);
+
+      velocityWeeks.push({
+        week: weekLabel,
+        tasksCompleted: completedUpToWeek,
+        tasksRemaining: remaining,
+        ideal: Math.max(0, Math.round(ideal))
+      });
+    }
+    setVelocityData(velocityWeeks);
   };
 
-  const filteredTasks = tasks.filter(task => {
-    if (filterStatus !== 'all' && task.status !== filterStatus) return false;
-    if (filterProject !== 'all' && task.project_id !== parseInt(filterProject)) return false;
-    return true;
-  });
+  const applyFilters = (tasksList) => {
+    return tasksList.filter(task => {
+      // Time range filter
+      if (filters.timeRange !== 'all') {
+        const taskDate = new Date(task.created_at);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (filters.timeRange === 'today') {
+          const todayStart = new Date(today);
+          if (taskDate < todayStart) return false;
+        } else if (filters.timeRange === 'week') {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          if (taskDate < weekAgo) return false;
+        } else if (filters.timeRange === 'month') {
+          const monthAgo = new Date(today);
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          if (taskDate < monthAgo) return false;
+        }
+      }
+
+      // User filter
+      if (filters.userId !== 'all' && task.assigned_to !== parseInt(filters.userId)) {
+        return false;
+      }
+
+      // Project filter
+      if (filters.projectId !== 'all' && task.project_id !== parseInt(filters.projectId)) {
+        return false;
+      }
+
+      // Status filter
+      if (filters.status !== 'all' && task.status !== filters.status) {
+        return false;
+      }
+
+      return true;
+    });
+  };
+
+  const filteredTasks = applyFilters(tasks);
 
   const stats = {
-    total: tasks.length,
-    in_progress: tasks.filter(t => t.status === 'in_progress').length,
-    blocked: tasks.filter(t => t.status === 'blocked').length,
-    waiting: tasks.filter(t => t.status === 'waiting_clarification').length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    totalTime: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
+    total: filteredTasks.length,
+    in_progress: filteredTasks.filter(t => t.status === 'in_progress').length,
+    blocked: filteredTasks.filter(t => t.status === 'blocked').length,
+    waiting: filteredTasks.filter(t => t.status === 'waiting_clarification').length,
+    completed: filteredTasks.filter(t => t.status === 'completed').length,
+    totalTime: filteredTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
   };
 
   const formatTime = (seconds) => {
@@ -95,17 +199,14 @@ export default function DirezioneDashboard() {
     return `${hours}h`;
   };
 
-  // Calculate advanced metrics
   const calculateMetrics = () => {
-    const completedTasks = tasks.filter(t => t.status === 'completed');
+    const completedTasks = filteredTasks.filter(t => t.status === 'completed');
 
-    // Average time to complete (in hours)
     const avgCompletionTime = completedTasks.length > 0
       ? completedTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0) / completedTasks.length / 3600
       : 0;
 
-    // Tasks with deadline
-    const tasksWithDeadline = tasks.filter(t => t.deadline && t.status !== 'completed');
+    const tasksWithDeadline = filteredTasks.filter(t => t.deadline && t.status !== 'completed');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -119,7 +220,6 @@ export default function DirezioneDashboard() {
       ? (overdueTasks.length / tasksWithDeadline.length) * 100
       : 0;
 
-    // Tasks completed this week vs last week
     const oneWeekAgo = new Date(today);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const twoWeeksAgo = new Date(today);
@@ -151,6 +251,22 @@ export default function DirezioneDashboard() {
 
   const metrics = calculateMetrics();
 
+  const handleTaskUpdate = async (taskId, updates) => {
+    try {
+      await tasksApi.update(taskId, updates);
+      await loadData();
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'projects', label: 'Progetti', icon: FolderKanban },
+    { id: 'team', label: 'Team', icon: UserCheck },
+    { id: 'alerts', label: 'Alert', icon: Bell }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navbar />
@@ -158,328 +274,243 @@ export default function DirezioneDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
-          <div className="mb-6">
-            <h2 className="text-3xl font-bold text-gray-900">
-              Dashboard Direzione R&D
-            </h2>
-            <p className="text-gray-600 mt-1 text-sm">
-              Monitoraggio progetti di sviluppo dispositivi ortopedici e strumentario chirurgico
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            <StatCard
-              title="Task Totali"
-              value={stats.total}
-              icon={Briefcase}
-              variant="default"
-            />
-            <StatCard
-              title="In Corso"
-              value={stats.in_progress}
-              variant="flat"
-              iconBg="bg-blue-100"
-              iconColor="text-blue-600"
-            />
-            <StatCard
-              title="Bloccati"
-              value={stats.blocked}
-              icon={AlertCircle}
-              variant="flat"
-              iconBg="bg-red-100"
-              iconColor="text-red-600"
-            />
-            <StatCard
-              title="In Attesa"
-              value={stats.waiting}
-              icon={HelpCircle}
-              variant="flat"
-              iconBg="bg-yellow-100"
-              iconColor="text-yellow-600"
-            />
-            <StatCard
-              title="Completati"
-              value={stats.completed}
-              icon={CheckCircle}
-              variant="flat"
-              iconBg="bg-green-100"
-              iconColor="text-green-600"
-            />
-            <StatCard
-              title="Tempo Totale"
-              value={formatTime(stats.totalTime)}
-              icon={Clock}
-              variant="default"
-            />
-          </div>
-
-          {/* Advanced Metrics */}
-          <StatCardGrid columns={4} className="mb-8">
-            <StatCard
-              title="Tempo medio completamento"
-              value={`${metrics.avgCompletionTime.toFixed(1)}h`}
-              icon={Clock}
-              variant="flat"
-              iconBg="bg-indigo-100"
-              iconColor="text-indigo-600"
-            />
-            <Card className={metrics.overdueTasks > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}>
-              <div className="flex items-center justify-between mb-2">
-                <Calendar className={`w-5 h-5 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
-                <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  SCADENZE
-                </span>
-              </div>
-              <div className={`text-2xl font-bold ${metrics.overdueTasks > 0 ? 'text-red-900' : 'text-green-900'}`}>
-                {metrics.overdueTasks > 0 ? metrics.overdueTasks : '0'}
-              </div>
-              <div className={`text-sm ${metrics.overdueTasks > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                {metrics.overdueTasks > 0
-                  ? `In ritardo (${metrics.overdueRate.toFixed(0)}%)`
-                  : 'Nessun ritardo'
-                }
-              </div>
-            </Card>
-            <StatCard
-              title={`vs settimana scorsa (${metrics.thisWeekCompleted} vs ${metrics.lastWeekCompleted})`}
-              value={`${metrics.weeklyTrend >= 0 ? '+' : ''}${metrics.weeklyTrend.toFixed(0)}%`}
-              icon={metrics.weeklyTrend >= 0 ? TrendingUp : TrendingDown}
-              variant="flat"
-              iconBg="bg-purple-100"
-              iconColor="text-purple-600"
-              trendDirection={metrics.weeklyTrend >= 0 ? 'up' : 'down'}
-            />
-            <StatCard
-              title="Progetti R&D attivi"
-              value={projects.length}
-              icon={Briefcase}
-              variant="flat"
-              iconBg="bg-cyan-100"
-              iconColor="text-cyan-600"
-            />
-          </StatCardGrid>
-
-          {/* Alerts Section */}
-          {!loading && alerts && (
-            <div className="mb-8 animate-fade-in">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Alert & Problemi Critici
-              </h3>
-              <AlertsPanel alerts={alerts} onTaskClick={(task) => setSelectedTask(task)} />
-            </div>
-          )}
-
-          {/* Project Health Overview */}
-          {!loading && projectsWithHealth.length > 0 && (
-            <div className="mb-8 animate-fade-in">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Salute Progetti
-              </h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {projectsWithHealth.map((project, index) => (
-                  <div key={project.id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                    <ProjectHealthCard
-                      project={project}
-                      onClick={() => {
-                        // Could navigate to project details or filter tasks by project
-                        setFilterProject(project.id.toString());
-                        window.scrollTo({ top: document.querySelector('.animate-slide-up')?.offsetTop - 100, behavior: 'smooth' });
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Timeline/Roadmap */}
-          {!loading && timelineData.length > 0 && (
-            <div className="mb-8 animate-fade-in">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Roadmap Progetti
-              </h3>
-              <TimelineView
-                projects={timelineData}
-                onProjectClick={(project) => {
-                  setFilterProject(project.id.toString());
-                  window.scrollTo({ top: document.querySelector('.animate-slide-up')?.offsetTop - 100, behavior: 'smooth' });
-                }}
-              />
-            </div>
-          )}
-
-          {/* Burndown Chart */}
-          {!loading && projectsWithHealth.length > 0 && (
-            <div className="mb-8 animate-fade-in">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Burndown Chart - Progresso Progetto
-              </h3>
-              <div className="mb-4">
-                <Card>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Seleziona progetto per visualizzare il burndown chart
-                  </label>
-                  <select
-                    className="input"
-                    value={selectedProjectForBurndown || ''}
-                    onChange={(e) => setSelectedProjectForBurndown(e.target.value ? parseInt(e.target.value) : null)}
-                  >
-                    <option value="">-- Seleziona un progetto --</option>
-                    {projectsWithHealth.map(project => (
-                      <option key={project.id} value={project.id}>
-                        {project.name} ({project.stats.completed_tasks}/{project.stats.total_tasks} task - {project.health_score}/100)
-                      </option>
-                    ))}
-                  </select>
-                </Card>
-              </div>
-              {loadingBurndown ? (
-                <Card className="text-center py-8">
-                  <div className="animate-pulse">
-                    <div className="h-64 bg-gray-200 rounded"></div>
-                  </div>
-                </Card>
-              ) : selectedProjectForBurndown && burndownData ? (
-                <BurndownChart
-                  projectId={selectedProjectForBurndown}
-                  velocityData={burndownData}
-                />
-              ) : selectedProjectForBurndown ? (
-                <Card className="text-center py-8 text-gray-500">
-                  <p>Nessun dato disponibile per questo progetto</p>
-                </Card>
-              ) : null}
-            </div>
-          )}
-
-          {/* Filters */}
-          <Card>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Filtra per stato
-                </label>
-                <select
-                  className="input"
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                >
-                  <option value="all">Tutti gli stati</option>
-                  <option value="todo">Da fare</option>
-                  <option value="in_progress">In corso</option>
-                  <option value="blocked">Bloccati</option>
-                  <option value="waiting_clarification">In attesa</option>
-                  <option value="completed">Completati</option>
-                </select>
-              </div>
-
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Filtra per progetto
-                </label>
-                <select
-                  className="input"
-                  value={filterProject}
-                  onChange={(e) => setFilterProject(e.target.value)}
-                >
-                  <option value="all">Tutti i progetti</option>
-                  {projects.map(project => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </Card>
+          <h2 className="text-3xl font-bold text-gray-900">
+            Dashboard Direzione
+          </h2>
+          <p className="text-gray-600 mt-1 text-sm">
+            Monitoraggio completo progetti e team
+          </p>
         </div>
 
-        {/* Tasks */}
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          <StatCard title="Task Totali" value={stats.total} icon={Briefcase} variant="default" />
+          <StatCard title="In Corso" value={stats.in_progress} variant="flat" iconBg="bg-blue-100" iconColor="text-blue-600" />
+          <StatCard title="Bloccati" value={stats.blocked} icon={AlertCircle} variant="flat" iconBg="bg-red-100" iconColor="text-red-600" />
+          <StatCard title="In Attesa" value={stats.waiting} icon={HelpCircle} variant="flat" iconBg="bg-yellow-100" iconColor="text-yellow-600" />
+          <StatCard title="Completati" value={stats.completed} icon={CheckCircle} variant="flat" iconBg="bg-green-100" iconColor="text-green-600" />
+          <StatCard title="Tempo Totale" value={formatTime(stats.totalTime)} icon={Clock} variant="default" />
+        </div>
+
+        {/* Advanced Metrics */}
+        <StatCardGrid columns={4} className="mb-6">
+          <StatCard
+            title="Tempo medio completamento"
+            value={`${metrics.avgCompletionTime.toFixed(1)}h`}
+            icon={Clock}
+            variant="flat"
+            iconBg="bg-indigo-100"
+            iconColor="text-indigo-600"
+          />
+          <Card className={metrics.overdueTasks > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}>
+            <div className="flex items-center justify-between mb-2">
+              <Calendar className={`w-5 h-5 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                SCADENZE
+              </span>
+            </div>
+            <div className={`text-2xl font-bold ${metrics.overdueTasks > 0 ? 'text-red-900' : 'text-green-900'}`}>
+              {metrics.overdueTasks > 0 ? metrics.overdueTasks : '0'}
+            </div>
+            <div className={`text-sm ${metrics.overdueTasks > 0 ? 'text-red-700' : 'text-green-700'}`}>
+              {metrics.overdueTasks > 0 ? `In ritardo (${metrics.overdueRate.toFixed(0)}%)` : 'Nessun ritardo'}
+            </div>
+          </Card>
+          <StatCard
+            title={`Trend settimanale (${metrics.thisWeekCompleted} vs ${metrics.lastWeekCompleted})`}
+            value={`${metrics.weeklyTrend >= 0 ? '+' : ''}${metrics.weeklyTrend.toFixed(0)}%`}
+            icon={metrics.weeklyTrend >= 0 ? TrendingUp : TrendingDown}
+            variant="flat"
+            iconBg="bg-purple-100"
+            iconColor="text-purple-600"
+            trendDirection={metrics.weeklyTrend >= 0 ? 'up' : 'down'}
+          />
+          <StatCard
+            title="Progetti attivi"
+            value={projects.length}
+            icon={Briefcase}
+            variant="flat"
+            iconBg="bg-cyan-100"
+            iconColor="text-cyan-600"
+          />
+        </StatCardGrid>
+
+        {/* Filters */}
+        <FilterBar filters={filters} onFilterChange={setFilters} showEmployeeFilter={true} />
+
+        {/* Tabs Navigation */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="flex border-b border-gray-200">
+            {tabs.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-b-2 border-blue-600 text-blue-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tab Content */}
         {loading ? (
           <div className="space-y-6">
-            <div className="animate-pulse">
-              <div className="h-6 bg-gray-300 rounded w-32 mb-4"></div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3, 4, 5, 6].map(i => (
-                  <div key={i} className="bg-white rounded-lg p-4 shadow">
-                    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="text-center py-16 animate-fade-in">
-            <div className="max-w-md mx-auto">
-              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Briefcase className="w-12 h-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Nessun task trovato
-              </h3>
-              <p className="text-gray-500">
-                Prova a modificare i filtri per vedere altri task
-              </p>
+            <div className="animate-pulse bg-white rounded-lg p-8">
+              <div className="h-64 bg-gray-200 rounded"></div>
             </div>
           </div>
         ) : (
-          <div className="animate-slide-up">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              Task ({filteredTasks.length})
-            </h3>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredTasks.map((task, index) => (
-                <div key={task.id} style={{ animationDelay: `${index * 30}ms` }} className="animate-fade-in">
-                  <TaskCard
-                    task={task}
-                    onClick={() => setSelectedTask(task)}
-                    showProject={true}
+          <>
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Charts Row 1 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <TaskDistributionChart tasks={filteredTasks} />
+                  <ProgressChart progressData={progressData} title="Progresso Ultimi 7 Giorni" />
+                </div>
+
+                {/* Charts Row 2 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <WorkloadChart workloadData={workloadData} />
+                  <VelocityChart velocityData={velocityData} />
+                </div>
+
+                {/* Kanban View */}
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                    Vista Kanban Task ({filteredTasks.length})
+                  </h3>
+                  <KanbanBoard
+                    tasks={filteredTasks}
+                    onTaskClick={setSelectedTask}
+                    onTaskUpdate={handleTaskUpdate}
                   />
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Projects Overview */}
-        {!loading && (
-          <div className="mt-12 animate-slide-up" style={{ animationDelay: '200ms' }}>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              Progetti ({projects.length})
-            </h3>
-            {projects.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-xl shadow-md">
-                <p className="text-gray-500">Nessun progetto presente</p>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {projects.map((project, index) => (
-                  <Card
-                    key={project.id}
-                    hover
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <h4 className="font-semibold text-gray-900 mb-2">{project.name}</h4>
-                    {project.description && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{project.description}</p>
-                    )}
-                    <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-100">
-                      <span className="text-gray-500">
-                        {project.task_count || 0} task
-                      </span>
-                      <span className="text-green-600 font-medium">
-                        {project.completed_count || 0} completati
-                      </span>
-                    </div>
-                  </Card>
-                ))}
               </div>
             )}
-          </div>
+
+            {/* Projects Tab */}
+            {activeTab === 'projects' && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Project Health */}
+                {projectsWithHealth.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                      Salute Progetti
+                    </h3>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {projectsWithHealth.map(project => (
+                        <ProjectHealthCard key={project.id} project={project} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Timeline */}
+                {timelineData.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                      Roadmap Progetti
+                    </h3>
+                    <TimelineView projects={timelineData} />
+                  </div>
+                )}
+
+                {/* Burndown Chart */}
+                {projectsWithHealth.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                      Burndown Chart
+                    </h3>
+                    <div className="grid gap-6">
+                      {projectsWithHealth.map(project => (
+                        <BurndownChartWrapper key={project.id} project={project} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Team Tab */}
+            {activeTab === 'team' && (
+              <div className="space-y-6 animate-fade-in">
+                <WorkloadChart workloadData={workloadData} title="Carico di Lavoro Team" />
+
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {users.filter(u => u.role === 'dipendente').map(user => {
+                    const userTasks = filteredTasks.filter(t => t.assigned_to === user.id);
+                    const completedTasks = userTasks.filter(t => t.status === 'completed');
+                    const completionRate = userTasks.length > 0
+                      ? (completedTasks.length / userTasks.length) * 100
+                      : 0;
+
+                    return (
+                      <Card key={user.id} hover>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <Users className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {user.first_name} {user.last_name}
+                            </h4>
+                            <p className="text-sm text-gray-500">{user.email}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Task totali:</span>
+                            <span className="font-medium">{userTasks.length}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Completati:</span>
+                            <span className="font-medium text-green-600">{completedTasks.length}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">In corso:</span>
+                            <span className="font-medium text-blue-600">
+                              {userTasks.filter(t => t.status === 'in_progress').length}
+                            </span>
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-600">Tasso completamento</span>
+                              <span className="font-semibold text-gray-900">{completionRate.toFixed(0)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-green-500 h-2 rounded-full transition-all"
+                                style={{ width: `${completionRate}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Alerts Tab */}
+            {activeTab === 'alerts' && (
+              <div className="space-y-6 animate-fade-in">
+                {alerts && <AlertsPanel alerts={alerts} onTaskClick={setSelectedTask} />}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -493,4 +524,44 @@ export default function DirezioneDashboard() {
       )}
     </div>
   );
+}
+
+// Helper component for Burndown Chart
+function BurndownChartWrapper({ project }) {
+  const [velocityData, setVelocityData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, [project.id]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const response = await projectsApi.getVelocity(project.id, 8);
+      setVelocityData(response.data);
+    } catch (error) {
+      console.error('Error loading burndown data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="animate-pulse h-64 bg-gray-200 rounded"></div>
+      </Card>
+    );
+  }
+
+  if (!velocityData) {
+    return (
+      <Card>
+        <p className="text-center py-8 text-gray-500">Nessun dato disponibile per {project.name}</p>
+      </Card>
+    );
+  }
+
+  return <BurndownChart projectId={project.id} velocityData={velocityData} />;
 }
