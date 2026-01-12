@@ -124,7 +124,7 @@ class Task {
     const values = [];
 
     const allowedFields = [
-      'title', 'description', 'status', 'project_id', 'milestone_id', 'priority',
+      'title', 'description', 'status', 'project_id', 'milestone_id', 'assigned_to', 'priority',
       'time_spent', 'blocked_reason', 'clarification_needed', 'deadline', 'completed_at',
       'order_index', 'depends_on_task_id', 'parent_task_id'
     ];

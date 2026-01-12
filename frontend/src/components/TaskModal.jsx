@@ -92,7 +92,15 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
     setLoading(true);
     try {
-      await tasksApi.update(task.id, editedTask);
+      // Convert string values to integers for numeric fields
+      const updates = {
+        ...editedTask,
+        project_id: editedTask.project_id ? parseInt(editedTask.project_id) : null,
+        milestone_id: editedTask.milestone_id ? parseInt(editedTask.milestone_id) : null,
+        assigned_to: editedTask.assigned_to ? parseInt(editedTask.assigned_to) : null
+      };
+
+      await tasksApi.update(task.id, updates);
       onUpdate();
       onClose();
     } catch (error) {

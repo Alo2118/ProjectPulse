@@ -72,9 +72,9 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
 
       await tasksApi.create({
         ...formData,
-        project_id: projectId || null,
-        milestone_id: formData.milestone_id || null,
-        assigned_to: formData.assigned_to || user.id
+        project_id: projectId ? parseInt(projectId) : null,
+        milestone_id: formData.milestone_id ? parseInt(formData.milestone_id) : null,
+        assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : user.id
       });
 
       onCreate();
@@ -199,7 +199,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
                 <option value="">Seleziona dipendente</option>
                 {users.map(u => (
                   <option key={u.id} value={u.id}>
-                    {u.name} ({u.email})
+                    {u.first_name} {u.last_name} ({u.email})
                   </option>
                 ))}
               </select>
