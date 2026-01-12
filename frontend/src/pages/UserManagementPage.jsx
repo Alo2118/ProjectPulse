@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Users, Shield, User as UserIcon, X, Crown, UserCheck, UserX } from 'lucide-react';
 import { usersApi } from '../services/api';
 import Navbar from '../components/Navbar';
+import { isValidEmail, formatDate } from '../utils/helpers';
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
@@ -124,11 +125,18 @@ export default function UserManagementPage() {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    if (filterStatus === 'active') return user.active;
-    if (filterStatus === 'pending') return !user.active;
-    return true; // 'all'
-  });
+  // Memoize filtered users
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      if (filterStatus === 'active') return user.active;
+      if (filterStatus === 'pending') return !user.active;
+      return true; // 'all'
+    });
+  }, [users, filterStatus]);
+
+  // Memoize counts
+  const activeCount = useMemo(() => users.filter(u => u.active).length, [users]);
+  const pendingCount = useMemo(() => users.filter(u => !u.active).length, [users]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -143,7 +151,7 @@ export default function UserManagementPage() {
 
     if (!formData.email.trim()) {
       newErrors.email = 'Email richiesta';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (!isValidEmail(formData.email)) {
       newErrors.email = 'Email non valida';
     }
 
@@ -244,7 +252,7 @@ export default function UserManagementPage() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="mb-6 flex gap-2">
+        <div className="mb-6 flex gap-3">
           <button
             onClick={() => setFilterStatus('all')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -263,7 +271,7 @@ export default function UserManagementPage() {
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            Attivi ({users.filter(u => u.active).length})
+            Attivi ({activeCount})
           </button>
           <button
             onClick={() => setFilterStatus('pending')}
@@ -273,7 +281,7 @@ export default function UserManagementPage() {
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            In attesa di approvazione ({users.filter(u => !u.active).length})
+            In attesa di approvazione ({pendingCount})
           </button>
         </div>
 
@@ -346,7 +354,7 @@ export default function UserManagementPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(user.created_at).toLocaleDateString('it-IT')}
+                        {formatDate(user.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         {isPending ? (
@@ -395,7 +403,7 @@ export default function UserManagementPage() {
           </div>
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 {filterStatus === 'pending'
@@ -434,7 +442,7 @@ export default function UserManagementPage() {
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Nome

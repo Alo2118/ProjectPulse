@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
@@ -9,6 +9,7 @@ import {
   Inbox, Plus, Filter, Search, AlertCircle, CheckCircle, X,
   Clock, ArrowRight, FileText, FolderPlus, ListTodo, Edit
 } from 'lucide-react';
+import { formatDate, formatDateTime } from '../utils/helpers';
 
 const InboxPage = () => {
   const { user } = useAuth();
@@ -283,7 +284,7 @@ const InboxPage = () => {
 
         {/* Stats */}
         {stats && stats.byStatus && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             {stats.byStatus.map(stat => (
               <Card key={stat.status} padding="md" shadow="sm">
                 <div className="flex items-center gap-2 mb-2">
@@ -301,12 +302,12 @@ const InboxPage = () => {
         )}
 
         {/* Filters */}
-        <Card className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
+        <Card className="mb-4">
+          <div className="flex items-center gap-2 mb-4">
             <Filter className="w-5 h-5" />
             <span className="font-semibold">Filtri</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1">Stato</label>
               <select
@@ -380,30 +381,30 @@ const InboxPage = () => {
         ) : (
           requests.map(request => (
             <Card key={request.id} hover padding="lg">
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-lg font-semibold">{request.title}</h3>
                     <StatusBadge status={request.status} />
                     <PriorityBadge priority={request.priority} />
                   </div>
-                  <p className="text-gray-700 mb-3">{request.description}</p>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  <p className="text-gray-700 mb-4">{request.description}</p>
+                  <div className="flex flex-wrap gap-6 text-sm text-gray-600">
                     <span><strong>Tipo:</strong> {getTypeName(request.type)}</span>
                     <span><strong>Provenienza:</strong> {getSourceName(request.source)}</span>
                     {request.source_contact && <span><strong>Contatto:</strong> {request.source_contact}</span>}
                     {request.assigned_to_name && <span><strong>Assegnato a:</strong> {request.assigned_to_name}</span>}
                     {request.project_name && <span><strong>Progetto:</strong> {request.project_name}</span>}
-                    {request.due_date && <span><strong>Scadenza:</strong> {new Date(request.due_date).toLocaleDateString('it-IT')}</span>}
+                    {request.due_date && <span><strong>Scadenza:</strong> {formatDate(request.due_date)}</span>}
                   </div>
                   <div className="text-xs text-gray-500 mt-2">
-                    Ricevuto: {new Date(request.received_at).toLocaleString('it-IT')} |
+                    Ricevuto: {formatDateTime(request.received_at)} |
                     Creato da: {request.created_by_name}
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col gap-2 ml-4">
+                <div className="flex flex-col gap-3 ml-4">
                   {(request.status === 'new' || request.status === 'reviewing') && (
                     <>
                       <Button
