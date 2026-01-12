@@ -29,7 +29,8 @@ export default function StatCard({
   iconBg = 'bg-primary-100',
   iconColor = 'text-primary-600',
   className = '',
-  onClick
+  onClick,
+  compact = false
 }) {
   // Trend colors
   const trendColors = {
@@ -41,34 +42,34 @@ export default function StatCard({
   return (
     <Card
       variant={variant}
-      padding="lg"
-      shadow="md"
+      padding={compact ? 'sm' : 'lg'}
+      shadow={compact ? 'sm' : 'md'}
       hover={!!onClick}
       className={className}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className={`text-sm font-medium ${variant === 'gradient' ? 'text-white/80' : 'text-gray-600'}`}>
+          <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium ${variant === 'gradient' ? 'text-white/80' : 'text-gray-600'}`}>
             {title}
           </p>
-          <p className={`mt-2 text-3xl font-bold ${variant === 'gradient' ? 'text-white' : 'text-gray-900'}`}>
+          <p className={`${compact ? 'mt-1 text-2xl' : 'mt-2 text-3xl'} font-bold ${variant === 'gradient' ? 'text-white' : 'text-gray-900'}`}>
             {value}
           </p>
           {subtitle && (
-            <p className={`mt-1 text-sm ${variant === 'gradient' ? 'text-white/70' : 'text-gray-500'}`}>
+            <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} ${variant === 'gradient' ? 'text-white/70' : 'text-gray-500'}`}>
               {subtitle}
             </p>
           )}
           {trend && (
-            <p className={`mt-2 text-sm font-medium ${variant === 'gradient' ? 'text-white/90' : trendColors[trendDirection]}`}>
+            <p className={`${compact ? 'mt-1' : 'mt-2'} text-sm font-medium ${variant === 'gradient' ? 'text-white/90' : trendColors[trendDirection]}`}>
               {trend}
             </p>
           )}
         </div>
         {Icon && (
-          <div className={`p-3 rounded-lg ${variant === 'gradient' ? 'bg-white/20' : iconBg}`}>
-            <Icon className={`w-6 h-6 ${variant === 'gradient' ? 'text-white' : iconColor}`} />
+          <div className={`${compact ? 'p-2' : 'p-3'} rounded-lg ${variant === 'gradient' ? 'bg-white/20' : iconBg}`}>
+            <Icon className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} ${variant === 'gradient' ? 'text-white' : iconColor}`} />
           </div>
         )}
       </div>
@@ -80,15 +81,16 @@ export default function StatCard({
  * StatCardGrid Component
  * For consistent grid layout of stat cards
  */
-export function StatCardGrid({ children, columns = 4, className = '' }) {
+export function StatCardGrid({ children, columns = 4, className = '', compact = false }) {
   const columnStyles = {
     2: 'grid-cols-1 md:grid-cols-2',
     3: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+    4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+    6: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
   };
 
   return (
-    <div className={`grid ${columnStyles[columns]} gap-6 ${className}`}>
+    <div className={`grid ${columnStyles[columns]} ${compact ? 'gap-3' : 'gap-6'} ${className}`}>
       {children}
     </div>
   );

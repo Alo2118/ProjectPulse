@@ -273,7 +273,7 @@ export default function DirezioneDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8 animate-fade-in">
+        <div className="mb-6 animate-fade-in">
           <h2 className="text-3xl font-bold text-gray-900">
             Dashboard Direzione
           </h2>
@@ -283,17 +283,17 @@ export default function DirezioneDashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-          <StatCard title="Task Totali" value={stats.total} icon={Briefcase} variant="default" />
-          <StatCard title="In Corso" value={stats.in_progress} variant="flat" iconBg="bg-blue-100" iconColor="text-blue-600" />
-          <StatCard title="Bloccati" value={stats.blocked} icon={AlertCircle} variant="flat" iconBg="bg-red-100" iconColor="text-red-600" />
-          <StatCard title="In Attesa" value={stats.waiting} icon={HelpCircle} variant="flat" iconBg="bg-yellow-100" iconColor="text-yellow-600" />
-          <StatCard title="Completati" value={stats.completed} icon={CheckCircle} variant="flat" iconBg="bg-green-100" iconColor="text-green-600" />
-          <StatCard title="Tempo Totale" value={formatTime(stats.totalTime)} icon={Clock} variant="default" />
-        </div>
+        <StatCardGrid columns={6} compact className="mb-4">
+          <StatCard title="Task Totali" value={stats.total} icon={Briefcase} variant="default" compact />
+          <StatCard title="In Corso" value={stats.in_progress} variant="flat" iconBg="bg-blue-100" iconColor="text-blue-600" compact />
+          <StatCard title="Bloccati" value={stats.blocked} icon={AlertCircle} variant="flat" iconBg="bg-red-100" iconColor="text-red-600" compact />
+          <StatCard title="In Attesa" value={stats.waiting} icon={HelpCircle} variant="flat" iconBg="bg-yellow-100" iconColor="text-yellow-600" compact />
+          <StatCard title="Completati" value={stats.completed} icon={CheckCircle} variant="flat" iconBg="bg-green-100" iconColor="text-green-600" compact />
+          <StatCard title="Tempo Totale" value={formatTime(stats.totalTime)} icon={Clock} variant="default" compact />
+        </StatCardGrid>
 
         {/* Advanced Metrics */}
-        <StatCardGrid columns={4} className="mb-6">
+        <StatCardGrid columns={4} compact className="mb-4">
           <StatCard
             title="Tempo medio completamento"
             value={`${metrics.avgCompletionTime.toFixed(1)}h`}
@@ -301,10 +301,11 @@ export default function DirezioneDashboard() {
             variant="flat"
             iconBg="bg-indigo-100"
             iconColor="text-indigo-600"
+            compact
           />
-          <Card className={metrics.overdueTasks > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}>
-            <div className="flex items-center justify-between mb-2">
-              <Calendar className={`w-5 h-5 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
+          <Card padding="sm" className={metrics.overdueTasks > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}>
+            <div className="flex items-center justify-between mb-1">
+              <Calendar className={`w-4 h-4 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
               <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`}>
                 SCADENZE
               </span>
@@ -312,18 +313,20 @@ export default function DirezioneDashboard() {
             <div className={`text-2xl font-bold ${metrics.overdueTasks > 0 ? 'text-red-900' : 'text-green-900'}`}>
               {metrics.overdueTasks > 0 ? metrics.overdueTasks : '0'}
             </div>
-            <div className={`text-sm ${metrics.overdueTasks > 0 ? 'text-red-700' : 'text-green-700'}`}>
+            <div className={`text-xs ${metrics.overdueTasks > 0 ? 'text-red-700' : 'text-green-700'}`}>
               {metrics.overdueTasks > 0 ? `In ritardo (${metrics.overdueRate.toFixed(0)}%)` : 'Nessun ritardo'}
             </div>
           </Card>
           <StatCard
-            title={`Trend settimanale (${metrics.thisWeekCompleted} vs ${metrics.lastWeekCompleted})`}
+            title={`Trend settimanale`}
+            subtitle={`${metrics.thisWeekCompleted} vs ${metrics.lastWeekCompleted}`}
             value={`${metrics.weeklyTrend >= 0 ? '+' : ''}${metrics.weeklyTrend.toFixed(0)}%`}
             icon={metrics.weeklyTrend >= 0 ? TrendingUp : TrendingDown}
             variant="flat"
             iconBg="bg-purple-100"
             iconColor="text-purple-600"
             trendDirection={metrics.weeklyTrend >= 0 ? 'up' : 'down'}
+            compact
           />
           <StatCard
             title="Progetti attivi"
@@ -332,6 +335,7 @@ export default function DirezioneDashboard() {
             variant="flat"
             iconBg="bg-cyan-100"
             iconColor="text-cyan-600"
+            compact
           />
         </StatCardGrid>
 
