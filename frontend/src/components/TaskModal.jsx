@@ -100,10 +100,14 @@ export default function TaskModal({ task, onClose, onUpdate }) {
         assigned_to: editedTask.assigned_to ? parseInt(editedTask.assigned_to) : null
       };
 
-      await tasksApi.update(task.id, updates);
+      console.log('Sending updates to backend:', updates);
+      const response = await tasksApi.update(task.id, updates);
+      console.log('Backend response:', response.data);
       onUpdate();
       onClose();
     } catch (error) {
+      console.error('Error updating task:', error);
+      console.error('Error response:', error.response?.data);
       alert(error.response?.data?.error || 'Errore durante il salvataggio');
     } finally {
       setLoading(false);
