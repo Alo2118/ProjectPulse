@@ -70,12 +70,12 @@ export default function Card({
  * CardHeader Component
  * For consistent card headers with title and optional actions
  */
-export function CardHeader({ title, subtitle, action, className = '' }) {
+export function CardHeader({ title, subtitle, action, compact = false, className = '' }) {
   return (
-    <div className={`flex justify-between items-start mb-4 ${className}`}>
+    <div className={`flex justify-between items-start ${compact ? 'mb-3' : 'mb-4'} ${className}`}>
       <div>
-        {title && <h3 className="text-lg font-semibold text-gray-900">{title}</h3>}
-        {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+        {title && <h3 className={`${compact ? 'text-base' : 'text-lg'} font-semibold text-gray-900`}>{title}</h3>}
+        {subtitle && <p className={`${compact ? 'text-xs' : 'text-sm'} text-gray-500 mt-1`}>{subtitle}</p>}
       </div>
       {action && <div className="ml-4">{action}</div>}
     </div>

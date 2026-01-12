@@ -26,6 +26,7 @@ export default function Modal({
   size = 'md',
   closeOnOverlayClick = true,
   showCloseButton = true,
+  compact = false,
   children,
   footer
 }) {
@@ -75,11 +76,11 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-gray-200">
+        <div className={`flex items-start justify-between ${compact ? 'p-4' : 'p-6'} border-b border-gray-200`}>
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+            <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-semibold text-gray-900`}>{title}</h2>
             {description && (
-              <p className="mt-1 text-sm text-gray-500">{description}</p>
+              <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} text-gray-500`}>{description}</p>
             )}
           </div>
           {showCloseButton && (
@@ -87,19 +88,19 @@ export default function Modal({
               onClick={onClose}
               className="ml-4 text-gray-400 hover:text-gray-500 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
             </button>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'}`}>
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+          <div className={`flex items-center justify-end gap-3 ${compact ? 'p-4' : 'p-6'} border-t border-gray-200 bg-gray-50`}>
             {footer}
           </div>
         )}
