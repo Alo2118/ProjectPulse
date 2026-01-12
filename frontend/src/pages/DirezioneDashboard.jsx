@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle, TrendingUp, TrendingDown, Users, Calendar, LayoutDashboard, FolderKanban, UserCheck, Bell } from 'lucide-react';
 import { tasksApi, projectsApi, usersApi } from '../services/api';
 import Navbar from '../components/Navbar';
@@ -14,6 +14,7 @@ import TaskDistributionChart from '../components/charts/TaskDistributionChart';
 import ProgressChart from '../components/charts/ProgressChart';
 import WorkloadChart from '../components/charts/WorkloadChart';
 import VelocityChart from '../components/charts/VelocityChart';
+import { formatTime, formatTimeToHours } from '../utils/helpers';
 
 export default function DirezioneDashboard() {
   const [tasks, setTasks] = useState([]);
@@ -36,20 +37,9 @@ export default function DirezioneDashboard() {
   const [projectsWithHealth, setProjectsWithHealth] = useState([]);
   const [timelineData, setTimelineData] = useState([]);
 
-  // Chart data
-  const [progressData, setProgressData] = useState([]);
-  const [workloadData, setWorkloadData] = useState([]);
-  const [velocityData, setVelocityData] = useState([]);
-
   useEffect(() => {
     loadData();
   }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      prepareChartData();
-    }
-  }, [tasks, users, loading]);
 
   const loadData = async () => {
     setLoading(true);
@@ -77,10 +67,11 @@ export default function DirezioneDashboard() {
     }
   };
 
-  const prepareChartData = () => {
-    // Progress Data - last 7 days
+  // Memoize chart data to avoid recalculation on every render
+  const progressData = useMemo(() => {
     const last7Days = [];
     const today = new Date();
+
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
@@ -101,11 +92,13 @@ export default function DirezioneDashboard() {
 
       last7Days.push({ date: dateStr, completed, total });
     }
-    setProgressData(last7Days);
 
-    // Workload Data - by employee
+    return last7Days;
+  }, [tasks]);
+
+  const workloadData = useMemo(() => {
     const employees = users.filter(u => u.role === 'dipendente');
-    const workload = employees.map(emp => {
+    return employees.map(emp => {
       const empTasks = tasks.filter(t => t.assigned_to === emp.id);
       return {
         name: `${emp.first_name} ${emp.last_name}`,
@@ -114,11 +107,13 @@ export default function DirezioneDashboard() {
         completed: empTasks.filter(t => t.status === 'completed').length
       };
     });
-    setWorkloadData(workload);
+  }, [tasks, users]);
 
-    // Velocity Data - last 4 weeks
+  const velocityData = useMemo(() => {
     const velocityWeeks = [];
+    const today = new Date();
     const totalTasks = tasks.length;
+
     for (let i = 3; i >= 0; i--) {
       const weekStart = new Date(today);
       weekStart.setDate(weekStart.getDate() - (i * 7));
@@ -139,11 +134,13 @@ export default function DirezioneDashboard() {
         ideal: Math.max(0, Math.round(ideal))
       });
     }
-    setVelocityData(velocityWeeks);
-  };
 
-  const applyFilters = (tasksList) => {
-    return tasksList.filter(task => {
+    return velocityWeeks;
+  }, [tasks]);
+
+  // Memoize filtered tasks
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
       // Time range filter
       if (filters.timeRange !== 'all') {
         const taskDate = new Date(task.created_at);
@@ -181,25 +178,20 @@ export default function DirezioneDashboard() {
 
       return true;
     });
-  };
+  }, [tasks, filters]);
 
-  const filteredTasks = applyFilters(tasks);
-
-  const stats = {
+  // Memoize stats calculation
+  const stats = useMemo(() => ({
     total: filteredTasks.length,
     in_progress: filteredTasks.filter(t => t.status === 'in_progress').length,
     blocked: filteredTasks.filter(t => t.status === 'blocked').length,
     waiting: filteredTasks.filter(t => t.status === 'waiting_clarification').length,
     completed: filteredTasks.filter(t => t.status === 'completed').length,
     totalTime: filteredTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
-  };
+  }), [filteredTasks]);
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    return `${hours}h`;
-  };
-
-  const calculateMetrics = () => {
+  // Memoize metrics calculation
+  const metrics = useMemo(() => {
     const completedTasks = filteredTasks.filter(t => t.status === 'completed');
 
     const avgCompletionTime = completedTasks.length > 0
@@ -247,9 +239,7 @@ export default function DirezioneDashboard() {
       lastWeekCompleted,
       weeklyTrend
     };
-  };
-
-  const metrics = calculateMetrics();
+  }, [filteredTasks]);
 
   const handleTaskUpdate = async (taskId, updates) => {
     try {

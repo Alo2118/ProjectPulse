@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Archive, Clock, CheckCircle, AlertCircle, Target, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
@@ -8,6 +8,7 @@ import TaskModal from '../components/TaskModal';
 import CreateTaskModal from '../components/CreateTaskModal';
 import ProjectModal from '../components/ProjectModal';
 import MilestoneModal from '../components/MilestoneModal';
+import { formatTime } from '../utils/helpers';
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -91,30 +92,28 @@ export default function ProjectDetailPage() {
     });
   };
 
-  const getTasksForMilestone = (milestoneId) => {
+  // Memoize task filtering functions
+  const getTasksForMilestone = useCallback((milestoneId) => {
     return tasks.filter(t => t.milestone_id === milestoneId);
-  };
+  }, [tasks]);
 
-  const getUnassignedTasks = () => {
+  const unassignedTasks = useMemo(() => {
     return tasks.filter(t => !t.milestone_id);
-  };
+  }, [tasks]);
 
-  const stats = {
+  // Memoize stats calculation
+  const stats = useMemo(() => ({
     total: tasks.length,
     completed: tasks.filter(t => t.status === 'completed').length,
     in_progress: tasks.filter(t => t.status === 'in_progress').length,
     blocked: tasks.filter(t => t.status === 'blocked').length,
     total_time: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
-  };
+  }), [tasks]);
 
-  const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
+  const completionRate = useMemo(() =>
+    stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0,
+    [stats]
+  );
 
   if (loading) {
     return (
@@ -138,7 +137,7 @@ export default function ProjectDetailPage() {
         <div className="mb-6">
           <button
             onClick={() => navigate('/projects')}
-            className="btn-secondary flex items-center gap-2 mb-3"
+            className="btn-secondary flex items-center gap-2 mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             Torna ai Progetti
@@ -182,7 +181,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
           <div className="card text-center">
             <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
             <div className="text-xs text-gray-500">Task Totali</div>
@@ -216,8 +215,8 @@ export default function ProjectDetailPage() {
 
         {/* Progress Bar */}
         {stats.total > 0 && (
-          <div className="card mb-6">
-            <div className="flex items-center justify-between mb-3">
+          <div className="card mb-4">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Progresso Complessivo</h3>
               <span className="text-2xl font-bold text-primary-600">{completionRate}%</span>
             </div>
@@ -273,7 +272,7 @@ export default function ProjectDetailPage() {
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Milestone Accordion Items */}
               {milestones.map((milestone) => {
                 const milestoneTasks = getTasksForMilestone(milestone.id);
@@ -389,9 +388,9 @@ export default function ProjectDetailPage() {
 
                     {/* Expanded Tasks */}
                     {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                      <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
                         {milestone.description && (
-                          <p className="text-sm text-gray-600 mb-3">
+                          <p className="text-sm text-gray-600 mb-4">
                             {milestone.description}
                           </p>
                         )}
@@ -420,7 +419,7 @@ export default function ProjectDetailPage() {
               })}
 
               {/* Unassigned Tasks Section */}
-              {getUnassignedTasks().length > 0 && (
+              {unassignedTasks.length > 0 && (
                 <div className="card bg-gray-50">
                   <div
                     className="flex items-center gap-3 cursor-pointer hover:bg-gray-100/50 -m-4 p-4 rounded-lg transition-colors"
@@ -436,7 +435,7 @@ export default function ProjectDetailPage() {
 
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-700">
-                        Task senza milestone ({getUnassignedTasks().length})
+                        Task senza milestone ({unassignedTasks.length})
                       </h4>
                       <p className="text-sm text-gray-500">
                         Attività non ancora assegnate a una fase specifica
@@ -447,7 +446,7 @@ export default function ProjectDetailPage() {
                   {showUnassignedTasks && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                        {getUnassignedTasks().map(task => (
+                        {unassignedTasks.map(task => (
                           <TaskCard
                             key={task.id}
                             task={task}
@@ -465,8 +464,8 @@ export default function ProjectDetailPage() {
               {/* Empty State for No Milestones */}
               {milestones.length === 0 && (
                 <div className="card text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100">
-                  <Target className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-2">Nessuna milestone definita</p>
+                  <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 mb-4">Nessuna milestone definita</p>
                   <p className="text-sm text-gray-400 mb-4">
                     Organizza i task in fasi (milestone) per una migliore pianificazione
                   </p>

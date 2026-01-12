@@ -47,11 +47,11 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4 text-center">
           ProjectPulse
         </h1>
-        <p className="text-gray-600 text-center mb-8">
+        <p className="text-gray-600 text-center mb-4">
           {isLogin ? 'Accedi al tuo account' : 'Crea un nuovo account'}
         </p>
 
@@ -134,7 +134,7 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <button
             onClick={() => setIsLogin(!isLogin)}
             className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -143,8 +143,8 @@ export default function Login() {
           </button>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center mb-2">Account di test:</p>
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center mb-4">Account di test:</p>
           <p className="text-xs text-gray-600 text-center">
             Amministratore: nicola@admin.it / password123
           </p>

@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FolderOpen, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { projectsApi, tasksApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import ProjectModal from '../components/ProjectModal';
+import { formatTime } from '../utils/helpers';
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [projectStats, setProjectStats] = useState({});
 
   useEffect(() => {
     loadProjects();
@@ -25,31 +26,31 @@ export default function ProjectsPage() {
         tasksApi.getAll()
       ]);
 
-      const projects = projectsRes.data;
+      setProjects(projectsRes.data);
       // Handle paginated response from tasks API
-      const tasks = tasksRes.data.data || tasksRes.data;
-
-      // Calculate stats for each project
-      const stats = {};
-      projects.forEach(project => {
-        const projectTasks = tasks.filter(t => t.project_id === project.id);
-        stats[project.id] = {
-          total: projectTasks.length,
-          completed: projectTasks.filter(t => t.status === 'completed').length,
-          in_progress: projectTasks.filter(t => t.status === 'in_progress').length,
-          blocked: projectTasks.filter(t => t.status === 'blocked').length,
-          total_time: projectTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
-        };
-      });
-
-      setProjects(projects);
-      setProjectStats(stats);
+      setTasks(tasksRes.data.data || tasksRes.data);
     } catch (error) {
       console.error('Error loading projects:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Memoize project stats calculation
+  const projectStats = useMemo(() => {
+    const stats = {};
+    projects.forEach(project => {
+      const projectTasks = tasks.filter(t => t.project_id === project.id);
+      stats[project.id] = {
+        total: projectTasks.length,
+        completed: projectTasks.filter(t => t.status === 'completed').length,
+        in_progress: projectTasks.filter(t => t.status === 'in_progress').length,
+        blocked: projectTasks.filter(t => t.status === 'blocked').length,
+        total_time: projectTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
+      };
+    });
+    return stats;
+  }, [projects, tasks]);
 
   const handleCreate = () => {
     setSelectedProject(null);
@@ -72,13 +73,6 @@ export default function ProjectsPage() {
     }
   };
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
-
   const getCompletionRate = (projectId) => {
     const stats = projectStats[projectId];
     if (!stats || stats.total === 0) return 0;
@@ -91,7 +85,7 @@ export default function ProjectsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Progetti R&D</h1>
             <p className="text-gray-600 mt-0.5 text-sm">
@@ -109,7 +103,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
           <div className="card bg-blue-50 border-blue-200">
             <FolderOpen className="w-6 h-6 text-blue-600 mb-1" />
             <div className="text-xl font-bold text-blue-900">{projects.length}</div>
@@ -156,7 +150,7 @@ export default function ProjectsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map(project => {
               const stats = projectStats[project.id] || {};
               const completionRate = getCompletionRate(project.id);
@@ -167,7 +161,7 @@ export default function ProjectsPage() {
                   className="card hover:shadow-lg transition-shadow cursor-pointer group"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <h3 className="font-semibold text-base text-gray-900 group-hover:text-primary-600 transition-colors">
                         {project.name}
@@ -182,7 +176,7 @@ export default function ProjectsPage() {
 
                   {/* Progress Bar */}
                   {stats.total > 0 && (
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span className="text-gray-600">Progresso</span>
                         <span className="font-medium text-gray-900">{completionRate}%</span>
@@ -197,7 +191,7 @@ export default function ProjectsPage() {
                   )}
 
                   {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
                     <div>
                       <div className="text-xl font-bold text-gray-900">
                         {stats.total || 0}
@@ -223,7 +217,7 @@ export default function ProjectsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, FileText, AlertTriangle, Calendar, LayoutGrid, LayoutList, PieChart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, projectsApi } from '../services/api';
@@ -13,6 +13,7 @@ import KanbanBoard from '../components/common/KanbanBoard';
 import TaskCalendar from '../components/common/TaskCalendar';
 import TaskDistributionChart from '../components/charts/TaskDistributionChart';
 import ProgressChart from '../components/charts/ProgressChart';
+import { formatTime, groupTasksByStatus, getOverdueTasks, getApproachingTasks } from '../utils/helpers';
 
 export default function DipendenteDashboard() {
   const { user } = useAuth();
@@ -54,34 +55,21 @@ export default function DipendenteDashboard() {
     }
   };
 
-  const groupedTasks = {
-    todo: tasks.filter(t => t.status === 'todo'),
-    in_progress: tasks.filter(t => t.status === 'in_progress'),
-    blocked: tasks.filter(t => t.status === 'blocked'),
-    waiting_clarification: tasks.filter(t => t.status === 'waiting_clarification'),
-    completed: tasks.filter(t => t.status === 'completed')
-  };
+  // Memoize grouped tasks to avoid recalculation on every render
+  const groupedTasks = useMemo(() => groupTasksByStatus(tasks), [tasks]);
 
-  const stats = {
+  // Memoize stats calculation
+  const stats = useMemo(() => ({
     total: tasks.length,
     in_progress: groupedTasks.in_progress.length,
     blocked: groupedTasks.blocked.length,
     waiting: groupedTasks.waiting_clarification.length,
     completed: groupedTasks.completed.length,
     totalTime: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
-  };
+  }), [tasks, groupedTasks]);
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
-  };
-
-  // Calculate weekly stats
-  const getWeeklyStats = () => {
+  // Memoize weekly stats calculation
+  const weeklyStats = useMemo(() => {
     const today = new Date();
     const oneWeekAgo = new Date(today);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -102,12 +90,10 @@ export default function DipendenteDashboard() {
       totalTime: thisWeekTime,
       avgTimePerTask
     };
-  };
+  }, [tasks]);
 
-  const weeklyStats = getWeeklyStats();
-
-  // Prepare progress data for chart - last 7 days
-  const getProgressData = () => {
+  // Memoize progress data for chart - last 7 days
+  const progressData = useMemo(() => {
     const last7Days = [];
     const today = new Date();
 
@@ -133,35 +119,13 @@ export default function DipendenteDashboard() {
     }
 
     return last7Days;
-  };
+  }, [tasks]);
 
-  const progressData = getProgressData();
-
-  // Calculate alerts for deadlines
-  const getAlerts = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const overdueTasks = tasks.filter(task => {
-      if (!task.deadline || task.status === 'completed') return false;
-      const deadline = new Date(task.deadline);
-      deadline.setHours(0, 0, 0, 0);
-      return deadline < today;
-    });
-
-    const dueSoonTasks = tasks.filter(task => {
-      if (!task.deadline || task.status === 'completed') return false;
-      const deadline = new Date(task.deadline);
-      deadline.setHours(0, 0, 0, 0);
-      const diffTime = deadline - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays >= 0 && diffDays <= 3;
-    });
-
-    return { overdueTasks, dueSoonTasks };
-  };
-
-  const { overdueTasks, dueSoonTasks } = getAlerts();
+  // Memoize alerts calculation using utility functions
+  const { overdueTasks, dueSoonTasks } = useMemo(() => ({
+    overdueTasks: getOverdueTasks(tasks),
+    dueSoonTasks: getApproachingTasks(tasks, 3)
+  }), [tasks]);
 
   const viewModes = [
     { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
