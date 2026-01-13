@@ -101,6 +101,9 @@ export default function TemplateManagerPage() {
     try {
       await templatesApi.delete(id);
       loadTemplates();
+      // Reload task and milestone templates for selectors
+      loadTaskTemplates();
+      loadMilestoneTemplates();
     } catch (error) {
       console.error('Error deleting template:', error);
       alert(error.response?.data?.error || 'Errore durante l\'eliminazione');
@@ -130,6 +133,9 @@ export default function TemplateManagerPage() {
         await templatesApi.create(formData);
       }
       loadTemplates();
+      // Reload task and milestone templates for selectors
+      loadTaskTemplates();
+      loadMilestoneTemplates();
       setShowModal(false);
     } catch (error) {
       console.error('Error saving template:', error);
