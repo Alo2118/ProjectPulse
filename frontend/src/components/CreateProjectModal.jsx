@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
-import { projectsApi, milestonesApi, tasksApi } from '../services/api';
+import { projectsApi, milestonesApi, tasksApi, templatesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TemplateSelector from './TemplateSelector';
 import TemplateManagerModal from './TemplateManagerModal';
 import { useTemplates } from '../hooks/useTemplates';
-import { TASK_TEMPLATES } from '../config/templates';
 
 export default function CreateProjectModal({ onClose, onCreate }) {
   const { user, isDirezione } = useAuth();
   const { getAllTemplates, refresh: refreshTemplates } = useTemplates('project');
 
   const projectTemplates = getAllTemplates();
+  const [taskTemplates, setTaskTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(projectTemplates[0]);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [formData, setFormData] = useState({
@@ -21,6 +21,19 @@ export default function CreateProjectModal({ onClose, onCreate }) {
   });
   const [createMilestones, setCreateMilestones] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  // Load task templates from database
+  useEffect(() => {
+    const loadTaskTemplates = async () => {
+      try {
+        const response = await templatesApi.getAll({ type: 'task' });
+        setTaskTemplates(response.data || []);
+      } catch (error) {
+        console.error('Error loading task templates:', error);
+      }
+    };
+    loadTaskTemplates();
+  }, []);
 
   // Apply template data when template changes
   useEffect(() => {
@@ -75,36 +88,47 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           // Create tasks for this milestone if template has them
           if (milestoneTemplate.tasks && milestoneTemplate.tasks.length > 0) {
             for (const taskTemplateId of milestoneTemplate.tasks) {
-              // Find the task template by ID
-              const taskTemplate = TASK_TEMPLATES.find(t => t.id === taskTemplateId);
-              if (taskTemplate && taskTemplate.data) {
-                // Create the task with template data
-                const taskResponse = await tasksApi.create({
-                  title: taskTemplate.name,
-                  description: taskTemplate.data.description || '',
-                  project_id: newProject.id,
-                  milestone_id: newMilestone.id,
-                  priority: taskTemplate.data.priority || 'medium',
-                  estimated_hours: taskTemplate.data.estimated_hours || 0,
-                  status: 'todo'
-                });
+              // Find the task template by ID or name in database
+              let taskTemplate = taskTemplates.find(t =>
+                t.id === taskTemplateId ||
+                t.name === taskTemplateId ||
+                (typeof t.data === 'string' ? JSON.parse(t.data).id : t.data?.id) === taskTemplateId
+              );
 
-                const newTask = taskResponse.data;
+              if (taskTemplate) {
+                // Parse data if it's a string
+                const taskData = typeof taskTemplate.data === 'string'
+                  ? JSON.parse(taskTemplate.data)
+                  : taskTemplate.data;
 
-                // Create subtasks if template has them
-                if (taskTemplate.data.subtasks && taskTemplate.data.subtasks.length > 0) {
-                  for (let i = 0; i < taskTemplate.data.subtasks.length; i++) {
-                    const subtaskTitle = taskTemplate.data.subtasks[i];
-                    await tasksApi.create({
-                      title: subtaskTitle,
-                      description: '',
-                      project_id: newProject.id,
-                      milestone_id: newMilestone.id,
-                      parent_task_id: newTask.id,
-                      order_index: i,
-                      priority: 'medium',
-                      status: 'todo'
-                    });
+                  // Create the task with template data
+                  const taskResponse = await tasksApi.create({
+                    title: taskTemplate.name,
+                    description: taskData.description || '',
+                    project_id: newProject.id,
+                    milestone_id: newMilestone.id,
+                    priority: taskData.priority || 'medium',
+                    estimated_hours: taskData.estimated_hours || 0,
+                    status: 'todo'
+                  });
+
+                  const newTask = taskResponse.data;
+
+                  // Create subtasks if template has them
+                  if (taskData.subtasks && taskData.subtasks.length > 0) {
+                    for (let i = 0; i < taskData.subtasks.length; i++) {
+                      const subtaskTitle = taskData.subtasks[i];
+                      await tasksApi.create({
+                        title: subtaskTitle,
+                        description: '',
+                        project_id: newProject.id,
+                        milestone_id: newMilestone.id,
+                        parent_task_id: newTask.id,
+                        order_index: i,
+                        priority: 'medium',
+                        status: 'todo'
+                      });
+                    }
                   }
                 }
               }

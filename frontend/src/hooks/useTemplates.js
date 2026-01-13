@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { templatesApi } from '../services/api';
-import { PROJECT_TEMPLATES, TASK_TEMPLATES, MILESTONE_TEMPLATES } from '../config/templates';
 
 const STORAGE_KEY = 'projectpulse_custom_templates';
 const MIGRATION_KEY = 'projectpulse_templates_migrated';
@@ -132,34 +131,56 @@ export function useTemplates(type = 'task') {
     }
   };
 
-  // Get all templates (built-in + custom)
+  // Get all templates (database only)
   const getAllTemplates = () => {
-    let builtIn = [];
-
+    // Create the "custom" (empty) template option
+    let customOption;
     switch (type) {
       case 'project':
-        builtIn = PROJECT_TEMPLATES;
+        customOption = {
+          id: 'custom',
+          name: 'Progetto Personalizzato',
+          description: 'Crea un progetto da zero',
+          icon: '📝',
+          data: null
+        };
         break;
       case 'task':
-        builtIn = TASK_TEMPLATES;
+        customOption = {
+          id: 'custom',
+          name: 'Task Personalizzato',
+          description: 'Crea un task da zero',
+          icon: '📋',
+          data: null
+        };
         break;
       case 'milestone':
-        builtIn = MILESTONE_TEMPLATES;
+        customOption = {
+          id: 'custom',
+          name: 'Milestone Personalizzata',
+          description: 'Crea una milestone da zero',
+          icon: '🎯',
+          data: null
+        };
         break;
+      default:
+        customOption = {
+          id: 'custom',
+          name: 'Personalizzato',
+          description: 'Crea da zero',
+          icon: '📝',
+          data: null
+        };
     }
 
-    // Always put "custom" (empty) template first, then custom templates, then built-in
-    const customOption = builtIn[0]; // First one is always the "custom" option
-    const otherBuiltIn = builtIn.slice(1);
-
-    // Add custom flag and unique IDs to custom templates from DB
-    const customWithFlags = customTemplates.map(t => ({
+    // Parse JSON data for templates from DB
+    const templatesWithParsedData = customTemplates.map(t => ({
       ...t,
-      custom: true,
       data: typeof t.data === 'string' ? JSON.parse(t.data) : t.data
     }));
 
-    return [customOption, ...customWithFlags, ...otherBuiltIn];
+    // Return custom option first, then all DB templates
+    return [customOption, ...templatesWithParsedData];
   };
 
   return {

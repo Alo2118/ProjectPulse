@@ -12,7 +12,8 @@
     "create-admin": "node src/scripts/createAdmin.js",
     "inspect-db": "node src/scripts/inspectDb.js",
     "query-db": "node src/scripts/queryDb.js",
-    "manage-db": "node src/scripts/manageDb.js"
+    "manage-db": "node src/scripts/manageDb.js",
+    "seed-templates": "node scripts/seed-templates.js"
   },
   "keywords": ["task-management", "api"],
   "author": "",
