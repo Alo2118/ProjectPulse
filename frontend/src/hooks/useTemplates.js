@@ -1,66 +1,133 @@
 import { useState, useEffect } from 'react';
+import { templatesApi } from '../services/api';
 import { PROJECT_TEMPLATES, TASK_TEMPLATES, MILESTONE_TEMPLATES } from '../config/templates';
 
 const STORAGE_KEY = 'projectpulse_custom_templates';
+const MIGRATION_KEY = 'projectpulse_templates_migrated';
 
 export function useTemplates(type = 'task') {
   const [customTemplates, setCustomTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCustomTemplates();
-  }, []);
+    loadTemplates();
+  }, [type]);
 
-  const loadCustomTemplates = () => {
+  const migrateFromLocalStorage = async () => {
+    // Check if already migrated
+    if (localStorage.getItem(MIGRATION_KEY)) {
+      return;
+    }
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const all = JSON.parse(stored);
-        setCustomTemplates(all[type] || []);
+      if (!stored) {
+        localStorage.setItem(MIGRATION_KEY, 'true');
+        return;
       }
+
+      const all = JSON.parse(stored);
+      const templates = all[type] || [];
+
+      console.log(`🔄 Migrating ${templates.length} ${type} templates to database...`);
+
+      // Migrate each template
+      for (const template of templates) {
+        try {
+          await templatesApi.create({
+            name: template.name,
+            description: template.description,
+            type: type,
+            icon: template.icon || '📋',
+            data: template.data,
+            is_public: false
+          });
+          console.log(`✅ Migrated: ${template.name}`);
+        } catch (error) {
+          // Skip if already exists
+          if (!error.response?.data?.error?.includes('già')) {
+            console.error(`❌ Failed to migrate: ${template.name}`, error);
+          }
+        }
+      }
+
+      // Mark as migrated
+      localStorage.setItem(MIGRATION_KEY, 'true');
+      console.log('✅ Migration completed');
     } catch (error) {
-      console.error('Error loading custom templates:', error);
+      console.error('Migration error:', error);
     }
   };
 
-  const saveCustomTemplate = (template) => {
+  const loadTemplates = async () => {
+    setLoading(true);
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const all = stored ? JSON.parse(stored) : { project: [], task: [], milestone: [] };
+      // Migrate from localStorage first time
+      await migrateFromLocalStorage();
 
-      // Add unique ID if not present
-      if (!template.id) {
-        template.id = `custom_${Date.now()}`;
-        template.custom = true;
-      }
-
-      // Check if updating existing template
-      const existingIndex = all[type].findIndex(t => t.id === template.id);
-      if (existingIndex >= 0) {
-        all[type][existingIndex] = template;
-      } else {
-        all[type].push(template);
-      }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-      setCustomTemplates(all[type]);
-      return template;
+      // Load from database
+      const response = await templatesApi.getAll({ type });
+      setCustomTemplates(response.data || []);
     } catch (error) {
-      console.error('Error saving custom template:', error);
+      console.error('Error loading templates:', error);
+      // Fallback to localStorage if API fails
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const all = JSON.parse(stored);
+          setCustomTemplates(all[type] || []);
+        }
+      } catch (localError) {
+        console.error('Error loading from localStorage:', localError);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveCustomTemplate = async (template) => {
+    try {
+      let saved;
+
+      if (template.id && !template.id.toString().startsWith('custom_')) {
+        // Update existing template
+        const response = await templatesApi.update(template.id, {
+          name: template.name,
+          description: template.description,
+          icon: template.icon,
+          data: template.data,
+          is_public: template.is_public || false
+        });
+        saved = response.data;
+      } else {
+        // Create new template
+        const response = await templatesApi.create({
+          name: template.name,
+          description: template.description,
+          type: type,
+          icon: template.icon || '📋',
+          data: template.data,
+          is_public: template.is_public || false
+        });
+        saved = response.data;
+      }
+
+      // Refresh list
+      await loadTemplates();
+      return saved;
+    } catch (error) {
+      console.error('Error saving template:', error);
       throw error;
     }
   };
 
-  const deleteCustomTemplate = (templateId) => {
+  const deleteCustomTemplate = async (templateId) => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const all = stored ? JSON.parse(stored) : { project: [], task: [], milestone: [] };
-
-      all[type] = all[type].filter(t => t.id !== templateId);
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-      setCustomTemplates(all[type]);
+      await templatesApi.delete(templateId);
+      // Refresh list
+      await loadTemplates();
     } catch (error) {
-      console.error('Error deleting custom template:', error);
+      console.error('Error deleting template:', error);
       throw error;
     }
   };
@@ -85,7 +152,14 @@ export function useTemplates(type = 'task') {
     const customOption = builtIn[0]; // First one is always the "custom" option
     const otherBuiltIn = builtIn.slice(1);
 
-    return [customOption, ...customTemplates, ...otherBuiltIn];
+    // Add custom flag and unique IDs to custom templates from DB
+    const customWithFlags = customTemplates.map(t => ({
+      ...t,
+      custom: true,
+      data: typeof t.data === 'string' ? JSON.parse(t.data) : t.data
+    }));
+
+    return [customOption, ...customWithFlags, ...otherBuiltIn];
   };
 
   return {
@@ -93,6 +167,7 @@ export function useTemplates(type = 'task') {
     getAllTemplates,
     saveCustomTemplate,
     deleteCustomTemplate,
-    refresh: loadCustomTemplates
+    refresh: loadTemplates,
+    loading
   };
 }

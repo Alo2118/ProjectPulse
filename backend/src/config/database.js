@@ -264,6 +264,23 @@ const createTables = () => {
     )
   `);
 
+  // Templates table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      type TEXT NOT NULL CHECK(type IN ('task', 'project', 'milestone')),
+      icon TEXT DEFAULT '📋',
+      data TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      is_public BOOLEAN DEFAULT 0,
+      created_at DATETIME DEFAULT (datetime('now', '+1 hour')),
+      updated_at DATETIME DEFAULT (datetime('now', '+1 hour')),
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   console.log('✅ Database tables created successfully');
 };
 
@@ -316,6 +333,12 @@ const createIndexes = () => {
     db.exec('CREATE INDEX IF NOT EXISTS idx_requests_project_id ON requests(project_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_requests_received_at ON requests(received_at)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_requests_due_date ON requests(due_date)');
+
+    // Templates indexes
+    db.exec('CREATE INDEX IF NOT EXISTS idx_templates_type ON templates(type)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_templates_created_by ON templates(created_by)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_templates_is_public ON templates(is_public)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_templates_created_at ON templates(created_at)');
 
     console.log('✅ Database indexes created successfully');
   } catch (error) {
