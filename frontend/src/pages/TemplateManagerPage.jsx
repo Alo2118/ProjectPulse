@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Copy, Save, X, FileText, FolderOpen, Target } from 'lucide-react';
+import { Plus, Edit2, Trash2, Copy, Save, X, FileText, FolderOpen, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { templatesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 export default function TemplateManagerPage() {
   const { user } = useAuth();
   const [templates, setTemplates] = useState([]);
+  const [taskTemplates, setTaskTemplates] = useState([]); // For milestone and project editors
   const [activeTab, setActiveTab] = useState('project'); // 'project', 'task', 'milestone'
   const [showModal, setShowModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -22,6 +23,7 @@ export default function TemplateManagerPage() {
 
   useEffect(() => {
     loadTemplates();
+    loadTaskTemplates(); // Load task templates for selectors
   }, []);
 
   const loadTemplates = async () => {
@@ -34,6 +36,15 @@ export default function TemplateManagerPage() {
       alert('Errore nel caricamento dei template');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTaskTemplates = async () => {
+    try {
+      const response = await templatesApi.getAll({ type: 'task' });
+      setTaskTemplates(response.data || []);
+    } catch (error) {
+      console.error('Error loading task templates:', error);
     }
   };
 
@@ -359,6 +370,7 @@ export default function TemplateManagerPage() {
                     type={formData.type}
                     data={formData.data}
                     onChange={(newData) => setFormData({ ...formData, data: newData })}
+                    taskTemplates={taskTemplates}
                   />
                 </div>
 
@@ -386,27 +398,191 @@ export default function TemplateManagerPage() {
 }
 
 // Component for editing template-specific data
-function TemplateDataEditor({ type, data, onChange }) {
+function TemplateDataEditor({ type, data, onChange, taskTemplates = [] }) {
+  const [expandedMilestones, setExpandedMilestones] = useState({});
+
+  const toggleMilestone = (index) => {
+    setExpandedMilestones(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  const addMilestone = () => {
+    const milestones = data.milestones || [];
+    onChange({
+      ...data,
+      milestones: [
+        ...milestones,
+        {
+          name: '',
+          description: '',
+          duration_days: 30,
+          tasks: []
+        }
+      ]
+    });
+    // Expand the newly added milestone
+    setExpandedMilestones(prev => ({ ...prev, [milestones.length]: true }));
+  };
+
+  const updateMilestone = (index, field, value) => {
+    const milestones = [...(data.milestones || [])];
+    milestones[index] = { ...milestones[index], [field]: value };
+    onChange({ ...data, milestones });
+  };
+
+  const removeMilestone = (index) => {
+    const milestones = [...(data.milestones || [])];
+    milestones.splice(index, 1);
+    onChange({ ...data, milestones });
+  };
+
+  const toggleTask = (milestoneIndex, taskName) => {
+    const milestones = [...(data.milestones || [])];
+    const milestone = { ...milestones[milestoneIndex] };
+    const tasks = milestone.tasks || [];
+
+    if (tasks.includes(taskName)) {
+      milestone.tasks = tasks.filter(t => t !== taskName);
+    } else {
+      milestone.tasks = [...tasks, taskName];
+    }
+
+    milestones[milestoneIndex] = milestone;
+    onChange({ ...data, milestones });
+  };
+
   if (type === 'project') {
+    const milestones = data.milestones || [];
+
     return (
       <div className="border rounded-lg p-4 bg-gray-50">
-        <h4 className="font-semibold mb-3">Dati Progetto</h4>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold">Dati Progetto</h4>
+          <button
+            type="button"
+            onClick={addMilestone}
+            className="btn btn-secondary text-sm flex items-center gap-1"
+          >
+            <Plus size={16} />
+            Aggiungi Milestone
+          </button>
+        </div>
+
         <div className="space-y-3">
+          {/* Descrizione generale */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descrizione Dettagliata
+              Descrizione Progetto
             </label>
             <textarea
               className="input"
-              rows="3"
+              rows="2"
               value={data.description || ''}
               onChange={(e) => onChange({ ...data, description: e.target.value })}
-              placeholder="Descrizione del progetto quando viene creato da template..."
+              placeholder="Descrizione generale del progetto..."
             />
           </div>
-          <div className="text-sm text-gray-600">
-            💡 Le milestone vengono gestite nella sezione template milestone
-          </div>
+
+          {/* Milestone list */}
+          {milestones.length === 0 ? (
+            <div className="text-sm text-gray-500 text-center py-4 border-2 border-dashed rounded">
+              Nessuna milestone definita. Clicca "Aggiungi Milestone" per iniziare.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {milestones.map((milestone, index) => (
+                <div key={index} className="border rounded bg-white">
+                  {/* Milestone header */}
+                  <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                    onClick={() => toggleMilestone(index)}>
+                    <div className="flex items-center gap-2 flex-1">
+                      {expandedMilestones[index] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      <span className="font-medium">{milestone.name || `Milestone ${index + 1}`}</span>
+                      <span className="text-xs text-gray-500">({milestone.duration_days || 0} giorni)</span>
+                      {milestone.tasks && milestone.tasks.length > 0 && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                          {milestone.tasks.length} task
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeMilestone(index); }}
+                      className="text-red-600 hover:text-red-800 p-1"
+                      title="Elimina milestone"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  {/* Milestone details (expanded) */}
+                  {expandedMilestones[index] && (
+                    <div className="p-3 border-t space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Nome</label>
+                        <input
+                          type="text"
+                          className="input text-sm"
+                          value={milestone.name || ''}
+                          onChange={(e) => updateMilestone(index, 'name', e.target.value)}
+                          placeholder="Es: Ricerca e Concept"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Descrizione</label>
+                        <textarea
+                          className="input text-sm"
+                          rows="2"
+                          value={milestone.description || ''}
+                          onChange={(e) => updateMilestone(index, 'description', e.target.value)}
+                          placeholder="Descrizione della milestone..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Durata (giorni)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          className="input text-sm"
+                          value={milestone.duration_days || 30}
+                          onChange={(e) => updateMilestone(index, 'duration_days', parseInt(e.target.value) || 30)}
+                        />
+                      </div>
+
+                      {/* Task selector */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-2">
+                          Task da Creare ({(milestone.tasks || []).length} selezionati)
+                        </label>
+                        {taskTemplates.length === 0 ? (
+                          <p className="text-xs text-gray-500">Nessun task template disponibile</p>
+                        ) : (
+                          <div className="max-h-40 overflow-y-auto border rounded p-2 space-y-1 bg-gray-50">
+                            {taskTemplates.map((task) => (
+                              <label key={task.id} className="flex items-center gap-2 text-sm hover:bg-gray-100 p-1 rounded cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={(milestone.tasks || []).includes(task.name)}
+                                  onChange={() => toggleTask(index, task.name)}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-lg">{task.icon}</span>
+                                <span className="flex-1">{task.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -480,6 +656,16 @@ function TemplateDataEditor({ type, data, onChange }) {
   }
 
   if (type === 'milestone') {
+    const selectedTasks = data.tasks || [];
+
+    const toggleTaskForMilestone = (taskName) => {
+      if (selectedTasks.includes(taskName)) {
+        onChange({ ...data, tasks: selectedTasks.filter(t => t !== taskName) });
+      } else {
+        onChange({ ...data, tasks: [...selectedTasks, taskName] });
+      }
+    };
+
     return (
       <div className="border rounded-lg p-4 bg-gray-50">
         <h4 className="font-semibold mb-3">Dati Milestone</h4>
@@ -493,6 +679,7 @@ function TemplateDataEditor({ type, data, onChange }) {
               rows="2"
               value={data.description || ''}
               onChange={(e) => onChange({ ...data, description: e.target.value })}
+              placeholder="Descrizione della milestone..."
             />
           </div>
 
@@ -509,8 +696,47 @@ function TemplateDataEditor({ type, data, onChange }) {
             />
           </div>
 
-          <div className="text-sm text-gray-600">
-            💡 I task assegnati a questa milestone vengono gestiti dai template task
+          {/* Task selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Task da Creare ({selectedTasks.length} selezionati)
+            </label>
+            {taskTemplates.length === 0 ? (
+              <p className="text-sm text-gray-500 border-2 border-dashed rounded p-3 text-center">
+                Nessun task template disponibile. Crea prima dei task template.
+              </p>
+            ) : (
+              <div className="max-h-60 overflow-y-auto border rounded p-3 space-y-2 bg-white">
+                {taskTemplates.map((task) => (
+                  <label
+                    key={task.id}
+                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTasks.includes(task.name)}
+                      onChange={() => toggleTaskForMilestone(task.name)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-2xl">{task.icon}</span>
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{task.name}</div>
+                      {task.description && (
+                        <div className="text-xs text-gray-500">{task.description}</div>
+                      )}
+                    </div>
+                    {task.data && task.data.estimated_hours > 0 && (
+                      <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                        {task.data.estimated_hours}h
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Questi task verranno creati automaticamente quando si crea un progetto con questa milestone
+            </p>
           </div>
         </div>
       </div>
