@@ -2,17 +2,36 @@ import { useState, useEffect } from 'react';
 import { X, Plus, User } from 'lucide-react';
 import { tasksApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import TemplateSelector from './TemplateSelector';
+import { TASK_TEMPLATES, SMART_DEFAULTS } from '../config/templates';
 
-export default function CreateTaskModal({ projects, onClose, onCreate, parentTaskId = null }) {
+export default function CreateTaskModal({ projects, onClose, onCreate, parentTaskId = null, defaultProjectId = null, defaultMilestoneId = null }) {
   const { user, isAmministratore } = useAuth();
+
+  // Smart default: calcola deadline predefinita (+7 giorni)
+  const getDefaultDeadline = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + SMART_DEFAULTS.task.deadlineOffset);
+    return date.toISOString().split('T')[0];
+  };
+
+  // Smart default: recupera ultimo utente assegnato
+  const getLastAssignedUser = () => {
+    if (SMART_DEFAULTS.task.rememberLastAssignee) {
+      return localStorage.getItem('lastAssignedUser') || '';
+    }
+    return '';
+  };
+
+  const [selectedTemplate, setSelectedTemplate] = useState(TASK_TEMPLATES[0]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    project_id: '',
-    milestone_id: '',
-    priority: 'medium',
-    deadline: '',
-    assigned_to: '',
+    project_id: defaultProjectId || '',
+    milestone_id: defaultMilestoneId || '',
+    priority: SMART_DEFAULTS.task.priorityByContext.default,
+    deadline: getDefaultDeadline(),
+    assigned_to: getLastAssignedUser(),
     parent_task_id: parentTaskId
   });
   const [showNewProject, setShowNewProject] = useState(false);
@@ -25,7 +44,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
     if (isAmministratore) {
       loadUsers();
     }
-  }, []);
+  }, [isAmministratore]);
 
   useEffect(() => {
     if (formData && formData.project_id) {
@@ -35,6 +54,17 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
       setFormData(prev => ({ ...prev, milestone_id: '' }));
     }
   }, [formData?.project_id]);
+
+  // Apply template data when template changes
+  useEffect(() => {
+    if (selectedTemplate && selectedTemplate.data) {
+      setFormData(prev => ({
+        ...prev,
+        description: selectedTemplate.data.description || prev.description,
+        priority: selectedTemplate.data.priority || prev.priority
+      }));
+    }
+  }, [selectedTemplate]);
 
   const loadUsers = async () => {
     try {
@@ -70,16 +100,45 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
         projectId = response.data.id;
       }
 
-      await tasksApi.create({
+      const assignedUserId = formData.assigned_to ? parseInt(formData.assigned_to) : user.id;
+
+      // Save last assigned user for smart defaults
+      if (SMART_DEFAULTS.task.rememberLastAssignee && formData.assigned_to) {
+        localStorage.setItem('lastAssignedUser', formData.assigned_to);
+      }
+
+      // Create main task
+      const taskResponse = await tasksApi.create({
         ...formData,
         project_id: projectId ? parseInt(projectId) : null,
         milestone_id: formData.milestone_id ? parseInt(formData.milestone_id) : null,
-        assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : user.id
+        assigned_to: assignedUserId
       });
+
+      const newTask = taskResponse.data;
+
+      // Create subtasks if template has them
+      if (selectedTemplate?.data?.subtasks && selectedTemplate.data.subtasks.length > 0) {
+        for (let i = 0; i < selectedTemplate.data.subtasks.length; i++) {
+          const subtaskTitle = selectedTemplate.data.subtasks[i];
+          await tasksApi.create({
+            title: subtaskTitle,
+            description: '',
+            project_id: projectId ? parseInt(projectId) : null,
+            milestone_id: formData.milestone_id ? parseInt(formData.milestone_id) : null,
+            assigned_to: assignedUserId,
+            parent_task_id: newTask.id,
+            order_index: i,
+            priority: 'medium',
+            status: 'todo'
+          });
+        }
+      }
 
       onCreate();
       onClose();
     } catch (error) {
+      console.error('Error creating task:', error);
       alert(error.response?.data?.error || 'Errore durante la creazione del task');
     } finally {
       setLoading(false);
@@ -97,6 +156,24 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Template Selector */}
+          <TemplateSelector
+            templates={TASK_TEMPLATES}
+            onSelect={setSelectedTemplate}
+            selectedId={selectedTemplate?.id}
+          />
+
+          {selectedTemplate?.data?.subtasks && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="text-sm text-green-900 font-medium mb-1">
+                ✨ Template con checklist integrata
+              </div>
+              <div className="text-xs text-green-700">
+                Verranno create automaticamente {selectedTemplate.data.subtasks.length} subtask
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Titolo *
@@ -121,6 +198,11 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
+            {selectedTemplate?.data?.description && (
+              <p className="text-xs text-primary-600 mt-1">
+                💡 Descrizione pre-compilata dal template
+              </p>
+            )}
           </div>
 
           <div>
@@ -203,9 +285,11 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Assegna il task a un dipendente specifico
-              </p>
+              {formData.assigned_to && getLastAssignedUser() === formData.assigned_to && (
+                <p className="text-xs text-primary-600 mt-1">
+                  💡 Ultimo utente assegnato (smart default)
+                </p>
+              )}
             </div>
           )}
 
@@ -235,8 +319,22 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
                 value={formData.deadline}
                 onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
               />
+              <p className="text-xs text-primary-600 mt-1">
+                💡 Scadenza +{SMART_DEFAULTS.task.deadlineOffset} giorni (smart default)
+              </p>
             </div>
           </div>
+
+          {/* Info about auto-filled fields */}
+          {(defaultProjectId || defaultMilestoneId) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="text-sm text-blue-900">
+                ℹ️ Campi pre-compilati automaticamente:
+                {defaultProjectId && <span className="block text-xs text-blue-700 mt-1">• Progetto selezionato dal contesto</span>}
+                {defaultMilestoneId && <span className="block text-xs text-blue-700">• Milestone selezionata dal contesto</span>}
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button

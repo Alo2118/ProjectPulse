@@ -1,0 +1,182 @@
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { projectsApi, milestonesApi } from '../services/api';
+import TemplateSelector from './TemplateSelector';
+import { PROJECT_TEMPLATES } from '../config/templates';
+
+export default function CreateProjectModal({ onClose, onCreate }) {
+  const [selectedTemplate, setSelectedTemplate] = useState(PROJECT_TEMPLATES[0]);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    status: 'active'
+  });
+  const [createMilestones, setCreateMilestones] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // Apply template data when template changes
+  useEffect(() => {
+    if (selectedTemplate && selectedTemplate.data) {
+      setFormData(prev => ({
+        ...prev,
+        description: selectedTemplate.data.description || ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        description: ''
+      }));
+    }
+  }, [selectedTemplate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      alert('Il nome del progetto è obbligatorio');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create project
+      const projectResponse = await projectsApi.create(formData);
+      const newProject = projectResponse.data;
+
+      // Create milestones if template has them and user wants them
+      if (createMilestones && selectedTemplate?.data?.milestones) {
+        const today = new Date();
+        let cumulativeDays = 0;
+
+        for (const milestoneTemplate of selectedTemplate.data.milestones) {
+          const startDate = new Date(today);
+          startDate.setDate(startDate.getDate() + cumulativeDays);
+
+          const dueDate = new Date(startDate);
+          dueDate.setDate(dueDate.getDate() + milestoneTemplate.duration_days);
+
+          await milestonesApi.create({
+            name: milestoneTemplate.name,
+            description: milestoneTemplate.description,
+            project_id: newProject.id,
+            due_date: dueDate.toISOString().split('T')[0],
+            status: 'active'
+          });
+
+          cumulativeDays += milestoneTemplate.duration_days;
+        }
+      }
+
+      onCreate();
+      onClose();
+    } catch (error) {
+      console.error('Error creating project:', error);
+      alert(error.response?.data?.error || 'Errore durante la creazione del progetto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900">Nuovo Progetto R&D</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Template Selector */}
+          <TemplateSelector
+            templates={PROJECT_TEMPLATES}
+            onSelect={setSelectedTemplate}
+            selectedId={selectedTemplate?.id}
+          />
+
+          {/* Project Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nome Progetto *
+            </label>
+            <input
+              type="text"
+              className="input"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="es. Fissatore Esapodiale Gen 2"
+              required
+              autoFocus
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descrizione
+            </label>
+            <textarea
+              className="input"
+              rows="4"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descrizione dettagliata del progetto..."
+            />
+            {selectedTemplate?.data && (
+              <p className="text-xs text-primary-600 mt-1">
+                💡 Template applicato: descrizione pre-compilata
+              </p>
+            )}
+          </div>
+
+          {/* Create Milestones Option */}
+          {selectedTemplate?.data?.milestones && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={createMilestones}
+                  onChange={(e) => setCreateMilestones(e.target.checked)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-blue-900 text-sm mb-1">
+                    Crea milestone automaticamente
+                  </div>
+                  <div className="text-xs text-blue-700">
+                    Verranno create {selectedTemplate.data.milestones.length} milestone predefinite per questo tipo di progetto:
+                  </div>
+                  <ul className="text-xs text-blue-600 mt-2 space-y-1 ml-4">
+                    {selectedTemplate.data.milestones.map((m, i) => (
+                      <li key={i}>
+                        • {m.name} ({m.duration_days} giorni)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary flex-1"
+            >
+              {loading ? 'Creazione...' : 'Crea Progetto'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+            >
+              Annulla
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

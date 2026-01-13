@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, FolderOpen, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { projectsApi, tasksApi } from '../services/api';
 import Navbar from '../components/Navbar';
+import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectModal from '../components/ProjectModal';
 import { formatTime } from '../utils/helpers';
 
@@ -11,7 +12,8 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,13 +55,12 @@ export default function ProjectsPage() {
   }, [projects, tasks]);
 
   const handleCreate = () => {
-    setSelectedProject(null);
-    setShowModal(true);
+    setShowCreateModal(true);
   };
 
   const handleEdit = (project) => {
     setSelectedProject(project);
-    setShowModal(true);
+    setShowEditModal(true);
   };
 
   const handleArchive = async (project) => {
@@ -244,11 +245,19 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      {/* Project Modal */}
-      {showModal && (
+      {/* Create Project Modal */}
+      {showCreateModal && (
+        <CreateProjectModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={loadProjects}
+        />
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditModal && selectedProject && (
         <ProjectModal
           project={selectedProject}
-          onClose={() => setShowModal(false)}
+          onClose={() => setShowEditModal(false)}
           onSave={loadProjects}
         />
       )}

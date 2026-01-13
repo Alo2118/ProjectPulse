@@ -18,6 +18,7 @@ export default function ProjectDetailPage() {
   const [milestones, setMilestones] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [defaultMilestoneForTask, setDefaultMilestoneForTask] = useState(null);
   const [showEditProject, setShowEditProject] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
@@ -497,7 +498,12 @@ export default function ProjectDetailPage() {
       {showCreateTask && (
         <CreateTaskModal
           projects={[project]}
-          onClose={() => setShowCreateTask(false)}
+          defaultProjectId={project.id}
+          defaultMilestoneId={defaultMilestoneForTask}
+          onClose={() => {
+            setShowCreateTask(false);
+            setDefaultMilestoneForTask(null);
+          }}
           onCreate={loadData}
         />
       )}
