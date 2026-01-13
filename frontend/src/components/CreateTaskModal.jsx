@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, User } from 'lucide-react';
+import { X, Plus, User, Settings } from 'lucide-react';
 import { tasksApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TemplateSelector from './TemplateSelector';
-import { TASK_TEMPLATES, SMART_DEFAULTS } from '../config/templates';
+import TemplateManagerModal from './TemplateManagerModal';
+import { useTemplates } from '../hooks/useTemplates';
+import { SMART_DEFAULTS } from '../config/templates';
 
 export default function CreateTaskModal({ projects, onClose, onCreate, parentTaskId = null, defaultProjectId = null, defaultMilestoneId = null }) {
-  const { user, isAmministratore } = useAuth();
+  const { user, isAmministratore, isDirezione } = useAuth();
+  const { getAllTemplates, refresh: refreshTemplates } = useTemplates('task');
 
   // Smart default: calcola deadline predefinita (+7 giorni)
   const getDefaultDeadline = () => {
@@ -23,7 +26,9 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
     return '';
   };
 
-  const [selectedTemplate, setSelectedTemplate] = useState(TASK_TEMPLATES[0]);
+  const taskTemplates = getAllTemplates();
+  const [selectedTemplate, setSelectedTemplate] = useState(taskTemplates[0]);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -157,11 +162,26 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Template Selector */}
-          <TemplateSelector
-            templates={TASK_TEMPLATES}
-            onSelect={setSelectedTemplate}
-            selectedId={selectedTemplate?.id}
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <TemplateSelector
+                templates={taskTemplates}
+                onSelect={setSelectedTemplate}
+                selectedId={selectedTemplate?.id}
+              />
+            </div>
+            {!isDirezione && (
+              <button
+                type="button"
+                onClick={() => setShowTemplateManager(true)}
+                className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+                title="Gestisci template personalizzati"
+              >
+                <Settings className="w-4 h-4" />
+                Gestisci
+              </button>
+            )}
+          </div>
 
           {selectedTemplate?.data?.subtasks && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -354,6 +374,17 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
           </div>
         </form>
       </div>
+
+      {/* Template Manager Modal */}
+      {showTemplateManager && (
+        <TemplateManagerModal
+          type="task"
+          onClose={() => {
+            setShowTemplateManager(false);
+            refreshTemplates();
+          }}
+        />
+      )}
     </div>
   );
 }

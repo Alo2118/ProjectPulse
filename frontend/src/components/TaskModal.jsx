@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, MessageSquare, Send, User, Trash2 } from 'lucide-react';
+import { X, Clock, MessageSquare, Send, User, Trash2, Save } from 'lucide-react';
 import { tasksApi, commentsApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SubtaskList from './SubtaskList';
+import { useTemplates } from '../hooks/useTemplates';
 
 const statusLabels = {
   todo: 'Da fare',
@@ -14,6 +15,7 @@ const statusLabels = {
 
 export default function TaskModal({ task, onClose, onUpdate }) {
   const { user, isDirezione, isAmministratore } = useAuth();
+  const { saveCustomTemplate } = useTemplates('task');
   const [editedTask, setEditedTask] = useState(task);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -145,6 +147,37 @@ export default function TaskModal({ task, onClose, onUpdate }) {
     } catch (error) {
       alert(error.response?.data?.error || 'Errore durante l\'eliminazione');
       setLoading(false);
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!task) return;
+
+    const templateName = prompt('Nome del template:', task.title);
+    if (!templateName || !templateName.trim()) return;
+
+    try {
+      // Get subtasks for this task
+      const subtasksResponse = await tasksApi.getSubtasks(task.id);
+      const subtasks = subtasksResponse.data.map(st => st.title);
+
+      const template = {
+        name: templateName.trim(),
+        description: `Template creato da: ${task.title}`,
+        icon: '📋',
+        custom: true,
+        data: {
+          description: task.description || '',
+          priority: task.priority || 'medium',
+          subtasks: subtasks
+        }
+      };
+
+      saveCustomTemplate(template);
+      alert(`Template "${templateName}" salvato con successo!\n\n${subtasks.length > 0 ? `Include ${subtasks.length} subtask` : 'Nessuna subtask inclusa'}`);
+    } catch (error) {
+      console.error('Error saving template:', error);
+      alert('Errore durante il salvataggio del template');
     }
   };
 
@@ -435,6 +468,15 @@ export default function TaskModal({ task, onClose, onUpdate }) {
               <>
                 <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
                   {loading ? 'Salvataggio...' : isAmministratore ? 'Salva assegnazione' : 'Salva modifiche'}
+                </button>
+                <button
+                  onClick={handleSaveAsTemplate}
+                  disabled={loading}
+                  className="btn-secondary text-primary-600 hover:bg-primary-50 hover:border-primary-300 flex items-center gap-2"
+                  title="Salva come template personalizzato"
+                >
+                  <Save className="w-4 h-4" />
+                  Template
                 </button>
                 <button
                   onClick={handleDelete}

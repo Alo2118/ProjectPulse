@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Settings } from 'lucide-react';
 import { projectsApi, milestonesApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import TemplateSelector from './TemplateSelector';
-import { PROJECT_TEMPLATES } from '../config/templates';
+import TemplateManagerModal from './TemplateManagerModal';
+import { useTemplates } from '../hooks/useTemplates';
 
 export default function CreateProjectModal({ onClose, onCreate }) {
-  const [selectedTemplate, setSelectedTemplate] = useState(PROJECT_TEMPLATES[0]);
+  const { isDirezione } = useAuth();
+  const { getAllTemplates, refresh: refreshTemplates } = useTemplates('project');
+
+  const projectTemplates = getAllTemplates();
+  const [selectedTemplate, setSelectedTemplate] = useState(projectTemplates[0]);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -88,11 +95,26 @@ export default function CreateProjectModal({ onClose, onCreate }) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Template Selector */}
-          <TemplateSelector
-            templates={PROJECT_TEMPLATES}
-            onSelect={setSelectedTemplate}
-            selectedId={selectedTemplate?.id}
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <TemplateSelector
+                templates={projectTemplates}
+                onSelect={setSelectedTemplate}
+                selectedId={selectedTemplate?.id}
+              />
+            </div>
+            {!isDirezione && (
+              <button
+                type="button"
+                onClick={() => setShowTemplateManager(true)}
+                className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+                title="Gestisci template personalizzati"
+              >
+                <Settings className="w-4 h-4" />
+                Gestisci
+              </button>
+            )}
+          </div>
 
           {/* Project Name */}
           <div>
@@ -177,6 +199,17 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           </div>
         </form>
       </div>
+
+      {/* Template Manager Modal */}
+      {showTemplateManager && (
+        <TemplateManagerModal
+          type="project"
+          onClose={() => {
+            setShowTemplateManager(false);
+            refreshTemplates();
+          }}
+        />
+      )}
     </div>
   );
 }
