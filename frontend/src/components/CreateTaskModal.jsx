@@ -26,19 +26,52 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
     return '';
   };
 
+  // Smart default: calcola data inizio basandosi su deadline e ore stimate
+  const calculateSmartStartDate = (deadline, estimatedHours) => {
+    if (!SMART_DEFAULTS.task.autoCalculateStartDate) {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    if (!deadline) {
+      // Nessuna deadline: inizia oggi
+      return new Date().toISOString().split('T')[0];
+    }
+
+    if (!estimatedHours || estimatedHours === 0) {
+      // Nessuna stima ore: inizia oggi
+      return new Date().toISOString().split('T')[0];
+    }
+
+    // Calcola data inizio: deadline - (estimated_hours / hoursPerWorkingDay)
+    const deadlineDate = new Date(deadline);
+    const workingDays = Math.ceil(estimatedHours / SMART_DEFAULTS.task.hoursPerWorkingDay);
+    const startDate = new Date(deadlineDate);
+    startDate.setDate(startDate.getDate() - workingDays);
+
+    // Non permettere date di inizio nel passato
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (startDate < today) {
+      return today.toISOString().split('T')[0];
+    }
+
+    return startDate.toISOString().split('T')[0];
+  };
+
   const taskTemplates = getAllTemplates();
   const [selectedTemplate, setSelectedTemplate] = useState(taskTemplates[0]);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const defaultDeadline = getDefaultDeadline();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     project_id: defaultProjectId || '',
     milestone_id: defaultMilestoneId || '',
     priority: SMART_DEFAULTS.task.priorityByContext.default,
-    deadline: getDefaultDeadline(),
+    deadline: defaultDeadline,
     assigned_to: getLastAssignedUser(),
     parent_task_id: parentTaskId,
-    start_date: '',
+    start_date: calculateSmartStartDate(defaultDeadline, 0),
     estimated_hours: 0,
     progress_percentage: 0
   });
@@ -73,6 +106,17 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
       }));
     }
   }, [selectedTemplate]);
+
+  // Auto-calculate start_date when deadline or estimated_hours change
+  useEffect(() => {
+    if (formData.deadline || formData.estimated_hours) {
+      const newStartDate = calculateSmartStartDate(formData.deadline, formData.estimated_hours);
+      setFormData(prev => ({
+        ...prev,
+        start_date: newStartDate
+      }));
+    }
+  }, [formData.deadline, formData.estimated_hours]);
 
   const loadUsers = async () => {
     try {
@@ -366,6 +410,11 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
                   value={formData.start_date}
                   onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                 />
+                <p className="text-xs text-primary-600 mt-1">
+                  {formData.estimated_hours > 0
+                    ? `💡 Calcolata: scadenza - ${Math.ceil(formData.estimated_hours / SMART_DEFAULTS.task.hoursPerWorkingDay)} giorni lavorativi`
+                    : '💡 Default: oggi (modifica ore stimate per calcolo automatico)'}
+                </p>
               </div>
 
               <div>
@@ -380,6 +429,9 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
                   value={formData.estimated_hours}
                   onChange={(e) => setFormData({ ...formData, estimated_hours: parseInt(e.target.value) || 0 })}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Aggiorna auto la data inizio
+                </p>
               </div>
 
               <div>

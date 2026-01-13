@@ -298,7 +298,13 @@ export const SMART_DEFAULTS = {
     // Default deadline offset in days
     deadlineOffset: 7,
     // Auto-assign to last used user (stored in localStorage)
-    rememberLastAssignee: true
+    rememberLastAssignee: true,
+    // Auto-calculate start_date based on deadline and estimated hours
+    // Logic: deadline - (estimated_hours / 8 working hours per day)
+    // Falls back to today if no deadline or no estimated hours
+    autoCalculateStartDate: true,
+    // Hours per working day for start date calculation
+    hoursPerWorkingDay: 8
   },
   project: {
     // Default status for new projects
