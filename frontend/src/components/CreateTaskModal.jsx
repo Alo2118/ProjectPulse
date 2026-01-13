@@ -201,15 +201,16 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900">Nuovo Task</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Template Selector */}
           <div className="flex items-end gap-2">
             <div className="flex-1">
@@ -465,8 +466,9 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
               </div>
             </div>
           )}
+          </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 p-6 pt-4 border-t border-gray-200 flex-shrink-0">
             <button
               type="submit"
               disabled={loading}
