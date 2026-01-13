@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
-import { projectsApi, milestonesApi } from '../services/api';
+import { projectsApi, milestonesApi, tasksApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TemplateSelector from './TemplateSelector';
 import TemplateManagerModal from './TemplateManagerModal';
 import { useTemplates } from '../hooks/useTemplates';
+import { TASK_TEMPLATES } from '../config/templates';
 
 export default function CreateProjectModal({ onClose, onCreate }) {
-  const { isDirezione } = useAuth();
+  const { user, isDirezione } = useAuth();
   const { getAllTemplates, refresh: refreshTemplates } = useTemplates('project');
 
   const projectTemplates = getAllTemplates();
@@ -61,13 +62,54 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           const dueDate = new Date(startDate);
           dueDate.setDate(dueDate.getDate() + milestoneTemplate.duration_days);
 
-          await milestonesApi.create({
+          const milestoneResponse = await milestonesApi.create({
             name: milestoneTemplate.name,
             description: milestoneTemplate.description,
             project_id: newProject.id,
             due_date: dueDate.toISOString().split('T')[0],
             status: 'active'
           });
+
+          const newMilestone = milestoneResponse.data;
+
+          // Create tasks for this milestone if template has them
+          if (milestoneTemplate.tasks && milestoneTemplate.tasks.length > 0) {
+            for (const taskTemplateId of milestoneTemplate.tasks) {
+              // Find the task template by ID
+              const taskTemplate = TASK_TEMPLATES.find(t => t.id === taskTemplateId);
+              if (taskTemplate && taskTemplate.data) {
+                // Create the task with template data
+                const taskResponse = await tasksApi.create({
+                  title: taskTemplate.name,
+                  description: taskTemplate.data.description || '',
+                  project_id: newProject.id,
+                  milestone_id: newMilestone.id,
+                  priority: taskTemplate.data.priority || 'medium',
+                  estimated_hours: taskTemplate.data.estimated_hours || 0,
+                  status: 'todo'
+                });
+
+                const newTask = taskResponse.data;
+
+                // Create subtasks if template has them
+                if (taskTemplate.data.subtasks && taskTemplate.data.subtasks.length > 0) {
+                  for (let i = 0; i < taskTemplate.data.subtasks.length; i++) {
+                    const subtaskTitle = taskTemplate.data.subtasks[i];
+                    await tasksApi.create({
+                      title: subtaskTitle,
+                      description: '',
+                      project_id: newProject.id,
+                      milestone_id: newMilestone.id,
+                      parent_task_id: newTask.id,
+                      order_index: i,
+                      priority: 'medium',
+                      status: 'todo'
+                    });
+                  }
+                }
+              }
+            }
+          }
 
           cumulativeDays += milestoneTemplate.duration_days;
         }

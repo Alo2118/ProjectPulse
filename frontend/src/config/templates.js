@@ -16,11 +16,11 @@ export const PROJECT_TEMPLATES = [
     data: {
       description: 'Progetto di sviluppo e validazione di un nuovo sistema di fissatore ortopedico per fratture complesse',
       milestones: [
-        { name: 'Analisi e Design', description: 'Analisi biomeccanica e design preliminare', duration_days: 30 },
-        { name: 'Prototipazione', description: 'Realizzazione prototipi e test preliminari', duration_days: 45 },
-        { name: 'Test Meccanici', description: 'Validazione resistenza e performance', duration_days: 30 },
-        { name: 'Test Clinici', description: 'Validazione clinica e feedback medici', duration_days: 60 },
-        { name: 'Certificazione CE', description: 'Documentazione e certificazione CE', duration_days: 45 }
+        { name: 'Analisi e Design', description: 'Analisi biomeccanica e design preliminare', duration_days: 30, tasks: ['analisi_biomeccanica', 'doc_tecnica'] },
+        { name: 'Prototipazione', description: 'Realizzazione prototipi e test preliminari', duration_days: 45, tasks: ['prototipazione', 'controllo_qualita'] },
+        { name: 'Test Meccanici', description: 'Validazione resistenza e performance', duration_days: 30, tasks: ['test_meccanici'] },
+        { name: 'Test Clinici', description: 'Validazione clinica e feedback medici', duration_days: 60, tasks: ['validazione_clinica', 'meeting_review'] },
+        { name: 'Certificazione CE', description: 'Documentazione e certificazione CE', duration_days: 45, tasks: ['certificazione_ce', 'doc_tecnica'] }
       ]
     }
   },
@@ -32,12 +32,12 @@ export const PROJECT_TEMPLATES = [
     data: {
       description: 'Progetto di sviluppo protesi articolare con focus su biocompatibilità e durata',
       milestones: [
-        { name: 'Studio Biomeccanico', description: 'Analisi cinematica e dinamica articolare', duration_days: 30 },
-        { name: 'Selezione Materiali', description: 'Test biocompatibilità e resistenza', duration_days: 20 },
-        { name: 'Design CAD', description: 'Modellazione 3D e simulazioni FEM', duration_days: 30 },
-        { name: 'Prototipazione', description: 'Stampa 3D e realizzazione prototipi', duration_days: 40 },
-        { name: 'Test Funzionali', description: 'Test di usura e affidabilità', duration_days: 50 },
-        { name: 'Validazione Clinica', description: 'Trial clinici e raccolta dati', duration_days: 90 }
+        { name: 'Studio Biomeccanico', description: 'Analisi cinematica e dinamica articolare', duration_days: 30, tasks: ['analisi_biomeccanica'] },
+        { name: 'Selezione Materiali', description: 'Test biocompatibilità e resistenza', duration_days: 20, tasks: ['test_meccanici'] },
+        { name: 'Design CAD', description: 'Modellazione 3D e simulazioni FEM', duration_days: 30, tasks: ['analisi_biomeccanica', 'doc_tecnica'] },
+        { name: 'Prototipazione', description: 'Stampa 3D e realizzazione prototipi', duration_days: 40, tasks: ['prototipazione', 'controllo_qualita'] },
+        { name: 'Test Funzionali', description: 'Test di usura e affidabilità', duration_days: 50, tasks: ['test_meccanici', 'controllo_qualita'] },
+        { name: 'Validazione Clinica', description: 'Trial clinici e raccolta dati', duration_days: 90, tasks: ['validazione_clinica', 'doc_tecnica'] }
       ]
     }
   },
@@ -49,12 +49,12 @@ export const PROJECT_TEMPLATES = [
     data: {
       description: 'Progetto di sviluppo strumentario chirurgico specializzato',
       milestones: [
-        { name: 'Analisi Requisiti', description: 'Raccolta feedback chirurghi e analisi procedure', duration_days: 20 },
-        { name: 'Design Ergonomico', description: 'Progettazione ergonomica e usabilità', duration_days: 25 },
-        { name: 'Prototipazione Rapida', description: 'Realizzazione prototipi per test', duration_days: 30 },
-        { name: 'Test Operatori', description: 'Validazione con chirurghi', duration_days: 40 },
-        { name: 'Sterilizzazione', description: 'Test protocolli sterilizzazione', duration_days: 20 },
-        { name: 'Produzione', description: 'Setup produzione e QA', duration_days: 30 }
+        { name: 'Analisi Requisiti', description: 'Raccolta feedback chirurghi e analisi procedure', duration_days: 20, tasks: ['meeting_review', 'doc_tecnica'] },
+        { name: 'Design Ergonomico', description: 'Progettazione ergonomica e usabilità', duration_days: 25, tasks: ['analisi_biomeccanica'] },
+        { name: 'Prototipazione Rapida', description: 'Realizzazione prototipi per test', duration_days: 30, tasks: ['prototipazione'] },
+        { name: 'Test Operatori', description: 'Validazione con chirurghi', duration_days: 40, tasks: ['validazione_clinica', 'meeting_review'] },
+        { name: 'Sterilizzazione', description: 'Test protocolli sterilizzazione', duration_days: 20, tasks: ['test_meccanici', 'doc_tecnica'] },
+        { name: 'Produzione', description: 'Setup produzione e QA', duration_days: 30, tasks: ['controllo_qualita'] }
       ]
     }
   },
@@ -66,11 +66,11 @@ export const PROJECT_TEMPLATES = [
     data: {
       description: 'Progetto di ricerca per nuove tecnologie e materiali innovativi',
       milestones: [
-        { name: 'Ricerca Bibliografica', description: 'Studio stato dell\'arte e letteratura', duration_days: 15 },
-        { name: 'Sperimentazione', description: 'Test e validazione concetti', duration_days: 60 },
-        { name: 'Analisi Risultati', description: 'Elaborazione dati e conclusioni', duration_days: 20 },
-        { name: 'Brevettazione', description: 'Valutazione IP e deposito brevetto', duration_days: 30 },
-        { name: 'Pubblicazione', description: 'Paper scientifico e presentazioni', duration_days: 25 }
+        { name: 'Ricerca Bibliografica', description: 'Studio stato dell\'arte e letteratura', duration_days: 15, tasks: ['doc_tecnica'] },
+        { name: 'Sperimentazione', description: 'Test e validazione concetti', duration_days: 60, tasks: ['test_meccanici', 'analisi_biomeccanica'] },
+        { name: 'Analisi Risultati', description: 'Elaborazione dati e conclusioni', duration_days: 20, tasks: ['doc_tecnica', 'meeting_review'] },
+        { name: 'Brevettazione', description: 'Valutazione IP e deposito brevetto', duration_days: 30, tasks: ['doc_tecnica'] },
+        { name: 'Pubblicazione', description: 'Paper scientifico e presentazioni', duration_days: 25, tasks: ['doc_tecnica', 'meeting_review'] }
       ]
     }
   }
