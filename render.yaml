@@ -5,6 +5,11 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+    # Persistent disk for SQLite database - prevents data loss on deploy
+    disk:
+      name: projectpulse-db
+      mountPath: /opt/render/project/src/backend
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
