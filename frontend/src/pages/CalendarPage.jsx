@@ -125,9 +125,9 @@ export default function CalendarPage() {
             <div className="h-96 bg-gray-200 rounded"></div>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg p-4 animate-slide-up">
+          <div className="bg-white rounded-xl shadow-lg p-4 animate-slide-up overflow-x-auto">
             {/* Day headers */}
-            <div className="grid grid-cols-7 gap-3 mb-4">
+            <div className="grid grid-cols-7 gap-3 mb-4 min-w-[640px]">
               {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (
                 <div key={day} className="text-center font-semibold text-sm text-gray-700 py-2">
                   {day}
@@ -136,7 +136,7 @@ export default function CalendarPage() {
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-3">
+            <div className="grid grid-cols-7 gap-3 min-w-[640px]">
               {calendarDays.map((day, index) => {
                 if (day === null) {
                   return <div key={`empty-${index}`} className="aspect-square" />;

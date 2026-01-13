@@ -199,7 +199,7 @@ export default function DipendenteDashboard() {
           {/* Weekly Stats */}
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-sm p-4 mb-4 text-white">
             <h3 className="text-base font-semibold mb-3">Statistiche Settimanali</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <div className="text-2xl font-bold">{weeklyStats.completed}</div>
                 <div className="text-blue-100 text-xs">Task completati questa settimana</div>
