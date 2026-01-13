@@ -1,5 +1,6 @@
 import Task from '../models/Task.js';
 import TimeEntry from '../models/TimeEntry.js';
+import { canModify, canDelete, canCreate } from '../utils/permissions.js';
 
 export const createTask = async (req, res) => {
   try {
@@ -7,6 +8,11 @@ export const createTask = async (req, res) => {
 
     if (!title) {
       return res.status(400).json({ error: 'Task title is required' });
+    }
+
+    // Check permission to create task
+    if (!canCreate(req.user, 'task')) {
+      return res.status(403).json({ error: 'Non hai i permessi per creare task' });
     }
 
     const task = Task.create({
@@ -75,6 +81,16 @@ export const getTask = async (req, res) => {
 
 export const updateTask = async (req, res) => {
   try {
+    const existingTask = Task.findById(req.params.id);
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check permission to modify task
+    if (!canModify(req.user, existingTask, 'task')) {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare questo task' });
+    }
+
     const updates = { ...req.body };
 
     // Auto-set completed_at when status changes to completed
@@ -88,11 +104,6 @@ export const updateTask = async (req, res) => {
     }
 
     const task = Task.update(req.params.id, updates);
-
-    if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-
     res.json(task);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -101,6 +112,16 @@ export const updateTask = async (req, res) => {
 
 export const deleteTask = async (req, res) => {
   try {
+    const existingTask = Task.findById(req.params.id);
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check permission to delete task
+    if (!canDelete(req.user, existingTask, 'task')) {
+      return res.status(403).json({ error: 'Non hai i permessi per eliminare questo task' });
+    }
+
     Task.delete(req.params.id);
     res.status(204).send();
   } catch (error) {

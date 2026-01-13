@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import { canCreate } from '../utils/permissions.js';
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -30,6 +31,11 @@ export const createUser = async (req, res) => {
   try {
     const { email, password, first_name, last_name, role, active } = req.body;
 
+    // Only administrators can create users
+    if (!canCreate(req.user, 'user')) {
+      return res.status(403).json({ error: 'Non hai i permessi per creare utenti' });
+    }
+
     // Validation
     if (!email || !password || !first_name || !last_name || !role) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
@@ -59,6 +65,11 @@ export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { email, first_name, last_name, role, password, active } = req.body;
+
+    // Only administrators can update users
+    if (req.user.role !== 'amministratore') {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare utenti' });
+    }
 
     // Check if user exists
     const existingUser = User.findById(id);
@@ -103,6 +114,11 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Only administrators can delete users
+    if (req.user.role !== 'amministratore') {
+      return res.status(403).json({ error: 'Non hai i permessi per eliminare utenti' });
+    }
+
     // Check if user exists
     const existingUser = User.findById(id);
     if (!existingUser) {
@@ -129,6 +145,11 @@ export const deleteUser = async (req, res) => {
 export const reactivateUser = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Only administrators can reactivate users
+    if (req.user.role !== 'amministratore') {
+      return res.status(403).json({ error: 'Non hai i permessi per riattivare utenti' });
+    }
 
     // Check if user exists
     const existingUser = User.findById(id);

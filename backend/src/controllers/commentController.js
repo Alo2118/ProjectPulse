@@ -1,5 +1,6 @@
 import Comment from '../models/Comment.js';
 import Task from '../models/Task.js';
+import { canDelete } from '../utils/permissions.js';
 
 export const createComment = async (req, res) => {
   try {
@@ -15,6 +16,7 @@ export const createComment = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
+    // All users can create comments (including direzione for communication)
     const is_from_direction = req.user.role === 'direzione';
 
     const comment = Comment.create({
@@ -53,9 +55,12 @@ export const deleteComment = async (req, res) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    // Only allow users to delete their own comments
-    if (comment.user_id !== req.user.id) {
-      return res.status(403).json({ error: 'You can only delete your own comments' });
+    // Map user_id to created_by for permission check
+    const commentWithCreatedBy = { ...comment, created_by: comment.user_id };
+
+    // Check permission to delete comment
+    if (!canDelete(req.user, commentWithCreatedBy, 'comment')) {
+      return res.status(403).json({ error: 'Non hai i permessi per eliminare questo commento' });
     }
 
     Comment.delete(req.params.id);

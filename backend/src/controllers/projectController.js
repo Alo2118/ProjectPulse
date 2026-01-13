@@ -1,4 +1,5 @@
 import Project from '../models/Project.js';
+import { canModify, canDelete, canCreate } from '../utils/permissions.js';
 
 export const createProject = async (req, res) => {
   try {
@@ -6,6 +7,11 @@ export const createProject = async (req, res) => {
 
     if (!name) {
       return res.status(400).json({ error: 'Project name is required' });
+    }
+
+    // Check permission to create project
+    if (!canCreate(req.user, 'project')) {
+      return res.status(403).json({ error: 'Non hai i permessi per creare progetti' });
     }
 
     const project = Project.create({
@@ -47,12 +53,17 @@ export const updateProject = async (req, res) => {
   try {
     const { name, description, archived } = req.body;
 
-    const project = Project.update(req.params.id, { name, description, archived });
-
-    if (!project) {
+    const existingProject = Project.findById(req.params.id);
+    if (!existingProject) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    // Check permission to modify project
+    if (!canModify(req.user, existingProject, 'project')) {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare questo progetto' });
+    }
+
+    const project = Project.update(req.params.id, { name, description, archived });
     res.json(project);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -61,6 +72,16 @@ export const updateProject = async (req, res) => {
 
 export const deleteProject = async (req, res) => {
   try {
+    const existingProject = Project.findById(req.params.id);
+    if (!existingProject) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Check permission to delete project
+    if (!canDelete(req.user, existingProject, 'project')) {
+      return res.status(403).json({ error: 'Non hai i permessi per eliminare questo progetto' });
+    }
+
     Project.delete(req.params.id);
     res.status(204).send();
   } catch (error) {

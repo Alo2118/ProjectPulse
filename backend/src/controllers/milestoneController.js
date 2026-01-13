@@ -1,4 +1,6 @@
 import Milestone from '../models/Milestone.js';
+import Project from '../models/Project.js';
+import { canModify, canDelete, canCreate } from '../utils/permissions.js';
 
 export const createMilestone = async (req, res) => {
   try {
@@ -6,6 +8,21 @@ export const createMilestone = async (req, res) => {
 
     if (!name || !project_id) {
       return res.status(400).json({ error: 'Name and project_id are required' });
+    }
+
+    // Check permission based on project ownership
+    const project = Project.findById(project_id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (!canCreate(req.user, 'milestone')) {
+      return res.status(403).json({ error: 'Non hai i permessi per creare milestone' });
+    }
+
+    // Also check if user can modify the project
+    if (!canModify(req.user, project, 'project')) {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare questo progetto' });
     }
 
     const milestone = Milestone.create({ name, description, project_id, due_date });
@@ -46,6 +63,21 @@ export const getMilestone = async (req, res) => {
 
 export const updateMilestone = async (req, res) => {
   try {
+    const existingMilestone = Milestone.findById(req.params.id);
+    if (!existingMilestone) {
+      return res.status(404).json({ error: 'Milestone not found' });
+    }
+
+    // Check permission based on project ownership
+    const project = Project.findById(existingMilestone.project_id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (!canModify(req.user, project, 'project')) {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare questo progetto' });
+    }
+
     const updates = { ...req.body };
 
     // Auto-set completed_at when status changes to completed
@@ -54,11 +86,6 @@ export const updateMilestone = async (req, res) => {
     }
 
     const milestone = Milestone.update(req.params.id, updates);
-
-    if (!milestone) {
-      return res.status(404).json({ error: 'Milestone not found' });
-    }
-
     res.json(milestone);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -67,6 +94,21 @@ export const updateMilestone = async (req, res) => {
 
 export const deleteMilestone = async (req, res) => {
   try {
+    const existingMilestone = Milestone.findById(req.params.id);
+    if (!existingMilestone) {
+      return res.status(404).json({ error: 'Milestone not found' });
+    }
+
+    // Check permission based on project ownership
+    const project = Project.findById(existingMilestone.project_id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (!canDelete(req.user, project, 'project')) {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare questo progetto' });
+    }
+
     Milestone.delete(req.params.id);
     res.status(204).send();
   } catch (error) {
