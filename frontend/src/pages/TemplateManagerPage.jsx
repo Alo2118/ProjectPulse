@@ -42,7 +42,12 @@ export default function TemplateManagerPage() {
   const loadTaskTemplates = async () => {
     try {
       const response = await templatesApi.getAll({ type: 'task' });
-      setTaskTemplates(response.data || []);
+      // Parse JSON data if it's a string
+      const parsed = (response.data || []).map(t => ({
+        ...t,
+        data: typeof t.data === 'string' ? JSON.parse(t.data) : t.data
+      }));
+      setTaskTemplates(parsed);
     } catch (error) {
       console.error('Error loading task templates:', error);
     }
