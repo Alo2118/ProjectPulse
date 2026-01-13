@@ -3,6 +3,7 @@ import { Plus, Edit2, Trash2, Copy, Save, X, FileText, FolderOpen, Target, Chevr
 import { templatesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { canModify, canDelete, canCreate } from '../utils/permissions';
 
 export default function TemplateManagerPage() {
   const { user } = useAuth();
@@ -217,6 +218,7 @@ export default function TemplateManagerPage() {
           <button
             onClick={() => handleCreate(activeTab)}
             className="btn btn-primary flex items-center gap-2"
+            disabled={!canCreate(user, 'template')}
           >
             <Plus size={20} />
             Nuovo Template {tabs.find(t => t.id === activeTab)?.label}
@@ -296,7 +298,7 @@ export default function TemplateManagerPage() {
                   <button
                     onClick={() => handleEdit(template)}
                     className="flex-1 btn btn-secondary text-sm"
-                    disabled={template.created_by !== user?.id}
+                    disabled={!canModify(user, template, 'template')}
                   >
                     <Edit2 size={16} />
                     Modifica
@@ -311,7 +313,7 @@ export default function TemplateManagerPage() {
                   <button
                     onClick={() => handleDelete(template.id)}
                     className="btn btn-danger text-sm"
-                    disabled={template.created_by !== user?.id}
+                    disabled={!canDelete(user, template, 'template')}
                     title="Elimina template"
                   >
                     <Trash2 size={16} />

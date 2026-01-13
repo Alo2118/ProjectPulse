@@ -1,4 +1,5 @@
 import Template from '../models/Template.js';
+import { canModify, canDelete, canCreate } from '../utils/permissions.js';
 
 export const createTemplate = async (req, res) => {
   try {
@@ -10,6 +11,11 @@ export const createTemplate = async (req, res) => {
 
     if (!['task', 'project', 'milestone'].includes(type)) {
       return res.status(400).json({ error: 'Tipo non valido' });
+    }
+
+    // Check permission to create template
+    if (!canCreate(req.user, 'template')) {
+      return res.status(403).json({ error: 'Non hai i permessi per creare template' });
     }
 
     const template = Template.create({
@@ -78,9 +84,9 @@ export const updateTemplate = async (req, res) => {
       return res.status(404).json({ error: 'Template non trovato' });
     }
 
-    // Only creator can update template
-    if (existingTemplate.created_by !== req.user.id) {
-      return res.status(403).json({ error: 'Solo il creatore può modificare questo template' });
+    // Check permission to modify template
+    if (!canModify(req.user, existingTemplate, 'template')) {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare questo template' });
     }
 
     const template = Template.update(id, req.body);
@@ -100,9 +106,9 @@ export const deleteTemplate = async (req, res) => {
       return res.status(404).json({ error: 'Template non trovato' });
     }
 
-    // Only creator can delete template
-    if (existingTemplate.created_by !== req.user.id) {
-      return res.status(403).json({ error: 'Solo il creatore può eliminare questo template' });
+    // Check permission to delete template
+    if (!canDelete(req.user, existingTemplate, 'template')) {
+      return res.status(403).json({ error: 'Non hai i permessi per eliminare questo template' });
     }
 
     Template.delete(id);

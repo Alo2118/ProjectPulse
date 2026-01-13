@@ -1,6 +1,7 @@
 import Request from '../models/Request.js';
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
+import { canModify, canDelete, canCreate } from '../utils/permissions.js';
 
 // Get all requests with filters and pagination
 export const getRequests = async (req, res) => {
@@ -69,6 +70,11 @@ export const createRequest = async (req, res) => {
       });
     }
 
+    // Check permission to create request
+    if (!canCreate(req.user, 'request')) {
+      return res.status(403).json({ error: 'Non hai i permessi per creare richieste' });
+    }
+
     const request = Request.create({
       title,
       description,
@@ -95,6 +101,11 @@ export const updateRequest = async (req, res) => {
     const request = Request.findById(req.params.id);
     if (!request) {
       return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+
+    // Check permission to modify request
+    if (!canModify(req.user, request, 'request')) {
+      return res.status(403).json({ error: 'Non hai i permessi per modificare questa richiesta' });
     }
 
     const updated = Request.update(req.params.id, req.body);
@@ -212,11 +223,9 @@ export const deleteRequest = async (req, res) => {
       return res.status(404).json({ error: 'Richiesta non trovata' });
     }
 
-    // Only allow admins or the creator to delete
-    if (req.user.role !== 'amministratore' && request.created_by !== req.user.id) {
-      return res.status(403).json({
-        error: 'Non hai i permessi per eliminare questa richiesta'
-      });
+    // Check permission to delete request
+    if (!canDelete(req.user, request, 'request')) {
+      return res.status(403).json({ error: 'Non hai i permessi per eliminare questa richiesta' });
     }
 
     Request.delete(req.params.id);
