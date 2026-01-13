@@ -28,82 +28,9 @@ const createTables = () => {
     )
   `);
 
-  // Migration: Update users table structure
-  try {
-    const tableInfo = db.prepare("PRAGMA table_info(users)").all();
-    const columns = tableInfo.map(col => col.name);
-
-    const needsMigration =
-      columns.includes('name') && !columns.includes('first_name') ||
-      !columns.includes('active');
-
-    if (needsMigration) {
-      console.log('🔄 Migrating users table to new structure...');
-
-      // Temporarily disable foreign keys for migration
-      db.pragma('foreign_keys = OFF');
-
-      // Use a transaction for safety
-      db.exec('BEGIN TRANSACTION');
-
-      try {
-        // Create new table with updated structure
-        db.exec(`
-          CREATE TABLE users_new (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('dipendente', 'direzione', 'amministratore')),
-            active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT (datetime('now', '+1 hour'))
-          )
-        `);
-
-        // Migrate data with name splitting
-        const oldUsers = db.prepare('SELECT * FROM users').all();
-        const insertStmt = db.prepare(`
-          INSERT INTO users_new (id, email, password, first_name, last_name, role, active, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-        `);
-
-        for (const user of oldUsers) {
-          // Split name into first_name and last_name
-          const nameParts = (user.name || '').trim().split(' ');
-          const firstName = nameParts[0] || 'Nome';
-          const lastName = nameParts.slice(1).join(' ') || 'Cognome';
-
-          insertStmt.run(
-            user.id,
-            user.email,
-            user.password,
-            firstName,
-            lastName,
-            user.role,
-            user.created_at
-          );
-        }
-
-        // Drop old table and rename new one
-        db.exec(`DROP TABLE users`);
-        db.exec(`ALTER TABLE users_new RENAME TO users`);
-
-        db.exec('COMMIT');
-        console.log('✅ Successfully migrated users table to new structure');
-      } catch (migrationError) {
-        db.exec('ROLLBACK');
-        throw migrationError;
-      }
-
-      // Re-enable foreign keys
-      db.pragma('foreign_keys = ON');
-    }
-  } catch (error) {
-    console.error('Migration error:', error.message);
-    // Re-enable foreign keys even if migration fails
-    db.pragma('foreign_keys = ON');
-  }
+  // MIGRATION REMOVED: Do not modify existing table structure in production
+  // All migrations should be done manually or via dedicated migration scripts
+  // to prevent data loss in production environments
 
   // Projects table
   db.exec(`
