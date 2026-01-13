@@ -1,5 +1,98 @@
 import { useMemo } from 'react';
-import { Calendar, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Circle, AlertCircle, Zap } from 'lucide-react';
+
+// Calculate Critical Path using CPM (Critical Path Method)
+const calculateCriticalPath = (tasks) => {
+  if (!tasks || tasks.length === 0) return new Set();
+
+  // Build task map and dependency graph
+  const taskMap = new Map();
+  tasks.forEach(task => {
+    taskMap.set(task.id, {
+      ...task,
+      earliestStart: 0,
+      earliestFinish: 0,
+      latestStart: 0,
+      latestFinish: 0,
+      slack: 0,
+      duration: task.hours || 1 // Use estimated hours or default to 1 day
+    });
+  });
+
+  // Forward pass - calculate earliest start/finish
+  const visited = new Set();
+  const calculateEarliest = (taskId) => {
+    if (visited.has(taskId)) return;
+    visited.add(taskId);
+
+    const task = taskMap.get(taskId);
+    if (!task) return;
+
+    // If task has dependency, calculate dependency first
+    if (task.depends_on_task_id) {
+      calculateEarliest(task.depends_on_task_id);
+      const dependency = taskMap.get(task.depends_on_task_id);
+      if (dependency) {
+        task.earliestStart = dependency.earliestFinish;
+      }
+    }
+
+    task.earliestFinish = task.earliestStart + task.duration;
+  };
+
+  // Calculate earliest times for all tasks
+  tasks.forEach(task => calculateEarliest(task.id));
+
+  // Find project duration (max earliest finish)
+  const projectDuration = Math.max(...Array.from(taskMap.values()).map(t => t.earliestFinish));
+
+  // Backward pass - calculate latest start/finish
+  tasks.forEach(task => {
+    const t = taskMap.get(task.id);
+    // Tasks without successors have latest finish = project duration
+    const hasSuccessors = tasks.some(other => other.depends_on_task_id === task.id);
+    if (!hasSuccessors) {
+      t.latestFinish = projectDuration;
+    }
+  });
+
+  const visitedBackward = new Set();
+  const calculateLatest = (taskId) => {
+    if (visitedBackward.has(taskId)) return;
+    visitedBackward.add(taskId);
+
+    const task = taskMap.get(taskId);
+    if (!task) return;
+
+    // Find all tasks that depend on this task
+    const successors = tasks.filter(t => t.depends_on_task_id === taskId);
+
+    if (successors.length > 0) {
+      // Latest finish is the minimum latest start of all successors
+      const minSuccessorStart = Math.min(...successors.map(s => {
+        calculateLatest(s.id);
+        return taskMap.get(s.id).latestStart;
+      }));
+      task.latestFinish = minSuccessorStart;
+    }
+
+    task.latestStart = task.latestFinish - task.duration;
+    task.slack = task.latestStart - task.earliestStart;
+  };
+
+  // Calculate latest times for all tasks
+  tasks.forEach(task => calculateLatest(task.id));
+
+  // Critical path = tasks with zero slack
+  const criticalTasks = new Set();
+  taskMap.forEach((task, id) => {
+    if (Math.abs(task.slack) < 0.01) { // Float comparison tolerance
+      criticalTasks.add(id);
+    }
+  });
+
+  return criticalTasks;
+};
 
 export default function GanttChart({ milestones, tasks, onMilestoneClick, onTaskClick }) {
   const chartData = useMemo(() => {
@@ -48,6 +141,9 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
       };
     });
 
+    // Calculate critical path
+    const criticalTaskIds = calculateCriticalPath(tasks);
+
     // Process tasks
     const processedTasks = tasks.map(task => {
       // Use start_date if available, otherwise fall back to created_at
@@ -64,7 +160,8 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
         start,
         end,
         progress: task.progress_percentage || 0,
-        hours: task.estimated_hours || 0
+        hours: task.estimated_hours || 0,
+        isCritical: criticalTaskIds.has(task.id)
       };
     });
 
@@ -73,7 +170,8 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
       endDate,
       totalDays,
       milestones: processedMilestones,
-      tasks: processedTasks
+      tasks: processedTasks,
+      criticalCount: criticalTaskIds.size
     };
   }, [milestones, tasks]);
 
@@ -136,6 +234,22 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 overflow-auto">
+      {/* Critical Path Info */}
+      {chartData.criticalCount > 0 && (
+        <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-3">
+          <Zap className="w-5 h-5 text-orange-500 fill-orange-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-orange-900 text-sm">
+              Percorso Critico Identificato
+            </div>
+            <div className="text-xs text-orange-700 mt-1">
+              {chartData.criticalCount} {chartData.criticalCount === 1 ? 'task è' : 'task sono'} sul percorso critico.
+              Qualsiasi ritardo in {chartData.criticalCount === 1 ? 'questo task' : 'questi task'} impatterà la data di consegna del progetto.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Timeline Header */}
       <div className="mb-6 relative" style={{ minWidth: '800px' }}>
         <div className="flex border-b border-gray-300">
@@ -216,7 +330,10 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                       onClick={() => onTaskClick?.(task)}
                       className="text-left hover:text-primary-600 transition-colors"
                     >
-                      <div className="text-xs font-medium truncate">{task.title}</div>
+                      <div className="text-xs font-medium truncate flex items-center gap-1">
+                        {task.isCritical && <Zap className="w-3 h-3 text-orange-500 fill-orange-500" />}
+                        {task.title}
+                      </div>
                       {task.hours > 0 && (
                         <div className="text-xs text-gray-500">{task.hours}h</div>
                       )}
@@ -224,12 +341,13 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                   </div>
                   <div className="flex-1 relative h-6">
                     <div
-                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer`}
+                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer ${task.isCritical ? 'ring-2 ring-orange-500 ring-offset-1' : ''}`}
                       style={{
                         left: `${task.startOffset}%`,
                         width: `${task.width}%`
                       }}
                       onClick={() => onTaskClick?.(task)}
+                      title={task.isCritical ? '⚡ Task sul percorso critico - qualsiasi ritardo impatta la consegna del progetto' : ''}
                     >
                       {/* Progress bar background */}
                       {task.progress > 0 && (
@@ -265,7 +383,10 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                       onClick={() => onTaskClick?.(task)}
                       className="text-left hover:text-primary-600 transition-colors"
                     >
-                      <div className="text-xs font-medium truncate">{task.title}</div>
+                      <div className="text-xs font-medium truncate flex items-center gap-1">
+                        {task.isCritical && <Zap className="w-3 h-3 text-orange-500 fill-orange-500" />}
+                        {task.title}
+                      </div>
                       <div className="text-xs text-gray-500">
                         {task.project_name || 'Nessun progetto'}
                         {task.hours > 0 && ` • ${task.hours}h`}
@@ -274,12 +395,13 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                   </div>
                   <div className="flex-1 relative h-6">
                     <div
-                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer`}
+                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer ${task.isCritical ? 'ring-2 ring-orange-500 ring-offset-1' : ''}`}
                       style={{
                         left: `${task.startOffset}%`,
                         width: `${task.width}%`
                       }}
                       onClick={() => onTaskClick?.(task)}
+                      title={task.isCritical ? '⚡ Task sul percorso critico - qualsiasi ritardo impatta la consegna del progetto' : ''}
                     >
                       {/* Progress bar background */}
                       {task.progress > 0 && (
@@ -309,26 +431,34 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
       </div>
 
       {/* Legend */}
-      <div className="mt-8 pt-6 border-t border-gray-200 flex flex-wrap gap-4 text-xs">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gray-400 rounded"></div>
-          <span>Da fare</span>
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <div className="flex flex-wrap gap-4 text-xs mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-400 rounded"></div>
+            <span>Da fare</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+            <span>In corso</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+            <span>In attesa</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-500 rounded"></div>
+            <span>Bloccato</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <span>Completato</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-blue-500 rounded"></div>
-          <span>In corso</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-          <span>In attesa</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-red-500 rounded"></div>
-          <span>Bloccato</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-green-500 rounded"></div>
-          <span>Completato</span>
+        <div className="flex items-center gap-2 text-xs">
+          <div className="w-4 h-4 bg-blue-500 rounded ring-2 ring-orange-500"></div>
+          <Zap className="w-3 h-3 text-orange-500 fill-orange-500" />
+          <span className="font-medium text-orange-700">Percorso Critico</span>
+          <span className="text-gray-500">- Task che impattano direttamente la data di consegna</span>
         </div>
       </div>
     </div>
