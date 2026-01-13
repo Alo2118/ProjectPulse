@@ -7,7 +7,7 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
     const allDates = [
       ...milestones.map(m => new Date(m.created_at)),
       ...milestones.map(m => m.due_date ? new Date(m.due_date) : null).filter(Boolean),
-      ...tasks.map(t => new Date(t.created_at)),
+      ...tasks.map(t => t.start_date ? new Date(t.start_date) : new Date(t.created_at)),
       ...tasks.map(t => t.deadline ? new Date(t.deadline) : null).filter(Boolean)
     ];
 
@@ -50,7 +50,8 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
 
     // Process tasks
     const processedTasks = tasks.map(task => {
-      const start = new Date(task.created_at);
+      // Use start_date if available, otherwise fall back to created_at
+      const start = task.start_date ? new Date(task.start_date) : new Date(task.created_at);
       const end = task.deadline ? new Date(task.deadline) : task.completed_at ? new Date(task.completed_at) : new Date();
 
       const startOffset = Math.floor((start - startDate) / (1000 * 60 * 60 * 24));
@@ -61,7 +62,9 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
         startOffset: (startOffset / totalDays) * 100,
         width: (duration / totalDays) * 100,
         start,
-        end
+        end,
+        progress: task.progress_percentage || 0,
+        hours: task.estimated_hours || 0
       };
     });
 
@@ -214,19 +217,30 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                       className="text-left hover:text-primary-600 transition-colors"
                     >
                       <div className="text-xs font-medium truncate">{task.title}</div>
+                      {task.hours > 0 && (
+                        <div className="text-xs text-gray-500">{task.hours}h</div>
+                      )}
                     </button>
                   </div>
                   <div className="flex-1 relative h-6">
                     <div
-                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer opacity-80`}
+                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer`}
                       style={{
                         left: `${task.startOffset}%`,
                         width: `${task.width}%`
                       }}
                       onClick={() => onTaskClick?.(task)}
                     >
-                      <div className="px-2 py-1 text-white text-xs truncate">
-                        {task.assigned_to_name || 'Non assegnato'}
+                      {/* Progress bar background */}
+                      {task.progress > 0 && (
+                        <div
+                          className="absolute left-0 top-0 bottom-0 bg-white bg-opacity-30 rounded-l"
+                          style={{ width: `${task.progress}%` }}
+                        ></div>
+                      )}
+                      <div className="relative px-2 py-1 text-white text-xs truncate flex items-center justify-between">
+                        <span>{task.assigned_to_name || 'Non assegnato'}</span>
+                        {task.progress > 0 && <span className="font-semibold">{task.progress}%</span>}
                       </div>
                     </div>
                   </div>
@@ -254,20 +268,29 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                       <div className="text-xs font-medium truncate">{task.title}</div>
                       <div className="text-xs text-gray-500">
                         {task.project_name || 'Nessun progetto'}
+                        {task.hours > 0 && ` • ${task.hours}h`}
                       </div>
                     </button>
                   </div>
                   <div className="flex-1 relative h-6">
                     <div
-                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer opacity-80`}
+                      className={`absolute ${getStatusColor(task.status)} rounded h-full shadow hover:shadow-md transition-shadow cursor-pointer`}
                       style={{
                         left: `${task.startOffset}%`,
                         width: `${task.width}%`
                       }}
                       onClick={() => onTaskClick?.(task)}
                     >
-                      <div className="px-2 py-1 text-white text-xs truncate">
-                        {task.assigned_to_name || 'Non assegnato'}
+                      {/* Progress bar background */}
+                      {task.progress > 0 && (
+                        <div
+                          className="absolute left-0 top-0 bottom-0 bg-white bg-opacity-30 rounded-l"
+                          style={{ width: `${task.progress}%` }}
+                        ></div>
+                      )}
+                      <div className="relative px-2 py-1 text-white text-xs truncate flex items-center justify-between">
+                        <span>{task.assigned_to_name || 'Non assegnato'}</span>
+                        {task.progress > 0 && <span className="font-semibold">{task.progress}%</span>}
                       </div>
                     </div>
                   </div>

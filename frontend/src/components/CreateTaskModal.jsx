@@ -37,7 +37,10 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
     priority: SMART_DEFAULTS.task.priorityByContext.default,
     deadline: getDefaultDeadline(),
     assigned_to: getLastAssignedUser(),
-    parent_task_id: parentTaskId
+    parent_task_id: parentTaskId,
+    start_date: '',
+    estimated_hours: 0,
+    progress_percentage: 0
   });
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -117,7 +120,9 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
         ...formData,
         project_id: projectId ? parseInt(projectId) : null,
         milestone_id: formData.milestone_id ? parseInt(formData.milestone_id) : null,
-        assigned_to: assignedUserId
+        assigned_to: assignedUserId,
+        estimated_hours: formData.estimated_hours ? parseInt(formData.estimated_hours) : 0,
+        progress_percentage: formData.progress_percentage ? parseInt(formData.progress_percentage) : 0
       });
 
       const newTask = taskResponse.data;
@@ -342,6 +347,59 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
               <p className="text-xs text-primary-600 mt-1">
                 💡 Scadenza +{SMART_DEFAULTS.task.deadlineOffset} giorni (smart default)
               </p>
+            </div>
+          </div>
+
+          {/* Gantt Planning Fields */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              📊 Pianificazione Gantt (Opzionale)
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data inizio
+                </label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ore stimate
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="input"
+                  value={formData.estimated_hours}
+                  onChange={(e) => setFormData({ ...formData, estimated_hours: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Progresso %
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="5"
+                  className="input"
+                  value={formData.progress_percentage}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    const clamped = Math.min(100, Math.max(0, val));
+                    setFormData({ ...formData, progress_percentage: clamped });
+                  }}
+                />
+              </div>
             </div>
           </div>
 

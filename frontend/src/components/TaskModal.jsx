@@ -99,7 +99,9 @@ export default function TaskModal({ task, onClose, onUpdate }) {
         ...editedTask,
         project_id: editedTask.project_id ? parseInt(editedTask.project_id) : null,
         milestone_id: editedTask.milestone_id ? parseInt(editedTask.milestone_id) : null,
-        assigned_to: editedTask.assigned_to ? parseInt(editedTask.assigned_to) : null
+        assigned_to: editedTask.assigned_to ? parseInt(editedTask.assigned_to) : null,
+        estimated_hours: editedTask.estimated_hours ? parseInt(editedTask.estimated_hours) : 0,
+        progress_percentage: editedTask.progress_percentage ? parseInt(editedTask.progress_percentage) : 0
       };
 
       console.log('Sending updates to backend:', updates);
@@ -350,6 +352,71 @@ export default function TaskModal({ task, onClose, onUpdate }) {
                 onChange={(e) => setEditedTask({ ...editedTask, deadline: e.target.value })}
                 disabled={isDirezione}
               />
+            </div>
+          </div>
+
+          {/* Gantt Planning Fields */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              📊 Pianificazione Gantt
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data inizio
+                </label>
+                <input
+                  type="date"
+                  className="input"
+                  value={editedTask.start_date || ''}
+                  onChange={(e) => setEditedTask({ ...editedTask, start_date: e.target.value })}
+                  disabled={isDirezione}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Quando inizia il lavoro
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ore stimate
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="input"
+                  value={editedTask.estimated_hours || 0}
+                  onChange={(e) => setEditedTask({ ...editedTask, estimated_hours: parseInt(e.target.value) || 0 })}
+                  disabled={isDirezione}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Durata prevista in ore
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Progresso %
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="5"
+                  className="input"
+                  value={editedTask.progress_percentage || 0}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    const clamped = Math.min(100, Math.max(0, val));
+                    setEditedTask({ ...editedTask, progress_percentage: clamped });
+                  }}
+                  disabled={isDirezione}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Completamento visuale
+                </p>
+              </div>
             </div>
           </div>
 

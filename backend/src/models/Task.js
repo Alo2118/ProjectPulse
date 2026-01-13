@@ -1,7 +1,7 @@
 import db from '../config/database.js';
 
 class Task {
-  static create({ title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id, order_index, depends_on_task_id }) {
+  static create({ title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id, order_index, depends_on_task_id, start_date, estimated_hours, progress_percentage }) {
     // Auto-calculate order_index for subtasks
     let finalOrderIndex = order_index !== undefined ? order_index : 0;
     if (parent_task_id && order_index === undefined) {
@@ -10,8 +10,8 @@ class Task {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO tasks (title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id, order_index, depends_on_task_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (title, description, status, project_id, milestone_id, assigned_to, created_by, priority, deadline, parent_task_id, order_index, depends_on_task_id, start_date, estimated_hours, progress_percentage)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       title,
@@ -25,7 +25,10 @@ class Task {
       deadline || null,
       parent_task_id || null,
       finalOrderIndex,
-      depends_on_task_id || null
+      depends_on_task_id || null,
+      start_date || null,
+      estimated_hours || 0,
+      progress_percentage || 0
     );
     return this.findById(result.lastInsertRowid);
   }
@@ -126,7 +129,7 @@ class Task {
     const allowedFields = [
       'title', 'description', 'status', 'project_id', 'milestone_id', 'assigned_to', 'priority',
       'time_spent', 'blocked_reason', 'clarification_needed', 'deadline', 'completed_at',
-      'order_index', 'depends_on_task_id', 'parent_task_id'
+      'order_index', 'depends_on_task_id', 'parent_task_id', 'start_date', 'estimated_hours', 'progress_percentage'
     ];
 
     allowedFields.forEach(field => {

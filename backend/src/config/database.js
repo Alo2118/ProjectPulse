@@ -191,6 +191,31 @@ const createTables = () => {
     console.error('Migration error (subtask enhancements):', error.message);
   }
 
+  // Migration: Add Gantt chart specific columns (start_date, estimated_hours, progress_percentage)
+  try {
+    const checkTasksColumns = db.prepare("PRAGMA table_info(tasks)").all();
+    const hasStartDate = checkTasksColumns.some(col => col.name === 'start_date');
+    const hasEstimatedHours = checkTasksColumns.some(col => col.name === 'estimated_hours');
+    const hasProgressPercentage = checkTasksColumns.some(col => col.name === 'progress_percentage');
+
+    if (!hasStartDate) {
+      db.exec("ALTER TABLE tasks ADD COLUMN start_date DATE");
+      console.log('✅ Added start_date column to tasks table for Gantt chart planning');
+    }
+
+    if (!hasEstimatedHours) {
+      db.exec("ALTER TABLE tasks ADD COLUMN estimated_hours INTEGER DEFAULT 0");
+      console.log('✅ Added estimated_hours column to tasks table for capacity planning');
+    }
+
+    if (!hasProgressPercentage) {
+      db.exec("ALTER TABLE tasks ADD COLUMN progress_percentage INTEGER DEFAULT 0");
+      console.log('✅ Added progress_percentage column to tasks table for visual progress tracking');
+    }
+  } catch (error) {
+    console.error('Migration error (Gantt enhancements):', error.message);
+  }
+
   // Time entries table
   db.exec(`
     CREATE TABLE IF NOT EXISTS time_entries (
