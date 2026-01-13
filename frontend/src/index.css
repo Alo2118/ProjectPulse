@@ -73,4 +73,28 @@ body {
       transform: translateY(0);
     }
   }
+
+  /* Mobile responsive utilities */
+  .mobile-scroll {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+
+  .mobile-table {
+    @apply min-w-full divide-y divide-gray-200;
+  }
+
+  .mobile-hidden {
+    @apply hidden sm:table-cell;
+  }
+}
+
+/* Touch-friendly sizing for mobile */
+@media (max-width: 640px) {
+  .btn {
+    @apply px-4 py-2.5 min-h-[44px];
+  }
+
+  .input {
+    @apply py-2.5 min-h-[44px];
+  }
 }
