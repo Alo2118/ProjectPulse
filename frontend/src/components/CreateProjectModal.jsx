@@ -101,34 +101,33 @@ export default function CreateProjectModal({ onClose, onCreate }) {
                   ? JSON.parse(taskTemplate.data)
                   : taskTemplate.data;
 
-                  // Create the task with template data
-                  const taskResponse = await tasksApi.create({
-                    title: taskTemplate.name,
-                    description: taskData.description || '',
-                    project_id: newProject.id,
-                    milestone_id: newMilestone.id,
-                    priority: taskData.priority || 'medium',
-                    estimated_hours: taskData.estimated_hours || 0,
-                    status: 'todo'
-                  });
+                // Create the task with template data
+                const taskResponse = await tasksApi.create({
+                  title: taskTemplate.name,
+                  description: taskData.description || '',
+                  project_id: newProject.id,
+                  milestone_id: newMilestone.id,
+                  priority: taskData.priority || 'medium',
+                  estimated_hours: taskData.estimated_hours || 0,
+                  status: 'todo'
+                });
 
-                  const newTask = taskResponse.data;
+                const newTask = taskResponse.data;
 
-                  // Create subtasks if template has them
-                  if (taskData.subtasks && taskData.subtasks.length > 0) {
-                    for (let i = 0; i < taskData.subtasks.length; i++) {
-                      const subtaskTitle = taskData.subtasks[i];
-                      await tasksApi.create({
-                        title: subtaskTitle,
-                        description: '',
-                        project_id: newProject.id,
-                        milestone_id: newMilestone.id,
-                        parent_task_id: newTask.id,
-                        order_index: i,
-                        priority: 'medium',
-                        status: 'todo'
-                      });
-                    }
+                // Create subtasks if template has them
+                if (taskData.subtasks && taskData.subtasks.length > 0) {
+                  for (let i = 0; i < taskData.subtasks.length; i++) {
+                    const subtaskTitle = taskData.subtasks[i];
+                    await tasksApi.create({
+                      title: subtaskTitle,
+                      description: '',
+                      project_id: newProject.id,
+                      milestone_id: newMilestone.id,
+                      parent_task_id: newTask.id,
+                      order_index: i,
+                      priority: 'medium',
+                      status: 'todo'
+                    });
                   }
                 }
               }
