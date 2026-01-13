@@ -10,6 +10,7 @@ import CalendarPage from './pages/CalendarPage';
 import UserManagementPage from './pages/UserManagementPage';
 import TimeTrackingPage from './pages/TimeTrackingPage';
 import InboxPage from './pages/InboxPage';
+import TemplateManagerPage from './pages/TemplateManagerPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -102,6 +103,14 @@ function App() {
             element={
               <PrivateRoute>
                 <UserManagementPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/templates"
+            element={
+              <PrivateRoute>
+                <TemplateManagerPage />
               </PrivateRoute>
             }
           />
