@@ -21,13 +21,20 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow Vercel domains and localhost
-    const allowedOrigins = [
+    // Default origins (local dev + legacy Vercel). Extendable via ALLOWED_ORIGINS env (comma-separated).
+    const defaultOrigins = [
       'https://project-pulse-amber.vercel.app',
       /https:\/\/project-pulse-.*\.vercel\.app$/,
       'http://localhost:3000',
       'http://localhost:5173'
     ];
+
+    const extraOrigins = (process.env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map(o => o.trim())
+      .filter(Boolean);
+
+    const allowedOrigins = [...defaultOrigins, ...extraOrigins];
 
     if (!origin || allowedOrigins.some(allowed =>
       typeof allowed === 'string' ? allowed === origin : allowed.test(origin)

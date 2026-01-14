@@ -1,0 +1,28 @@
+# Proxy backend API and serve frontend build
+# Adjust server_name and root paths to your environment.
+
+server {
+    listen 80;
+    server_name projectpulse.local;
+
+    # Serve frontend (built assets)
+    root /opt/projectpulse/frontend/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy API to backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Increase upload size if needed
+    client_max_body_size 10m;
+}

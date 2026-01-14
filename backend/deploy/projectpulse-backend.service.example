@@ -1,0 +1,16 @@
+[Unit]
+Description=ProjectPulse Backend API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/projectpulse/backend
+ExecStart=/usr/bin/node src/server.js
+EnvironmentFile=/opt/projectpulse/backend/.env
+Restart=on-failure
+RestartSec=5
+User=projectpulse
+Group=projectpulse
+
+[Install]
+WantedBy=multi-user.target
