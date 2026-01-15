@@ -9,7 +9,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
 
   if (totalAlerts === 0) {
     return (
-      <Card className="bg-green-50 border-green-200">
+      <Card className="alert-success mb-0">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-green-100 rounded-lg">
             <AlertCircle className="w-6 h-6 text-green-600" />
@@ -26,7 +26,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
   return (
     <div className="space-y-4">
       {/* Summary Card */}
-      <Card className="bg-red-50 border-red-200">
+      <Card className="alert-critical mb-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 rounded-lg">
@@ -58,7 +58,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 cursor-pointer transition-colors"
+                className="p-3 alert-critical mb-2 rounded-lg hover:bg-red-100 cursor-pointer transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -97,7 +97,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 cursor-pointer transition-colors"
+                className="p-3 alert-warning mb-2 rounded-lg hover:bg-amber-100 cursor-pointer transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -131,7 +131,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 cursor-pointer transition-colors"
+                className="p-3 alert-warning mb-2 rounded-lg hover:bg-amber-100 cursor-pointer transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

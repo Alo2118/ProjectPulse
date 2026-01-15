@@ -2,8 +2,8 @@
  * Permission utility functions for ProjectPulse
  *
  * Role Permissions:
- * - amministratore: Can modify EVERYTHING (all records, even created by others)
- * - dipendente: Can modify only records CREATED BY THEM
+ * - amministratore: Can modify EVERYTHING (all records, even created by others, including users)
+ * - dipendente: Can modify EVERYTHING EXCEPT user management
  * - direzione: Can only VIEW (read-only), EXCEPT inbox where they can create/modify requests
  */
 
@@ -22,14 +22,15 @@ export const canModify = (user, resource, resourceType = null) => {
     return true;
   }
 
+  // Dipendente can modify everything except users
+  if (user.role === 'dipendente') {
+    if (resourceType === 'user') return false;
+    return true;
+  }
+
   // Direzione can only modify requests (inbox items)
   if (user.role === 'direzione') {
     return resourceType === 'request';
-  }
-
-  // Dipendente can only modify their own records
-  if (user.role === 'dipendente') {
-    return resource.created_by === user.id;
   }
 
   return false;
@@ -57,14 +58,14 @@ export const canCreate = (user, resourceType = null) => {
     return true;
   }
 
-  // Direzione can only create requests
-  if (user.role === 'direzione') {
-    return resourceType === 'request';
-  }
-
   // Dipendente can create anything except users
   if (user.role === 'dipendente') {
     return resourceType !== 'user';
+  }
+
+  // Direzione can only create requests
+  if (user.role === 'direzione') {
+    return resourceType === 'request';
   }
 
   return false;

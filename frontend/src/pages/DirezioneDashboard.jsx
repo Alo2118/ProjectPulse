@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle, TrendingUp, TrendingDown, Users, Calendar, LayoutDashboard, FolderKanban, UserCheck, Bell } from 'lucide-react';
 import { tasksApi, projectsApi, usersApi } from '../services/api';
-import Navbar from '../components/Navbar';
 import TaskModal from '../components/TaskModal';
 import { Card, StatCard, StatCardGrid } from '../components/ui';
 import AlertsPanel from '../components/management/AlertsPanel';
@@ -258,52 +257,68 @@ export default function DirezioneDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 animate-fade-in">
-          <h2 className="text-3xl font-bold text-gray-900">
-            Dashboard Direzione
+        <div className="mb-4 animate-slide-right">
+          <h2 className="page-title flex items-center gap-2">
+            📊 Dashboard Direzione
           </h2>
-          <p className="text-gray-600 mt-1 text-sm">
-            Monitoraggio completo progetti e team
+          <p className="text-slate-600 mt-0.5 text-xs">
+            Monitoraggio progetti e team
           </p>
         </div>
 
-        {/* Stats */}
-        <StatCardGrid columns={6} compact className="mb-4">
-          <StatCard title="Task Totali" value={stats.total} icon={Briefcase} variant="default" compact />
-          <StatCard title="In Corso" value={stats.in_progress} variant="flat" iconBg="bg-blue-100" iconColor="text-blue-600" compact />
-          <StatCard title="Bloccati" value={stats.blocked} icon={AlertCircle} variant="flat" iconBg="bg-red-100" iconColor="text-red-600" compact />
-          <StatCard title="In Attesa" value={stats.waiting} icon={HelpCircle} variant="flat" iconBg="bg-yellow-100" iconColor="text-yellow-600" compact />
-          <StatCard title="Completati" value={stats.completed} icon={CheckCircle} variant="flat" iconBg="bg-green-100" iconColor="text-green-600" compact />
-          <StatCard title="Tempo Totale" value={formatTime(stats.totalTime)} icon={Clock} variant="default" compact />
-        </StatCardGrid>
+        {/* Stats Compatti con Emoji */}
+        <div className="stats-grid stagger-animation">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 hover-lift">
+            <div className="text-xs text-slate-600 mb-1">📋 Tot</div>
+            <div className="text-2xl font-bold text-slate-900">{stats.total}</div>
+          </div>
+          <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
+            <div className="text-xs text-blue-700 mb-1">🚀 WIP</div>
+            <div className="text-2xl font-bold text-blue-900">{stats.in_progress}</div>
+          </div>
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg p-3 border border-slate-300 hover-lift">
+            <div className="text-xs text-slate-700 mb-1">🚫 Block</div>
+            <div className="text-2xl font-bold text-slate-900">{stats.blocked}</div>
+          </div>
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 hover-lift">
+            <div className="text-xs text-slate-600 mb-1">⏳ Wait</div>
+            <div className="text-2xl font-bold text-slate-800">{stats.waiting}</div>
+          </div>
+          <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200 hover-lift">
+            <div className="text-xs text-primary-700 mb-1">✅ Done</div>
+            <div className="text-2xl font-bold text-primary-900">{stats.completed}</div>
+          </div>
+          <div className="bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg p-3 border border-primary-300 hover-lift">
+            <div className="text-xs text-primary-800 mb-1">⏱️ Time</div>
+            <div className="text-lg font-bold text-primary-900">{formatTime(stats.totalTime)}</div>
+          </div>
+        </div>
 
         {/* Advanced Metrics */}
-        <StatCardGrid columns={4} compact className="mb-4">
+        <StatCardGrid columns={4} compact className="mb-6">
           <StatCard
             title="Tempo medio completamento"
             value={`${metrics.avgCompletionTime.toFixed(1)}h`}
             icon={Clock}
             variant="flat"
-            iconBg="bg-indigo-100"
-            iconColor="text-indigo-600"
+            iconBg="bg-secondary-100"
+            iconColor="text-secondary-600"
             compact
           />
-          <Card padding="sm" className={metrics.overdueTasks > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}>
+          <Card padding="sm" className={metrics.overdueTasks > 0 ? 'bg-danger-50 border-danger-200' : 'bg-success-50 border-success-200'}>
             <div className="flex items-center justify-between mb-1">
-              <Calendar className={`w-4 h-4 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
-              <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <Calendar className={`w-4 h-4 ${metrics.overdueTasks > 0 ? 'text-danger-600' : 'text-success-600'}`} />
+              <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-danger-600' : 'text-success-600'}`}>
                 SCADENZE
               </span>
             </div>
-            <div className={`text-2xl font-bold ${metrics.overdueTasks > 0 ? 'text-red-900' : 'text-green-900'}`}>
+            <div className={`text-2xl font-bold ${metrics.overdueTasks > 0 ? 'text-danger-900' : 'text-success-900'}`}>
               {metrics.overdueTasks > 0 ? metrics.overdueTasks : '0'}
             </div>
-            <div className={`text-xs ${metrics.overdueTasks > 0 ? 'text-red-700' : 'text-green-700'}`}>
+            <div className={`text-xs ${metrics.overdueTasks > 0 ? 'text-danger-700' : 'text-success-700'}`}>
               {metrics.overdueTasks > 0 ? `In ritardo (${metrics.overdueRate.toFixed(0)}%)` : 'Nessun ritardo'}
             </div>
           </Card>
@@ -313,8 +328,8 @@ export default function DirezioneDashboard() {
             value={`${metrics.weeklyTrend >= 0 ? '+' : ''}${metrics.weeklyTrend.toFixed(0)}%`}
             icon={metrics.weeklyTrend >= 0 ? TrendingUp : TrendingDown}
             variant="flat"
-            iconBg="bg-purple-100"
-            iconColor="text-purple-600"
+            iconBg="bg-accent-100"
+            iconColor="text-accent-600"
             trendDirection={metrics.weeklyTrend >= 0 ? 'up' : 'down'}
             compact
           />
@@ -323,8 +338,8 @@ export default function DirezioneDashboard() {
             value={projects.length}
             icon={Briefcase}
             variant="flat"
-            iconBg="bg-cyan-100"
-            iconColor="text-cyan-600"
+            iconBg="bg-primary-100"
+            iconColor="text-primary-600"
             compact
           />
         </StatCardGrid>
@@ -332,23 +347,20 @@ export default function DirezioneDashboard() {
         {/* Filters */}
         <FilterBar filters={filters} onFilterChange={setFilters} showEmployeeFilter={true} />
 
-        {/* Tabs Navigation */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="flex border-b border-gray-200">
+        {/* Tabs Navigation Compatto */}
+        <div className="card-compact mb-4 p-1.5">
+          <div className="flex gap-1 flex-wrap">
             {tabs.map(tab => {
               const Icon = tab.icon;
+              const emojis = {overview: '🎯', projects: '📁', team: '👥', alerts: '🔔'};
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                  className={activeTab === tab.id ? 'tab-active' : 'tab-inactive'}
                 >
-                  <Icon className="w-5 h-5" />
-                  {tab.label}
+                  <span className="text-base">{emojis[tab.id]}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               );
             })}
@@ -485,7 +497,7 @@ export default function DirezioneDashboard() {
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div
-                                className="bg-green-500 h-2 rounded-full transition-all"
+                                className="bg-primary-600 h-2 rounded-full transition-all"
                                 style={{ width: `${completionRate}%` }}
                               />
                             </div>

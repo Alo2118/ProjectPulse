@@ -159,11 +159,11 @@ export const getStatusLabel = (status) => {
  */
 export const getStatusColors = (status) => {
   const colors = {
-    todo: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' },
-    in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
-    blocked: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300' },
-    waiting_clarification: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-300' },
-    completed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' }
+    todo: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300' },
+    in_progress: { bg: 'bg-primary-100', text: 'text-primary-700', border: 'border-primary-300' },
+    blocked: { bg: 'bg-slate-200', text: 'text-slate-800', border: 'border-slate-400' },
+    waiting_clarification: { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-300' },
+    completed: { bg: 'bg-primary-50', text: 'text-primary-900', border: 'border-primary-200' }
   };
   return colors[status] || colors.todo;
 };
@@ -190,10 +190,10 @@ export const getPriorityLabel = (priority) => {
  */
 export const getPriorityColors = (priority) => {
   const colors = {
-    bassa: { text: 'text-gray-500', bg: 'bg-gray-100', border: 'border-gray-300' },
-    media: { text: 'text-blue-500', bg: 'bg-blue-100', border: 'border-blue-300' },
-    alta: { text: 'text-orange-500', bg: 'bg-orange-100', border: 'border-orange-300' },
-    critica: { text: 'text-red-500', bg: 'bg-red-100', border: 'border-red-300' }
+    bassa: { text: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200' },
+    media: { text: 'text-primary-600', bg: 'bg-primary-100', border: 'border-primary-200' },
+    alta: { text: 'text-primary-700', bg: 'bg-primary-200', border: 'border-primary-400' },
+    critica: { text: 'text-slate-900', bg: 'bg-slate-300', border: 'border-slate-500' }
   };
   return colors[priority] || colors.media;
 };

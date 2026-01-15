@@ -2,13 +2,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FolderOpen, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { projectsApi, tasksApi } from '../services/api';
-import Navbar from '../components/Navbar';
+import { useAuth } from '../context/AuthContext';
+import { canCreate } from '../utils/permissions';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectModal from '../components/ProjectModal';
 import { formatTime } from '../utils/helpers';
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -81,77 +83,102 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Compatto */}
+        <div className="flex items-center justify-between mb-4 animate-slide-right">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Progetti R&D</h1>
-            <p className="text-gray-600 mt-0.5 text-sm">
-              Sviluppo dispositivi ortopedici, protesi e strumenti chirurgici
+            <h1 className="page-title flex items-center gap-2">
+              🔬 Progetti R&D
+            </h1>
+            <p className="text-slate-600 mt-0.5 text-xs">
+              Dispositivi ortopedici, protesi e strumenti chirurgici
             </p>
           </div>
 
           <button
             onClick={handleCreate}
-            className="btn-primary flex items-center gap-2"
+            disabled={!canCreate(user, 'project')}
+            className="btn-primary flex items-center gap-1.5 text-sm py-2 px-3 disabled:opacity-50 disabled:cursor-not-allowed hover-scale"
           >
             <Plus className="w-4 h-4" />
-            Nuovo Progetto
+            <span className="hidden sm:inline">Nuovo Progetto</span>
+            <span className="inline sm:hidden">Nuovo</span>
           </button>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-          <div className="card bg-blue-50 border-blue-200">
-            <FolderOpen className="w-6 h-6 text-blue-600 mb-1" />
-            <div className="text-xl font-bold text-blue-900">{projects.length}</div>
-            <div className="text-xs text-blue-600">Progetti Attivi</div>
+        {/* Stats Compatti con Emoji */}
+        <div className="stats-grid-compact stagger-animation">
+          <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-blue-700 mb-1">📁 Progetti</div>
+                <div className="text-2xl font-bold text-blue-900">{projects.length}</div>
+              </div>
+              <div className="text-3xl">🗂️</div>
+            </div>
           </div>
 
-          <div className="card bg-green-50 border-green-200">
-            <CheckCircle className="w-6 h-6 text-green-600 mb-1" />
-            <div className="text-xl font-bold text-green-900">
-              {Object.values(projectStats).reduce((sum, s) => sum + s.completed, 0)}
+          <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200 hover-lift">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-primary-700 mb-1">✓ Completati</div>
+                <div className="text-2xl font-bold text-primary-900">
+                  {Object.values(projectStats).reduce((sum, s) => sum + s.completed, 0)}
+                </div>
+              </div>
+              <div className="text-3xl">✅</div>
             </div>
-            <div className="text-xs text-green-600">Task Completati</div>
           </div>
 
-          <div className="card bg-yellow-50 border-yellow-200">
-            <Clock className="w-6 h-6 text-yellow-600 mb-1" />
-            <div className="text-xl font-bold text-yellow-900">
-              {Object.values(projectStats).reduce((sum, s) => sum + s.in_progress, 0)}
+          <div className="bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg p-3 border border-primary-300 hover-lift">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-primary-800 mb-1">⚡ In Corso</div>
+                <div className="text-2xl font-bold text-primary-900">
+                  {Object.values(projectStats).reduce((sum, s) => sum + s.in_progress, 0)}
+                </div>
+              </div>
+              <div className="text-3xl">🚀</div>
             </div>
-            <div className="text-xs text-yellow-600">In Corso</div>
           </div>
 
-          <div className="card bg-red-50 border-red-200">
-            <AlertCircle className="w-6 h-6 text-red-600 mb-1" />
-            <div className="text-xl font-bold text-red-900">
-              {Object.values(projectStats).reduce((sum, s) => sum + s.blocked, 0)}
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 hover-lift">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-red-700 mb-1">🚫 Bloccati</div>
+                <div className="text-2xl font-bold text-red-900">
+                  {Object.values(projectStats).reduce((sum, s) => sum + s.blocked, 0)}
+                </div>
+              </div>
+              <div className="text-3xl">⛔</div>
             </div>
-            <div className="text-xs text-red-600">Bloccati</div>
           </div>
         </div>
 
         {/* Projects Grid */}
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Caricamento...</div>
+          <div className="text-center py-8">
+            <div className="animate-spin w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-slate-500 mt-3 text-sm">Caricamento...</p>
+          </div>
         ) : projects.length === 0 ? (
-          <div className="text-center py-12">
-            <FolderOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Nessun progetto R&D</h3>
-            <p className="text-gray-500 mb-4">
-              Inizia creando un progetto per lo sviluppo di dispositivi medici o strumentario
+          <div className="text-center py-12 animate-fade-in">
+            <div className="text-6xl mb-4">🔬</div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">Nessun progetto R&D</h3>
+            <p className="text-slate-500 mb-4 text-sm">
+              Inizia creando un progetto per lo sviluppo di dispositivi medici
             </p>
-            <button onClick={handleCreate} className="btn-primary hover:scale-105 transition-transform shadow-lg">
+            <button 
+              onClick={handleCreate} 
+              disabled={!canCreate(user, 'project')}
+              className="btn-primary hover-scale shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Crea il primo progetto
             </button>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 stagger-animation">
             {projects.map(project => {
               const stats = projectStats[project.id] || {};
               const completionRate = getCompletionRate(project.id);
@@ -159,59 +186,78 @@ export default function ProjectsPage() {
               return (
                 <div
                   key={project.id}
-                  className="card hover:shadow-lg transition-shadow cursor-pointer group"
+                  className="card hover-lift cursor-pointer group transition-all"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-base text-gray-900 group-hover:text-primary-600 transition-colors">
+                      <h3 className="font-semibold text-base text-slate-900 group-hover:text-teal-600 transition-colors flex items-center gap-2">
+                        <span>📐</span>
                         {project.name}
                       </h3>
                       {project.description && (
-                        <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                        <p className="text-xs text-slate-600 mt-1 line-clamp-2">
                           {project.description}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
+                  {/* Progress Bar Compatto */}
                   {stats.total > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-gray-600">Progresso</span>
-                        <span className="font-medium text-gray-900">{completionRate}%</span>
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-slate-600">Progresso</span>
+                        <span className="font-semibold text-slate-900">{completionRate}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-slate-200 rounded-full h-1.5">
                         <div
-                          className="bg-primary-600 h-2 rounded-full transition-all"
+                          className="bg-gradient-to-r from-primary-600 to-primary-700 h-1.5 rounded-full transition-all"
                           style={{ width: `${completionRate}%` }}
                         />
                       </div>
                     </div>
                   )}
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
-                    <div>
-                      <div className="text-xl font-bold text-gray-900">
+                  {/* Stats Compatti */}
+                  <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100">
+                    <div className="text-center">
+                      <div className="text-sm">📊</div>
+                      <div className="text-lg font-bold text-slate-900">
                         {stats.total || 0}
                       </div>
-                      <div className="text-xs text-gray-500">Task Totali</div>
+                      <div className="text-xs text-slate-500">Tot</div>
                     </div>
 
-                    <div>
-                      <div className="text-xl font-bold text-green-600">
+                    <div className="text-center">
+                      <div className="text-sm">✅</div>
+                      <div className="text-lg font-bold text-primary-700">
                         {stats.completed || 0}
                       </div>
-                      <div className="text-xs text-gray-500">Completati</div>
+                      <div className="text-xs text-slate-500">OK</div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-sm">🚀</div>
+                      <div className="text-lg font-bold text-primary-600">
+                        {stats.in_progress || 0}
+                      </div>
+                      <div className="text-xs text-slate-500">WIP</div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-sm">🚫</div>
+                      <div className="text-lg font-bold text-slate-700">
+                        {stats.blocked || 0}
+                      </div>
+                      <div className="text-xs text-slate-500">Block</div>
                     </div>
 
                     {stats.total_time > 0 && (
-                      <div className="col-span-2 mt-1">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{formatTime(stats.total_time)} di lavoro</span>
+                      <div className="col-span-4 mt-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-center gap-1 text-xs text-slate-600">
+                          <span>⏱️</span>
+                          <span className="font-medium">{formatTime(stats.total_time)}</span>
                         </div>
                       </div>
                     )}

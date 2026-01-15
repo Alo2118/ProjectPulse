@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Archive, Clock, CheckCircle, AlertCircle, Target, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
-import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
+import TaskTreeList from '../components/TaskTreeList';
 import TaskModal from '../components/TaskModal';
 import CreateTaskModal from '../components/CreateTaskModal';
 import ProjectModal from '../components/ProjectModal';
@@ -118,10 +118,9 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12 text-gray-500">Caricamento...</div>
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12 text-slate-500">Caricamento...</div>
         </div>
       </div>
     );
@@ -130,12 +129,10 @@ export default function ProjectDetailPage() {
   if (!project) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="page-header">
           <button
             onClick={() => navigate('/projects')}
             className="btn-secondary flex items-center gap-2 mb-4"
@@ -188,18 +185,18 @@ export default function ProjectDetailPage() {
             <div className="text-xs text-gray-500">Task Totali</div>
           </div>
 
-          <div className="card text-center bg-green-50 border-green-200">
-            <CheckCircle className="w-5 h-5 text-green-600 mx-auto mb-0.5" />
-            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-            <div className="text-xs text-green-600">Completati</div>
+          <div className="card text-center bg-primary-50 border-primary-200">
+            <CheckCircle className="w-5 h-5 text-primary-600 mx-auto mb-0.5" />
+            <div className="text-2xl font-bold text-primary-700">{stats.completed}</div>
+            <div className="text-xs text-primary-600">Completati</div>
           </div>
 
-          <div className="card text-center bg-blue-50 border-blue-200">
-            <div className="text-2xl font-bold text-blue-600">{stats.in_progress}</div>
-            <div className="text-xs text-blue-600">In Corso</div>
+          <div className="card text-center bg-primary-100 border-primary-300">
+            <div className="text-2xl font-bold text-primary-700">{stats.in_progress}</div>
+            <div className="text-xs text-primary-600">In Corso</div>
           </div>
 
-          <div className="card text-center bg-red-50 border-red-200">
+          <div className="card text-center bg-slate-100 border-slate-300">
             <AlertCircle className="w-5 h-5 text-red-600 mx-auto mb-0.5" />
             <div className="text-2xl font-bold text-red-600">{stats.blocked}</div>
             <div className="text-xs text-red-600">Bloccati</div>
@@ -288,9 +285,9 @@ export default function ProjectDetailPage() {
 
                 return (
                   <div key={milestone.id} className={`card ${
-                    isCompleted ? 'bg-green-50 border-green-200' :
+                    isCompleted ? 'bg-primary-50 border-primary-200' :
                     isCancelled ? 'bg-gray-100 opacity-70' :
-                    isOverdue ? 'bg-red-50 border-red-200' :
+                    isOverdue ? 'bg-slate-100 border-slate-300' :
                     'bg-white'
                   }`}>
                     {/* Milestone Header */}
@@ -331,7 +328,7 @@ export default function ProjectDetailPage() {
                             <div className="w-32 bg-gray-200 rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
-                                  isCompleted ? 'bg-green-600' : 'bg-primary-600'
+                                  isCompleted ? 'bg-primary-700' : 'bg-primary-600'
                                 }`}
                                 style={{ width: `${milestoneProgress}%` }}
                               />
@@ -401,17 +398,14 @@ export default function ProjectDetailPage() {
                             Nessun task assegnato a questa milestone
                           </p>
                         ) : (
-                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                            {milestoneTasks.map(task => (
-                              <TaskCard
-                                key={task.id}
-                                task={task}
-                                onClick={() => setSelectedTask(task)}
-                                onTimerStart={loadData}
-                                showProject={false}
-                              />
-                            ))}
-                          </div>
+                          <TaskTreeList
+                            tasks={milestoneTasks}
+                            allTasks={tasks}
+                            onTaskClick={(task) => setSelectedTask(task)}
+                            onTimerStart={loadData}
+                            showProject={false}
+                            showGrid={true}
+                          />
                         )}
                       </div>
                     )}
@@ -446,17 +440,14 @@ export default function ProjectDetailPage() {
 
                   {showUnassignedTasks && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                        {unassignedTasks.map(task => (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            onClick={() => setSelectedTask(task)}
-                            onTimerStart={loadData}
-                            showProject={false}
-                          />
-                        ))}
-                      </div>
+                      <TaskTreeList
+                        tasks={unassignedTasks}
+                        allTasks={tasks}
+                        onTaskClick={(task) => setSelectedTask(task)}
+                        onTimerStart={loadData}
+                        showProject={false}
+                        showGrid={true}
+                      />
                     </div>
                   )}
                 </div>

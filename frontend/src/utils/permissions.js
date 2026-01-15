@@ -2,8 +2,8 @@
  * Permission utility functions for ProjectPulse (Frontend)
  *
  * Role Permissions:
- * - amministratore: Can modify EVERYTHING (all records, even created by others)
- * - dipendente: Can modify only records CREATED BY THEM
+ * - amministratore: Can modify EVERYTHING (all records, even created by others, including users)
+ * - dipendente: Can modify EVERYTHING EXCEPT user management
  * - direzione: Can only VIEW (read-only), EXCEPT inbox where they can create/modify requests
  */
 
@@ -22,14 +22,15 @@ export const canModify = (user, resource, resourceType = null) => {
     return true;
   }
 
+  // Dipendente can modify everything except users
+  if (user.role === 'dipendente') {
+    if (resourceType === 'user') return false;
+    return true;
+  }
+
   // Direzione can only modify requests (inbox items)
   if (user.role === 'direzione') {
     return resourceType === 'request';
-  }
-
-  // Dipendente can only modify their own records
-  if (user.role === 'dipendente') {
-    return resource.created_by === user.id;
   }
 
   return false;
@@ -57,14 +58,14 @@ export const canCreate = (user, resourceType = null) => {
     return true;
   }
 
-  // Direzione can only create requests
-  if (user.role === 'direzione') {
-    return resourceType === 'request';
-  }
-
   // Dipendente can create anything except users
   if (user.role === 'dipendente') {
     return resourceType !== 'user';
+  }
+
+  // Direzione can only create requests
+  if (user.role === 'direzione') {
+    return resourceType === 'request';
   }
 
   return false;
@@ -76,4 +77,53 @@ export const canCreate = (user, resourceType = null) => {
  */
 export const canView = (user) => {
   return !!user;
+};
+
+/**
+ * Check if user can access templates
+ * @param {Object} user - Current user object {role}
+ * @returns {Boolean}
+ */
+export const canAccessTemplates = (user) => {
+  if (!user) return false;
+  // Direzione cannot access templates
+  return user.role !== 'direzione';
+};
+
+/**
+ * Check if user can access user management
+ * @param {Object} user - Current user object {role}
+ * @returns {Boolean}
+ */
+export const canAccessUserManagement = (user) => {
+  if (!user) return false;
+  // Only amministratore can manage users
+  return user.role === 'amministratore';
+};
+
+/**
+ * Check if user can access a page/route
+ * @param {Object} user - Current user object {role}
+ * @param {String} route - Route name
+ * @returns {Boolean}
+ */
+export const canAccessRoute = (user, route) => {
+  if (!user) return false;
+
+  // Amministratore can access everything
+  if (user.role === 'amministratore') return true;
+
+  // Routes that direzione CANNOT access
+  const direzioneForbidden = ['templates', 'template-manager', 'users'];
+  
+  if (user.role === 'direzione' && direzioneForbidden.includes(route)) {
+    return false;
+  }
+
+  // Dipendente cannot access user management
+  if (user.role === 'dipendente' && route === 'users') {
+    return false;
+  }
+
+  return true;
 };

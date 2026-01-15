@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Copy, Save, X, FileText, FolderOpen, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { templatesApi } from '../services/api';
-import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { canModify, canDelete, canCreate } from '../utils/permissions';
 
@@ -178,34 +177,38 @@ export default function TemplateManagerPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestione Template</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Gestione Template</h1>
+          <p className="text-slate-600">
             Crea e gestisci template riutilizzabili per progetti, task e milestone
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-4 mb-6 border-b border-gray-200">
+        <div className="flex flex-wrap gap-2 mb-6 border-b border-slate-200">
           {tabs.map(tab => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const colorClasses = {
+              blue: isActive ? 'border-primary-500 text-primary-600 bg-primary-50' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100',
+              green: isActive ? 'border-success-500 text-success-600 bg-success-50' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100',
+              purple: isActive ? 'border-accent-500 text-accent-600 bg-accent-50' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            };
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? `border-${tab.color}-500 text-${tab.color}-600 font-semibold`
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                className={`flex items-center gap-2 px-4 py-3 border-b-2 rounded-t-lg transition-colors text-sm sm:text-base font-medium ${
+                  colorClasses[tab.color]
                 }`}
               >
-                <Icon size={20} />
-                {tab.label}
-                <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100">
+                <Icon size={18} className="shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="inline sm:hidden text-xs">({templates.filter(t => t.type === tab.id).length})</span>
+                <span className="hidden sm:inline ml-2 px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700">
                   {templates.filter(t => t.type === tab.id).length}
                 </span>
               </button>
@@ -217,31 +220,32 @@ export default function TemplateManagerPage() {
         <div className="mb-6">
           <button
             onClick={() => handleCreate(activeTab)}
-            className="btn btn-primary flex items-center gap-2"
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!canCreate(user, 'template')}
           >
             <Plus size={20} />
-            Nuovo Template {tabs.find(t => t.id === activeTab)?.label}
+            <span className="hidden sm:inline">Nuovo Template {tabs.find(t => t.id === activeTab)?.label}</span>
+            <span className="inline sm:hidden">Nuovo</span>
           </button>
         </div>
 
         {/* Templates Grid */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
           </div>
         ) : filteredTemplates.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <div className="text-6xl mb-4">{tabs.find(t => t.id === activeTab)?.icon && '📋'}</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <div className="text-center py-12 card">
+            <div className="text-6xl mb-4">📋</div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
               Nessun template trovato
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-slate-600 mb-4">
               Crea il tuo primo template per iniziare
             </p>
             <button
               onClick={() => handleCreate(activeTab)}
-              className="btn btn-primary"
+              className="btn-primary"
             >
               Crea Template
             </button>
@@ -251,7 +255,8 @@ export default function TemplateManagerPage() {
             {filteredTemplates.map(template => (
               <div
                 key={template.id}
-                className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6"
+                className="card hover:shadow-md transition-shadow p-6 cursor-pointer"
+                onClick={() => handleEdit(template)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -327,7 +332,7 @@ export default function TemplateManagerPage() {
         {/* Create/Edit Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="card shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">
                   {selectedTemplate ? 'Modifica Template' : 'Nuovo Template'}

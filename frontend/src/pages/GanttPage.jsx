@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart3, Filter } from 'lucide-react';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
-import Navbar from '../components/Navbar';
 import GanttChart from '../components/GanttChart';
 import TaskModal from '../components/TaskModal';
 import MilestoneModal from '../components/MilestoneModal';
@@ -73,34 +72,31 @@ export default function GanttPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-4 animate-fade-in">
+        <div className="mb-4 animate-slide-right">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <BarChart3 className="w-8 h-8 text-primary-600" />
-                Diagramma di Gantt
+              <h2 className="page-title flex items-center gap-2">
+                📊 Diagramma di Gantt
               </h2>
-              <p className="text-gray-600 mt-4">
-                Visualizzazione temporale dei progetti R&D e delle attività
+              <p className="text-slate-600 mt-0.5 text-xs">
+                Timeline progetti R&D
               </p>
             </div>
           </div>
 
           {/* Filter */}
-          <div className="card shadow-md">
-            <div className="flex items-center gap-3">
-              <Filter className="w-5 h-5 text-gray-500" />
+          <div className="card-compact">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔍</span>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-4">
+                <label className="block text-xs font-medium text-slate-700 mb-2">
                   Filtra per progetto
                 </label>
                 <select
-                  className="input max-w-md"
+                  className="input max-w-md text-sm"
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(e.target.value)}
                 >

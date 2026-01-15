@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, FileText, AlertTriangle, Calendar, LayoutGrid, LayoutList, PieChart } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Calendar, LayoutGrid, LayoutList, PieChart, ClipboardList, Zap, CheckCircle2, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, projectsApi } from '../services/api';
-import Navbar from '../components/Navbar';
 import Timer from '../components/Timer';
 import TaskCard from '../components/TaskCard';
+import TaskTreeList from '../components/TaskTreeList';
 import TaskModal from '../components/TaskModal';
 import CreateTaskModal from '../components/CreateTaskModal';
 import DailyReportModal from '../components/DailyReportModal';
@@ -55,8 +55,19 @@ export default function DipendenteDashboard() {
     }
   };
 
+  // Enrich tasks with parent title and subtask flag
+  const tasksWithRelations = useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+    const map = new Map(tasks.map(t => [t.id, t]));
+    return tasks.map(t => ({
+      ...t,
+      is_subtask: !!t.parent_task_id,
+      parent_title: t.parent_task_id ? map.get(t.parent_task_id)?.title : undefined
+    }));
+  }, [tasks]);
+
   // Memoize grouped tasks to avoid recalculation on every render
-  const groupedTasks = useMemo(() => groupTasksByStatus(tasks), [tasks]);
+  const groupedTasks = useMemo(() => groupTasksByStatus(tasksWithRelations), [tasksWithRelations]);
 
   // Memoize stats calculation
   const stats = useMemo(() => ({
@@ -135,193 +146,201 @@ export default function DipendenteDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-6 animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900">
-                Le mie Attività
-              </h2>
-              <p className="text-gray-600 mt-1 text-sm">
-                Gestisci i tuoi task e monitora i tuoi progressi
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setShowReportModal(true)}>
-                <FileText className="w-5 h-5" />
-                Report Giornaliero
-              </Button>
-              <Button onClick={() => setShowCreateModal(true)}>
-                <Plus className="w-5 h-5" />
-                Nuova Attività
-              </Button>
-            </div>
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
+        {/* Header pulito */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="page-title flex items-center gap-2">
+              ✨ Le mie Attività
+            </h2>
+            <p className="text-slate-600 mt-0.5 text-sm">
+              Gestisci i tuoi task e monitora i tuoi progressi
+            </p>
           </div>
-
-          {/* Stats Overview */}
-          <StatCardGrid columns={4} compact className="mb-4">
-            <StatCard
-              title="Totali"
-              value={stats.total}
-              variant="default"
-              compact
-            />
-            <StatCard
-              title="In Corso"
-              value={stats.in_progress}
-              variant="flat"
-              iconBg="bg-blue-100"
-              iconColor="text-blue-600"
-              compact
-            />
-            <StatCard
-              title="Completati"
-              value={stats.completed}
-              variant="flat"
-              iconBg="bg-green-100"
-              iconColor="text-green-600"
-              compact
-            />
-            <StatCard
-              title="Tempo Totale"
-              value={formatTime(stats.totalTime)}
-              variant="flat"
-              iconBg="bg-purple-100"
-              iconColor="text-purple-600"
-              compact
-            />
-          </StatCardGrid>
-
-          {/* Weekly Stats */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-sm p-4 mb-4 text-white">
-            <h3 className="text-base font-semibold mb-3">Statistiche Settimanali</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <div className="text-2xl font-bold">{weeklyStats.completed}</div>
-                <div className="text-blue-100 text-xs">Task completati questa settimana</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{formatTime(weeklyStats.totalTime)}</div>
-                <div className="text-blue-100 text-xs">Tempo investito questa settimana</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{weeklyStats.avgTimePerTask.toFixed(1)}h</div>
-                <div className="text-blue-100 text-xs">Tempo medio per task</div>
-              </div>
-            </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowReportModal(true)} className="text-sm py-2">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Report</span>
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)} className="text-sm py-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nuovo Task</span>
+            </Button>
           </div>
+        </div>
 
-          {/* Alerts for deadlines */}
-          {(overdueTasks.length > 0 || dueSoonTasks.length > 0) && (
-            <div className="mb-4 space-y-2">
-              {overdueTasks.length > 0 && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-lg animate-fade-in">
-                  <div className="flex items-start">
-                    <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h4 className="text-xs font-semibold text-red-800 mb-1">
-                        {overdueTasks.length} attività in ritardo
-                      </h4>
-                      <div className="text-xs text-red-700 space-y-1">
-                        {overdueTasks.slice(0, 3).map(task => (
-                          <div key={task.id} className="flex items-center gap-2">
-                            <span>•</span>
-                            <button
-                              onClick={() => setSelectedTask(task)}
-                              className="hover:underline text-left"
-                            >
-                              {task.title}
-                            </button>
-                          </div>
-                        ))}
-                        {overdueTasks.length > 3 && (
-                          <p className="text-xs text-red-600 italic">
-                            ... e altre {overdueTasks.length - 3} attività
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+        {/* Stats Cards in alto */}
+        <StatCardGrid columns={4} compact className="mb-4">
+          <StatCard
+            title="Totali"
+            value={stats.total}
+            icon={ClipboardList}
+            compact
+          />
+          <StatCard
+            title="In Corso"
+            value={stats.in_progress}
+            icon={Zap}
+            iconBg="bg-blue-100"
+            iconColor="text-blue-600"
+            compact
+          />
+          <StatCard
+            title="Completati"
+            value={stats.completed}
+            icon={CheckCircle2}
+            iconBg="bg-green-100"
+            iconColor="text-green-600"
+            compact
+          />
+          <StatCard
+            title="Tempo"
+            value={formatTime(stats.totalTime)}
+            icon={Clock}
+            iconBg="bg-slate-100"
+            iconColor="text-slate-600"
+            compact
+          />
+        </StatCardGrid>
+
+        {/* Layout a due colonne */}
+        <div className="grid lg:grid-cols-12 gap-4 mb-4">
+          {/* Colonna principale - 8 colonne */}
+          <div className="lg:col-span-8 space-y-4">
+            {/* Weekly Stats (standardized card) */}
+            <div className="card animate-slide-up">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xl">📈</span>
+                <h3 className="text-sm font-semibold text-slate-900">Questa Settimana</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-slate-900">{weeklyStats.completed}</div>
+                  <div className="text-xs text-slate-600 mt-1">Completati</div>
                 </div>
-              )}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-slate-900">{formatTime(weeklyStats.totalTime)}</div>
+                  <div className="text-xs text-slate-600 mt-1">Tempo</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-slate-900">{weeklyStats.avgTimePerTask.toFixed(1)}h</div>
+                  <div className="text-xs text-slate-600 mt-1">Media/Task</div>
+                </div>
+              </div>
+            </div>
 
-              {dueSoonTasks.length > 0 && (
-                <div className="bg-orange-50 border-l-4 border-orange-500 p-3 rounded-r-lg animate-fade-in">
-                  <div className="flex items-start">
-                    <Calendar className="w-4 h-4 text-orange-600 mt-0.5 mr-2 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h4 className="text-xs font-semibold text-orange-800 mb-1">
-                        {dueSoonTasks.length} attività in scadenza (prossimi 3 giorni)
-                      </h4>
-                      <div className="text-xs text-orange-700 space-y-1">
-                        {dueSoonTasks.slice(0, 3).map(task => {
-                          const deadline = new Date(task.deadline);
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          deadline.setHours(0, 0, 0, 0);
-                          const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
-                          return (
-                            <div key={task.id} className="flex items-center gap-2">
-                              <span>•</span>
+            {/* View Mode Toggle */}
+            <div className="card-compact p-1.5">
+              <div className="flex gap-1 flex-wrap">
+                {viewModes.map(mode => {
+                  const Icon = mode.icon;
+                  const emojis = { kanban: '📊', list: '📝', calendar: '📅', stats: '📈' };
+                  return (
+                    <button
+                      key={mode.id}
+                      onClick={() => setViewMode(mode.id)}
+                      className={viewMode === mode.id ? 'tab-active' : 'tab-inactive'}
+                    >
+                      <span className="text-base">{emojis[mode.id]}</span>
+                      <span className="hidden sm:inline">{mode.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar destra - 4 colonne */}
+          <div className="lg:col-span-4 space-y-4">
+            {/* Timer */}
+            <Timer onTimerChange={loadData} />
+
+            {/* Alerts Compatti */}
+            {(overdueTasks.length > 0 || dueSoonTasks.length > 0) && (
+              <div className="space-y-2">
+                {overdueTasks.length > 0 && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 shadow-sm p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-red-100 text-red-700 text-sm">🚨</div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-red-800 flex items-center gap-2">
+                          {overdueTasks.length} attività in ritardo
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+                        </h4>
+                        <div className="mt-1 text-xs text-red-700 space-y-1">
+                          {overdueTasks.slice(0, 2).map(task => (
+                            <div key={task.id} className="flex items-center gap-1">
+                              <span className="text-red-400">•</span>
                               <button
                                 onClick={() => setSelectedTask(task)}
-                                className="hover:underline text-left"
+                                className="hover:underline text-left truncate"
                               >
                                 {task.title}
                               </button>
-                              <span className="text-xs">
-                                ({diffDays === 0 ? 'oggi' : `${diffDays} gg`})
-                              </span>
                             </div>
-                          );
-                        })}
-                        {dueSoonTasks.length > 3 && (
-                          <p className="text-xs text-orange-600 italic">
-                            ... e altre {dueSoonTasks.length - 3} attività
-                          </p>
-                        )}
+                          ))}
+                          {overdueTasks.length > 2 && (
+                            <p className="text-xs text-red-600 italic">
+                              ... e altre {overdueTasks.length - 2}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
 
-          <Timer onTimerChange={loadData} />
-        </div>
-
-        {/* View Mode Toggle */}
-        <div className="bg-white rounded-lg shadow-sm mb-6 p-2">
-          <div className="flex gap-2">
-            {viewModes.map(mode => {
-              const Icon = mode.icon;
-              return (
-                <button
-                  key={mode.id}
-                  onClick={() => setViewMode(mode.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    viewMode === mode.id
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  {mode.label}
-                </button>
-              );
-            })}
+                {dueSoonTasks.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 shadow-sm p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-amber-100 text-amber-700 text-sm">⏰</div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                          {dueSoonTasks.length} in scadenza (3 giorni)
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+                        </h4>
+                        <div className="mt-1 text-xs text-amber-700 space-y-1">
+                          {dueSoonTasks.slice(0, 2).map(task => {
+                            const deadline = new Date(task.deadline);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            deadline.setHours(0, 0, 0, 0);
+                            const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+                            return (
+                              <div key={task.id} className="flex items-center gap-1">
+                                <span className="text-amber-400">•</span>
+                                <button
+                                  onClick={() => setSelectedTask(task)}
+                                  className="hover:underline text-left truncate flex-1"
+                                >
+                                  {task.title}
+                                </button>
+                                <span className="text-[11px] whitespace-nowrap text-amber-600">
+                                  ({diffDays === 0 ? 'oggi' : `${diffDays}g`})
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {dueSoonTasks.length > 2 && (
+                            <p className="text-xs text-amber-600 italic">
+                              ... e altre {dueSoonTasks.length - 2}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {loading ? (
           <div className="space-y-6">
-            <div className="animate-pulse bg-white rounded-lg p-8">
-              <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="animate-pulse bg-white rounded-lg p-8 border border-slate-200">
+              <div className="h-64 bg-slate-200 rounded"></div>
             </div>
           </div>
         ) : (
@@ -329,11 +348,11 @@ export default function DipendenteDashboard() {
             {/* Kanban View */}
             {viewMode === 'kanban' && (
               <div className="animate-fade-in">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                <h3 className="text-xl font-semibold text-slate-900 mb-4">
                   Vista Kanban ({tasks.length} task)
                 </h3>
                 <KanbanBoard
-                  tasks={tasks}
+                  tasks={tasksWithRelations}
                   onTaskClick={setSelectedTask}
                   onTaskUpdate={handleTaskUpdate}
                 />
@@ -342,112 +361,117 @@ export default function DipendenteDashboard() {
 
             {/* List View */}
             {viewMode === 'list' && (
-              <div className="space-y-8 animate-fade-in">
+              <div className="space-y-4 animate-fade-in">
                 {/* In Progress */}
                 {groupedTasks.in_progress.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-full">
-                        <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        <h3 className="text-lg font-semibold text-blue-900">
-                          In Corso ({groupedTasks.in_progress.length})
-                        </h3>
-                      </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">🚀</span>
+                      <h3 className="text-base font-semibold text-blue-900">
+                        In Corso
+                      </h3>
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {groupedTasks.in_progress.length}
+                      </span>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {groupedTasks.in_progress.map((task, index) => (
-                        <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
-                          <TaskCard task={task} onClick={() => setSelectedTask(task)} onTimerStart={loadData} />
-                        </div>
-                      ))}
-                    </div>
+                    <TaskTreeList
+                      tasks={groupedTasks.in_progress}
+                      allTasks={tasksWithRelations}
+                      onTaskClick={(task) => setSelectedTask(task)}
+                      onTimerStart={loadData}
+                      showGrid={true}
+                    />
                   </section>
                 )}
 
                 {/* Blocked */}
                 {groupedTasks.blocked.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex items-center gap-2 bg-red-100 px-4 py-2 rounded-full">
-                        <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                        <h3 className="text-lg font-semibold text-red-900">
-                          Bloccati ({groupedTasks.blocked.length})
-                        </h3>
-                      </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">🚫</span>
+                      <h3 className="text-base font-semibold text-red-900">
+                        Bloccati
+                      </h3>
+                      <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {groupedTasks.blocked.length}
+                      </span>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {groupedTasks.blocked.map((task, index) => (
-                        <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
-                          <TaskCard task={task} onClick={() => setSelectedTask(task)} onTimerStart={loadData} />
-                        </div>
-                      ))}
-                    </div>
+                    <TaskTreeList
+                      tasks={groupedTasks.blocked}
+                      allTasks={tasksWithRelations}
+                      onTaskClick={(task) => setSelectedTask(task)}
+                      onTimerStart={loadData}
+                      showGrid={true}
+                    />
                   </section>
                 )}
 
                 {/* Waiting Clarification */}
                 {groupedTasks.waiting_clarification.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex items-center gap-2 bg-yellow-100 px-4 py-2 rounded-full">
-                        <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                        <h3 className="text-lg font-semibold text-yellow-900">
-                          In Attesa di Chiarimenti ({groupedTasks.waiting_clarification.length})
-                        </h3>
-                      </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">❓</span>
+                      <h3 className="text-base font-semibold text-orange-900">
+                        In Attesa
+                      </h3>
+                      <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {groupedTasks.waiting_clarification.length}
+                      </span>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {groupedTasks.waiting_clarification.map((task, index) => (
-                        <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
-                          <TaskCard task={task} onClick={() => setSelectedTask(task)} onTimerStart={loadData} />
-                        </div>
-                      ))}
-                    </div>
+                    <TaskTreeList
+                      tasks={groupedTasks.waiting_clarification}
+                      allTasks={tasksWithRelations}
+                      onTaskClick={(task) => setSelectedTask(task)}
+                      onTimerStart={loadData}
+                      showGrid={true}
+                    />
                   </section>
                 )}
 
                 {/* Todo */}
                 {groupedTasks.todo.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full">
-                        <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Da Fare ({groupedTasks.todo.length})
-                        </h3>
-                      </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">📋</span>
+                      <h3 className="text-base font-semibold text-slate-900">
+                        Da Fare
+                      </h3>
+                      <span className="bg-slate-100 text-slate-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {groupedTasks.todo.length}
+                      </span>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {groupedTasks.todo.map((task, index) => (
-                        <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
-                          <TaskCard task={task} onClick={() => setSelectedTask(task)} onTimerStart={loadData} />
-                        </div>
-                      ))}
-                    </div>
+                    <TaskTreeList
+                      tasks={groupedTasks.todo}
+                      allTasks={tasksWithRelations}
+                      onTaskClick={(task) => setSelectedTask(task)}
+                      onTimerStart={loadData}
+                      showGrid={true}
+                    />
                   </section>
                 )}
 
                 {/* Completed */}
                 {groupedTasks.completed.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex items-center gap-2 bg-green-100 px-4 py-2 rounded-full">
-                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                        <h3 className="text-lg font-semibold text-green-900">
-                          Completati ({groupedTasks.completed.length})
-                        </h3>
-                      </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">✅</span>
+                      <h3 className="text-base font-semibold text-green-900">
+                        Completati
+                      </h3>
+                      <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {groupedTasks.completed.length}
+                      </span>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {groupedTasks.completed.slice(0, 6).map((task, index) => (
-                        <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-fade-in">
-                          <TaskCard task={task} onClick={() => setSelectedTask(task)} onTimerStart={loadData} />
-                        </div>
-                      ))}
-                    </div>
+                    <TaskTreeList
+                      tasks={groupedTasks.completed.slice(0, 6)}
+                      allTasks={tasksWithRelations}
+                      onTaskClick={(task) => setSelectedTask(task)}
+                      onTimerStart={loadData}
+                      showGrid={true}
+                    />
                     {groupedTasks.completed.length > 6 && (
-                      <div className="text-center mt-4">
-                        <p className="text-sm text-gray-500">
+                      <div className="text-center mt-3">
+                        <p className="text-sm text-slate-500">
                           Mostrati 6 di {groupedTasks.completed.length} task completati
                         </p>
                       </div>
@@ -456,18 +480,16 @@ export default function DipendenteDashboard() {
                 )}
 
                 {tasks.length === 0 && (
-                  <div className="text-center py-16">
+                  <div className="text-center py-12">
                     <div className="max-w-md mx-auto">
-                      <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Plus className="w-12 h-12 text-gray-400" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      <div className="text-6xl mb-4">📝</div>
+                      <h3 className="text-xl font-semibold text-slate-900 mb-2">
                         Nessuna attività presente
                       </h3>
-                      <p className="text-gray-500 mb-6">
+                      <p className="text-slate-500 mb-4 text-sm">
                         Inizia creando la tua prima attività
                       </p>
-                      <Button onClick={() => setShowCreateModal(true)}>
+                      <Button onClick={() => setShowCreateModal(true)} className="hover-scale">
                         Crea la prima attività
                       </Button>
                     </div>
@@ -499,8 +521,8 @@ export default function DipendenteDashboard() {
                 </div>
 
                 {/* Projects Breakdown */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                <div className="card p-6">
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
                     Task per Progetto
                   </h3>
                   <div className="space-y-4">
@@ -514,20 +536,20 @@ export default function DipendenteDashboard() {
                       if (projectTasks.length === 0) return null;
 
                       return (
-                        <div key={project.id} className="border-b border-gray-100 pb-4 last:border-0">
+                        <div key={project.id} className="border-b border-slate-100 pb-4 last:border-0">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-gray-900">{project.name}</h4>
-                            <span className="text-sm text-gray-500">
+                            <h4 className="font-medium text-slate-900">{project.name}</h4>
+                            <span className="text-sm text-slate-500">
                               {completedTasks.length}/{projectTasks.length} completati
                             </span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="w-full bg-slate-200 rounded-full h-2">
                             <div
-                              className="bg-green-500 h-2 rounded-full transition-all"
+                              className="bg-success-500 h-2 rounded-full transition-all"
                               style={{ width: `${completionRate}%` }}
                             />
                           </div>
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <div className="flex justify-between text-xs text-slate-500 mt-1">
                             <span>{completionRate.toFixed(0)}% completato</span>
                             <span>
                               {formatTime(projectTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0))}

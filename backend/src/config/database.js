@@ -87,62 +87,6 @@ const createTables = () => {
     )
   `);
 
-  // Migration: Add parent_task_id column if it doesn't exist
-  try {
-    const checkTasksColumns = db.prepare("PRAGMA table_info(tasks)").all();
-    const hasParentTaskId = checkTasksColumns.some(col => col.name === 'parent_task_id');
-    if (!hasParentTaskId) {
-      db.exec("ALTER TABLE tasks ADD COLUMN parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE");
-      console.log('✅ Added parent_task_id column to tasks table for subtask support');
-    }
-  } catch (error) {
-    console.error('Migration error (parent_task_id):', error.message);
-  }
-
-  // Migration: Add order_index and depends_on_task_id columns for advanced subtask features
-  try {
-    const checkTasksColumns = db.prepare("PRAGMA table_info(tasks)").all();
-    const hasOrderIndex = checkTasksColumns.some(col => col.name === 'order_index');
-    const hasDependsOn = checkTasksColumns.some(col => col.name === 'depends_on_task_id');
-
-    if (!hasOrderIndex) {
-      db.exec("ALTER TABLE tasks ADD COLUMN order_index INTEGER DEFAULT 0");
-      console.log('✅ Added order_index column to tasks table for subtask ordering');
-    }
-
-    if (!hasDependsOn) {
-      db.exec("ALTER TABLE tasks ADD COLUMN depends_on_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL");
-      console.log('✅ Added depends_on_task_id column to tasks table for subtask dependencies');
-    }
-  } catch (error) {
-    console.error('Migration error (subtask enhancements):', error.message);
-  }
-
-  // Migration: Add Gantt chart specific columns (start_date, estimated_hours, progress_percentage)
-  try {
-    const checkTasksColumns = db.prepare("PRAGMA table_info(tasks)").all();
-    const hasStartDate = checkTasksColumns.some(col => col.name === 'start_date');
-    const hasEstimatedHours = checkTasksColumns.some(col => col.name === 'estimated_hours');
-    const hasProgressPercentage = checkTasksColumns.some(col => col.name === 'progress_percentage');
-
-    if (!hasStartDate) {
-      db.exec("ALTER TABLE tasks ADD COLUMN start_date DATE");
-      console.log('✅ Added start_date column to tasks table for Gantt chart planning');
-    }
-
-    if (!hasEstimatedHours) {
-      db.exec("ALTER TABLE tasks ADD COLUMN estimated_hours INTEGER DEFAULT 0");
-      console.log('✅ Added estimated_hours column to tasks table for capacity planning');
-    }
-
-    if (!hasProgressPercentage) {
-      db.exec("ALTER TABLE tasks ADD COLUMN progress_percentage INTEGER DEFAULT 0");
-      console.log('✅ Added progress_percentage column to tasks table for visual progress tracking');
-    }
-  } catch (error) {
-    console.error('Migration error (Gantt enhancements):', error.message);
-  }
-
   // Time entries table
   db.exec(`
     CREATE TABLE IF NOT EXISTS time_entries (
@@ -157,18 +101,6 @@ const createTables = () => {
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
-
-  // Migration: Add notes column if it doesn't exist
-  try {
-    const checkColumn = db.prepare("PRAGMA table_info(time_entries)").all();
-    const hasNotes = checkColumn.some(col => col.name === 'notes');
-    if (!hasNotes) {
-      db.exec("ALTER TABLE time_entries ADD COLUMN notes TEXT DEFAULT ''");
-      console.log('✅ Added notes column to time_entries table');
-    }
-  } catch (error) {
-    console.error('Migration error:', error.message);
-  }
 
   // Comments table
   db.exec(`
@@ -233,7 +165,7 @@ const createTables = () => {
     )
   `);
 
-  console.log('✅ Database tables created successfully');
+  console.log('✅ Database tables initialized');
 };
 
 // Create performance indexes
@@ -292,7 +224,7 @@ const createIndexes = () => {
     db.exec('CREATE INDEX IF NOT EXISTS idx_templates_is_public ON templates(is_public)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_templates_created_at ON templates(created_at)');
 
-    console.log('✅ Database indexes created successfully');
+    console.log('✅ Database indexes initialized');
   } catch (error) {
     console.error('❌ Error creating indexes:', error.message);
   }

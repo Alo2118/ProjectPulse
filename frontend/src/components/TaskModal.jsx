@@ -195,16 +195,22 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Dettagli Task</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div 
+        className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transform transition-all animate-slide-up border border-slate-200"
+        style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}
+      >
+        <div className="sticky top-0 bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4 flex items-center justify-between z-10 shadow-lg">
+          <h2 className="text-2xl font-bold text-white">Dettagli Task</h2>
+          <button 
+            onClick={onClose} 
+            className="text-white hover:bg-white/20 rounded-lg p-2 transition-all hover:scale-110"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 bg-slate-50">
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -285,7 +291,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           {/* Assigned User (only for amministratore) */}
           {isAmministratore && users.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <label className="label flex items-center gap-2 mb-2">
                 <User className="w-4 h-4" />
                 Assegnato a
               </label>

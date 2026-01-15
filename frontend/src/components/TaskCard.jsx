@@ -1,12 +1,12 @@
-import { Clock, MessageSquare, Play, AlertCircle, HelpCircle, Calendar } from 'lucide-react';
+import { Clock, MessageSquare, Play, AlertCircle, HelpCircle, Calendar, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
 import { timeApi } from '../services/api';
 
 const statusColors = {
-  todo: 'bg-gray-100 text-gray-800',
-  in_progress: 'bg-blue-100 text-blue-800',
-  blocked: 'bg-red-100 text-red-800',
-  waiting_clarification: 'bg-yellow-100 text-yellow-800',
-  completed: 'bg-green-100 text-green-800'
+  todo: 'bg-slate-100 text-slate-700 border-slate-200',
+  in_progress: 'bg-primary-50 text-primary-700 border-primary-200',
+  blocked: 'bg-danger-50 text-danger-700 border-danger-200',
+  waiting_clarification: 'bg-warning-50 text-warning-700 border-warning-200',
+  completed: 'bg-success-50 text-success-700 border-success-200'
 };
 
 const statusLabels = {
@@ -17,13 +17,25 @@ const statusLabels = {
   completed: 'Completato'
 };
 
-const priorityColors = {
-  low: 'text-gray-500',
-  medium: 'text-yellow-500',
-  high: 'text-red-500'
+const priorityConfig = {
+  low: { 
+    color: 'text-slate-600 bg-slate-100', 
+    icon: ArrowDown,
+    label: 'Bassa'
+  },
+  medium: { 
+    color: 'text-warning-600 bg-warning-100', 
+    icon: ArrowRight,
+    label: 'Media'
+  },
+  high: { 
+    color: 'text-danger-600 bg-danger-100', 
+    icon: ArrowUp,
+    label: 'Alta'
+  }
 };
 
-export default function TaskCard({ task, onClick, onTimerStart, showProject = true }) {
+export default function TaskCard({ task, onClick, onTimerStart, showProject = true, expandButton = null, hasSubtasks = false }) {
   const handleStartTimer = async (e) => {
     e.stopPropagation();
     try {
@@ -55,101 +67,150 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
     if (diffDays < 0) {
       return {
         text: `In ritardo di ${Math.abs(diffDays)} gg`,
-        color: 'text-red-600 font-semibold',
-        icon: AlertCircle
+        color: 'text-danger-700 bg-danger-50',
+        icon: AlertCircle,
+        urgent: true
       };
     } else if (diffDays === 0) {
       return {
         text: 'Scade oggi',
-        color: 'text-orange-600 font-semibold',
-        icon: Calendar
+        color: 'text-warning-700 bg-warning-50',
+        icon: Calendar,
+        urgent: true
       };
     } else if (diffDays <= 3) {
       return {
         text: `Scade tra ${diffDays} gg`,
-        color: 'text-orange-500 font-medium',
-        icon: Calendar
+        color: 'text-warning-600 bg-warning-50',
+        icon: Calendar,
+        urgent: false
       };
     } else if (diffDays <= 7) {
       return {
         text: `Scade tra ${diffDays} gg`,
-        color: 'text-yellow-600',
-        icon: Calendar
+        color: 'text-slate-600 bg-slate-100',
+        icon: Calendar,
+        urgent: false
       };
     } else {
       return {
         text: deadline.toLocaleDateString('it-IT'),
-        color: 'text-gray-500',
-        icon: Calendar
+        color: 'text-slate-500 bg-slate-50',
+        icon: Calendar,
+        urgent: false
       };
     }
   };
 
   const deadlineInfo = getDeadlineInfo();
+  const priorityInfo = priorityConfig[task.priority] || priorityConfig.medium;
+
+  const isSubtask = task.parent_task_id;
+  const borderTopColor = isSubtask ? (
+    task.priority === 'high' ? 'border-t-2 border-t-danger-400' :
+    task.priority === 'medium' ? 'border-t-2 border-t-warning-400' :
+    'border-t-2 border-t-slate-300'
+  ) : '';
 
   return (
     <div
       onClick={onClick}
-      className="card hover:shadow-lg transition-shadow cursor-pointer"
+      className={`card-compact hover:shadow-lg cursor-pointer group transition-all ${
+        isSubtask ? `ml-4 bg-slate-50 border-l-2 border-slate-300 shadow-sm hover:shadow-md ${borderTopColor}` : 'border-l-4 shadow-md hover:shadow-lg'
+      }`}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`badge ${statusColors[task.status]}`}>
-              {statusLabels[task.status]}
-            </span>
-            <span className={`text-xs font-medium ${priorityColors[task.priority]}`}>
-              {task.priority === 'high' && '⬆ Alta'}
-              {task.priority === 'medium' && '➡ Media'}
-              {task.priority === 'low' && '⬇ Bassa'}
-            </span>
+      {/* Priority Indicator Bar - diverso per subtask */}
+      {!isSubtask && (
+        <div className={`h-0.5 ${
+          task.priority === 'high' ? 'bg-danger-500' :
+          task.priority === 'medium' ? 'bg-warning-500' :
+          'bg-slate-400'
+        }`} />
+      )}
+           
+      <div className="p-2">
+        {/* Header Compatto */}
+        <div className="flex items-start justify-between gap-1 mb-1">
+          <div className="flex-1 min-w-0">
+            {/* Badges compatti in una riga */}
+            <div className="flex items-center gap-1 mb-1 flex-wrap">
+              {/* Project Name compatto - non mostrare se è un subtask */}
+              {showProject && !isSubtask && task.project_name && (
+                <div className="inline-flex items-center gap-0.5 text-xs text-slate-600 bg-slate-50 rounded px-1.5 py-0.5">
+                  <span>📁</span>
+                  <span className="font-medium truncate max-w-[100px]">{task.project_name}</span>
+                </div>
+              )}
+              <span className={`inline-flex items-center px-1.5 py-0 rounded text-xs font-medium border ${statusColors[task.status]}`}>
+                {statusLabels[task.status]}
+              </span>
+              <span className={`inline-flex items-center gap-0.5 px-1 py-0 rounded text-xs font-medium ${priorityInfo.color}`}>
+                <priorityInfo.icon className="w-3 h-3" />
+              </span>
+            </div>
+
+            {/* Task Title più compatto - diverso per subtask */}
+            <div className="flex items-start gap-1">
+              {/* Expand Button allineato con il titolo */}
+              {expandButton && (
+                <div className="flex-shrink-0">
+                  {expandButton}
+                </div>
+              )}
+              <h3 className={`${isSubtask ? 'font-medium' : 'font-semibold'} text-slate-900 mb-1 text-xs leading-normal group-hover:text-primary-600 transition-colors line-clamp-2 flex-1`}>
+                {isSubtask && <span className="text-slate-500">└ </span>}
+                {task.title}
+              </h3>
+            </div>
+
+            {/* Description più compatta (opzionale, solo 1 riga) */}
+            {task.description && (
+              <p className="text-xs text-slate-600 line-clamp-1"></p>
+            )}
           </div>
-          <h3 className="font-semibold text-gray-900 mb-1">{task.title}</h3>
-          {showProject && task.project_name && (
-            <p className="text-sm text-gray-500 mb-2">📁 {task.project_name}</p>
-          )}
-          {task.description && (
-            <p className="text-sm text-gray-600 line-clamp-2">{task.description}</p>
+
+          {/* Timer Button compatto */}
+          {task.status !== 'completed' && task.status !== 'blocked' && (
+            <button
+              onClick={handleStartTimer}
+              className="btn-primary btn-xs shadow-sm flex-shrink-0"
+            >
+              <Play className="w-3 h-3" />
+              <span className="hidden sm:inline text-xs">Start</span>
+            </button>
           )}
         </div>
 
-        {task.status !== 'completed' && task.status !== 'blocked' && (
-          <button
-            onClick={handleStartTimer}
-            className="btn-primary flex items-center gap-1 text-sm ml-4"
-          >
-            <Play className="w-4 h-4" />
-            Start
-          </button>
-        )}
-      </div>
+        {/* Footer compatto */}
+        {(task.time_spent > 0 || deadlineInfo || task.blocked_reason || task.clarification_needed) && (
+          <div className="flex items-center gap-1 text-xs pt-1 border-t border-slate-100 flex-wrap mt-1">
+            {task.time_spent > 0 && (
+              <div className="flex items-center gap-0.5 text-slate-600 bg-slate-50 px-1.5 py-0 rounded text-xs">
+                <Clock className="w-2.5 h-2.5" />
+                <span className="font-medium">{formatTime(task.time_spent)}</span>
+              </div>
+            )}
 
-      <div className="flex items-center gap-4 text-sm text-gray-500 pt-3 border-t border-gray-100 flex-wrap">
-        {task.time_spent > 0 && (
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            {formatTime(task.time_spent)}
-          </div>
-        )}
+            {deadlineInfo && (
+              <div className={`flex items-center gap 0.5 px 1.5 py-0 rounded font-medium text-xs ${deadlineInfo.color}`}>
+                <deadlineInfo.icon className="w-2.5 h-2.5" />
+                <span>{deadlineInfo.text}</span>
+              </div>
+            )}
 
-        {deadlineInfo && (
-          <div className={`flex items-center gap-1 ${deadlineInfo.color}`}>
-            <deadlineInfo.icon className="w-4 h-4" />
-            {deadlineInfo.text}
-          </div>
-        )}
+            {task.blocked_reason && (
+              <div className="flex items-center gap 0.5 text-danger-600 bg-danger-50 px-1.5 py-0 rounded font-medium text-xs">
+                <AlertCircle className="w-2.5 h-2.5" />
+                <span>Bloccato</span>
+              </div>
+            )}
 
-        {task.blocked_reason && (
-          <div className="flex items-center gap-1 text-red-600">
-            <AlertCircle className="w-4 h-4" />
-            Bloccato
-          </div>
-        )}
-
-        {task.clarification_needed && (
-          <div className="flex items-center gap-1 text-yellow-600">
-            <HelpCircle className="w-4 h-4" />
-            Chiarimenti
+            {task.clarification_needed && (
+              <div className="flex items-center gap-0.5 text-warning-600 bg-warning-50 px-1.5 py-0 rounded font-medium text-xs">
+                <HelpCircle className="w-2.5 h-2.5" />
+                <span>Chiarimenti</span>
+              </div>
+            )}
           </div>
         )}
       </div>

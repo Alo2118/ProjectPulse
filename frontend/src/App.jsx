@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { canAccessUserManagement, canAccessTemplates } from './utils/permissions';
+import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import DipendenteDashboard from './pages/DipendenteDashboard';
 import DirezioneDashboard from './pages/DirezioneDashboard';
@@ -12,8 +14,8 @@ import TimeTrackingPage from './pages/TimeTrackingPage';
 import InboxPage from './pages/InboxPage';
 import TemplateManagerPage from './pages/TemplateManagerPage';
 
-function PrivateRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+function PrivateRoute({ children, requirePermission = null }) {
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -23,7 +25,27 @@ function PrivateRoute({ children }) {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  // Check specific permission if required
+  if (requirePermission && !requirePermission(user)) {
+    return <Navigate to="/" />;
+  }
+
+  return children;
+}
+
+function AppLayout({ children }) {
+  return (
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar />
+      <main className="flex-1 overflow-auto lg:ml-0">
+        {children}
+      </main>
+    </div>
+  );
 }
 
 function DashboardRouter() {
@@ -46,7 +68,9 @@ function App() {
             path="/"
             element={
               <PrivateRoute>
-                <DashboardRouter />
+                <AppLayout>
+                  <DashboardRouter />
+                </AppLayout>
               </PrivateRoute>
             }
           />
@@ -54,7 +78,9 @@ function App() {
             path="/projects"
             element={
               <PrivateRoute>
-                <ProjectsPage />
+                <AppLayout>
+                  <ProjectsPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />
@@ -62,7 +88,9 @@ function App() {
             path="/projects/:id"
             element={
               <PrivateRoute>
-                <ProjectDetailPage />
+                <AppLayout>
+                  <ProjectDetailPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />
@@ -70,7 +98,9 @@ function App() {
             path="/gantt"
             element={
               <PrivateRoute>
-                <GanttPage />
+                <AppLayout>
+                  <GanttPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />
@@ -78,15 +108,19 @@ function App() {
             path="/calendar"
             element={
               <PrivateRoute>
-                <CalendarPage />
+                <AppLayout>
+                  <CalendarPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />
           <Route
             path="/time-tracking"
             element={
-              <PrivateRoute>
-                <TimeTrackingPage />
+              <PrivateRoute requirePermission={(user) => user?.role !== 'direzione'}>
+                <AppLayout>
+                  <TimeTrackingPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />
@@ -94,23 +128,29 @@ function App() {
             path="/inbox"
             element={
               <PrivateRoute>
-                <InboxPage />
+                <AppLayout>
+                  <InboxPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />
           <Route
             path="/users"
             element={
-              <PrivateRoute>
-                <UserManagementPage />
+              <PrivateRoute requirePermission={canAccessUserManagement}>
+                <AppLayout>
+                  <UserManagementPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />
           <Route
             path="/templates"
             element={
-              <PrivateRoute>
-                <TemplateManagerPage />
+              <PrivateRoute requirePermission={canAccessTemplates}>
+                <AppLayout>
+                  <TemplateManagerPage />
+                </AppLayout>
               </PrivateRoute>
             }
           />

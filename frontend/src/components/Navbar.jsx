@@ -59,7 +59,7 @@ export default function Navbar() {
       to: '/templates',
       icon: FileText,
       label: 'Template',
-      condition: true,
+      condition: user?.role !== 'direzione', // Direzione non può accedere ai template
       isActiveCheck: () => isActive('/templates')
     },
     {

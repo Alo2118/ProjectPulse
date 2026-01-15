@@ -68,25 +68,26 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
       onClick={handleOverlayClick}
     >
       <div
-        className={`bg-white rounded-lg shadow-xl w-full ${sizeStyles[size]} max-h-[90vh] flex flex-col`}
+        className={`bg-white rounded-xl shadow-2xl w-full ${sizeStyles[size]} max-h-[90vh] flex flex-col transform transition-all animate-slide-up border border-slate-200`}
+        style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`flex items-start justify-between ${compact ? 'p-4' : 'p-6'} border-b border-gray-200`}>
+        <div className={`flex items-start justify-between ${compact ? 'p-4' : 'p-6'} border-b border-slate-200 bg-gradient-to-r from-primary-50 to-white`}>
           <div className="flex-1">
-            <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-semibold text-gray-900`}>{title}</h2>
+            <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-bold text-slate-900`}>{title}</h2>
             {description && (
-              <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} text-gray-500`}>{description}</p>
+              <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} text-slate-600`}>{description}</p>
             )}
           </div>
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="ml-4 text-gray-400 hover:text-gray-500 transition-colors"
+              className="ml-4 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-all hover:scale-110"
             >
               <X className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
             </button>
@@ -94,13 +95,13 @@ export default function Modal({
         </div>
 
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'}`}>
+        <div className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} bg-slate-50`}>
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className={`flex items-center justify-end gap-3 ${compact ? 'p-4' : 'p-6'} border-t border-gray-200 bg-gray-50`}>
+          <div className={`${compact ? 'p-4' : 'p-6'} border-t border-slate-200 bg-white flex justify-end gap-3`}>
             {footer}
           </div>
         )}

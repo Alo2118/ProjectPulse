@@ -116,7 +116,7 @@ export default function DailyReportModal({ onClose }) {
           ) : (
             <div className="space-y-6">
               {/* Summary */}
-              <div className="card bg-primary-50 border-primary-200">
+              <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
                 <h3 className="font-semibold text-primary-900 mb-2">Riepilogo</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
@@ -149,7 +149,7 @@ export default function DailyReportModal({ onClose }) {
                   </h3>
                   <div className="space-y-2">
                     {report.completed_tasks.map(task => (
-                      <div key={task.id} className="card bg-green-50 border-green-200">
+                      <div key={task.id} className="card-stat from-primary-50 to-primary-100 border-primary-200">
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.time_spent > 0 && (
                           <div className="text-sm text-gray-600">
@@ -171,7 +171,7 @@ export default function DailyReportModal({ onClose }) {
                   </h3>
                   <div className="space-y-2">
                     {report.in_progress_tasks.map(task => (
-                      <div key={task.id} className="card bg-blue-50 border-blue-200">
+                      <div key={task.id} className="card-stat from-primary-100 to-primary-200 border-primary-300">
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.time_spent > 0 && (
                           <div className="text-sm text-gray-600">
@@ -193,7 +193,7 @@ export default function DailyReportModal({ onClose }) {
                   </h3>
                   <div className="space-y-2">
                     {report.blocked_tasks.map(task => (
-                      <div key={task.id} className="card bg-red-50 border-red-200">
+                      <div key={task.id} className="card-stat from-slate-50 to-slate-100 border-slate-200">
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.blocked_reason && (
                           <div className="text-sm text-red-700 mt-1">
@@ -215,7 +215,7 @@ export default function DailyReportModal({ onClose }) {
                   </h3>
                   <div className="space-y-2">
                     {report.waiting_clarification_tasks.map(task => (
-                      <div key={task.id} className="card bg-yellow-50 border-yellow-200">
+                      <div key={task.id} className="card-stat from-slate-100 to-slate-200 border-slate-300">
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.clarification_needed && (
                           <div className="text-sm text-yellow-700 mt-1">

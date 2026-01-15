@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Users, Shield, User as UserIcon, X, Crown, UserCheck, UserX } from 'lucide-react';
 import { usersApi } from '../services/api';
-import Navbar from '../components/Navbar';
 import { isValidEmail, formatDate } from '../utils/helpers';
 
 export default function UserManagementPage() {
@@ -204,8 +203,8 @@ export default function UserManagementPage() {
   };
 
   const getRoleBadgeColor = (role) => {
-    if (role === 'amministratore') return 'bg-red-100 text-red-800';
-    if (role === 'direzione') return 'bg-purple-100 text-purple-800';
+    if (role === 'amministratore') return 'bg-slate-200 text-slate-900';
+    if (role === 'direzione') return 'bg-primary-100 text-primary-800';
     return 'bg-blue-100 text-blue-800';
   };
 
@@ -223,70 +222,55 @@ export default function UserManagementPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Caricamento...</div>
+          <div className="text-slate-500">Caricamento...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 animate-slide-right">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
-            <p className="text-gray-600 mt-1">
-              Gestisci gli utenti e i loro permessi di accesso
+            <h1 className="page-title flex items-center gap-2">👥 Gestione Utenti</h1>
+            <p className="text-slate-600 mt-0.5 text-xs">
+              Permessi e accessi
             </p>
           </div>
-          <button onClick={handleCreate} className="btn btn-primary">
+          <button onClick={handleCreate} className="btn btn-primary text-sm py-2 hover-scale">
             <Plus className="w-4 h-4" />
-            Nuovo Utente
+            <span className="hidden sm:inline">Nuovo</span>
           </button>
         </div>
 
         {/* Filter Tabs */}
-        <div className="mb-6 flex gap-3">
+        <div className="mb-4 flex gap-2">
           <button
             onClick={() => setFilterStatus('all')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterStatus === 'all'
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
+            className={filterStatus === 'all' ? 'tab-active' : 'tab-inactive'}
           >
-            Tutti ({users.length})
+            📊 Tutti ({users.length})
           </button>
           <button
             onClick={() => setFilterStatus('active')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterStatus === 'active'
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
+            className={filterStatus === 'active' ? 'tab-active' : 'tab-inactive'}
           >
-            Attivi ({activeCount})
+            ✅ Attivi ({activeCount})
           </button>
           <button
             onClick={() => setFilterStatus('pending')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterStatus === 'pending'
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
+            className={filterStatus === 'pending' ? 'tab-active' : 'tab-inactive'}
           >
-            In attesa di approvazione ({pendingCount})
+            ⏳ In attesa ({pendingCount})
           </button>
         </div>
 
         {/* Users List */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -316,7 +300,7 @@ export default function UserManagementPage() {
                   const RoleIcon = getRoleIcon(user.role);
                   const isPending = !user.active;
                   return (
-                    <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${isPending ? 'bg-yellow-50' : ''}`}>
+                    <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${isPending ? 'bg-slate-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
@@ -361,7 +345,7 @@ export default function UserManagementPage() {
                           <>
                             <button
                               onClick={() => handleApprove(user)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium mr-3"
+                              className="btn-primary btn-sm mr-3"
                               title="Approva registrazione"
                             >
                               <UserCheck className="w-4 h-4" />
@@ -427,7 +411,7 @@ export default function UserManagementPage() {
       {/* Create/Edit User Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 animate-fade-in">
+          <div className="card max-w-md w-full p-6 animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">
                 {selectedUser ? 'Modifica Utente' : 'Nuovo Utente'}

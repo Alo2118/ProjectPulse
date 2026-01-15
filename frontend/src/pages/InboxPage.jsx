@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
 import {
   Card, Button, StatusBadge, PriorityBadge, Modal
 } from '../components/ui';
@@ -251,53 +250,57 @@ const InboxPage = () => {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-lg">Caricamento...</div>
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-slate-500">Caricamento...</div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="p-6 max-w-7xl mx-auto">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4 animate-slide-right">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Inbox className="w-8 h-8" />
-              Inbox - Richieste Ufficio Tecnico
+            <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-900">
+              📥 Inbox
             </h1>
-            <p className="text-gray-600 mt-1">
-              Gestisci tutte le richieste e input ricevuti quotidianamente
+            <p className="text-slate-600 mt-0.5 text-xs">
+              Richieste Ufficio Tecnico
             </p>
           </div>
-          <Button onClick={() => setShowNewRequestModal(true)}>
-            <Plus className="w-5 h-5" />
-            Nuova Richiesta
+          <Button onClick={() => setShowNewRequestModal(true)} className="text-sm py-2 hover-scale">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nuova</span>
           </Button>
         </div>
 
         {/* Stats */}
         {stats && stats.byStatus && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            {stats.byStatus.map(stat => (
-              <Card key={stat.status} padding="md" shadow="sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <StatusBadge status={stat.status} size="sm" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900">{stat.count}</div>
-                {stat.avg_resolution_hours && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    Media: {Math.round(stat.avg_resolution_hours)}h
+          <div className="stats-grid-compact stagger-animation">
+            {stats.byStatus.map((stat, idx) => {
+              const emojis = {pending: '⏳', in_progress: '🚀', resolved: '✅', rejected: '❌'};
+              const colors = {pending: 'yellow', in_progress: 'blue', resolved: 'green', rejected: 'red'};
+              const color = colors[stat.status] || 'slate';
+              return (
+                <div key={stat.status} className={`bg-gradient-to-br from-${color}-50 to-${color}-100 rounded-lg p-3 border border-${color}-200 hover-lift`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-${color}-700 mb-1">{emojis[stat.status] || '📋'}</div>
+                      <div className="text-2xl font-bold text-${color}-900">{stat.count}</div>
+                      {stat.avg_resolution_hours && (
+                        <div className="text-xs text-${color}-600 mt-0.5">
+                          ⏱️ {Math.round(stat.avg_resolution_hours)}h
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </Card>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -877,7 +880,7 @@ const InboxPage = () => {
             </form>
       </Modal>
       </div>
-    </>
+    </div>
   );
 };
 

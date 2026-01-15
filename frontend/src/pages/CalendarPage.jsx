@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { tasksApi } from '../services/api';
-import Navbar from '../components/Navbar';
 import TaskModal from '../components/TaskModal';
 
 export default function CalendarPage() {
@@ -81,26 +80,23 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-4 animate-fade-in">
+        <div className="mb-4 animate-slide-right">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <CalendarIcon className="w-7 h-7 text-primary-600" />
-                Calendario Scadenze
+              <h2 className="page-title flex items-center gap-2">
+                📅 Calendario
               </h2>
-              <p className="text-gray-600 mt-1 text-sm">
-                Pianificazione attività R&D per milestone e progetti
+              <p className="text-slate-600 mt-0.5 text-xs">
+                Scadenze e milestone
               </p>
             </div>
           </div>
 
           {/* Month navigation */}
-          <div className="flex items-center justify-between bg-white rounded-xl shadow-md p-4">
+          <div className="flex items-center justify-between card-compact">
             <button
               onClick={previousMonth}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -171,12 +167,12 @@ export default function CalendarPage() {
                             onClick={() => setSelectedTask(task)}
                             className={`w-full text-left text-xs px-1.5 py-0.5 rounded truncate transition-colors ${
                               task.status === 'completed'
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                ? 'bg-primary-100 text-primary-800 hover:bg-primary-200'
                                 : task.status === 'blocked'
-                                ? 'bg-red-100 text-red-800 hover:bg-red-200'
+                                ? 'bg-slate-200 text-slate-900 hover:bg-slate-300'
                                 : task.priority === 'high'
-                                ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-                                : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
                             }`}
                             title={task.title}
                           >
@@ -202,19 +198,19 @@ export default function CalendarPage() {
                 <span>Oggi</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-orange-100 rounded"></div>
+                <div className="w-4 h-4 bg-slate-100 rounded"></div>
                 <span>Alta priorità</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-100 rounded"></div>
+                <div className="w-4 h-4 bg-primary-50 rounded"></div>
                 <span>Normale</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-100 rounded"></div>
+                <div className="w-4 h-4 bg-slate-200 rounded"></div>
                 <span>Bloccato</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-100 rounded"></div>
+                <div className="w-4 h-4 bg-primary-100 rounded"></div>
                 <span>Completato</span>
               </div>
             </div>

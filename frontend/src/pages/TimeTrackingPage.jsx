@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Clock, Plus, Edit2, Trash2, Download, BarChart3, TrendingUp, Users as UsersIcon, X } from 'lucide-react';
 import { timeApi, projectsApi, tasksApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
 import { formatTime, formatDate, formatDateTime } from '../utils/helpers';
 
 export default function TimeTrackingPage() {
@@ -111,43 +110,40 @@ export default function TimeTrackingPage() {
 
   if (loading && !statistics) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Caricamento...</div>
+          <div className="text-slate-500">Caricamento...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="page-container">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 animate-slide-right">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Monitoraggio Tempo</h1>
-            <p className="text-gray-600 mt-1">
-              Gestisci e analizza le registrazioni di tempo di lavoro
+            <h1 className="page-title flex items-center gap-2">⏱️ Monitoraggio Tempo</h1>
+            <p className="text-slate-600 mt-0.5 text-xs">
+              Registrazioni di tempo di lavoro
             </p>
           </div>
-          <div className="flex gap-3">
-            <button onClick={exportToCSV} className="btn-secondary flex items-center gap-2">
+          <div className="flex gap-2">
+            <button onClick={exportToCSV} className="btn-secondary flex items-center gap-1.5 text-sm py-2 hover-scale">
               <Download className="w-4 h-4" />
-              Esporta CSV
+              <span className="hidden sm:inline">CSV</span>
             </button>
-            <button onClick={() => { setSelectedEntry(null); setShowManualModal(true); }} className="btn-primary flex items-center gap-2">
+            <button onClick={() => { setSelectedEntry(null); setShowManualModal(true); }} className="btn-primary flex items-center gap-1.5 text-sm py-2 hover-scale">
               <Plus className="w-4 h-4" />
-              Aggiungi Manuale
+              <span className="hidden sm:inline">Manuale</span>
             </button>
           </div>
         </div>
 
         {/* Statistics Cards */}
         {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-4">
+          <div className="stats-grid-compact mb-4">
             <div className="card bg-gradient-to-br from-primary-50 to-primary-100 border-primary-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -160,7 +156,7 @@ export default function TimeTrackingPage() {
               </div>
             </div>
 
-            <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-medium text-blue-600">Registrazioni</div>

@@ -156,6 +156,19 @@ export const convertToTask = async (req, res) => {
       deadline
     } = req.body;
 
+    // Map request priority to task priority
+    // Request: 'low', 'normal', 'high', 'urgent'
+    // Task: 'low', 'medium', 'high'
+    const priorityMap = {
+      'low': 'low',
+      'normal': 'medium',
+      'high': 'high',
+      'urgent': 'high'
+    };
+
+    const requestPriority = priority || request.priority;
+    const taskPriority = priorityMap[requestPriority] || 'medium';
+
     // Create task from request
     const task = Task.create({
       title: title || request.title,
@@ -164,7 +177,7 @@ export const convertToTask = async (req, res) => {
       milestone_id,
       assigned_to: assigned_to || request.assigned_to,
       created_by: req.user.id,
-      priority: priority || request.priority,
+      priority: taskPriority,
       deadline,
       status: 'todo'
     });

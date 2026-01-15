@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { Card, CardBody, Button, Input } from '../components/ui/FormComponents';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -46,8 +49,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4 animate-fade-in">
+      <div className="card rounded-2xl shadow-xl w-full max-w-md p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-4 text-center">
           ProjectPulse
         </h1>
@@ -56,13 +59,13 @@ export default function Login() {
         </p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-slate-100 border border-slate-300 text-slate-800 px-4 py-3 rounded-lg mb-4">
             {error}
           </div>
         )}
 
-        {successMessage && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+        {message && (
+          <div className="bg-primary-50 border border-primary-200 text-primary-800 px-4 py-3 rounded-lg mb-4">
             {successMessage}
           </div>
         )}
@@ -144,9 +147,9 @@ export default function Login() {
         </div>
 
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center mb-4">Account di test:</p>
+          <p className="text-xs text-gray-500 text-center mb-4">ProjectPulse</p>
           <p className="text-xs text-gray-600 text-center">
-            Amministratore: nicola@admin.it / password123
+            © 2026 Nicola Mussolin. Tutti i diritti riservati.
           </p>
         </div>
       </div>

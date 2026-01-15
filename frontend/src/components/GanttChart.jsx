@@ -236,7 +236,7 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
     <div className="bg-white rounded-xl shadow-lg p-6 overflow-auto">
       {/* Critical Path Info */}
       {chartData.criticalCount > 0 && (
-        <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-3">
+        <div className="alert-warning flex items-start gap-3">
           <Zap className="w-5 h-5 text-orange-500 fill-orange-500 flex-shrink-0 mt-0.5" />
           <div>
             <div className="font-semibold text-orange-900 text-sm">
