@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { tasksApi } from '../services/api';
 import TaskModal from '../components/TaskModal';
+import { GamingLayout, GamingHeader, GamingCard, GamingLoader, Button } from '../components/ui';
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -79,151 +80,134 @@ export default function CalendarPage() {
     calendarDays.push(day);
   }
 
-  return (
-    <div className="page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-4 animate-slide-right">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="page-title flex items-center gap-2">
-                📅 Calendario
-              </h2>
-              <p className="text-slate-600 mt-0.5 text-xs">
-                Scadenze e milestone
-              </p>
-            </div>
-          </div>
+  if (loading) {
+    return <GamingLoader message="Caricamento calendario..." />;
+  }
 
-          {/* Month navigation */}
-          <div className="flex items-center justify-between card-compact">
-            <button
-              onClick={previousMonth}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-semibold text-gray-900 capitalize">
-              {monthName}
-            </h3>
-            <button
-              onClick={nextMonth}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+  return (
+    <GamingLayout>
+      <GamingHeader
+        title="Calendario"
+        subtitle="Scadenze e milestone"
+        icon={CalendarIcon}
+      />
+
+      {/* Month navigation */}
+      <GamingCard>
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            onClick={previousMonth}
+            className="bg-slate-800 hover:bg-slate-700 text-white p-2"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <h3 className="text-xl font-bold text-white capitalize">
+            {monthName}
+          </h3>
+          <Button
+            onClick={nextMonth}
+            className="bg-slate-800 hover:bg-slate-700 text-white p-2"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Day headers */}
+        <div className="grid grid-cols-7 gap-2 mb-4">
+          {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (
+            <div key={day} className="text-center font-semibold text-sm text-cyan-400 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-2">
+          {calendarDays.map((day, index) => {
+            if (day === null) {
+              return <div key={`empty-${index}`} className="aspect-square" />;
+            }
+
+            const dayTasks = getTasksForDate(day);
+
+            return (
+              <div
+                key={day}
+                className={`aspect-square border rounded-lg p-2 transition-all hover:shadow-lg hover:shadow-cyan-500/20 ${
+                  isToday(day)
+                    ? 'bg-gradient-to-br from-cyan-900/50 to-blue-900/50 border-cyan-500 border-2'
+                    : isPast(day)
+                    ? 'bg-slate-800/30 border-slate-700/30'
+                    : 'bg-slate-800/50 border-slate-700/50 hover:border-cyan-500/50'
+                }`}
+              >
+                <div className="h-full flex flex-col">
+                  <div className={`text-right text-sm font-medium mb-1 ${
+                    isToday(day) ? 'text-cyan-400' : isPast(day) ? 'text-slate-500' : 'text-slate-300'
+                  }`}>
+                    {day}
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-1">
+                    {dayTasks.slice(0, 3).map(task => (
+                      <button
+                        key={task.id}
+                        onClick={() => setSelectedTask(task)}
+                        className={`w-full text-left text-xs px-2 py-1 rounded truncate transition-all ${
+                          task.status === 'completed'
+                            ? 'bg-emerald-900/50 text-emerald-300 hover:bg-emerald-800/50'
+                            : task.status === 'blocked'
+                            ? 'bg-red-900/50 text-red-300 hover:bg-red-800/50'
+                            : task.priority === 'high'
+                            ? 'bg-orange-900/50 text-orange-300 hover:bg-orange-800/50'
+                            : 'bg-cyan-900/50 text-cyan-300 hover:bg-cyan-800/50'
+                        }`}
+                        title={task.title}
+                      >
+                        {task.title}
+                      </button>
+                    ))}
+                    {dayTasks.length > 3 && (
+                      <div className="text-xs text-center text-slate-400 font-medium">
+                        +{dayTasks.length - 3}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-6 pt-6 border-t border-slate-700/50 flex flex-wrap gap-6 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gradient-to-br from-cyan-900/50 to-blue-900/50 border-2 border-cyan-500 rounded"></div>
+            <span className="text-slate-300">Oggi</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-orange-900/50 rounded"></div>
+            <span className="text-slate-300">Alta priorità</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-cyan-900/50 rounded"></div>
+            <span className="text-slate-300">Normale</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-900/50 rounded"></div>
+            <span className="text-slate-300">Bloccato</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-emerald-900/50 rounded"></div>
+            <span className="text-slate-300">Completato</span>
           </div>
         </div>
 
-        {/* Calendar */}
-        {loading ? (
-          <div className="bg-white rounded-xl shadow-lg p-4 animate-pulse">
-            <div className="h-96 bg-gray-200 rounded"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-lg p-4 animate-slide-up overflow-x-auto">
-            {/* Day headers */}
-            <div className="grid grid-cols-7 gap-3 mb-4 min-w-[640px]">
-              {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (
-                <div key={day} className="text-center font-semibold text-sm text-gray-700 py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-3 min-w-[640px]">
-              {calendarDays.map((day, index) => {
-                if (day === null) {
-                  return <div key={`empty-${index}`} className="aspect-square" />;
-                }
-
-                const dayTasks = getTasksForDate(day);
-                const hasOverdue = dayTasks.some(t => t.status !== 'completed' && isPast(day));
-                const hasUrgent = dayTasks.some(t => t.priority === 'high' && t.status !== 'completed');
-
-                return (
-                  <div
-                    key={day}
-                    className={`aspect-square border rounded-lg p-1.5 transition-all hover:shadow-md ${
-                      isToday(day)
-                        ? 'bg-primary-50 border-primary-500 border-2'
-                        : isPast(day)
-                        ? 'bg-gray-50 border-gray-200'
-                        : 'bg-white border-gray-300 hover:border-primary-300'
-                    }`}
-                  >
-                    <div className="h-full flex flex-col">
-                      <div className={`text-right text-sm font-medium mb-1 ${
-                        isToday(day) ? 'text-primary-700' : isPast(day) ? 'text-gray-400' : 'text-gray-700'
-                      }`}>
-                        {day}
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto space-y-0.5">
-                        {dayTasks.slice(0, 3).map(task => (
-                          <button
-                            key={task.id}
-                            onClick={() => setSelectedTask(task)}
-                            className={`w-full text-left text-xs px-1.5 py-0.5 rounded truncate transition-colors ${
-                              task.status === 'completed'
-                                ? 'bg-primary-100 text-primary-800 hover:bg-primary-200'
-                                : task.status === 'blocked'
-                                ? 'bg-slate-200 text-slate-900 hover:bg-slate-300'
-                                : task.priority === 'high'
-                                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
-                            }`}
-                            title={task.title}
-                          >
-                            {task.title}
-                          </button>
-                        ))}
-                        {dayTasks.length > 3 && (
-                          <div className="text-xs text-center text-gray-500 font-medium">
-                            +{dayTasks.length - 3}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-6 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-primary-50 border-2 border-primary-500 rounded"></div>
-                <span>Oggi</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-slate-100 rounded"></div>
-                <span>Alta priorità</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-primary-50 rounded"></div>
-                <span>Normale</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-slate-200 rounded"></div>
-                <span>Bloccato</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-primary-100 rounded"></div>
-                <span>Completato</span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Task count */}
-        {!loading && (
-          <div className="mt-4 text-center text-sm text-gray-600">
-            {tasks.length} attività con scadenza nel database
-          </div>
-        )}
-      </div>
+        <div className="mt-4 text-center text-sm text-slate-400">
+          {tasks.length} attività con scadenza nel database
+        </div>
+      </GamingCard>
 
       {/* Task Modal */}
       {selectedTask && (
@@ -236,6 +220,6 @@ export default function CalendarPage() {
           }}
         />
       )}
-    </div>
+    </GamingLayout>
   );
 }

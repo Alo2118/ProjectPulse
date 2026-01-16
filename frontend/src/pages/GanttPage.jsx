@@ -4,6 +4,7 @@ import { projectsApi, tasksApi, milestonesApi } from '../services/api';
 import GanttChart from '../components/GanttChart';
 import TaskModal from '../components/TaskModal';
 import MilestoneModal from '../components/MilestoneModal';
+import { GamingLayout, GamingHeader, GamingCard, GamingLoader } from '../components/ui';
 
 export default function GanttPage() {
   const [projects, setProjects] = useState([]);
@@ -71,84 +72,79 @@ export default function GanttPage() {
     setShowMilestoneModal(true);
   };
 
+  if (loading) {
+    return <GamingLoader message="Caricamento timeline..." />;
+  }
+
   return (
-    <div className="page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-4 animate-slide-right">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="page-title flex items-center gap-2">
-                📊 Diagramma di Gantt
-              </h2>
-              <p className="text-slate-600 mt-0.5 text-xs">
-                Timeline progetti R&D
-              </p>
-            </div>
-          </div>
+    <GamingLayout>
+      <GamingHeader
+        title="Diagramma di Gantt"
+        subtitle="Timeline progetti R&D"
+        icon={BarChart3}
+      />
 
-          {/* Filter */}
-          <div className="card-compact">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🔍</span>
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-slate-700 mb-2">
-                  Filtra per progetto
-                </label>
-                <select
-                  className="input max-w-md text-sm"
-                  value={selectedProject}
-                  onChange={(e) => setSelectedProject(e.target.value)}
-                >
-                  <option value="all">Tutti i progetti R&D</option>
-                  {projects.map(project => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+      {/* Filter */}
+      <GamingCard>
+        <div className="flex items-center gap-3 mb-4">
+          <Filter className="w-5 h-5 text-blue-600" />
+          <label className="text-sm font-bold text-slate-900">
+            Filtra per progetto
+          </label>
+        </div>
+        <select
+          className="w-full bg-white border-2 border-slate-300 rounded-lg px-4 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
+          value={selectedProject}
+          onChange={(e) => setSelectedProject(e.target.value)}
+        >
+          <option value="all">Tutti i progetti R&D</option>
+          {projects.map(project => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+      </GamingCard>
+
+      {/* Gantt Chart */}
+      <GamingCard>
+        <GanttChart
+          milestones={filteredMilestones}
+          tasks={filteredTasks}
+          onTaskClick={handleTaskClick}
+          onMilestoneClick={handleMilestoneClick}
+        />
+      </GamingCard>
+
+      {/* Info Box */}
+      <GamingCard>
+        <div className="flex gap-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+            <BarChart3 className="w-6 h-6 text-white" />
+          </div>
+          <div className="text-sm text-slate-600">
+            <p className="font-bold text-slate-900 mb-3">Informazioni sul Gantt</p>
+            <ul className="space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span>Le barre rappresentano la durata delle milestone e attività</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span>La linea rossa verticale indica la data odierna</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span>Clicca su una barra per visualizzare i dettagli</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span>Le attività sono raggruppate sotto le rispettive milestone</span>
+              </li>
+            </ul>
           </div>
         </div>
-
-        {/* Gantt Chart */}
-        {loading ? (
-          <div className="card">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-300 rounded w-full"></div>
-              <div className="h-12 bg-gray-200 rounded w-full"></div>
-              <div className="h-12 bg-gray-200 rounded w-full"></div>
-              <div className="h-12 bg-gray-200 rounded w-full"></div>
-            </div>
-          </div>
-        ) : (
-          <div className="animate-slide-up">
-            <GanttChart
-              milestones={filteredMilestones}
-              tasks={filteredTasks}
-              onTaskClick={handleTaskClick}
-              onMilestoneClick={handleMilestoneClick}
-            />
-          </div>
-        )}
-
-        {/* Info Box */}
-        <div className="mt-6 card bg-blue-50 border-blue-200">
-          <div className="flex gap-3">
-            <BarChart3 className="w-5 h-5 text-blue-600 flex-shrink-0" />
-            <div className="text-sm text-blue-900">
-              <p className="font-medium mb-4">Informazioni sul Gantt</p>
-              <ul className="space-y-4 text-blue-800">
-                <li>• Le barre rappresentano la durata delle milestone e attività</li>
-                <li>• La linea rossa verticale indica la data odierna</li>
-                <li>• Clicca su una barra per visualizzare i dettagli</li>
-                <li>• Le attività sono raggruppate sotto le rispettive milestone</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+      </GamingCard>
 
       {/* Task Modal */}
       {selectedTask && (
@@ -178,6 +174,6 @@ export default function GanttPage() {
           }}
         />
       )}
-    </div>
+    </GamingLayout>
   );
 }

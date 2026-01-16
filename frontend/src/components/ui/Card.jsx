@@ -27,9 +27,9 @@ export default function Card({
 
   // Variant styles
   const variantStyles = {
-    default: 'bg-white border border-gray-200',
-    gradient: 'bg-gradient-to-br from-primary-500 to-primary-600 text-white',
-    flat: 'bg-gray-50 border border-gray-200'
+    default: 'bg-slate-800/50 border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/10',
+    gradient: 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white',
+    flat: 'bg-slate-800/30 border-2 border-cyan-500/20'
   };
 
   // Padding styles
@@ -74,8 +74,8 @@ export function CardHeader({ title, subtitle, action, compact = false, className
   return (
     <div className={`flex justify-between items-start ${compact ? 'mb-3' : 'mb-4'} ${className}`}>
       <div>
-        {title && <h3 className={`${compact ? 'text-base' : 'text-lg'} font-semibold text-gray-900`}>{title}</h3>}
-        {subtitle && <p className={`${compact ? 'text-xs' : 'text-sm'} text-gray-500 mt-1`}>{subtitle}</p>}
+        {title && <h3 className={`${compact ? 'text-base' : 'text-lg'} font-semibold text-cyan-300`}>{title}</h3>}
+        {subtitle && <p className={`${compact ? 'text-xs' : 'text-sm'} text-cyan-400/60 mt-1`}>{subtitle}</p>}
       </div>
       {action && <div className="ml-4">{action}</div>}
     </div>
@@ -100,7 +100,7 @@ export function CardBody({ className = '', children }) {
  */
 export function CardFooter({ className = '', children }) {
   return (
-    <div className={`mt-4 pt-4 border-t border-gray-200 ${className}`}>
+    <div className={`mt-4 pt-4 border-t-2 border-cyan-500/20 ${className}`}>
       {children}
     </div>
   );

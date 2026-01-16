@@ -58,7 +58,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 alert-critical mb-2 rounded-lg hover:bg-red-100 cursor-pointer transition-colors"
+                className="p-3 alert-critical mb-2 rounded-xl border-2 border-red-200 shadow-sm hover:shadow-md cursor-pointer transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -97,7 +97,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 alert-warning mb-2 rounded-lg hover:bg-amber-100 cursor-pointer transition-colors"
+                className="p-3 alert-warning mb-2 rounded-xl border-2 border-orange-200 shadow-sm hover:shadow-md cursor-pointer transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -131,7 +131,7 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 alert-warning mb-2 rounded-lg hover:bg-amber-100 cursor-pointer transition-colors"
+                className="p-3 alert-warning mb-2 rounded-xl border-2 border-amber-200 shadow-sm hover:shadow-md cursor-pointer transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

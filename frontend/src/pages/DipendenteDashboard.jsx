@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, FileText, AlertTriangle, Calendar, LayoutGrid, LayoutList, PieChart, ClipboardList, Zap, CheckCircle2, Clock } from 'lucide-react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { Plus, FileText, AlertTriangle, Calendar, LayoutGrid, LayoutList, PieChart, ClipboardList, Zap, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, projectsApi } from '../services/api';
 import Timer from '../components/Timer';
@@ -8,12 +8,14 @@ import TaskTreeList from '../components/TaskTreeList';
 import TaskModal from '../components/TaskModal';
 import CreateTaskModal from '../components/CreateTaskModal';
 import DailyReportModal from '../components/DailyReportModal';
-import { Button, StatCard, StatCardGrid } from '../components/ui';
+import { Button, StatCard, StatCardGrid, GamingKPICard, GamingKPIGrid, GamingLayout, GamingHeader, GamingCard } from '../components/ui';
 import KanbanBoard from '../components/common/KanbanBoard';
 import TaskCalendar from '../components/common/TaskCalendar';
-import TaskDistributionChart from '../components/charts/TaskDistributionChart';
-import ProgressChart from '../components/charts/ProgressChart';
 import { formatTime, groupTasksByStatus, getOverdueTasks, getApproachingTasks } from '../utils/helpers';
+
+// Lazy load charts to reduce initial bundle size
+const TaskDistributionChart = lazy(() => import('../components/charts/TaskDistributionChart'));
+const ProgressChart = lazy(() => import('../components/charts/ProgressChart'));
 
 export default function DipendenteDashboard() {
   const { user } = useAuth();
@@ -27,6 +29,18 @@ export default function DipendenteDashboard() {
 
   useEffect(() => {
     loadData();
+    
+    // Refresh when user returns to the tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const loadData = async () => {
@@ -146,103 +160,73 @@ export default function DipendenteDashboard() {
   ];
 
   return (
-    <div className="page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header pulito */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="page-title flex items-center gap-2">
-              ✨ Le mie Attività
-            </h2>
-            <p className="text-slate-600 mt-0.5 text-sm">
-              Gestisci i tuoi task e monitora i tuoi progressi
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setShowReportModal(true)} className="text-sm py-2">
+    <GamingLayout>
+      <GamingHeader
+        title="Le mie Attività"
+        subtitle="Gestisci i tuoi task e monitora i tuoi progressi"
+        icon={Zap}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowReportModal(true)} className="bg-white border-2 border-slate-300 hover:border-blue-400 text-slate-700 shadow-sm hover:shadow-md transition-all font-bold">
               <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">Report</span>
             </Button>
-            <Button onClick={() => setShowCreateModal(true)} className="text-sm py-2">
+            <Button onClick={() => setShowCreateModal(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all font-bold">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Nuovo Task</span>
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {/* Stats Cards in alto */}
-        <StatCardGrid columns={4} compact className="mb-4">
-          <StatCard
-            title="Totali"
-            value={stats.total}
-            icon={ClipboardList}
-            compact
-          />
-          <StatCard
-            title="In Corso"
-            value={stats.in_progress}
-            icon={Zap}
-            iconBg="bg-blue-100"
-            iconColor="text-blue-600"
-            compact
-          />
-          <StatCard
-            title="Completati"
-            value={stats.completed}
-            icon={CheckCircle2}
-            iconBg="bg-green-100"
-            iconColor="text-green-600"
-            compact
-          />
-          <StatCard
-            title="Tempo"
-            value={formatTime(stats.totalTime)}
-            icon={Clock}
-            iconBg="bg-slate-100"
-            iconColor="text-slate-600"
-            compact
-          />
-        </StatCardGrid>
+      {/* KPI Cards */}
+      <GamingKPIGrid columns={4}>
+        <GamingKPICard title="Totali" value={stats.total} icon={ClipboardList} gradient="from-purple-600 to-pink-700" shadowColor="purple" />
+        <GamingKPICard title="In Corso" value={stats.in_progress} icon={Zap} gradient="from-blue-600 to-cyan-700" shadowColor="blue" />
+        <GamingKPICard title="Completati" value={stats.completed} icon={CheckCircle2} gradient="from-emerald-600 to-green-700" shadowColor="emerald" />
+        <GamingKPICard title="Tempo" value={formatTime(stats.totalTime)} icon={Clock} gradient="from-orange-600 to-red-700" shadowColor="orange" />
+      </GamingKPIGrid>
 
         {/* Layout a due colonne */}
         <div className="grid lg:grid-cols-12 gap-4 mb-4">
           {/* Colonna principale - 8 colonne */}
           <div className="lg:col-span-8 space-y-4">
-            {/* Weekly Stats (standardized card) */}
-            <div className="card animate-slide-up">
+            {/* Weekly Stats */}
+            <div className="bg-white border-2 border-slate-200 rounded-xl p-4 shadow-md hover:shadow-xl transition-all">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">📈</span>
-                <h3 className="text-sm font-semibold text-slate-900">Questa Settimana</h3>
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-bold text-slate-900">Questa Settimana</h3>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-slate-900">{weeklyStats.completed}</div>
-                  <div className="text-xs text-slate-600 mt-1">Completati</div>
+                <div className="text-center p-2 bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg border-2 border-emerald-200 shadow-sm">
+                  <div className="text-2xl font-bold text-emerald-700">{weeklyStats.completed}</div>
+                  <div className="text-xs text-slate-600 font-semibold mt-0.5">Completati</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-slate-900">{formatTime(weeklyStats.totalTime)}</div>
-                  <div className="text-xs text-slate-600 mt-1">Tempo</div>
+                <div className="text-center p-2 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200 shadow-sm">
+                  <div className="text-2xl font-bold text-cyan-700">{formatTime(weeklyStats.totalTime)}</div>
+                  <div className="text-xs text-slate-600 font-semibold mt-0.5">Tempo</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-slate-900">{weeklyStats.avgTimePerTask.toFixed(1)}h</div>
-                  <div className="text-xs text-slate-600 mt-1">Media/Task</div>
+                <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 shadow-sm">
+                  <div className="text-2xl font-bold text-purple-700">{weeklyStats.avgTimePerTask.toFixed(1)}h</div>
+                  <div className="text-xs text-slate-600 font-semibold mt-0.5">Media/Task</div>
                 </div>
               </div>
             </div>
 
             {/* View Mode Toggle */}
-            <div className="card-compact p-1.5">
-              <div className="flex gap-1 flex-wrap">
+            <div className="bg-white border-2 border-slate-200 rounded-xl p-2 shadow-md">
+              <div className="flex gap-2 flex-wrap">
                 {viewModes.map(mode => {
                   const Icon = mode.icon;
-                  const emojis = { kanban: '📊', list: '📝', calendar: '📅', stats: '📈' };
                   return (
                     <button
                       key={mode.id}
                       onClick={() => setViewMode(mode.id)}
-                      className={viewMode === mode.id ? 'tab-active' : 'tab-inactive'}
+                      className={viewMode === mode.id 
+                        ? 'flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-bold transition-all shadow-xl hover:shadow-2xl' 
+                        : 'flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 border-2 border-slate-200 rounded-lg hover:bg-slate-100 hover:border-slate-300 transition-all font-semibold'}
                     >
-                      <span className="text-base">{emojis[mode.id]}</span>
+                      <Icon className="w-4 h-4" />
                       <span className="hidden sm:inline">{mode.label}</span>
                     </button>
                   );
@@ -260,7 +244,7 @@ export default function DipendenteDashboard() {
             {(overdueTasks.length > 0 || dueSoonTasks.length > 0) && (
               <div className="space-y-2">
                 {overdueTasks.length > 0 && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 shadow-sm p-3">
+                  <div className="rounded-lg border-2 border-red-200 bg-red-50 shadow-md hover:shadow-xl transition-all p-3">
                     <div className="flex items-start gap-2">
                       <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-red-100 text-red-700 text-sm">🚨</div>
                       <div className="flex-1">
@@ -292,7 +276,7 @@ export default function DipendenteDashboard() {
                 )}
 
                 {dueSoonTasks.length > 0 && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 shadow-sm p-3">
+                  <div className="rounded-lg border-2 border-amber-200 bg-amber-50 shadow-md hover:shadow-xl transition-all p-3">
                     <div className="flex items-start gap-2">
                       <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-amber-100 text-amber-700 text-sm">⏰</div>
                       <div className="flex-1">
@@ -367,10 +351,10 @@ export default function DipendenteDashboard() {
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-2xl">🚀</span>
-                      <h3 className="text-base font-semibold text-blue-900">
+                      <h3 className="text-base font-bold text-slate-900">
                         In Corso
                       </h3>
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                      <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded-full border-2 border-blue-300">
                         {groupedTasks.in_progress.length}
                       </span>
                     </div>
@@ -389,10 +373,10 @@ export default function DipendenteDashboard() {
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-2xl">🚫</span>
-                      <h3 className="text-base font-semibold text-red-900">
+                      <h3 className="text-base font-bold text-slate-900">
                         Bloccati
                       </h3>
-                      <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                      <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full border-2 border-red-300">
                         {groupedTasks.blocked.length}
                       </span>
                     </div>
@@ -411,10 +395,10 @@ export default function DipendenteDashboard() {
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-2xl">❓</span>
-                      <h3 className="text-base font-semibold text-orange-900">
+                      <h3 className="text-base font-bold text-slate-900">
                         In Attesa
                       </h3>
-                      <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                      <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-0.5 rounded-full border-2 border-orange-300">
                         {groupedTasks.waiting_clarification.length}
                       </span>
                     </div>
@@ -433,10 +417,10 @@ export default function DipendenteDashboard() {
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-2xl">📋</span>
-                      <h3 className="text-base font-semibold text-slate-900">
+                      <h3 className="text-base font-bold text-slate-900">
                         Da Fare
                       </h3>
-                      <span className="bg-slate-100 text-slate-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                      <span className="bg-slate-100 text-slate-800 text-xs font-bold px-2 py-0.5 rounded-full border-2 border-slate-300">
                         {groupedTasks.todo.length}
                       </span>
                     </div>
@@ -455,10 +439,10 @@ export default function DipendenteDashboard() {
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-2xl">✅</span>
-                      <h3 className="text-base font-semibold text-green-900">
+                      <h3 className="text-base font-bold text-slate-900">
                         Completati
                       </h3>
-                      <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                      <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded-full border-2 border-green-300">
                         {groupedTasks.completed.length}
                       </span>
                     </div>
@@ -516,13 +500,17 @@ export default function DipendenteDashboard() {
             {viewMode === 'stats' && (
               <div className="space-y-6 animate-fade-in">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <TaskDistributionChart tasks={tasks} />
-                  <ProgressChart progressData={progressData} title="Il mio Progresso (Ultimi 7 Giorni)" />
+                  <Suspense fallback={<div className="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md h-[400px] flex items-center justify-center text-slate-500">Caricamento grafico...</div>}>
+                    <TaskDistributionChart tasks={tasks} />
+                  </Suspense>
+                  <Suspense fallback={<div className="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md h-[400px] flex items-center justify-center text-slate-500">Caricamento grafico...</div>}>
+                    <ProgressChart progressData={progressData} title="Il mio Progresso (Ultimi 7 Giorni)" />
+                  </Suspense>
                 </div>
 
                 {/* Projects Breakdown */}
-                <div className="card p-6">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                <GamingCard>
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">
                     Task per Progetto
                   </h3>
                   <div className="space-y-4">
@@ -536,16 +524,16 @@ export default function DipendenteDashboard() {
                       if (projectTasks.length === 0) return null;
 
                       return (
-                        <div key={project.id} className="border-b border-slate-100 pb-4 last:border-0">
+                        <div key={project.id} className="border-b-2 border-slate-200 pb-4 last:border-0">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-slate-900">{project.name}</h4>
-                            <span className="text-sm text-slate-500">
+                            <h4 className="font-bold text-slate-900">{project.name}</h4>
+                            <span className="text-sm font-semibold text-slate-600">
                               {completedTasks.length}/{projectTasks.length} completati
                             </span>
                           </div>
-                          <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div className="w-full bg-slate-200 rounded-full h-2 border-2 border-slate-300">
                             <div
-                              className="bg-success-500 h-2 rounded-full transition-all"
+                              className="bg-gradient-to-r from-emerald-600 to-green-600 h-2 rounded-full transition-all"
                               style={{ width: `${completionRate}%` }}
                             />
                           </div>
@@ -559,12 +547,11 @@ export default function DipendenteDashboard() {
                       );
                     })}
                   </div>
-                </div>
+                </GamingCard>
               </div>
             )}
           </>
         )}
-      </div>
 
       {/* Modals */}
       {selectedTask && (
@@ -588,6 +575,6 @@ export default function DipendenteDashboard() {
           onClose={() => setShowReportModal(false)}
         />
       )}
-    </div>
+    </GamingLayout>
   );
 }

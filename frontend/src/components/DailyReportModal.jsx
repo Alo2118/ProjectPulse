@@ -77,8 +77,8 @@ export default function DailyReportModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border-2 border-slate-200">
+        <div className="sticky top-0 bg-white border-b-2 border-slate-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Report Giornaliero</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
@@ -116,7 +116,7 @@ export default function DailyReportModal({ onClose }) {
           ) : (
             <div className="space-y-6">
               {/* Summary */}
-              <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
+              <div className="bg-white border-2 border-primary-200 rounded-xl p-4 shadow-md">
                 <h3 className="font-semibold text-primary-900 mb-2">Riepilogo</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
@@ -149,7 +149,7 @@ export default function DailyReportModal({ onClose }) {
                   </h3>
                   <div className="space-y-2">
                     {report.completed_tasks.map(task => (
-                      <div key={task.id} className="card-stat from-primary-50 to-primary-100 border-primary-200">
+                      <div key={task.id} className="bg-white border-2 border-primary-200 rounded-xl p-3 shadow-sm">
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.time_spent > 0 && (
                           <div className="text-sm text-gray-600">
@@ -171,7 +171,7 @@ export default function DailyReportModal({ onClose }) {
                   </h3>
                   <div className="space-y-2">
                     {report.in_progress_tasks.map(task => (
-                      <div key={task.id} className="card-stat from-primary-100 to-primary-200 border-primary-300">
+                      <div key={task.id} className="bg-white border-2 border-primary-300 rounded-xl p-3 shadow-sm">
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.time_spent > 0 && (
                           <div className="text-sm text-gray-600">

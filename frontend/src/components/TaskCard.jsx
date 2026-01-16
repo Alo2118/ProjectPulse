@@ -2,11 +2,11 @@ import { Clock, MessageSquare, Play, AlertCircle, HelpCircle, Calendar, ArrowUp,
 import { timeApi } from '../services/api';
 
 const statusColors = {
-  todo: 'bg-slate-100 text-slate-700 border-slate-200',
-  in_progress: 'bg-primary-50 text-primary-700 border-primary-200',
-  blocked: 'bg-danger-50 text-danger-700 border-danger-200',
-  waiting_clarification: 'bg-warning-50 text-warning-700 border-warning-200',
-  completed: 'bg-success-50 text-success-700 border-success-200'
+  todo: 'bg-slate-100 text-slate-700 border-2 border-slate-200',
+  in_progress: 'bg-primary-50 text-primary-700 border-2 border-primary-200',
+  blocked: 'bg-danger-50 text-danger-700 border-2 border-danger-200',
+  waiting_clarification: 'bg-warning-50 text-warning-700 border-2 border-warning-200',
+  completed: 'bg-success-50 text-success-700 border-2 border-success-200'
 };
 
 const statusLabels = {
@@ -18,18 +18,18 @@ const statusLabels = {
 };
 
 const priorityConfig = {
-  low: { 
-    color: 'text-slate-600 bg-slate-100', 
+  low: {
+    color: 'text-slate-700 bg-slate-50 border-2 border-slate-200',
     icon: ArrowDown,
     label: 'Bassa'
   },
-  medium: { 
-    color: 'text-warning-600 bg-warning-100', 
+  medium: {
+    color: 'text-warning-700 bg-warning-50 border-2 border-warning-200',
     icon: ArrowRight,
     label: 'Media'
   },
-  high: { 
-    color: 'text-danger-600 bg-danger-100', 
+  high: {
+    color: 'text-danger-700 bg-danger-50 border-2 border-danger-200',
     icon: ArrowUp,
     label: 'Alta'
   }
@@ -115,8 +115,10 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
   return (
     <div
       onClick={onClick}
-      className={`card-compact hover:shadow-lg cursor-pointer group transition-all ${
-        isSubtask ? `ml-4 bg-slate-50 border-l-2 border-slate-300 shadow-sm hover:shadow-md ${borderTopColor}` : 'border-l-4 shadow-md hover:shadow-lg'
+      className={`group cursor-pointer transition-all rounded-xl ${
+        isSubtask
+          ? `ml-4 card ${borderTopColor}`
+          : 'card-lg'
       }`}
     >
       {/* Priority Indicator Bar - diverso per subtask */}
@@ -141,10 +143,10 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
                   <span className="font-medium truncate max-w-[100px]">{task.project_name}</span>
                 </div>
               )}
-              <span className={`inline-flex items-center px-1.5 py-0 rounded text-xs font-medium border ${statusColors[task.status]}`}>
+              <span className={`inline-flex items-center px-1.5 py-0 rounded text-xs font-bold ${statusColors[task.status]}`}>
                 {statusLabels[task.status]}
               </span>
-              <span className={`inline-flex items-center gap-0.5 px-1 py-0 rounded text-xs font-medium ${priorityInfo.color}`}>
+              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0 rounded text-xs font-bold ${priorityInfo.color}`}>
                 <priorityInfo.icon className="w-3 h-3" />
               </span>
             </div>
@@ -183,7 +185,7 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
 
         {/* Footer compatto */}
         {(task.time_spent > 0 || deadlineInfo || task.blocked_reason || task.clarification_needed) && (
-          <div className="flex items-center gap-1 text-xs pt-1 border-t border-slate-100 flex-wrap mt-1">
+          <div className="flex items-center gap-1 text-xs pt-1 border-t-2 border-slate-200 flex-wrap mt-1">
             {task.time_spent > 0 && (
               <div className="flex items-center gap-0.5 text-slate-600 bg-slate-50 px-1.5 py-0 rounded text-xs">
                 <Clock className="w-2.5 h-2.5" />
@@ -192,21 +194,21 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
             )}
 
             {deadlineInfo && (
-              <div className={`flex items-center gap 0.5 px 1.5 py-0 rounded font-medium text-xs ${deadlineInfo.color}`}>
+              <div className={`flex items-center gap-0.5 px-1.5 py-0 rounded font-bold text-xs ${deadlineInfo.color}`}>
                 <deadlineInfo.icon className="w-2.5 h-2.5" />
                 <span>{deadlineInfo.text}</span>
               </div>
             )}
 
             {task.blocked_reason && (
-              <div className="flex items-center gap 0.5 text-danger-600 bg-danger-50 px-1.5 py-0 rounded font-medium text-xs">
+              <div className="flex items-center gap-0.5 text-danger-700 bg-danger-50 px-1.5 py-0 rounded font-bold text-xs border-2 border-danger-200">
                 <AlertCircle className="w-2.5 h-2.5" />
                 <span>Bloccato</span>
               </div>
             )}
 
             {task.clarification_needed && (
-              <div className="flex items-center gap-0.5 text-warning-600 bg-warning-50 px-1.5 py-0 rounded font-medium text-xs">
+              <div className="flex items-center gap-0.5 text-warning-700 bg-warning-50 px-1.5 py-0 rounded font-bold text-xs border-2 border-warning-200">
                 <HelpCircle className="w-2.5 h-2.5" />
                 <span>Chiarimenti</span>
               </div>

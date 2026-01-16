@@ -55,19 +55,19 @@ export default function Timer({ onTimerChange }) {
   if (!activeTimer) return null;
 
   return (
-    <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 flex items-center justify-between">
+    <div className="card-lg flex items-center justify-between">
       <div>
-        <div className="text-sm text-primary-600 font-medium">Timer attivo</div>
-        <div className="text-lg font-bold text-primary-900">{activeTimer.task_title}</div>
+        <div className="text-label">Timer attivo</div>
+        <div className="text-subtitle text-cyan-300 mt-1">{activeTimer.task_title}</div>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="text-3xl font-mono font-bold text-primary-600">
+        <div className="text-3xl font-mono font-bold text-cyan-400">
           {formatTime(elapsed)}
         </div>
         <button
           onClick={handleStop}
-          className="btn-danger flex items-center gap-2"
+          className="btn btn-danger flex items-center gap-2"
         >
           <Square className="w-4 h-4" />
           Stop

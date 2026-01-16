@@ -30,8 +30,8 @@ export default function ProjectModal({ project, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg border-2 border-slate-200">
+        <div className="border-b-2 border-slate-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">
             {project ? 'Modifica Progetto' : 'Nuovo Progetto'}
           </h2>
@@ -69,7 +69,7 @@ export default function ProjectModal({ project, onClose, onSave }) {
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4 border-t-2 border-slate-200 mt-2">
             <button
               type="submit"
               disabled={loading}

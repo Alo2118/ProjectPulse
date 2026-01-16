@@ -50,33 +50,33 @@ const FilterBar = ({ filters, onFilterChange, showEmployeeFilter = false }) => {
 
   if (isLoading) {
     return (
-      <div className="card mb-6">
+      <div className="bg-white border-2 border-slate-200 rounded-xl p-4 shadow-md mb-6">
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-          <span className="ml-2 text-gray-600">Caricamento filtri...</span>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+          <span className="ml-2 text-slate-600 font-medium">Caricamento filtri...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card mb-6">
+    <div className="bg-white border-2 border-slate-200 rounded-xl p-4 shadow-md mb-6">
       <div className="flex items-center gap-2 mb-4">
-        <Filter className="w-5 h-5 text-gray-500" />
-        <h3 className="text-lg font-semibold text-gray-800">Filtri</h3>
+        <Filter className="w-5 h-5 text-primary-600" />
+        <h3 className="text-lg font-bold text-slate-900">Filtri</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Filtro Temporale */}
         <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-900 mb-2">
             <Calendar className="w-4 h-4" />
             Periodo
           </label>
           <select
             value={filters.timeRange || 'all'}
             onChange={(e) => handleFilterChange('timeRange', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
           >
             {timeRanges.map(range => (
               <option key={range.value} value={range.value}>
@@ -89,14 +89,14 @@ const FilterBar = ({ filters, onFilterChange, showEmployeeFilter = false }) => {
         {/* Filtro Dipendente (solo per direzione) */}
         {showEmployeeFilter && (
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-slate-900 mb-2">
               <User className="w-4 h-4" />
               Dipendente
             </label>
             <select
               value={filters.userId || 'all'}
               onChange={(e) => handleFilterChange('userId', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
             >
               <option value="all">Tutti i dipendenti</option>
               {users
@@ -112,14 +112,14 @@ const FilterBar = ({ filters, onFilterChange, showEmployeeFilter = false }) => {
 
         {/* Filtro Progetto */}
         <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-900 mb-2">
             <FolderKanban className="w-4 h-4" />
             Progetto
           </label>
           <select
             value={filters.projectId || 'all'}
             onChange={(e) => handleFilterChange('projectId', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
           >
             <option value="all">Tutti i progetti</option>
             {projects.map(project => (
@@ -132,14 +132,14 @@ const FilterBar = ({ filters, onFilterChange, showEmployeeFilter = false }) => {
 
         {/* Filtro Stato */}
         <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-900 mb-2">
             <Filter className="w-4 h-4" />
             Stato
           </label>
           <select
             value={filters.status || 'all'}
             onChange={(e) => handleFilterChange('status', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
           >
             {statuses.map(status => (
               <option key={status.value} value={status.value}>

@@ -239,6 +239,22 @@ class Request {
     `);
     return stmt.all();
   }
-}
+
+  static getArchivedRequests() {
+    const stmt = db.prepare(`
+      SELECT
+        r.*,
+        (u_assigned.first_name || ' ' || u_assigned.last_name) as assigned_to_name,
+        (u_created.first_name || ' ' || u_created.last_name) as created_by_name,
+        p.name as project_name
+      FROM requests r
+      LEFT JOIN users u_assigned ON r.assigned_to = u_assigned.id
+      LEFT JOIN users u_created ON r.created_by = u_created.id
+      LEFT JOIN projects p ON r.project_id = p.id
+      WHERE r.status = 'archived'
+      ORDER BY r.created_at DESC
+    `);
+    return stmt.all();
+  }}
 
 export default Request;

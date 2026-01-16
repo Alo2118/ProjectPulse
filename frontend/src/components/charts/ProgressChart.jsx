@@ -97,8 +97,8 @@ const ProgressChart = ({ progressData, title = "Progresso Task" }) => {
   };
 
   return (
-    <div className="card p-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+    <div className="bg-slate-800/50 border-2 border-cyan-500/30 rounded-xl p-6 shadow-lg shadow-cyan-500/10">
+      <h3 className="text-lg font-bold text-cyan-300 mb-4">
         {title}
       </h3>
       <div className="h-[300px]">

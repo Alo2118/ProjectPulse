@@ -11,6 +11,7 @@ import milestoneRoutes from './routes/milestones.js';
 import userRoutes from './routes/users.js';
 import requestRoutes from './routes/requests.js';
 import templateRoutes from './routes/templates.js';
+import reportRoutes from './routes/reports.js';
 
 // Load environment variables
 dotenv.config();
@@ -59,6 +60,7 @@ app.use('/api/milestones', milestoneRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -252,7 +252,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
       {/* Bulk Actions Bar */}
       {showBulkActions && (
-        <Card className="mb-4 bg-blue-50 border-blue-200">
+        <Card className="mb-4 bg-blue-50 border-2 border-blue-200 shadow-md">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <input
@@ -291,7 +291,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
       {/* Create Form */}
       {showCreateForm && (
-        <Card className="mb-4 bg-blue-50 border-blue-200">
+        <Card className="mb-4 bg-blue-50 border-2 border-blue-200 shadow-md">
           <form onSubmit={handleCreateSubtask} className="space-y-3">
             <div>
               <label className="block text-sm font-medium mb-1">Titolo *</label>
@@ -299,7 +299,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
                 type="text"
                 value={newSubtask.title}
                 onChange={(e) => setNewSubtask({ ...newSubtask, title: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 placeholder="Titolo del subtask..."
                 required
                 autoFocus
@@ -310,7 +310,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
               <textarea
                 value={newSubtask.description}
                 onChange={(e) => setNewSubtask({ ...newSubtask, description: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 rows="2"
                 placeholder="Descrizione opzionale..."
               />
@@ -320,7 +320,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
               <select
                 value={newSubtask.priority}
                 onChange={(e) => setNewSubtask({ ...newSubtask, priority: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
               >
                 <option value="low">Bassa</option>
                 <option value="medium">Media</option>

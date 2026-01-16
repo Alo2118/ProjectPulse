@@ -339,7 +339,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
           {/* Assigned User (only for amministratore) */}
           {isAmministratore && users.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Assegna a
               </label>
@@ -458,7 +458,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
 
           {/* Info about auto-filled fields */}
           {(defaultProjectId || defaultMilestoneId) && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 shadow-sm">
               <div className="text-sm text-blue-900">
                 ℹ️ Campi pre-compilati automaticamente:
                 {defaultProjectId && <span className="block text-xs text-blue-700 mt-1">• Progetto selezionato dal contesto</span>}
@@ -468,7 +468,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate, parentTas
           )}
           </div>
 
-          <div className="flex gap-3 p-6 pt-4 border-t border-gray-200 flex-shrink-0">
+          <div className="flex gap-3 p-6 pt-4 border-t-2 border-slate-200 flex-shrink-0">
             <button
               type="submit"
               disabled={loading}

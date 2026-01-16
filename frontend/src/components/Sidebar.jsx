@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePendingRequestsCount } from '../hooks/usePendingRequestsCount';
 import { 
   LogOut, User, LayoutDashboard, FolderKanban, Calendar, Users, 
-  Clock, Inbox, FileText, Menu, X, ChevronDown, Home
+  Clock, Inbox, FileText, Menu, X, ChevronDown, Home, BarChart3
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -11,6 +12,15 @@ export default function Sidebar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(true);
   const [expandedMenu, setExpandedMenu] = useState(null);
+  const { pendingCount, refetchCount } = usePendingRequestsCount();
+
+  useEffect(() => {
+    // Initial fetch
+    refetchCount();
+    // Fallback: refresh every 120 seconds for sync across sessions
+    const interval = setInterval(refetchCount, 120000);
+    return () => clearInterval(interval);
+  }, [refetchCount]);
 
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
@@ -32,6 +42,7 @@ export default function Sidebar() {
         { to: '/gantt', icon: FileText, label: 'Gantt', condition: true },
         { to: '/time-tracking', icon: Clock, label: 'Tempo', condition: user?.role !== 'direzione' },
         { to: '/templates', icon: FileText, label: 'Template', condition: user?.role !== 'direzione' },
+        { to: '/reports', icon: BarChart3, label: 'Report', condition: true },
       ]
     },
     {
@@ -63,19 +74,19 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-slate-900 text-slate-100 transition-all duration-300 flex flex-col z-40 ${
+        className={`fixed left-0 top-0 h-screen bg-slate-900/80 backdrop-blur-lg text-slate-100 transition-all duration-300 flex flex-col z-40 border-r-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/20 ${
           isOpen ? 'w-64' : 'w-0 -translate-x-full'
         } lg:w-64 lg:translate-x-0`}
       >
         {/* Header */}
-        <div className="p-6 border-b border-slate-700">
+        <div className="p-6 border-b-2 border-cyan-500/20">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center font-bold text-xl">
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-cyan-500/50">
               PP
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">ProjectPulse</h1>
-              <p className="text-xs text-slate-400">v1.0</p>
+              <p className="text-xs text-cyan-400/70">v1.0</p>
             </div>
           </Link>
         </div>
@@ -86,7 +97,7 @@ export default function Sidebar() {
             <div key={groupIdx} className="mb-6">
               <button
                 onClick={() => toggleMenu(groupIdx)}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-300 transition-colors"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-cyan-400/70 uppercase tracking-wider hover:text-cyan-300 transition-colors"
               >
                 {group.group}
                 <ChevronDown
@@ -104,22 +115,29 @@ export default function Sidebar() {
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.to);
+                  // Show badge for Inbox when there are pending requests
+                  const showBadge = item.to === '/inbox' && pendingCount > 0;
 
                   return (
                     <Link
                       key={item.to}
                       to={item.to}
                       onClick={() => setIsOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-2 ${
                         active
-                          ? 'bg-primary-600 text-white shadow-lg'
-                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          ? 'bg-gradient-to-r from-cyan-600/30 to-blue-600/30 text-cyan-300 border-cyan-500/50 shadow-lg shadow-cyan-500/20'
+                          : 'border-transparent text-slate-300 hover:border-cyan-500/30 hover:bg-slate-800/50'
                       }`}
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" />
                       <span>{item.label}</span>
-                      {active && (
-                        <div className="ml-auto w-2 h-2 bg-white rounded-full" />
+                      {showBadge && (
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                          {pendingCount}
+                        </span>
+                      )}
+                      {active && !showBadge && (
+                        <div className="ml-auto w-2 h-2 bg-cyan-400 rounded-full shadow-lg shadow-cyan-500/50" />
                       )}
                     </Link>
                   );
@@ -130,16 +148,16 @@ export default function Sidebar() {
         </nav>
 
         {/* User Profile */}
-        <div className="p-4 border-t border-slate-700 space-y-3">
-          <div className="flex items-center gap-3 px-3 py-3 bg-slate-800 rounded-lg">
-            <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+        <div className="p-4 border-t-2 border-cyan-500/20 space-y-3">
+          <div className="flex items-center gap-3 px-3 py-3 bg-slate-800/50 rounded-lg border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/10">
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
+              <User className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">
+              <p className="text-sm font-semibold text-cyan-300 truncate">
                 {user?.first_name} {user?.last_name}
               </p>
-              <p className="text-xs text-slate-400 truncate capitalize">
+              <p className="text-xs text-cyan-400/60 truncate capitalize">
                 {user?.role === 'amministratore' ? 'Admin' : 
                  user?.role === 'direzione' ? 'Direzione' : 'Dipendente'}
               </p>
@@ -151,7 +169,7 @@ export default function Sidebar() {
               logout();
               setIsOpen(false);
             }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-red-400 border-2 border-red-500/30 hover:bg-red-500/10 transition-colors"
           >
             <LogOut className="w-5 h-5" />
             <span>Esci</span>

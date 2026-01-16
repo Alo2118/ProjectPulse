@@ -169,13 +169,18 @@ export const convertToTask = async (req, res) => {
     const requestPriority = priority || request.priority;
     const taskPriority = priorityMap[requestPriority] || 'medium';
 
+    // Determine assigned_to: use body value if provided, otherwise fall back to request's assigned_to
+    const finalAssignedTo = assigned_to !== undefined && assigned_to !== null && assigned_to !== '' 
+      ? parseInt(assigned_to) 
+      : (request.assigned_to || null);
+
     // Create task from request
     const task = Task.create({
       title: title || request.title,
       description: description || request.description,
       project_id: project_id || request.project_id,
       milestone_id,
-      assigned_to: assigned_to || request.assigned_to,
+      assigned_to: finalAssignedTo,
       created_by: req.user.id,
       priority: taskPriority,
       deadline,
@@ -262,3 +267,52 @@ export const getStats = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const archive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = Request.findById(id);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+
+    // Prevent archiving of unprocessed (new) requests
+    if (request.status === 'new') {
+      return res.status(400).json({ error: 'Non puoi archiviare richieste non elaborate' });
+    }
+
+    const updated = Request.update(id, { status: 'archived' });
+    res.json({
+      message: 'Richiesta archiviata',
+      data: updated
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const unarchive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = Request.findById(id);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+
+    if (request.status !== 'archived') {
+      return res.status(400).json({ error: 'Richiesta non è archiviata' });
+    }
+
+    // Restore to 'approved' status
+    const updated = Request.update(id, { status: 'approved' });
+    res.json({
+      message: 'Richiesta estratta dall\'archivio',
+      data: updated
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+

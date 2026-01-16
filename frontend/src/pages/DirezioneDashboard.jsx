@@ -1,19 +1,21 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle, TrendingUp, TrendingDown, Users, Calendar, LayoutDashboard, FolderKanban, UserCheck, Bell } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
+import { Briefcase, Clock, AlertCircle, HelpCircle, CheckCircle, TrendingUp, TrendingDown, Users, Calendar, LayoutDashboard, FolderKanban, UserCheck, Bell, ClipboardList, Zap, Target } from 'lucide-react';
 import { tasksApi, projectsApi, usersApi } from '../services/api';
 import TaskModal from '../components/TaskModal';
-import { Card, StatCard, StatCardGrid } from '../components/ui';
+import { StatCard, StatCardGrid, GamingLayout, GamingHeader, GamingCard, GamingKPICard, GamingKPIGrid } from '../components/ui';
 import AlertsPanel from '../components/management/AlertsPanel';
 import ProjectHealthCard from '../components/management/ProjectHealthCard';
 import TimelineView from '../components/management/TimelineView';
 import BurndownChart from '../components/management/BurndownChart';
 import FilterBar from '../components/common/FilterBar';
 import KanbanBoard from '../components/common/KanbanBoard';
-import TaskDistributionChart from '../components/charts/TaskDistributionChart';
-import ProgressChart from '../components/charts/ProgressChart';
-import WorkloadChart from '../components/charts/WorkloadChart';
-import VelocityChart from '../components/charts/VelocityChart';
 import { formatTime, formatTimeToHours } from '../utils/helpers';
+
+// Lazy load chart components to defer Chart.js loading
+const TaskDistributionChart = lazy(() => import('../components/charts/TaskDistributionChart'));
+const ProgressChart = lazy(() => import('../components/charts/ProgressChart'));
+const WorkloadChart = lazy(() => import('../components/charts/WorkloadChart'));
+const VelocityChart = lazy(() => import('../components/charts/VelocityChart'));
 
 export default function DirezioneDashboard() {
   const [tasks, setTasks] = useState([]);
@@ -257,115 +259,101 @@ export default function DirezioneDashboard() {
   ];
 
   return (
-    <div className="page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-4 animate-slide-right">
-          <h2 className="page-title flex items-center gap-2">
-            📊 Dashboard Direzione
-          </h2>
-          <p className="text-slate-600 mt-0.5 text-xs">
-            Monitoraggio progetti e team
-          </p>
-        </div>
+    <GamingLayout>
+      <GamingHeader
+        title="Dashboard Direzione"
+        subtitle="Monitoraggio progetti e team in tempo reale"
+        icon={LayoutDashboard}
+      />
 
-        {/* Stats Compatti con Emoji */}
-        <div className="stats-grid stagger-animation">
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 hover-lift">
-            <div className="text-xs text-slate-600 mb-1">📋 Tot</div>
-            <div className="text-2xl font-bold text-slate-900">{stats.total}</div>
-          </div>
-          <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
-            <div className="text-xs text-blue-700 mb-1">🚀 WIP</div>
-            <div className="text-2xl font-bold text-blue-900">{stats.in_progress}</div>
-          </div>
-          <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg p-3 border border-slate-300 hover-lift">
-            <div className="text-xs text-slate-700 mb-1">🚫 Block</div>
-            <div className="text-2xl font-bold text-slate-900">{stats.blocked}</div>
-          </div>
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 hover-lift">
-            <div className="text-xs text-slate-600 mb-1">⏳ Wait</div>
-            <div className="text-2xl font-bold text-slate-800">{stats.waiting}</div>
-          </div>
-          <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200 hover-lift">
-            <div className="text-xs text-primary-700 mb-1">✅ Done</div>
-            <div className="text-2xl font-bold text-primary-900">{stats.completed}</div>
-          </div>
-          <div className="bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg p-3 border border-primary-300 hover-lift">
-            <div className="text-xs text-primary-800 mb-1">⏱️ Time</div>
-            <div className="text-lg font-bold text-primary-900">{formatTime(stats.totalTime)}</div>
-          </div>
-        </div>
+      {/* KPI Cards */}
+      <GamingKPIGrid columns={6}>
+        <GamingKPICard title="Totali" value={stats.total} icon={ClipboardList} gradient="from-purple-600 to-pink-700" shadowColor="purple" />
+        <GamingKPICard title="In Corso" value={stats.in_progress} icon={Zap} gradient="from-blue-600 to-cyan-700" shadowColor="blue" />
+        <GamingKPICard title="Bloccati" value={stats.blocked} icon={AlertCircle} gradient="from-slate-600 to-slate-800" shadowColor="slate" />
+        <GamingKPICard title="In Attesa" value={stats.waiting} icon={HelpCircle} gradient="from-yellow-600 to-orange-700" shadowColor="orange" />
+        <GamingKPICard title="Completati" value={stats.completed} icon={CheckCircle} gradient="from-emerald-600 to-green-700" shadowColor="emerald" />
+        <GamingKPICard title="Tempo" value={formatTime(stats.totalTime)} icon={Clock} gradient="from-indigo-600 to-violet-700" shadowColor="indigo" />
+      </GamingKPIGrid>
 
-        {/* Advanced Metrics */}
-        <StatCardGrid columns={4} compact className="mb-6">
-          <StatCard
-            title="Tempo medio completamento"
-            value={`${metrics.avgCompletionTime.toFixed(1)}h`}
-            icon={Clock}
-            variant="flat"
-            iconBg="bg-secondary-100"
-            iconColor="text-secondary-600"
-            compact
-          />
-          <Card padding="sm" className={metrics.overdueTasks > 0 ? 'bg-danger-50 border-danger-200' : 'bg-success-50 border-success-200'}>
-            <div className="flex items-center justify-between mb-1">
-              <Calendar className={`w-4 h-4 ${metrics.overdueTasks > 0 ? 'text-danger-600' : 'text-success-600'}`} />
-              <span className={`text-xs font-medium ${metrics.overdueTasks > 0 ? 'text-danger-600' : 'text-success-600'}`}>
-                SCADENZE
-              </span>
+      {/* Advanced Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <GamingCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-blue-600" />
             </div>
-            <div className={`text-2xl font-bold ${metrics.overdueTasks > 0 ? 'text-danger-900' : 'text-success-900'}`}>
-              {metrics.overdueTasks > 0 ? metrics.overdueTasks : '0'}
+            <div>
+              <p className="text-xs font-semibold text-slate-600">Tempo Medio</p>
+              <p className="text-xl font-bold text-slate-900">{metrics.avgCompletionTime.toFixed(1)}h</p>
             </div>
-            <div className={`text-xs ${metrics.overdueTasks > 0 ? 'text-danger-700' : 'text-success-700'}`}>
-              {metrics.overdueTasks > 0 ? `In ritardo (${metrics.overdueRate.toFixed(0)}%)` : 'Nessun ritardo'}
+          </div>
+        </GamingCard>
+        <GamingCard className={`p-4 ${metrics.overdueTasks > 0 ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 bg-gradient-to-br ${metrics.overdueTasks > 0 ? 'from-red-100 to-red-200' : 'from-green-100 to-green-200'} rounded-lg flex items-center justify-center`}>
+              <Calendar className={`w-5 h-5 ${metrics.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
             </div>
-          </Card>
-          <StatCard
-            title={`Trend settimanale`}
-            subtitle={`${metrics.thisWeekCompleted} vs ${metrics.lastWeekCompleted}`}
-            value={`${metrics.weeklyTrend >= 0 ? '+' : ''}${metrics.weeklyTrend.toFixed(0)}%`}
-            icon={metrics.weeklyTrend >= 0 ? TrendingUp : TrendingDown}
-            variant="flat"
-            iconBg="bg-accent-100"
-            iconColor="text-accent-600"
-            trendDirection={metrics.weeklyTrend >= 0 ? 'up' : 'down'}
-            compact
-          />
-          <StatCard
-            title="Progetti attivi"
-            value={projects.length}
-            icon={Briefcase}
-            variant="flat"
-            iconBg="bg-primary-100"
-            iconColor="text-primary-600"
-            compact
-          />
-        </StatCardGrid>
+            <div>
+              <p className="text-xs font-semibold text-slate-600">Scadenze</p>
+              <p className={`text-xl font-bold ${metrics.overdueTasks > 0 ? 'text-red-900' : 'text-green-900'}`}>
+                {metrics.overdueTasks > 0 ? metrics.overdueTasks : '0'}
+              </p>
+              <p className={`text-xs ${metrics.overdueTasks > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                {metrics.overdueTasks > 0 ? `In ritardo (${metrics.overdueRate.toFixed(0)}%)` : 'Nessun ritardo'}
+              </p>
+            </div>
+          </div>
+        </GamingCard>
+        <GamingCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center">
+              {metrics.weeklyTrend >= 0 ? <TrendingUp className="w-5 h-5 text-purple-600" /> : <TrendingDown className="w-5 h-5 text-purple-600" />}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600">Trend Settimanale</p>
+              <p className="text-xl font-bold text-slate-900">{metrics.weeklyTrend >= 0 ? '+' : ''}{metrics.weeklyTrend.toFixed(0)}%</p>
+              <p className="text-xs text-slate-600">{metrics.thisWeekCompleted} vs {metrics.lastWeekCompleted}</p>
+            </div>
+          </div>
+        </GamingCard>
+        <GamingCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-lg flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600">Progetti Attivi</p>
+              <p className="text-xl font-bold text-slate-900">{projects.length}</p>
+            </div>
+          </div>
+        </GamingCard>
+      </div>
 
         {/* Filters */}
         <FilterBar filters={filters} onFilterChange={setFilters} showEmployeeFilter={true} />
 
-        {/* Tabs Navigation Compatto */}
-        <div className="card-compact mb-4 p-1.5">
-          <div className="flex gap-1 flex-wrap">
-            {tabs.map(tab => {
-              const Icon = tab.icon;
-              const emojis = {overview: '🎯', projects: '📁', team: '👥', alerts: '🔔'};
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={activeTab === tab.id ? 'tab-active' : 'tab-inactive'}
-                >
-                  <span className="text-base">{emojis[tab.id]}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+      {/* Tabs Navigation */}
+      <GamingCard className="p-2 mb-6">
+        <div className="flex gap-2 flex-wrap">
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            const emojis = {overview: '🎯', projects: '📁', team: '👥', alerts: '🔔'};
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={activeTab === tab.id 
+                  ? 'flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-bold transition-all shadow-xl hover:shadow-2xl' 
+                  : 'flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 border-2 border-slate-200 rounded-lg hover:bg-slate-100 hover:border-slate-300 transition-all font-semibold'}
+              >
+                <span className="text-base">{emojis[tab.id]}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
+      </GamingCard>
 
         {/* Tab Content */}
         {loading ? (
@@ -381,19 +369,27 @@ export default function DirezioneDashboard() {
               <div className="space-y-6 animate-fade-in">
                 {/* Charts Row 1 */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <TaskDistributionChart tasks={filteredTasks} />
-                  <ProgressChart progressData={progressData} title="Progresso Ultimi 7 Giorni" />
+                  <Suspense fallback={<div className="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md h-[400px] flex items-center justify-center text-slate-500">Caricamento grafico...</div>}>
+                    <TaskDistributionChart tasks={filteredTasks} />
+                  </Suspense>
+                  <Suspense fallback={<div className="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md h-[400px] flex items-center justify-center text-slate-500">Caricamento grafico...</div>}>
+                    <ProgressChart progressData={progressData} title="Progresso Ultimi 7 Giorni" />
+                  </Suspense>
                 </div>
 
                 {/* Charts Row 2 */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <WorkloadChart workloadData={workloadData} />
-                  <VelocityChart velocityData={velocityData} />
+                  <Suspense fallback={<div className="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md h-[400px] flex items-center justify-center text-slate-500">Caricamento grafico...</div>}>
+                    <WorkloadChart workloadData={workloadData} />
+                  </Suspense>
+                  <Suspense fallback={<div className="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md h-[400px] flex items-center justify-center text-slate-500">Caricamento grafico...</div>}>
+                    <VelocityChart velocityData={velocityData} />
+                  </Suspense>
                 </div>
 
                 {/* Kanban View */}
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">
                     Vista Kanban Task ({filteredTasks.length})
                   </h3>
                   <KanbanBoard
@@ -451,7 +447,9 @@ export default function DirezioneDashboard() {
             {/* Team Tab */}
             {activeTab === 'team' && (
               <div className="space-y-6 animate-fade-in">
-                <WorkloadChart workloadData={workloadData} title="Carico di Lavoro Team" />
+                <Suspense fallback={<div className="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md h-[400px] flex items-center justify-center text-slate-500">Caricamento grafico...</div>}>
+                  <WorkloadChart workloadData={workloadData} title="Carico di Lavoro Team" />
+                </Suspense>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {users.filter(u => u.role === 'dipendente').map(user => {
@@ -462,48 +460,48 @@ export default function DirezioneDashboard() {
                       : 0;
 
                     return (
-                      <Card key={user.id} hover>
+                      <GamingCard key={user.id} className="hover:shadow-xl transition-all">
                         <div className="flex items-center gap-3 mb-4">
-                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-full flex items-center justify-center border-2 border-blue-200">
                             <Users className="w-6 h-6 text-blue-600" />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-gray-900">
+                            <h4 className="font-bold text-slate-900">
                               {user.first_name} {user.last_name}
                             </h4>
-                            <p className="text-sm text-gray-500">{user.email}</p>
+                            <p className="text-sm font-medium text-slate-600">{user.email}</p>
                           </div>
                         </div>
 
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Task totali:</span>
-                            <span className="font-medium">{userTasks.length}</span>
+                            <span className="font-semibold text-slate-700">Task totali:</span>
+                            <span className="font-bold text-slate-900">{userTasks.length}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Completati:</span>
-                            <span className="font-medium text-green-600">{completedTasks.length}</span>
+                            <span className="font-semibold text-slate-700">Completati:</span>
+                            <span className="font-bold text-emerald-600">{completedTasks.length}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">In corso:</span>
-                            <span className="font-medium text-blue-600">
+                            <span className="font-semibold text-slate-700">In corso:</span>
+                            <span className="font-bold text-blue-600">
                               {userTasks.filter(t => t.status === 'in_progress').length}
                             </span>
                           </div>
-                          <div className="mt-3 pt-3 border-t border-gray-100">
+                          <div className="mt-3 pt-3 border-t-2 border-slate-200">
                             <div className="flex justify-between text-sm mb-1">
-                              <span className="text-gray-600">Tasso completamento</span>
-                              <span className="font-semibold text-gray-900">{completionRate.toFixed(0)}%</span>
+                              <span className="font-semibold text-slate-700">Tasso completamento</span>
+                              <span className="font-bold text-slate-900">{completionRate.toFixed(0)}%</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="w-full bg-slate-200 rounded-full h-2 border-2 border-slate-300">
                               <div
-                                className="bg-primary-600 h-2 rounded-full transition-all"
+                                className="bg-gradient-to-r from-primary-600 to-primary-700 h-2 rounded-full transition-all"
                                 style={{ width: `${completionRate}%` }}
                               />
                             </div>
                           </div>
                         </div>
-                      </Card>
+                      </GamingCard>
                     );
                   })}
                 </div>
@@ -518,7 +516,6 @@ export default function DirezioneDashboard() {
             )}
           </>
         )}
-      </div>
 
       {/* Task Modal */}
       {selectedTask && (
@@ -528,7 +525,7 @@ export default function DirezioneDashboard() {
           onUpdate={loadData}
         />
       )}
-    </div>
+    </GamingLayout>
   );
 }
 
@@ -555,17 +552,17 @@ function BurndownChartWrapper({ project }) {
 
   if (loading) {
     return (
-      <Card>
-        <div className="animate-pulse h-64 bg-gray-200 rounded"></div>
-      </Card>
+      <GamingCard>
+        <div className="animate-pulse h-64 bg-slate-200 rounded"></div>
+      </GamingCard>
     );
   }
 
   if (!velocityData) {
     return (
-      <Card>
-        <p className="text-center py-8 text-gray-500">Nessun dato disponibile per {project.name}</p>
-      </Card>
+      <GamingCard>
+        <p className="text-center py-8 font-medium text-slate-600">Nessun dato disponibile per {project.name}</p>
+      </GamingCard>
     );
   }
 

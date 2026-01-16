@@ -200,7 +200,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
         </div>
 
         {/* Legend and Stats */}
-        <div className="flex items-center justify-between pt-4 border-t">
+        <div className="flex items-center justify-between pt-4 border-t-2 border-slate-200">
           <div className="flex items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-8 h-0.5 bg-gray-400" style={{ borderTop: '2px dashed #94a3b8' }}></div>
@@ -220,7 +220,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
         </div>
 
         {/* Additional Stats */}
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t text-center">
+        <div className="grid grid-cols-3 gap-4 pt-4 border-t-2 border-slate-200 text-center">
           <div>
             <div className="text-2xl font-bold text-gray-900">
               {velocityData[velocityData.length - 1].remaining_tasks}

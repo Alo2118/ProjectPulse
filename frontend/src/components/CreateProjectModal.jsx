@@ -218,7 +218,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
 
           {/* Create Milestones Option */}
           {selectedTemplate?.data?.milestones && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 shadow-sm">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -246,7 +246,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 border-t-2 border-slate-200">
             <button
               type="submit"
               disabled={loading}

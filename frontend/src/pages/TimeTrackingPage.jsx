@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Clock, Plus, Edit2, Trash2, Download, BarChart3, TrendingUp, Users as UsersIcon, X } from 'lucide-react';
+import { Clock, Plus, Edit2, Trash2, Download, BarChart3, TrendingUp, Users as UsersIcon, X, Timer as TimerIcon } from 'lucide-react';
 import { timeApi, projectsApi, tasksApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { formatTime, formatDate, formatDateTime } from '../utils/helpers';
+import { 
+  GamingLayout, GamingHeader, GamingCard, GamingLoader,
+  GamingKPICard, GamingKPIGrid, Button 
+} from '../components/ui';
 
 export default function TimeTrackingPage() {
   const { user, isAmministratore } = useAuth();
@@ -109,303 +113,292 @@ export default function TimeTrackingPage() {
   };
 
   if (loading && !statistics) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-slate-500">Caricamento...</div>
-        </div>
-      </div>
-    );
+    return <GamingLoader message="Caricamento dati tempo..." />;
   }
 
   return (
-    <div className="page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 animate-slide-right">
-          <div>
-            <h1 className="page-title flex items-center gap-2">⏱️ Monitoraggio Tempo</h1>
-            <p className="text-slate-600 mt-0.5 text-xs">
-              Registrazioni di tempo di lavoro
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={exportToCSV} className="btn-secondary flex items-center gap-1.5 text-sm py-2 hover-scale">
+    <GamingLayout>
+      <GamingHeader
+        title="Monitoraggio Tempo"
+        subtitle="Registrazioni di tempo di lavoro"
+        icon={TimerIcon}
+        actions={
+          <>
+            <Button 
+              onClick={exportToCSV} 
+              className="bg-slate-800 hover:bg-slate-700 text-white shadow-lg transition-all"
+            >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">CSV</span>
-            </button>
-            <button onClick={() => { setSelectedEntry(null); setShowManualModal(true); }} className="btn-primary flex items-center gap-1.5 text-sm py-2 hover-scale">
+            </Button>
+            <Button 
+              onClick={() => { setSelectedEntry(null); setShowManualModal(true); }}
+              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/50 transition-all"
+            >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Manuale</span>
-            </button>
+            </Button>
+          </>
+        }
+      />
+
+      {/* Statistics Cards */}
+      {statistics && (
+        <GamingKPIGrid columns={4}>
+          <GamingKPICard
+            title="Tempo Totale"
+            value={formatTime(statistics.overall.total_seconds)}
+            icon={Clock}
+            gradient="from-orange-600 to-red-700"
+            shadowColor="orange"
+          />
+          <GamingKPICard
+            title="Registrazioni"
+            value={statistics.overall.total_entries}
+            icon={BarChart3}
+            gradient="from-blue-600 to-cyan-700"
+            shadowColor="blue"
+          />
+          <GamingKPICard
+            title="Media per Sessione"
+            value={formatTime(statistics.overall.avg_seconds)}
+            icon={TrendingUp}
+            gradient="from-emerald-600 to-green-700"
+            shadowColor="emerald"
+          />
+          <GamingKPICard
+            title="Task Lavorati"
+            value={statistics.overall.total_tasks}
+            icon={UsersIcon}
+            gradient="from-purple-600 to-pink-700"
+            shadowColor="purple"
+          />
+        </GamingKPIGrid>
+      )}
+
+      {/* Time by Project */}
+      {statistics?.by_project && statistics.by_project.length > 0 && (
+        <GamingCard>
+          <div className="flex items-center gap-3 mb-6">
+            <BarChart3 className="w-6 h-6 text-primary-600" />
+            <h3 className="text-lg font-bold text-slate-900">Tempo per Progetto</h3>
           </div>
+          <div className="space-y-4">
+            {statistics.by_project.map((project) => {
+              const percentage = statistics.overall.total_seconds > 0
+                ? (project.total_seconds / statistics.overall.total_seconds) * 100
+                : 0;
+              return (
+                <div key={project.project_id}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-slate-900">{project.project_name}</span>
+                    <span className="text-sm text-primary-600 font-bold">
+                      {formatTime(project.total_seconds)} ({percentage.toFixed(1)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden shadow-inner border-2 border-primary-300">
+                    <div
+                      className="bg-gradient-to-r from-primary-600 to-primary-500 h-3 rounded-full transition-all duration-500 shadow-md"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GamingCard>
+      )}
+
+      {/* Time by User (Admin only) */}
+      {isAmministratore && statistics?.by_user && statistics.by_user.length > 0 && (
+        <GamingCard>
+          <div className="flex items-center gap-3 mb-6">
+            <UsersIcon className="w-6 h-6 text-primary-600" />
+            <h3 className="text-lg font-bold text-slate-900">Tempo per Utente</h3>
+          </div>
+          <div className="space-y-4">
+            {statistics.by_user.map((userStat) => {
+              const percentage = statistics.overall.total_seconds > 0
+                ? (userStat.total_seconds / statistics.overall.total_seconds) * 100
+                : 0;
+              return (
+                <div key={userStat.user_id}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-slate-900">{userStat.user_name}</span>
+                    <span className="text-sm text-primary-600 font-bold">
+                      {formatTime(userStat.total_seconds)} ({percentage.toFixed(1)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden shadow-inner border-2 border-primary-300">
+                    <div
+                      className="bg-gradient-to-r from-primary-600 to-primary-500 h-3 rounded-full transition-all duration-500 shadow-md"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GamingCard>
+      )}
+
+      {/* Filters */}
+      <GamingCard>
+        <div className="flex items-center gap-3 mb-6">
+          <Clock className="w-6 h-6 text-primary-600" />
+          <h3 className="text-lg font-bold text-slate-900">Filtri</h3>
         </div>
-
-        {/* Statistics Cards */}
-        {statistics && (
-          <div className="stats-grid-compact mb-4">
-            <div className="card bg-gradient-to-br from-primary-50 to-primary-100 border-primary-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-primary-600">Tempo Totale</div>
-                  <div className="text-2xl font-bold text-primary-900 mt-1">
-                    {formatTime(statistics.overall.total_seconds)}
-                  </div>
-                </div>
-                <Clock className="w-10 h-10 text-primary-600 opacity-50" />
-              </div>
-            </div>
-
-            <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-blue-600">Registrazioni</div>
-                  <div className="text-2xl font-bold text-blue-900 mt-1">
-                    {statistics.overall.total_entries}
-                  </div>
-                </div>
-                <BarChart3 className="w-10 h-10 text-blue-600 opacity-50" />
-              </div>
-            </div>
-
-            <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-green-600">Media per Sessione</div>
-                  <div className="text-2xl font-bold text-green-900 mt-1">
-                    {formatTime(statistics.overall.avg_seconds)}
-                  </div>
-                </div>
-                <TrendingUp className="w-10 h-10 text-green-600 opacity-50" />
-              </div>
-            </div>
-
-            <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-purple-600">Task Lavorati</div>
-                  <div className="text-2xl font-bold text-purple-900 mt-1">
-                    {statistics.overall.total_tasks}
-                  </div>
-                </div>
-                <UsersIcon className="w-10 h-10 text-purple-600 opacity-50" />
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-900 mb-2">
+              Da
+            </label>
+            <input
+              type="date"
+              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+              value={filters.from_date}
+              onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
+            />
           </div>
-        )}
-
-        {/* Time by Project */}
-        {statistics?.by_project && statistics.by_project.length > 0 && (
-          <div className="card mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tempo per Progetto</h3>
-            <div className="space-y-4">
-              {statistics.by_project.map((project) => {
-                const percentage = statistics.overall.total_seconds > 0
-                  ? (project.total_seconds / statistics.overall.total_seconds) * 100
-                  : 0;
-                return (
-                  <div key={project.project_id}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-700">{project.project_name}</span>
-                      <span className="text-sm text-gray-600">
-                        {formatTime(project.total_seconds)} ({percentage.toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-primary-600 h-2 rounded-full transition-all"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-900 mb-2">
+              A
+            </label>
+            <input
+              type="date"
+              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+              value={filters.to_date}
+              onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
+            />
           </div>
-        )}
-
-        {/* Time by User (Admin only) */}
-        {isAmministratore && statistics?.by_user && statistics.by_user.length > 0 && (
-          <div className="card mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tempo per Utente</h3>
-            <div className="space-y-4">
-              {statistics.by_user.map((userStat) => {
-                const percentage = statistics.overall.total_seconds > 0
-                  ? (userStat.total_seconds / statistics.overall.total_seconds) * 100
-                  : 0;
-                return (
-                  <div key={userStat.user_id}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-700">{userStat.user_name}</span>
-                      <span className="text-sm text-gray-600">
-                        {formatTime(userStat.total_seconds)} ({percentage.toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-900 mb-2">
+              Progetto
+            </label>
+            <select
+              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+              value={filters.project_id}
+              onChange={(e) => setFilters({ ...filters, project_id: e.target.value })}
+            >
+              <option value="">Tutti i progetti</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
-        )}
-
-        {/* Filters */}
-        <div className="card mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtri</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {isAmministratore && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Da
-              </label>
-              <input
-                type="date"
-                className="input"
-                value={filters.from_date}
-                onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                A
-              </label>
-              <input
-                type="date"
-                className="input"
-                value={filters.to_date}
-                onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Progetto
+              <label className="block text-sm font-bold text-slate-900 mb-2">
+                Utente
               </label>
               <select
-                className="input"
-                value={filters.project_id}
-                onChange={(e) => setFilters({ ...filters, project_id: e.target.value })}
+                className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                value={filters.user_id}
+                onChange={(e) => setFilters({ ...filters, user_id: e.target.value })}
               >
-                <option value="">Tutti i progetti</option>
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                <option value="">Tutti gli utenti</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
             </div>
-            {isAmministratore && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Utente
-                </label>
-                <select
-                  className="input"
-                  value={filters.user_id}
-                  onChange={(e) => setFilters({ ...filters, user_id: e.target.value })}
-                >
-                  <option value="">Tutti gli utenti</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Time Entries List */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Registrazioni Tempo ({timeEntries.length})
-          </h3>
-
-          {timeEntries.length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna registrazione</h3>
-              <p className="text-gray-500">Non ci sono registrazioni di tempo per i filtri selezionati</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Task</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progetto</th>
-                    {isAmministratore && (
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utente</th>
-                    )}
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inizio</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fine</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durata</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Note</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Azioni</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {timeEntries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(entry.started_at)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {entry.task_title || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {entry.project_name || '-'}
-                      </td>
-                      {isAmministratore && (
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {entry.user_name || '-'}
-                        </td>
-                      )}
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(entry.started_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {entry.ended_at ? new Date(entry.ended_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : (
-                          <span className="text-blue-600 font-medium">In corso</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {entry.duration ? formatTime(entry.duration) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
-                        {entry.notes || '-'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                        {entry.ended_at && (
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => { setSelectedEntry(entry); setShowManualModal(true); }}
-                              className="text-primary-600 hover:text-primary-900"
-                              title="Modifica"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(entry)}
-                              className="text-red-600 hover:text-red-900"
-                              title="Elimina"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           )}
         </div>
-      </div>
+      </GamingCard>
 
-      {/* Manual Entry Modal - placeholder, will be created separately */}
+      {/* Time Entries List */}
+      <GamingCard>
+        <div className="flex items-center gap-3 mb-6">
+          <TimerIcon className="w-6 h-6 text-primary-600" />
+          <h3 className="text-lg font-bold text-slate-900">
+            Registrazioni Tempo ({timeEntries.length})
+          </h3>
+        </div>
+
+        {timeEntries.length === 0 ? (
+          <div className="text-center py-16">
+            <Clock className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Nessuna registrazione</h3>
+            <p className="text-slate-600">Non ci sono registrazioni di tempo per i filtri selezionati</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-100 border-b-2 border-slate-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Data</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Task</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Progetto</th>
+                  {isAmministratore && (
+                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Utente</th>
+                  )}
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Inizio</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Fine</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Durata</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-900 uppercase">Note</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold text-slate-900 uppercase">Azioni</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {timeEntries.map((entry) => (
+                  <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">
+                      {formatDate(entry.started_at)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {entry.task_title || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {entry.project_name || '-'}
+                    </td>
+                    {isAmministratore && (
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {entry.user_name || '-'}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                      {new Date(entry.started_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                      {entry.ended_at ? new Date(entry.ended_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : (
+                        <span className="text-primary-600 font-bold">In corso</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-slate-900">
+                      {entry.duration ? formatTime(entry.duration) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">
+                      {entry.notes || '-'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                      {entry.ended_at && (
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => { setSelectedEntry(entry); setShowManualModal(true); }}
+                            className="text-primary-600 hover:text-primary-700 transition-colors"
+                            title="Modifica"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(entry)}
+                            className="text-red-600 hover:text-red-700 transition-colors"
+                            title="Elimina"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </GamingCard>
+
+      {/* Manual Entry Modal */}
       {showManualModal && (
         <ManualTimeEntryModal
           entry={selectedEntry}
@@ -413,11 +406,11 @@ export default function TimeTrackingPage() {
           onSave={loadData}
         />
       )}
-    </div>
+    </GamingLayout>
   );
 }
 
-// Placeholder component - will be implemented separately
+// Gaming-styled Manual Time Entry Modal
 function ManualTimeEntryModal({ entry, onClose, onSave }) {
   const { user, isAmministratore } = useAuth();
   const [tasks, setTasks] = useState([]);
@@ -480,24 +473,27 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <GamingCard className="shadow-2xl w-full max-w-lg p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-slate-200">
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            <Clock className="w-7 h-7 text-primary-600" />
             {entry ? 'Modifica Registrazione' : 'Nuova Registrazione Manuale'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-slate-600 hover:text-slate-900 transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Body */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-slate-900 mb-2">
               Task *
             </label>
             <select
-              className="input"
+              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
               value={formData.task_id}
               onChange={(e) => setFormData({ ...formData, task_id: e.target.value })}
               required
@@ -513,11 +509,11 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
 
           {isAmministratore && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-slate-900 mb-2">
                 Utente *
               </label>
               <select
-                className="input"
+                className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
                 value={formData.user_id}
                 onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
                 required
@@ -531,24 +527,24 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-slate-900 mb-2">
                 Inizio *
               </label>
               <input
                 type="datetime-local"
-                className="input"
+                className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
                 value={formData.started_at}
                 onChange={(e) => setFormData({ ...formData, started_at: e.target.value })}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-slate-900 mb-2">
                 Fine *
               </label>
               <input
                 type="datetime-local"
-                className="input"
+                className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
                 value={formData.ended_at}
                 onChange={(e) => setFormData({ ...formData, ended_at: e.target.value })}
                 required
@@ -557,11 +553,11 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-slate-900 mb-2">
               Note
             </label>
             <textarea
-              className="input"
+              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium resize-none"
               rows="3"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -569,24 +565,25 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary flex-1"
-            >
-              {loading ? 'Salvataggio...' : entry ? 'Salva Modifiche' : 'Crea Registrazione'}
-            </button>
-            <button
+          {/* Footer */}
+          <div className="flex gap-3 pt-4 border-t-2 border-slate-200">
+            <Button
               type="button"
               onClick={onClose}
-              className="btn-secondary"
+              className="flex-1 bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold transition-all shadow-sm hover:shadow-md"
             >
               Annulla
-            </button>
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold shadow-lg shadow-primary-600/50 transition-all disabled:opacity-50"
+            >
+              {loading ? 'Salvataggio...' : entry ? 'Salva Modifiche' : 'Crea Registrazione'}
+            </Button>
           </div>
         </form>
-      </div>
+      </GamingCard>
     </div>
   );
 }

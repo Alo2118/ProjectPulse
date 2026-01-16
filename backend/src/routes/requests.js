@@ -8,7 +8,9 @@ import {
   convertToTask,
   convertToProject,
   deleteRequest,
-  getStats
+  getStats,
+  archive,
+  unarchive
 } from '../controllers/requestController.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -40,6 +42,12 @@ router.post('/:id/convert-to-task', convertToTask);
 
 // Convert to project
 router.post('/:id/convert-to-project', convertToProject);
+
+// Archive request
+router.post('/:id/archive', archive);
+
+// Unarchive request
+router.post('/:id/unarchive', unarchive);
 
 // Delete request
 router.delete('/:id', deleteRequest);

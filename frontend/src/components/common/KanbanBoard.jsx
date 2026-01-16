@@ -9,11 +9,11 @@ const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
   const [expandedTasks, setExpandedTasks] = useState({});
 
   const defaultColumns = [
-    { id: 'todo', title: 'Da fare', color: 'bg-slate-100', textColor: 'text-slate-700' },
-    { id: 'in_progress', title: 'In corso', color: 'bg-primary-100', textColor: 'text-primary-700' },
-    { id: 'blocked', title: 'Bloccato', color: 'bg-danger-100', textColor: 'text-danger-700' },
-    { id: 'waiting_clarification', title: 'In attesa', color: 'bg-warning-100', textColor: 'text-warning-700' },
-    { id: 'completed', title: 'Completato', color: 'bg-success-100', textColor: 'text-success-700' }
+    { id: 'todo', title: 'Da fare', color: 'bg-slate-200 border-2 border-slate-300', textColor: 'text-slate-900' },
+    { id: 'in_progress', title: 'In corso', color: 'bg-blue-100 border-2 border-blue-300', textColor: 'text-blue-900' },
+    { id: 'blocked', title: 'Bloccato', color: 'bg-red-100 border-2 border-red-300', textColor: 'text-red-900' },
+    { id: 'waiting_clarification', title: 'In attesa', color: 'bg-amber-100 border-2 border-amber-300', textColor: 'text-amber-900' },
+    { id: 'completed', title: 'Completato', color: 'bg-emerald-100 border-2 border-emerald-300', textColor: 'text-emerald-900' }
   ];
 
   const kanbanColumns = columns || defaultColumns;
@@ -85,9 +85,9 @@ const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
           return (
             <div key={column.id} className="flex flex-col min-w-[280px] sm:min-w-0">
               {/* Column Header */}
-              <div className={`${column.color} ${column.textColor} p-3 rounded-t-lg shadow-sm`}>
+              <div className={`${column.color} ${column.textColor} p-4 rounded-t-xl shadow-md`}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm sm:text-base">{column.title}</h3>
+                  <h3 className="font-bold text-base">{column.title}</h3>
                   <span className="text-xs sm:text-sm font-medium bg-white px-2 py-1 rounded shadow-sm">
                     {columnTasks.length}
                   </span>
@@ -100,12 +100,12 @@ const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex-1 p-2 bg-slate-50 rounded-b-lg min-h-[400px] sm:min-h-[500px] transition-colors shadow-sm ${
-                      snapshot.isDraggingOver ? 'bg-primary-50 ring-2 ring-primary-300' : ''
+                    className={`flex-1 p-2 bg-white rounded-b-xl min-h-[400px] sm:min-h-[500px] transition-colors shadow-md border-2 border-slate-200 ${
+                      snapshot.isDraggingOver ? 'bg-blue-50 ring-2 ring-blue-300' : ''
                     }`}
                   >
                     {columnTasks.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 text-sm">
+                      <div className="text-center py-8 text-slate-500 text-sm">
                         Nessun task
                       </div>
                     ) : (

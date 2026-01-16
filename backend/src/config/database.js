@@ -185,6 +185,9 @@ const createIndexes = () => {
     db.exec('CREATE INDEX IF NOT EXISTS idx_milestones_project_id ON milestones(project_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_milestones_status ON milestones(status)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_milestones_due_date ON milestones(due_date)');
+    
+    // Composite index for milestone queries
+    db.exec('CREATE INDEX IF NOT EXISTS idx_milestones_project_status ON milestones(project_id, status)');
 
     // Tasks indexes (CRITICAL for performance)
     db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)');
@@ -195,12 +198,23 @@ const createIndexes = () => {
     db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id ON tasks(parent_task_id)');
+    
+    // Composite indexes for common queries
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project_id, status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_assigned_status ON tasks(assigned_to, status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_parent_status ON tasks(parent_task_id, status) WHERE parent_task_id IS NOT NULL');
 
     // Time entries indexes (CRITICAL for performance)
     db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_task_id ON time_entries(task_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_user_id ON time_entries(user_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_started_at ON time_entries(started_at)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_ended_at ON time_entries(ended_at)');
+    
+    // Composite indexes for time tracking queries
+    db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_user_started ON time_entries(user_id, started_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_task_started ON time_entries(task_id, started_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_time_entries_active ON time_entries(user_id, ended_at) WHERE ended_at IS NULL');
 
     // Comments indexes
     db.exec('CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id)');
@@ -217,6 +231,10 @@ const createIndexes = () => {
     db.exec('CREATE INDEX IF NOT EXISTS idx_requests_project_id ON requests(project_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_requests_received_at ON requests(received_at)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_requests_due_date ON requests(due_date)');
+    
+    // Composite indexes for inbox filtering
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_status_priority ON requests(status, priority)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_requests_assigned_status ON requests(assigned_to, status) WHERE assigned_to IS NOT NULL');
 
     // Templates indexes
     db.exec('CREATE INDEX IF NOT EXISTS idx_templates_type ON templates(type)');

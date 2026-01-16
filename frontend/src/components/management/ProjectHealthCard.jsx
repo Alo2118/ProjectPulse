@@ -85,7 +85,7 @@ const ProjectHealthCard = ({ project, onClick }) => {
             <span>Completamento</span>
             <span>{completionPercent}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-slate-200 rounded-full h-2 border-2 border-slate-300">
             <div
               className={`h-2 rounded-full transition-all ${
                 health_color === 'green' ? 'bg-green-600' :
@@ -125,7 +125,7 @@ const ProjectHealthCard = ({ project, onClick }) => {
 
         {/* Reasons */}
         {health_reasons && health_reasons.length > 0 && (
-          <div className="pt-2 border-t border-gray-200">
+          <div className="pt-2 border-t-2 border-slate-200">
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
               <ul className="text-xs text-gray-700 space-y-1">

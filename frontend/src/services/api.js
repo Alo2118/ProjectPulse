@@ -130,6 +130,8 @@ export const requestsApi = {
   review: (id, data) => api.post(`/requests/${id}/review`, data),
   convertToTask: (id, data) => api.post(`/requests/${id}/convert-to-task`, data),
   convertToProject: (id, data) => api.post(`/requests/${id}/convert-to-project`, data),
+  archive: (id) => api.post(`/requests/${id}/archive`),
+  unarchive: (id) => api.post(`/requests/${id}/unarchive`),
   delete: (id) => api.delete(`/requests/${id}`),
   getStats: () => api.get('/requests/stats'),
 };
@@ -143,4 +145,8 @@ export const templatesApi = {
   delete: (id) => api.delete(`/templates/${id}`),
 };
 
+// Reports
+export const reportsApi = {
+  getWeekly: (params) => api.get('/reports/weekly', { params }),
+};
 export default api;

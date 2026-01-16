@@ -11,5 +11,17 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'charts': ['chart.js', 'react-chartjs-2'],
+          'dnd': ['@hello-pangea/dnd'],
+          'utils': ['date-fns', 'axios']
+        }
+      }
+    }
   }
 });

@@ -143,7 +143,7 @@ const TimelineView = ({ projects, onProjectClick }) => {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-6 pt-4 border-t text-xs">
+        <div className="flex items-center justify-center gap-6 pt-4 border-t-2 border-slate-200 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-green-500 rounded"></div>
             <span className="text-gray-600">Completato</span>

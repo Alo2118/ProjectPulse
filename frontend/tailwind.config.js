@@ -4,6 +4,36 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    // Status colors - dynamic classes used in reports and tasks
+    {
+      pattern: /bg-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+      variants: ['hover', 'focus', 'active', 'group-hover'],
+    },
+    {
+      pattern: /text-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+      variants: ['hover', 'focus', 'active', 'group-hover'],
+    },
+    {
+      pattern: /border-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+      variants: ['hover', 'focus', 'active'],
+    },
+    {
+      pattern: /from-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+    },
+    {
+      pattern: /to-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+    },
+    {
+      pattern: /via-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+    },
+    {
+      pattern: /shadow-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+    },
+    {
+      pattern: /ring-(emerald|blue|cyan|slate|red|orange|yellow|purple|pink|green|sky|rose|indigo|violet)-(50|100|200|300|400|500|600|700|800|900)/,
+    },
+  ],
   theme: {
     extend: {
       colors: {
@@ -127,6 +157,118 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addComponents, theme }) {
+      addComponents({
+        // ===== DARK THEME COMPONENTS =====
+        
+        // Cards & Containers
+        '.card': {
+          '@apply bg-slate-800/50 border-2 border-cyan-500/30 rounded-lg p-4 shadow-lg shadow-cyan-500/10': {},
+        },
+        '.card-lg': {
+          '@apply bg-slate-800/50 border-2 border-cyan-500/30 rounded-xl p-6 shadow-lg shadow-cyan-500/10 hover:shadow-xl hover:shadow-cyan-500/20 transition-all': {},
+        },
+        '.card-header': {
+          '@apply text-lg font-bold text-cyan-300': {},
+        },
+        '.card-subheader': {
+          '@apply text-sm font-semibold text-cyan-400/70': {},
+        },
+        '.card-body': {
+          '@apply text-slate-200': {},
+        },
+        '.card-footer': {
+          '@apply border-t-2 border-cyan-500/20 pt-4 mt-4': {},
+        },
+        
+        // Inputs & Forms
+        '.input-dark': {
+          '@apply bg-slate-800/30 border-2 border-cyan-500/20 text-slate-100 placeholder-slate-500 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all': {},
+        },
+        '.input-small': {
+          '@apply bg-slate-800/30 border-2 border-cyan-500/20 text-slate-100 placeholder-slate-500 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500': {},
+        },
+        '.textarea-dark': {
+          '@apply bg-slate-800/30 border-2 border-cyan-500/20 text-slate-100 placeholder-slate-500 rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500': {},
+        },
+        
+        // Buttons
+        '.btn': {
+          '@apply inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2': {},
+        },
+        '.btn-primary': {
+          '@apply btn bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50': {},
+        },
+        '.btn-secondary': {
+          '@apply btn bg-slate-700/50 text-cyan-300 border-2 border-cyan-500/30 hover:bg-slate-700': {},
+        },
+        '.btn-danger': {
+          '@apply btn bg-red-600/20 text-red-400 border-2 border-red-500/30 hover:bg-red-600/30': {},
+        },
+        '.btn-ghost': {
+          '@apply btn text-cyan-400 hover:bg-slate-800/50 hover:text-cyan-300': {},
+        },
+        
+        // Text & Typography
+        '.text-title': {
+          '@apply text-3xl font-bold text-cyan-300': {},
+        },
+        '.text-subtitle': {
+          '@apply text-lg font-semibold text-cyan-300': {},
+        },
+        '.text-label': {
+          '@apply text-sm font-medium text-cyan-400': {},
+        },
+        '.text-muted': {
+          '@apply text-slate-400': {},
+        },
+        '.text-highlight': {
+          '@apply text-cyan-300': {},
+        },
+        
+        // Badges & Pills
+        '.badge': {
+          '@apply inline-block px-3 py-1 rounded-full text-xs font-semibold border': {},
+        },
+        '.badge-primary': {
+          '@apply badge bg-cyan-600/20 text-cyan-300 border-cyan-500/40': {},
+        },
+        '.badge-success': {
+          '@apply badge bg-emerald-600/20 text-emerald-300 border-emerald-500/40': {},
+        },
+        '.badge-danger': {
+          '@apply badge bg-red-600/20 text-red-300 border-red-500/40': {},
+        },
+        '.badge-warning': {
+          '@apply badge bg-yellow-600/20 text-yellow-300 border-yellow-500/40': {},
+        },
+        
+        // Dividers & Separators
+        '.divider': {
+          '@apply border-t-2 border-cyan-500/20': {},
+        },
+        
+        // Page & Layout
+        '.page-container': {
+          '@apply min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6': {},
+        },
+        '.section': {
+          '@apply space-y-4': {},
+        },
+        '.section-lg': {
+          '@apply space-y-6': {},
+        },
+        
+        // Links & Navigation
+        '.link-primary': {
+          '@apply text-cyan-400 hover:text-cyan-300 transition-colors': {},
+        },
+        '.link-muted': {
+          '@apply text-slate-400 hover:text-slate-300 transition-colors': {},
+        },
+      });
+    }
+  ],
 }
 

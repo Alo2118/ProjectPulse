@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FolderOpen, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, FolderOpen, CheckCircle, Clock, AlertCircle, Briefcase } from 'lucide-react';
 import { projectsApi, tasksApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { canCreate } from '../utils/permissions';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectModal from '../components/ProjectModal';
 import { formatTime } from '../utils/helpers';
+import { GamingLayout, GamingHeader, GamingCard, GamingLoader, GamingKPICard, GamingKPIGrid, Button } from '../components/ui';
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -83,213 +84,190 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Compatto */}
-        <div className="flex items-center justify-between mb-4 animate-slide-right">
-          <div>
-            <h1 className="page-title flex items-center gap-2">
-              🔬 Progetti R&D
-            </h1>
-            <p className="text-slate-600 mt-0.5 text-xs">
-              Dispositivi ortopedici, protesi e strumenti chirurgici
-            </p>
-          </div>
-
-          <button
+    <GamingLayout>
+      <GamingHeader
+        title="Progetti R&D"
+        subtitle="Dispositivi ortopedici, protesi e strumenti chirurgici"
+        icon={Briefcase}
+        actions={
+          <Button
             onClick={handleCreate}
             disabled={!canCreate(user, 'project')}
-            className="btn-primary flex items-center gap-1.5 text-sm py-2 px-3 disabled:opacity-50 disabled:cursor-not-allowed hover-scale"
+            className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-xl shadow-primary-600/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-bold"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Nuovo Progetto</span>
             <span className="inline sm:hidden">Nuovo</span>
+          </Button>
+        }
+      />
+
+      {/* Stats */}
+      <GamingKPIGrid columns={4} className="mb-6">
+        <GamingKPICard 
+          title="Progetti" 
+          value={projects.length} 
+          icon={FolderOpen} 
+          gradient="from-blue-600 to-cyan-700" 
+          shadowColor="blue" 
+        />
+        <GamingKPICard 
+          title="Completati" 
+          value={Object.values(projectStats).reduce((sum, s) => sum + s.completed, 0)} 
+          icon={CheckCircle} 
+          gradient="from-emerald-600 to-green-700" 
+          shadowColor="emerald" 
+        />
+        <GamingKPICard 
+          title="In Corso" 
+          value={Object.values(projectStats).reduce((sum, s) => sum + s.in_progress, 0)} 
+          icon={Clock} 
+          gradient="from-purple-600 to-pink-700" 
+          shadowColor="purple" 
+        />
+        <GamingKPICard 
+          title="Bloccati" 
+          value={Object.values(projectStats).reduce((sum, s) => sum + s.blocked, 0)} 
+          icon={AlertCircle} 
+          gradient="from-red-600 to-rose-700" 
+          shadowColor="red" 
+        />
+      </GamingKPIGrid>
+
+      {/* Projects Grid */}
+      {loading ? (
+        <GamingLoader message="Caricamento progetti..." />
+      ) : projects.length === 0 ? (
+        <GamingCard className="text-center py-12">
+          <div className="text-6xl mb-4">🔬</div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Nessun progetto R&D</h3>
+          <p className="text-slate-600 mb-6">
+            Inizia creando un progetto per lo sviluppo di dispositivi medici
+          </p>
+          <button 
+            onClick={handleCreate} 
+            disabled={!canCreate(user, 'project')}
+            className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg font-bold shadow-xl shadow-primary-600/50 hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Crea il primo progetto
           </button>
-        </div>
+        </GamingCard>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map(project => {
+            const stats = projectStats[project.id] || {};
+            const completionRate = getCompletionRate(project.id);
 
-        {/* Stats Compatti con Emoji */}
-        <div className="stats-grid-compact stagger-animation">
-          <div className="card-stat from-primary-50 to-primary-100 border-primary-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-blue-700 mb-1">📁 Progetti</div>
-                <div className="text-2xl font-bold text-blue-900">{projects.length}</div>
-              </div>
-              <div className="text-3xl">🗂️</div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200 hover-lift">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-primary-700 mb-1">✓ Completati</div>
-                <div className="text-2xl font-bold text-primary-900">
-                  {Object.values(projectStats).reduce((sum, s) => sum + s.completed, 0)}
-                </div>
-              </div>
-              <div className="text-3xl">✅</div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg p-3 border border-primary-300 hover-lift">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-primary-800 mb-1">⚡ In Corso</div>
-                <div className="text-2xl font-bold text-primary-900">
-                  {Object.values(projectStats).reduce((sum, s) => sum + s.in_progress, 0)}
-                </div>
-              </div>
-              <div className="text-3xl">🚀</div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 hover-lift">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-red-700 mb-1">🚫 Bloccati</div>
-                <div className="text-2xl font-bold text-red-900">
-                  {Object.values(projectStats).reduce((sum, s) => sum + s.blocked, 0)}
-                </div>
-              </div>
-              <div className="text-3xl">⛔</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Projects Grid */}
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-slate-500 mt-3 text-sm">Caricamento...</p>
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="text-center py-12 animate-fade-in">
-            <div className="text-6xl mb-4">🔬</div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">Nessun progetto R&D</h3>
-            <p className="text-slate-500 mb-4 text-sm">
-              Inizia creando un progetto per lo sviluppo di dispositivi medici
-            </p>
-            <button 
-              onClick={handleCreate} 
-              disabled={!canCreate(user, 'project')}
-              className="btn-primary hover-scale shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Crea il primo progetto
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 stagger-animation">
-            {projects.map(project => {
-              const stats = projectStats[project.id] || {};
-              const completionRate = getCompletionRate(project.id);
-
-              return (
-                <div
-                  key={project.id}
-                  className="card hover-lift cursor-pointer group transition-all"
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-base text-slate-900 group-hover:text-teal-600 transition-colors flex items-center gap-2">
-                        <span>📐</span>
-                        {project.name}
-                      </h3>
-                      {project.description && (
-                        <p className="text-xs text-slate-600 mt-1 line-clamp-2">
-                          {project.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Progress Bar Compatto */}
-                  {stats.total > 0 && (
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-slate-600">Progresso</span>
-                        <span className="font-semibold text-slate-900">{completionRate}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-1.5">
-                        <div
-                          className="bg-gradient-to-r from-primary-600 to-primary-700 h-1.5 rounded-full transition-all"
-                          style={{ width: `${completionRate}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Stats Compatti */}
-                  <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100">
-                    <div className="text-center">
-                      <div className="text-sm">📊</div>
-                      <div className="text-lg font-bold text-slate-900">
-                        {stats.total || 0}
-                      </div>
-                      <div className="text-xs text-slate-500">Tot</div>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="text-sm">✅</div>
-                      <div className="text-lg font-bold text-primary-700">
-                        {stats.completed || 0}
-                      </div>
-                      <div className="text-xs text-slate-500">OK</div>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="text-sm">🚀</div>
-                      <div className="text-lg font-bold text-primary-600">
-                        {stats.in_progress || 0}
-                      </div>
-                      <div className="text-xs text-slate-500">WIP</div>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="text-sm">🚫</div>
-                      <div className="text-lg font-bold text-slate-700">
-                        {stats.blocked || 0}
-                      </div>
-                      <div className="text-xs text-slate-500">Block</div>
-                    </div>
-
-                    {stats.total_time > 0 && (
-                      <div className="col-span-4 mt-2 pt-2 border-t border-slate-100">
-                        <div className="flex items-center justify-center gap-1 text-xs text-slate-600">
-                          <span>⏱️</span>
-                          <span className="font-medium">{formatTime(stats.total_time)}</span>
-                        </div>
-                      </div>
+            return (
+              <GamingCard
+                key={project.id}
+                className="cursor-pointer group hover:border-primary-500/50 transition-all duration-300"
+                onClick={(e) => {
+                  console.log('Card clicked!', project.id);
+                  navigate(`/projects/${project.id}`);
+                }}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-2">
+                      <span>📐</span>
+                      {project.name}
+                    </h3>
+                    {project.description && (
+                      <p className="text-sm text-slate-600 line-clamp-2">
+                        {project.description}
+                      </p>
                     )}
                   </div>
+                </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(project);
-                      }}
-                      className="btn-secondary text-sm flex-1"
-                    >
-                      Modifica
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleArchive(project);
-                      }}
-                      className="btn-secondary text-sm"
-                    >
-                      Archivia
-                    </button>
+                {/* Progress Bar */}
+                {stats.total > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-primary-600 font-bold">Progresso</span>
+                      <span className="font-bold text-slate-900">{completionRate}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden shadow-inner border-2 border-primary-300">
+                      <div
+                        className="bg-gradient-to-r from-primary-600 to-primary-500 h-4 rounded-full transition-all duration-1000 relative shadow-sm"
+                        style={{ width: `${completionRate}%` }}
+                      >
+                        <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  <div className="text-center p-3 bg-white rounded-lg border-2 border-slate-200">
+                    <div className="text-xl mb-1">📊</div>
+                    <div className="text-xl font-bold text-slate-900">
+                      {stats.total || 0}
+                    </div>
+                    <div className="text-xs text-slate-600 font-semibold">Tot</div>
+                  </div>
+
+                  <div className="text-center p-3 bg-white rounded-lg border-2 border-emerald-200">
+                    <div className="text-xl mb-1">✅</div>
+                    <div className="text-xl font-bold text-emerald-700">
+                      {stats.completed || 0}
+                    </div>
+                    <div className="text-xs text-emerald-600 font-semibold">OK</div>
+                  </div>
+
+                  <div className="text-center p-3 bg-white rounded-lg border-2 border-blue-200">
+                    <div className="text-xl mb-1">🚀</div>
+                    <div className="text-xl font-bold text-blue-700">
+                      {stats.in_progress || 0}
+                    </div>
+                    <div className="text-xs text-blue-600 font-semibold">WIP</div>
+                  </div>
+
+                  <div className="text-center p-3 bg-white rounded-lg border-2 border-red-200">
+                    <div className="text-xl mb-1">🚫</div>
+                    <div className="text-xl font-bold text-red-700">
+                      {stats.blocked || 0}
+                    </div>
+                    <div className="text-xs text-red-600 font-semibold">Block</div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                {/* Time Badge */}
+                {stats.total_time > 0 && (
+                  <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200 mb-4 shadow-sm">
+                    <span className="text-lg">⏱️</span>
+                    <span className="text-sm font-bold text-blue-700">{formatTime(stats.total_time)}</span>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 border-t-2 border-slate-200">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(project);
+                    }}
+                    className="flex-1 px-4 py-2 bg-white border-2 border-primary-300 hover:bg-primary-50 hover:border-primary-400 text-primary-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
+                  >
+                    Modifica
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleArchive(project);
+                    }}
+                    className="px-4 py-2 bg-white border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 text-slate-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
+                  >
+                    Archivia
+                  </button>
+                </div>
+              </GamingCard>
+            );
+          })}
+        </div>
+      )}
 
       {/* Create Project Modal */}
       {showCreateModal && (
@@ -307,6 +285,6 @@ export default function ProjectsPage() {
           onSave={loadProjects}
         />
       )}
-    </div>
+    </GamingLayout>
   );
 }

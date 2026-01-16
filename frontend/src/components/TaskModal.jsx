@@ -197,7 +197,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
       <div 
-        className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transform transition-all animate-slide-up border border-slate-200"
+        className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transform transition-all animate-slide-up border-2 border-slate-200 shadow-2xl"
         style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}
       >
         <div className="sticky top-0 bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4 flex items-center justify-between z-10 shadow-lg">
@@ -462,7 +462,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
           {/* Time spent */}
           {task.time_spent > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
               <Clock className="w-5 h-5 text-blue-600" />
               <div>
                 <div className="text-sm text-blue-600 font-medium">Tempo lavorato</div>
@@ -487,10 +487,10 @@ export default function TaskModal({ task, onClose, onUpdate }) {
                 comments.map((comment) => (
                   <div
                     key={comment.id}
-                    className={`p-3 rounded-lg ${
+                    className={`p-3 rounded-xl shadow-sm ${
                       comment.is_from_direction
-                        ? 'bg-yellow-50 border border-yellow-200'
-                        : 'bg-gray-50 border border-gray-200'
+                        ? 'bg-yellow-50 border-2 border-yellow-200'
+                        : 'bg-gray-50 border-2 border-gray-200'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-1">
@@ -536,7 +536,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           />
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 border-t-2 border-slate-200">
             {!isDirezione && (
               <>
                 <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">

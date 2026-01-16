@@ -72,8 +72,8 @@ const TaskTreeNode = ({
     <div>
       <div
         onClick={handleClick}
-        className="p-2 rounded-lg mb-2 cursor-pointer transition-all bg-white shadow-sm hover:shadow-md border-l-4"
-        style={{ borderLeftColor: borderColor }}
+        className="card mb-2 cursor-pointer transition-all p-3 rounded-xl flex items-start gap-3"
+        style={{ borderLeftColor: borderColor, borderLeftWidth: '8px' }}
       >
         <div className="flex items-start justify-between gap-1 mb-1">
           <div className="flex-1 min-w-0">

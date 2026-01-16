@@ -233,16 +233,16 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
   const todayOffset = ((new Date() - chartData.startDate) / (1000 * 60 * 60 * 24) / chartData.totalDays) * 100;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 overflow-auto">
+    <div className="bg-white border-2 border-slate-200 rounded-xl shadow-md hover:shadow-xl transition-all p-6 overflow-auto">
       {/* Critical Path Info */}
       {chartData.criticalCount > 0 && (
-        <div className="alert-warning flex items-start gap-3">
-          <Zap className="w-5 h-5 text-orange-500 fill-orange-500 flex-shrink-0 mt-0.5" />
+        <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-6 flex items-start gap-3">
+          <Zap className="w-5 h-5 text-orange-600 fill-orange-600 flex-shrink-0 mt-0.5" />
           <div>
-            <div className="font-semibold text-orange-900 text-sm">
+            <div className="font-bold text-orange-900 text-sm">
               Percorso Critico Identificato
             </div>
-            <div className="text-xs text-orange-700 mt-1">
+            <div className="text-xs text-orange-700 font-medium mt-1">
               {chartData.criticalCount} {chartData.criticalCount === 1 ? 'task è' : 'task sono'} sul percorso critico.
               Qualsiasi ritardo in {chartData.criticalCount === 1 ? 'questo task' : 'questi task'} impatterà la data di consegna del progetto.
             </div>
@@ -252,11 +252,11 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
 
       {/* Timeline Header */}
       <div className="mb-6 relative" style={{ minWidth: '800px' }}>
-        <div className="flex border-b border-gray-300">
+        <div className="flex border-b-2 border-slate-300">
           {monthHeaders.map((month, i) => (
             <div
               key={i}
-              className="text-center font-semibold text-sm text-gray-700 py-2 border-r border-gray-200"
+              className="text-center font-bold text-sm text-slate-900 py-2 border-r-2 border-slate-200"
               style={{
                 marginLeft: `${month.startOffset}%`,
                 width: `${month.width}%`
@@ -290,13 +290,13 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
               <div className="w-48 pr-4 flex-shrink-0">
                 <button
                   onClick={() => onMilestoneClick?.(milestone)}
-                  className="text-left hover:text-primary-600 transition-colors"
+                  className="text-left hover:text-blue-600 transition-colors"
                 >
-                  <div className="font-semibold text-sm flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-primary-600" />
+                  <div className="font-bold text-sm flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
                     {milestone.name}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-slate-600 font-medium">
                     {milestone.start.toLocaleDateString('it-IT')} - {milestone.end.toLocaleDateString('it-IT')}
                   </div>
                 </button>
@@ -328,14 +328,14 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                   <div className="w-40 pr-4 flex-shrink-0">
                     <button
                       onClick={() => onTaskClick?.(task)}
-                      className="text-left hover:text-primary-600 transition-colors"
+                      className="text-left hover:text-blue-600 transition-colors"
                     >
-                      <div className="text-xs font-medium truncate flex items-center gap-1">
-                        {task.isCritical && <Zap className="w-3 h-3 text-orange-500 fill-orange-500" />}
+                      <div className="text-xs font-semibold truncate flex items-center gap-1">
+                        {task.isCritical && <Zap className="w-3 h-3 text-orange-600 fill-orange-600" />}
                         {task.title}
                       </div>
                       {task.hours > 0 && (
-                        <div className="text-xs text-gray-500">{task.hours}h</div>
+                        <div className="text-xs text-slate-600 font-medium">{task.hours}h</div>
                       )}
                     </button>
                   </div>
@@ -369,8 +369,8 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
 
         {/* Tasks without milestone */}
         {chartData.tasks.filter(task => !task.milestone_id).length > 0 && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="font-semibold text-sm text-gray-700 mb-3 flex items-center gap-2">
+          <div className="mt-6 pt-6 border-t-2 border-slate-200">
+            <div className="font-bold text-sm text-slate-900 mb-3 flex items-center gap-2">
               <Circle className="w-4 h-4" />
               Attività senza Milestone
             </div>
@@ -381,13 +381,13 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
                   <div className="w-48 pr-4 flex-shrink-0">
                     <button
                       onClick={() => onTaskClick?.(task)}
-                      className="text-left hover:text-primary-600 transition-colors"
+                      className="text-left hover:text-blue-600 transition-colors"
                     >
-                      <div className="text-xs font-medium truncate flex items-center gap-1">
-                        {task.isCritical && <Zap className="w-3 h-3 text-orange-500 fill-orange-500" />}
+                      <div className="text-xs font-semibold truncate flex items-center gap-1">
+                        {task.isCritical && <Zap className="w-3 h-3 text-orange-600 fill-orange-600" />}
                         {task.title}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-600 font-medium">
                         {task.project_name || 'Nessun progetto'}
                         {task.hours > 0 && ` • ${task.hours}h`}
                       </div>
@@ -422,17 +422,17 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
         )}
 
         {chartData.milestones.length === 0 && chartData.tasks.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <p>Nessuna milestone o attività da visualizzare</p>
+          <div className="text-center py-12 text-slate-600">
+            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-400" />
+            <p className="font-semibold">Nessuna milestone o attività da visualizzare</p>
             <p className="text-sm mt-2">Crea milestone e attività con date per vederle nel Gantt</p>
           </div>
         )}
       </div>
 
       {/* Legend */}
-      <div className="mt-8 pt-6 border-t border-gray-200">
-        <div className="flex flex-wrap gap-4 text-xs mb-3">
+      <div className="mt-8 pt-6 border-t-2 border-slate-200">
+        <div className="flex flex-wrap gap-4 text-xs font-semibold mb-3">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-gray-400 rounded"></div>
             <span>Da fare</span>
@@ -454,11 +454,11 @@ export default function GanttChart({ milestones, tasks, onMilestoneClick, onTask
             <span>Completato</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <div className="w-4 h-4 bg-blue-500 rounded ring-2 ring-orange-500"></div>
-          <Zap className="w-3 h-3 text-orange-500 fill-orange-500" />
-          <span className="font-medium text-orange-700">Percorso Critico</span>
-          <span className="text-gray-500">- Task che impattano direttamente la data di consegna</span>
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          <div className="w-4 h-4 bg-blue-500 rounded ring-2 ring-orange-600"></div>
+          <Zap className="w-3 h-3 text-orange-600 fill-orange-600" />
+          <span className="font-bold text-orange-800">Percorso Critico</span>
+          <span className="text-slate-600">- Task che impattano direttamente la data di consegna</span>
         </div>
       </div>
     </div>
