@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../hooks/useTheme';
+import theme, { cn } from '../styles/theme';
 import { useToast } from '../context/ToastContext';
 import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -305,7 +306,7 @@ const InboxPage = () => {
     return (
       <GamingLayout>
         <GamingHeader title="Inbox" subtitle="Richieste Ufficio Tecnico" icon={Inbox} />
-        <GamingCard className="py-12 text-center">
+        <GamingCard className={cn(theme.spacing.py.xl, "text-center")}>
           <div className={`text-lg ${colors.text.tertiary}`}>Caricamento...</div>
         </GamingCard>
       </GamingLayout>
@@ -321,7 +322,11 @@ const InboxPage = () => {
         actions={
           <Button
             onClick={() => setShowNewRequestModal(true)}
-            className={`${gradients.primary} font-bold text-white shadow-xl shadow-primary-600/50 transition-all hover:from-primary-700 hover:to-primary-800`}
+            className={cn(
+              gradients.primary,
+              theme.colors.text.primary,
+              'font-bold shadow-xl shadow-primary-600/50 transition-all hover:from-primary-700 hover:to-primary-800'
+            )}
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Nuova</span>
@@ -331,7 +336,7 @@ const InboxPage = () => {
 
       {/* Stats */}
       {stats && stats.byStatus && (
-        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className={cn(theme.spacing.mb.lg, "grid", "grid-cols-2", theme.spacing.gap.md, "md:grid-cols-4")}>
           {stats.byStatus.map((stat) => {
             const emojis = {
               pending: '⏳',
@@ -343,10 +348,10 @@ const InboxPage = () => {
             const color = getRequestStatusColors(stat.status);
             return (
               <GamingCard key={stat.status} className={`${color.bg} border ${color.border}`}>
-                <div className="mb-2 text-2xl">{emojis[stat.status] || '📋'}</div>
+                <div className={cn(theme.spacing.mb.xs, "text-2xl")}>{emojis[stat.status] || '📋'}</div>
                 <div className={`text-2xl font-bold ${color.text}`}>{stat.count}</div>
                 {stat.avg_resolution_hours && (
-                  <div className={`text-xs ${color.label} mt-1 font-semibold`}>
+                  <div className={cn('text-xs font-semibold', theme.spacing.mt.xs, color.label)}>
                     ⏱️ {Math.round(stat.avg_resolution_hours)}h media
                   </div>
                 )}
@@ -357,14 +362,14 @@ const InboxPage = () => {
       )}
 
       {/* Filters */}
-      <GamingCard className="mb-6">
-        <div className="mb-4 flex items-center gap-3">
-          <Filter className="h-5 w-5 text-cyan-400" />
-          <span className="font-bold text-cyan-300">Filtri</span>
+      <GamingCard className={cn(theme.spacing.mb.lg)}>
+        <div className={cn(theme.spacing.mb.md, "flex", "items-center", theme.spacing.gap.sm)}>
+          <Filter className={cn("h-5", "w-5", theme.colors.text.accentBright)} />
+          <span className={cn("font-bold", theme.colors.text.accent)}>Filtri</span>
         </div>
-        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className={cn(theme.spacing.mb.md, "grid", "grid-cols-1", theme.spacing.gap.sm, "md:grid-cols-4")}>
           <div>
-            <label className="text-label mb-1">Stato</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Stato</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -380,7 +385,7 @@ const InboxPage = () => {
             </select>
           </div>
           <div>
-            <label className="text-label mb-1">Priorità</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Priorità</label>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
@@ -394,7 +399,7 @@ const InboxPage = () => {
             </select>
           </div>
           <div>
-            <label className="text-label mb-1">Tipo</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Tipo</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -411,7 +416,7 @@ const InboxPage = () => {
             </select>
           </div>
           <div>
-            <label className="text-label mb-1">Ricerca</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Ricerca</label>
             <div className="relative">
               <Search className={`absolute left-2 top-2.5 h-5 w-5 ${colors.text.tertiary}`} />
               <input
@@ -424,13 +429,19 @@ const InboxPage = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={cn("flex", "items-center", theme.spacing.gap.sm)}>
           <input
             type="checkbox"
             id="showArchived"
             checked={showArchived}
             onChange={(e) => setShowArchived(e.target.checked)}
-            className={`rounded border-2 border-cyan-500/30 ${colors.bg.tertiary} ${colors.text.accent} focus:ring-cyan-500`}
+            className={cn(
+              'rounded border-2',
+              theme.colors.border.accentAlpha,
+              colors.bg.tertiary,
+              colors.text.accent,
+              'focus:ring-cyan-500'
+            )}
           />
           <label
             htmlFor="showArchived"
@@ -444,9 +455,9 @@ const InboxPage = () => {
       {/* Requests List */}
       <div className="space-y-4">
         {requests.length === 0 ? (
-          <GamingCard className="py-12 text-center">
-            <div className="mb-4 text-6xl">📭</div>
-            <h3 className="mb-2 text-xl font-bold text-cyan-300">Nessuna richiesta trovata</h3>
+          <GamingCard className={cn(theme.spacing.py.xl, "text-center")}>
+            <div className={cn(theme.spacing.mb.md, "text-6xl")}>📭</div>
+            <h3 className={cn(theme.spacing.mb.xs, "text-xl", "font-bold", theme.colors.text.accent)}>Nessuna richiesta trovata</h3>
             <p className={colors.text.tertiary}>Tutte le richieste sono state elaborate</p>
           </GamingCard>
         ) : (
@@ -492,10 +503,10 @@ const InboxPage = () => {
                   key={request.id}
                   className={`${color.bg} border-2 ${color.border} transition-all hover:shadow-lg`}
                 >
-                  <div className="mb-4 flex items-start justify-between">
+                  <div className={cn(theme.spacing.mb.md, "flex", "items-start", "justify-between")}>
                     <div className="flex-1">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold text-white">{request.title}</h3>
+                      <div className={cn(theme.spacing.mb.xs, "flex", "flex-wrap", "items-center", theme.spacing.gap.sm)}>
+                        <h3 className={cn("text-lg", "font-bold", theme.colors.text.primary)}>{request.title}</h3>
                         <span className={`rounded px-2 py-1 text-xs font-bold ${color.badge}`}>
                           {request.status.toUpperCase()}
                         </span>
@@ -505,8 +516,8 @@ const InboxPage = () => {
                           {request.priority.toUpperCase()}
                         </span>
                       </div>
-                      <p className="mb-4 font-medium text-slate-200">{request.description}</p>
-                      <div className="mb-2 flex flex-wrap gap-4 text-sm text-slate-300">
+                      <p className={cn(theme.spacing.mb.md, "font-medium", theme.colors.text.secondary)}>{request.description}</p>
+                      <div className={cn(theme.spacing.mb.xs, "flex", "flex-wrap", theme.spacing.gap.md, "text-sm", theme.colors.text.tertiary)}>
                         <span className="font-semibold">
                           <strong>Tipo:</strong> {getTypeName(request.type)}
                         </span>
@@ -534,26 +545,26 @@ const InboxPage = () => {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs font-medium text-slate-400">
+                      <div className={cn("text-xs", "font-medium", theme.colors.text.muted)}>
                         Ricevuto: {formatDateTime(request.received_at)} | Creato da:{' '}
                         {request.created_by_name}
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="ml-4 flex flex-col gap-2">
+                    <div className={cn("ml-4", "flex", "flex-col", theme.spacing.gap.sm)}>
                       {(request.status === 'new' || request.status === 'reviewing') && (
                         <>
                           <button
                             onClick={() => handleReview(request, 'approved')}
-                            className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-md"
+                            className={cn("flex", "items-center", "gap-1", "rounded-lg", "bg-green-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-green-700", "hover:shadow-md")}
                           >
                             <CheckCircle className="h-4 w-4" />
                             Approva
                           </button>
                           <button
                             onClick={() => handleReview(request, 'rejected')}
-                            className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md"
+                            className={cn("flex", "items-center", "gap-1", "rounded-lg", "bg-red-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-red-700", "hover:shadow-md")}
                           >
                             <X className="h-4 w-4" />
                             Rifiuta
@@ -567,7 +578,7 @@ const InboxPage = () => {
                               setSelectedRequest(request);
                               setShowConvertTaskModal(true);
                             }}
-                            className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md"
+                            className={cn("flex", "items-center", "gap-1", "rounded-lg", "bg-primary-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-primary-700", "hover:shadow-md")}
                           >
                             <ListTodo className="h-4 w-4" />→ Task
                           </button>
@@ -576,7 +587,7 @@ const InboxPage = () => {
                               setSelectedRequest(request);
                               setShowConvertProjectModal(true);
                             }}
-                            className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md"
+                            className={cn("flex", "items-center", "gap-1", "rounded-lg", "bg-primary-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-primary-700", "hover:shadow-md")}
                           >
                             <FolderPlus className="h-4 w-4" />→ Progetto
                           </button>
@@ -585,7 +596,7 @@ const InboxPage = () => {
                       {!['converted_to_task', 'converted_to_project'].includes(request.status) && (
                         <button
                           onClick={() => handleEdit(request)}
-                          className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-cyan-700 hover:shadow-md"
+                          className={cn("flex", "items-center", "gap-1", "rounded-lg", "bg-cyan-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-cyan-700", "hover:shadow-md")}
                         >
                           <Edit className="h-4 w-4" />
                           Modifica
@@ -594,7 +605,7 @@ const InboxPage = () => {
                       {request.status !== 'new' && request.status !== 'archived' && (
                         <button
                           onClick={() => handleArchive(request)}
-                          className="rounded-lg bg-slate-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-slate-700 hover:shadow-md"
+                          className={cn("rounded-lg", "bg-slate-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-slate-700", "hover:shadow-md")}
                         >
                           Archivia
                         </button>
@@ -602,7 +613,7 @@ const InboxPage = () => {
                       {request.status === 'archived' && (
                         <button
                           onClick={() => handleUnarchive(request)}
-                          className="rounded-lg bg-slate-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-slate-700 hover:shadow-md"
+                          className={cn("rounded-lg", "bg-slate-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-slate-700", "hover:shadow-md")}
                         >
                           Estrai
                         </button>
@@ -610,7 +621,7 @@ const InboxPage = () => {
                       {user?.role === 'amministratore' && (
                         <button
                           onClick={() => handleDelete(request.id)}
-                          className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md"
+                          className={cn("rounded-lg", "bg-red-600", "px-3", "py-2", "text-sm", "font-bold", theme.colors.text.primary, "shadow-sm", "transition-all", "hover:bg-red-700", "hover:shadow-md")}
                         >
                           Elimina
                         </button>
@@ -625,13 +636,13 @@ const InboxPage = () => {
 
       {/* New Request Modal */}
       {showNewRequestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <GamingCard className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
-              <h2 className="text-2xl font-bold text-cyan-300">Nuova Richiesta</h2>
+        <div className={cn("fixed", "inset-0", "z-50", "flex", "items-center", "justify-center", "bg-black/50", theme.spacing.p.md, "backdrop-blur-sm")}>
+          <GamingCard className={cn("max-h-[90vh]", "w-full", "max-w-2xl", "overflow-y-auto", theme.spacing.p.lg, "shadow-2xl")}>
+            <div className={cn(theme.spacing.mb.lg, "flex", "items-center", "justify-between", "border-b-2", theme.colors.border.accentAlpha, theme.spacing.pb.md)}>
+              <h2 className={cn("text-2xl", "font-bold", theme.colors.text.accent)}>Nuova Richiesta</h2>
               <button
                 onClick={() => setShowNewRequestModal(false)}
-                className="text-slate-400 transition-colors hover:text-cyan-300"
+                className={cn(theme.colors.text.muted, "transition-colors", "hover:text-cyan-300")}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -640,7 +651,7 @@ const InboxPage = () => {
             <form onSubmit={handleCreateRequest}>
               <div className="space-y-4">
                 <div>
-                  <label className="text-label mb-2">Titolo *</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Titolo *</label>
                   <input
                     type="text"
                     value={newRequestData.title}
@@ -652,7 +663,7 @@ const InboxPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-label mb-2">Descrizione *</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Descrizione *</label>
                   <textarea
                     value={newRequestData.description}
                     onChange={(e) =>
@@ -663,9 +674,9 @@ const InboxPage = () => {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn("grid", "grid-cols-2", theme.spacing.gap.md)}>
                   <div>
-                    <label className="text-label mb-1">Tipo *</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Tipo *</label>
                     <select
                       value={newRequestData.type}
                       onChange={(e) =>
@@ -684,7 +695,7 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-label mb-1">Provenienza *</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Provenienza *</label>
                     <select
                       value={newRequestData.source}
                       onChange={(e) =>
@@ -702,9 +713,9 @@ const InboxPage = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn("grid", "grid-cols-2", theme.spacing.gap.md)}>
                   <div>
-                    <label className="text-label mb-1">Priorità</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Priorità</label>
                     <select
                       value={newRequestData.priority}
                       onChange={(e) =>
@@ -719,7 +730,7 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-label mb-1">Contatto Fonte</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Contatto Fonte</label>
                     <input
                       type="text"
                       value={newRequestData.source_contact}
@@ -731,9 +742,9 @@ const InboxPage = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn("grid", "grid-cols-2", theme.spacing.gap.md)}>
                   <div>
-                    <label className="text-label mb-1">Progetto Collegato</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Progetto Collegato</label>
                     <select
                       value={newRequestData.project_id}
                       onChange={(e) =>
@@ -750,7 +761,7 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-label mb-1">Assegnato a</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Assegnato a</label>
                     <select
                       value={newRequestData.assigned_to}
                       onChange={(e) =>
@@ -768,7 +779,7 @@ const InboxPage = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-label mb-1">Scadenza</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Scadenza</label>
                   <input
                     type="date"
                     value={newRequestData.due_date}
@@ -779,17 +790,17 @@ const InboxPage = () => {
                   />
                 </div>
               </div>
-              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
+              <div className={cn("mt-6", "flex", theme.spacing.gap.sm, "border-t-2", theme.colors.border.accentAlpha, "pt-4")}>
                 <button
                   type="button"
                   onClick={() => setShowNewRequestModal(false)}
-                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
+                  className={cn("flex-1", "rounded-lg", "border-2", theme.colors.border.accentAlpha, theme.colors.bg.tertiary, "px-4", "py-2", "font-bold", theme.colors.text.secondary, "shadow-sm", "transition-all", "hover:bg-slate-600", "hover:shadow-md")}
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
+                  className={cn("flex-1", "rounded-lg", "bg-cyan-600", "px-4", "py-2", "font-bold", theme.colors.text.primary, "shadow-lg", "shadow-cyan-600/50", "transition-all", "hover:bg-cyan-700", "hover:shadow-xl")}
                 >
                   Crea Richiesta
                 </button>
@@ -801,16 +812,16 @@ const InboxPage = () => {
 
       {/* Edit Request Modal */}
       {showEditRequestModal && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <GamingCard className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
-              <h2 className="text-2xl font-bold text-cyan-300">Modifica Richiesta</h2>
+        <div className={cn("fixed", "inset-0", "z-50", "flex", "items-center", "justify-center", "bg-black/50", theme.spacing.p.md, "backdrop-blur-sm")}>
+          <GamingCard className={cn("max-h-[90vh]", "w-full", "max-w-2xl", "overflow-y-auto", theme.spacing.p.lg, "shadow-2xl")}>
+            <div className={cn(theme.spacing.mb.lg, "flex", "items-center", "justify-between", "border-b-2", theme.colors.border.accentAlpha, theme.spacing.pb.md)}>
+              <h2 className={cn("text-2xl", "font-bold", theme.colors.text.accent)}>Modifica Richiesta</h2>
               <button
                 onClick={() => {
                   setShowEditRequestModal(false);
                   setSelectedRequest(null);
                 }}
-                className="text-slate-400 transition-colors hover:text-cyan-300"
+                className={cn(theme.colors.text.muted, "transition-colors", "hover:text-cyan-300")}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -819,7 +830,7 @@ const InboxPage = () => {
             <form onSubmit={handleUpdateRequest}>
               <div className="space-y-4">
                 <div>
-                  <label className="text-label mb-1">Titolo *</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Titolo *</label>
                   <input
                     type="text"
                     value={editRequestData.title}
@@ -831,7 +842,7 @@ const InboxPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-label mb-1">Descrizione *</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Descrizione *</label>
                   <textarea
                     value={editRequestData.description}
                     onChange={(e) =>
@@ -842,9 +853,9 @@ const InboxPage = () => {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn("grid", "grid-cols-2", theme.spacing.gap.md)}>
                   <div>
-                    <label className="text-label mb-1">Tipo *</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Tipo *</label>
                     <select
                       value={editRequestData.type}
                       onChange={(e) =>
@@ -863,7 +874,7 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-label mb-1">Provenienza *</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Provenienza *</label>
                     <select
                       value={editRequestData.source}
                       onChange={(e) =>
@@ -881,9 +892,9 @@ const InboxPage = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn("grid", "grid-cols-2", theme.spacing.gap.md)}>
                   <div>
-                    <label className="text-label mb-1">Priorità</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Priorità</label>
                     <select
                       value={editRequestData.priority}
                       onChange={(e) =>
@@ -898,7 +909,7 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-label mb-1">Contatto Fonte</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Contatto Fonte</label>
                     <input
                       type="text"
                       value={editRequestData.source_contact}
@@ -910,9 +921,9 @@ const InboxPage = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn("grid", "grid-cols-2", theme.spacing.gap.md)}>
                   <div>
-                    <label className="text-label mb-1">Progetto Collegato</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Progetto Collegato</label>
                     <select
                       value={editRequestData.project_id}
                       onChange={(e) =>
@@ -929,7 +940,7 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-label mb-1">Assegnato a</label>
+                    <label className={cn("text-label", theme.spacing.mb.xs)}>Assegnato a</label>
                     <select
                       value={editRequestData.assigned_to}
                       onChange={(e) =>
@@ -947,7 +958,7 @@ const InboxPage = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-label mb-1">Scadenza</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Scadenza</label>
                   <input
                     type="date"
                     value={editRequestData.due_date}
@@ -958,20 +969,20 @@ const InboxPage = () => {
                   />
                 </div>
               </div>
-              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
+              <div className={cn("mt-6", "flex", theme.spacing.gap.sm, "border-t-2", theme.colors.border.accentAlpha, "pt-4")}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditRequestModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
+                  className={cn("flex-1", "rounded-lg", "border-2", theme.colors.border.accentAlpha, theme.colors.bg.tertiary, "px-4", "py-2", "font-bold", theme.colors.text.secondary, "shadow-sm", "transition-all", "hover:bg-slate-600", "hover:shadow-md")}
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
+                  className={cn("flex-1", "rounded-lg", "bg-cyan-600", "px-4", "py-2", "font-bold", theme.colors.text.primary, "shadow-lg", "shadow-cyan-600/50", "transition-all", "hover:bg-cyan-700", "hover:shadow-xl")}
                 >
                   Salva Modifiche
                 </button>
@@ -983,16 +994,16 @@ const InboxPage = () => {
 
       {/* Convert to Task Modal */}
       {showConvertTaskModal && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <GamingCard className="w-full max-w-md p-6 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
-              <h2 className="text-2xl font-bold text-cyan-300">Converti in Task</h2>
+        <div className={cn("fixed", "inset-0", "z-50", "flex", "items-center", "justify-center", "bg-black/50", theme.spacing.p.md, "backdrop-blur-sm")}>
+          <GamingCard className={cn("w-full", "max-w-md", theme.spacing.p.lg, "shadow-2xl")}>
+            <div className={cn(theme.spacing.mb.lg, "flex", "items-center", "justify-between", "border-b-2", theme.colors.border.accentAlpha, theme.spacing.pb.md)}>
+              <h2 className={cn("text-2xl", "font-bold", theme.colors.text.accent)}>Converti in Task</h2>
               <button
                 onClick={() => {
                   setShowConvertTaskModal(false);
                   setSelectedRequest(null);
                 }}
-                className="text-slate-400 transition-colors hover:text-cyan-300"
+                className={cn(theme.colors.text.muted, "transition-colors", "hover:text-cyan-300")}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -1001,7 +1012,7 @@ const InboxPage = () => {
             <form onSubmit={handleConvertToTask}>
               <div className="space-y-4">
                 <div>
-                  <label className="text-label mb-1">Progetto</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Progetto</label>
                   <select
                     name="project_id"
                     className="input-dark w-full"
@@ -1016,7 +1027,7 @@ const InboxPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-label mb-1">Assegna a *</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Assegna a *</label>
                   <select
                     name="assigned_to"
                     className="input-dark w-full"
@@ -1034,7 +1045,7 @@ const InboxPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-label mb-1">Deadline</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Deadline</label>
                   <input
                     type="date"
                     name="deadline"
@@ -1043,20 +1054,20 @@ const InboxPage = () => {
                   />
                 </div>
               </div>
-              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
+              <div className={cn("mt-6", "flex", theme.spacing.gap.sm, "border-t-2", theme.colors.border.accentAlpha, "pt-4")}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowConvertTaskModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
+                  className={cn("flex-1", "rounded-lg", "border-2", theme.colors.border.accentAlpha, theme.colors.bg.tertiary, "px-4", "py-2", "font-bold", theme.colors.text.secondary, "shadow-sm", "transition-all", "hover:bg-slate-600", "hover:shadow-md")}
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
+                  className={cn("flex-1", "rounded-lg", "bg-cyan-600", "px-4", "py-2", "font-bold", theme.colors.text.primary, "shadow-lg", "shadow-cyan-600/50", "transition-all", "hover:bg-cyan-700", "hover:shadow-xl")}
                 >
                   Converti in Task
                 </button>
@@ -1068,16 +1079,16 @@ const InboxPage = () => {
 
       {/* Convert to Project Modal */}
       {showConvertProjectModal && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <GamingCard className="w-full max-w-md p-6 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
-              <h2 className="text-2xl font-bold text-cyan-300">Converti in Progetto</h2>
+        <div className={cn("fixed", "inset-0", "z-50", "flex", "items-center", "justify-center", "bg-black/50", theme.spacing.p.md, "backdrop-blur-sm")}>
+          <GamingCard className={cn("w-full", "max-w-md", theme.spacing.p.lg, "shadow-2xl")}>
+            <div className={cn(theme.spacing.mb.lg, "flex", "items-center", "justify-between", "border-b-2", theme.colors.border.accentAlpha, theme.spacing.pb.md)}>
+              <h2 className={cn("text-2xl", "font-bold", theme.colors.text.accent)}>Converti in Progetto</h2>
               <button
                 onClick={() => {
                   setShowConvertProjectModal(false);
                   setSelectedRequest(null);
                 }}
-                className="text-slate-400 transition-colors hover:text-cyan-300"
+                className={cn(theme.colors.text.muted, "transition-colors", "hover:text-cyan-300")}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -1086,7 +1097,7 @@ const InboxPage = () => {
             <form onSubmit={handleConvertToProject}>
               <div className="space-y-4">
                 <div>
-                  <label className="text-label mb-1">Nome Progetto *</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Nome Progetto *</label>
                   <input
                     type="text"
                     name="name"
@@ -1096,7 +1107,7 @@ const InboxPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-label mb-1">Descrizione *</label>
+                  <label className={cn("text-label", theme.spacing.mb.xs)}>Descrizione *</label>
                   <textarea
                     name="description"
                     defaultValue={selectedRequest?.description || ''}
@@ -1106,20 +1117,20 @@ const InboxPage = () => {
                   />
                 </div>
               </div>
-              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
+              <div className={cn("mt-6", "flex", theme.spacing.gap.sm, "border-t-2", theme.colors.border.accentAlpha, "pt-4")}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowConvertProjectModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
+                  className={cn("flex-1", "rounded-lg", "border-2", theme.colors.border.accentAlpha, theme.colors.bg.tertiary, "px-4", "py-2", "font-bold", theme.colors.text.secondary, "shadow-sm", "transition-all", "hover:bg-slate-600", "hover:shadow-md")}
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
+                  className={cn("flex-1", "rounded-lg", "bg-cyan-600", "px-4", "py-2", "font-bold", theme.colors.text.primary, "shadow-lg", "shadow-cyan-600/50", "transition-all", "hover:bg-cyan-700", "hover:shadow-xl")}
                 >
                   Converti in Progetto
                 </button>
