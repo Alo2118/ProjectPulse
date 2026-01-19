@@ -1,4 +1,4 @@
-# ProjectPulse
+# ProjectPulse 0.1
 
 App per la gestione di task e progetti con tracciamento tempo e comunicazione direzione-dipendenti.
 
