@@ -12,7 +12,7 @@ import {
   Timer as TimerIcon,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
-import { designTokens } from '../config/designTokens';
+import theme, { cn } from '../styles/theme';
 import { timeApi, projectsApi, tasksApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { formatTime, formatDate, formatDateTime } from '../utils/helpers';
@@ -200,8 +200,8 @@ export default function TimeTrackingPage() {
       {/* Time by Project */}
       {statistics?.by_project && statistics.by_project.length > 0 && (
         <GamingCard>
-          <div className="mb-6 flex items-center gap-3">
-            <BarChart3 className={`h-6 w-6 ${designTokens.colors.cyan.text}`} />
+          <div className={cn(theme.spacing.mb.lg, "flex", "items-center", theme.spacing.gap.sm)}>
+            <BarChart3 className={cn("h-6", "w-6", theme.colors.text.accentBright)} />
             <h3 className="card-header">Tempo per Progetto</h3>
           </div>
           <div className="space-y-4">
@@ -212,13 +212,13 @@ export default function TimeTrackingPage() {
                   : 0;
               return (
                 <div key={project.project_id}>
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className={`text-sm font-bold ${colors.text.primary}`}>{project.project_name}</span>
-                    <span className={`text-sm font-bold ${colors.text.accent}`}>
+                  <div className={cn(theme.spacing.mb.xs, "flex", "items-center", "justify-between")}>
+                    <span className={cn("text-sm", "font-bold", theme.colors.text.primary)}>{project.project_name}</span>
+                    <span className={cn("text-sm", "font-bold", theme.colors.text.accent)}>
                       {formatTime(project.total_seconds)} ({percentage.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className={`h-3 w-full overflow-hidden rounded-full border ${designTokens.colors.cyan.borderLight} ${colors.bg.tertiary} shadow-inner`}>
+                  <div className={cn("h-3", "w-full", "overflow-hidden", "rounded-full", "border", theme.colors.border.accentAlpha, theme.colors.bg.tertiary, "shadow-inner")}>
                     <div
                       className="h-3 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-500 dark:to-blue-600 shadow-cyan-500/40 transition-all duration-500"
                       style={{ width: `${percentage}%` }}
@@ -234,8 +234,8 @@ export default function TimeTrackingPage() {
       {/* Time by User (Admin only) */}
       {isAmministratore && statistics?.by_user && statistics.by_user.length > 0 && (
         <GamingCard>
-          <div className="mb-6 flex items-center gap-3">
-            <UsersIcon className={`h-6 w-6 ${designTokens.colors.cyan.text}`} />
+          <div className={cn(theme.spacing.mb.lg, "flex", "items-center", theme.spacing.gap.sm)}>
+            <UsersIcon className={cn("h-6", "w-6", theme.colors.text.accentBright)} />
             <h3 className="card-header">Tempo per Utente</h3>
           </div>
           <div className="space-y-4">
@@ -246,13 +246,13 @@ export default function TimeTrackingPage() {
                   : 0;
               return (
                 <div key={userStat.user_id}>
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className={`text-sm font-bold ${colors.text.primary}`}>{userStat.user_name}</span>
-                    <span className={`text-sm font-bold ${designTokens.colors.cyan.text}`}>
+                  <div className={cn(theme.spacing.mb.xs, "flex", "items-center", "justify-between")}>
+                    <span className={cn("text-sm", "font-bold", theme.colors.text.primary)}>{userStat.user_name}</span>
+                    <span className={cn("text-sm", "font-bold", theme.colors.text.accentBright)}>
                       {formatTime(userStat.total_seconds)} ({percentage.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className={`h-3 w-full overflow-hidden rounded-full border ${designTokens.colors.cyan.borderLight} ${colors.bg.tertiary} shadow-inner`}>
+                  <div className={cn("h-3", "w-full", "overflow-hidden", "rounded-full", "border", theme.colors.border.accentAlpha, theme.colors.bg.tertiary, "shadow-inner")}>
                     <div
                       className="h-3 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-500 dark:to-blue-600 shadow-cyan-500/40 transition-all duration-500"
                       style={{ width: `${percentage}%` }}
@@ -267,13 +267,13 @@ export default function TimeTrackingPage() {
 
       {/* Filters */}
       <GamingCard>
-        <div className="mb-6 flex items-center gap-3">
-          <Clock className={`h-6 w-6 ${designTokens.colors.cyan.text}`} />
+        <div className={cn(theme.spacing.mb.lg, "flex", "items-center", theme.spacing.gap.sm)}>
+          <Clock className={cn("h-6", "w-6", theme.colors.text.accentBright)} />
           <h3 className="card-header">Filtri</h3>
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className={cn("grid", "grid-cols-1", theme.spacing.gap.md, "md:grid-cols-4")}>
           <div>
-            <label className="text-label mb-1">Da</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Da</label>
             <input
               type="date"
               className="input-dark w-full"
@@ -282,7 +282,7 @@ export default function TimeTrackingPage() {
             />
           </div>
           <div>
-            <label className="text-label mb-1">A</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>A</label>
             <input
               type="date"
               className="input-dark w-full"
@@ -291,7 +291,7 @@ export default function TimeTrackingPage() {
             />
           </div>
           <div>
-            <label className="text-label mb-1">Progetto</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Progetto</label>
             <select
               className="input-dark w-full"
               value={filters.project_id}
@@ -307,7 +307,7 @@ export default function TimeTrackingPage() {
           </div>
           {isAmministratore && (
             <div>
-              <label className="text-label mb-1">Utente</label>
+              <label className={cn("text-label", theme.spacing.mb.xs)}>Utente</label>
               <select
                 className="input-dark w-full"
                 value={filters.user_id}
@@ -327,93 +327,93 @@ export default function TimeTrackingPage() {
 
       {/* Time Entries List */}
       <GamingCard>
-        <div className="mb-6 flex items-center gap-3">
-          <TimerIcon className={`h-6 w-6 ${designTokens.colors.cyan.text}`} />
+        <div className={cn(theme.spacing.mb.lg, "flex", "items-center", theme.spacing.gap.sm)}>
+          <TimerIcon className={cn("h-6", "w-6", theme.colors.text.accentBright)} />
           <h3 className="card-header">Registrazioni Tempo ({timeEntries.length})</h3>
         </div>
 
         {timeEntries.length === 0 ? (
-          <div className={`py-16 text-center ${colors.text.secondary}`}>
-            <Clock className={`mx-auto mb-4 h-16 w-16 ${designTokens.colors.cyan.text}`} />
-            <h3 className={`mb-2 text-lg font-bold ${colors.text.primary}`}>Nessuna registrazione</h3>
-            <p className={colors.text.tertiary}>
+          <div className={cn(theme.spacing.py.xl, "text-center", theme.colors.text.secondary)}>
+            <Clock className={cn("mx-auto", theme.spacing.mb.md, "h-16", "w-16", theme.colors.text.accentBright)} />
+            <h3 className={cn(theme.spacing.mb.xs, "text-lg", "font-bold", theme.colors.text.primary)}>Nessuna registrazione</h3>
+            <p className={theme.colors.text.tertiary}>
               Non ci sono registrazioni di tempo per i filtri selezionati
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className={`border-b ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary}`}>
+              <thead className={cn("border-b", theme.colors.border.accentAlpha, theme.colors.bg.secondary)}>
                 <tr>
-                  <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Data
                   </th>
-                  <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Task
                   </th>
-                  <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Progetto
                   </th>
                   {isAmministratore && (
-                    <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                    <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                       Utente
                     </th>
                   )}
-                  <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Inizio
                   </th>
-                  <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Fine
                   </th>
-                  <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Durata
                   </th>
-                  <th className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-left", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Note
                   </th>
-                  <th className={`px-4 py-3 text-right text-xs font-bold uppercase tracking-wide ${colors.text.primary}`}>
+                  <th className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-right", "text-xs", "font-bold", "uppercase", "tracking-wide", theme.colors.text.primary)}>
                     Azioni
                   </th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${colors.border}`}>
+              <tbody className={cn("divide-y", theme.colors.border.default)}>
                 {timeEntries.map((entry) => (
-                  <tr key={entry.id} className={`transition-colors ${colors.bg.hover}`}>
-                    <td className={`whitespace-nowrap px-4 py-3 text-sm font-semibold ${colors.text.primary}`}>
+                  <tr key={entry.id} className={cn("transition-colors", theme.colors.bg.hover)}>
+                    <td className={cn("whitespace-nowrap", theme.spacing.px.md, theme.spacing.py.sm, "text-sm", "font-semibold", theme.colors.text.primary)}>
                       {formatDate(entry.started_at)}
                     </td>
-                    <td className={`px-4 py-3 text-sm ${colors.text.primary}`}>{entry.task_title || '-'}</td>
-                    <td className={`px-4 py-3 text-sm ${colors.text.secondary}`}>
+                    <td className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-sm", theme.colors.text.primary)}>{entry.task_title || '-'}</td>
+                    <td className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-sm", theme.colors.text.secondary)}>
                       {entry.project_name || '-'}
                     </td>
                     {isAmministratore && (
-                      <td className={`px-4 py-3 text-sm ${colors.text.secondary}`}>{entry.user_name || '-'}</td>
+                      <td className={cn(theme.spacing.px.md, theme.spacing.py.sm, "text-sm", theme.colors.text.secondary)}>{entry.user_name || '-'}</td>
                     )}
-                    <td className={`whitespace-nowrap px-4 py-3 text-sm ${colors.text.secondary}`}>
+                    <td className={cn("whitespace-nowrap", theme.spacing.px.md, theme.spacing.py.sm, "text-sm", theme.colors.text.secondary)}>
                       {new Date(entry.started_at).toLocaleTimeString('it-IT', {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
                     </td>
-                    <td className={`whitespace-nowrap px-4 py-3 text-sm ${colors.text.secondary}`}>
+                    <td className={cn("whitespace-nowrap", theme.spacing.px.md, theme.spacing.py.sm, "text-sm", theme.colors.text.secondary)}>
                       {entry.ended_at ? (
                         new Date(entry.ended_at).toLocaleTimeString('it-IT', {
                           hour: '2-digit',
                           minute: '2-digit',
                         })
                       ) : (
-                        <span className={`font-bold ${colors.text.accent}`}>In corso</span>
+                        <span className={cn("font-bold", theme.colors.text.accent)}>In corso</span>
                       )}
                     </td>
-                    <td className={`whitespace-nowrap px-4 py-3 text-sm font-bold ${colors.text.primary}`}>
+                    <td className={cn("whitespace-nowrap", theme.spacing.px.md, theme.spacing.py.sm, "text-sm", "font-bold", theme.colors.text.primary)}>
                       {entry.duration ? formatTime(entry.duration) : '-'}
                     </td>
-                    <td className={`max-w-xs truncate px-4 py-3 text-sm ${colors.text.secondary}`}>
+                    <td className={cn("max-w-xs", "truncate", theme.spacing.px.md, theme.spacing.py.sm, "text-sm", theme.colors.text.secondary)}>
                       {entry.notes || '-'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium">
+                    <td className={cn("whitespace-nowrap", theme.spacing.px.md, theme.spacing.py.sm, "text-right", "text-sm", "font-medium")}>
                       {entry.ended_at && (
-                        <div className="flex justify-end gap-2">
+                        <div className={cn("flex", "justify-end", theme.spacing.gap.sm)}>
                           <Button
                             type="button"
                             size="sm"
@@ -422,7 +422,7 @@ export default function TimeTrackingPage() {
                               setSelectedEntry(entry);
                               setShowManualModal(true);
                             }}
-                            className={`${colors.text.accent} hover:${colors.text.primary}`}
+                            className={cn(theme.colors.text.accent, "hover:text-cyan-300")}
                             title="Modifica"
                           >
                             <Edit2 className="h-4 w-4" />
@@ -432,7 +432,6 @@ export default function TimeTrackingPage() {
                             size="sm"
                             variant="danger"
                             onClick={() => handleDelete(entry)}
-                            className={`${designTokens.colors.error.text} ${designTokens.colors.error.textLight}`}
                             title="Elimina"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -467,6 +466,7 @@ export default function TimeTrackingPage() {
 function ManualTimeEntryModal({ entry, onClose, onSave }) {
   const { user, isAmministratore } = useAuth();
   const { colors } = useTheme();
+  const { error: showError } = useToast();
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -527,17 +527,17 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <GamingCard className="w-full max-w-lg p-6 shadow-2xl">
+    <div className={cn("fixed", "inset-0", "z-50", "flex", "items-center", "justify-center", "bg-black/50", theme.spacing.p.md, "backdrop-blur-sm")}>
+      <GamingCard className={cn("w-full", "max-w-lg", theme.spacing.p.lg, "shadow-2xl")}>
         {/* Header */}
-        <div className={`mb-6 flex items-center justify-between border-b-2 ${designTokens.colors.cyan.borderLight} pb-4`}>
-          <h2 className={`flex items-center gap-3 text-2xl font-bold ${designTokens.colors.cyan.text}`}>
-            <Clock className={`h-7 w-7 ${designTokens.colors.cyan.text}`} />
+        <div className={cn(theme.spacing.mb.lg, "flex", "items-center", "justify-between", "border-b-2", theme.colors.border.accentAlpha, theme.spacing.pb.md)}>
+          <h2 className={cn("flex", "items-center", theme.spacing.gap.sm, "text-2xl", "font-bold", theme.colors.text.accent)}>
+            <Clock className={cn("h-7", "w-7", theme.colors.text.accentBright)} />
             {entry ? 'Modifica Registrazione' : 'Nuova Registrazione Manuale'}
           </h2>
           <button
             onClick={onClose}
-            className={`${colors.text.tertiary} transition-colors hover:${colors.text.accent}`}
+            className={cn(theme.colors.text.muted, "transition-colors", "hover:text-cyan-300")}
           >
             <X className="h-6 w-6" />
           </button>
@@ -546,7 +546,7 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
         {/* Body */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-label mb-1">Task *</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Task *</label>
             <select
               className="input-dark w-full"
               value={formData.task_id}
@@ -564,7 +564,7 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
 
           {isAmministratore && (
             <div>
-              <label className="text-label mb-1">Utente *</label>
+              <label className={cn("text-label", theme.spacing.mb.xs)}>Utente *</label>
               <select
                 className="input-dark w-full"
                 value={formData.user_id}
@@ -580,9 +580,9 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className={cn("grid", "grid-cols-2", theme.spacing.gap.md)}>
             <div>
-              <label className="text-label mb-1">Inizio *</label>
+              <label className={cn("text-label", theme.spacing.mb.xs)}>Inizio *</label>
               <input
                 type="datetime-local"
                 className="input-dark w-full"
@@ -592,7 +592,7 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
               />
             </div>
             <div>
-              <label className="text-label mb-1">Fine *</label>
+              <label className={cn("text-label", theme.spacing.mb.xs)}>Fine *</label>
               <input
                 type="datetime-local"
                 className="input-dark w-full"
@@ -604,7 +604,7 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="text-label mb-1">Note</label>
+            <label className={cn("text-label", theme.spacing.mb.xs)}>Note</label>
             <textarea
               className="textarea-dark w-full resize-none"
               rows="3"
@@ -615,7 +615,7 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
           </div>
 
           {/* Footer */}
-          <div className={`flex gap-3 border-t-2 ${designTokens.colors.cyan.borderLight} pt-4`}>
+          <div className={cn("flex", theme.spacing.gap.sm, "border-t-2", theme.colors.border.accentAlpha, theme.spacing.pt.md)}>
             <Button type="button" onClick={onClose} variant="secondary" className="flex-1">
               Annulla
             </Button>
