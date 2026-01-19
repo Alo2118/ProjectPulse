@@ -5,6 +5,7 @@
 
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { designTokens } from '../config/designTokens';
 
 // ==================== TIME FORMATTING ====================
 
@@ -147,7 +148,7 @@ export const getStatusLabel = (status) => {
     in_progress: 'In corso',
     blocked: 'Bloccato',
     waiting_clarification: 'In attesa',
-    completed: 'Completato'
+    completed: 'Completato',
   };
   return labels[status] || status;
 };
@@ -158,14 +159,18 @@ export const getStatusLabel = (status) => {
  * @returns {object} Object with bg and text color classes
  */
 export const getStatusColors = (status) => {
-  const colors = {
-    todo: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300' },
+  const tokenized = {
+    todo: { bg: designTokens.colors.bg.tertiary, text: designTokens.colors.text.secondary, border: designTokens.colors.border },
     in_progress: { bg: 'bg-primary-100', text: 'text-primary-700', border: 'border-primary-300' },
-    blocked: { bg: 'bg-slate-200', text: 'text-slate-800', border: 'border-slate-400' },
-    waiting_clarification: { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-300' },
-    completed: { bg: 'bg-primary-50', text: 'text-primary-900', border: 'border-primary-200' }
+    blocked: { bg: designTokens.colors.bg.secondary, text: designTokens.colors.text.primary, border: designTokens.colors.border },
+    waiting_clarification: {
+      bg: designTokens.colors.bg.tertiary,
+      text: designTokens.colors.text.secondary,
+      border: designTokens.colors.border,
+    },
+    completed: { bg: 'bg-primary-50', text: 'text-primary-900', border: 'border-primary-200' },
   };
-  return colors[status] || colors.todo;
+  return tokenized[status] || tokenized.todo;
 };
 
 /**
@@ -178,7 +183,7 @@ export const getPriorityLabel = (priority) => {
     bassa: 'Bassa',
     media: 'Media',
     alta: 'Alta',
-    critica: 'Critica'
+    critica: 'Critica',
   };
   return labels[priority] || priority;
 };
@@ -190,12 +195,101 @@ export const getPriorityLabel = (priority) => {
  */
 export const getPriorityColors = (priority) => {
   const colors = {
-    bassa: { text: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200' },
+    bassa: { text: designTokens.colors.text.tertiary, bg: designTokens.colors.bg.tertiary, border: designTokens.colors.border },
     media: { text: 'text-primary-600', bg: 'bg-primary-100', border: 'border-primary-200' },
     alta: { text: 'text-primary-700', bg: 'bg-primary-200', border: 'border-primary-400' },
-    critica: { text: 'text-slate-900', bg: 'bg-slate-300', border: 'border-slate-500' }
+    critica: { text: designTokens.colors.text.primary, bg: designTokens.colors.bg.secondary, border: designTokens.colors.border },
   };
   return colors[priority] || colors.media;
+};
+
+/**
+ * Get request status color classes
+ * @param {string} status - Request status
+ * @returns {object} Object with bg, text, border, and label colors
+ */
+export const getRequestStatusColors = (status) => {
+  const colors = {
+    pending: {
+      bg: designTokens.colors.bg.secondary,
+      border: 'border-yellow-500/30',
+      text: 'text-yellow-300',
+      label: 'text-yellow-400',
+    },
+    in_progress: {
+      bg: designTokens.colors.bg.secondary,
+      border: 'border-cyan-500/30',
+      text: 'text-cyan-300',
+      label: 'text-cyan-400',
+    },
+    resolved: {
+      bg: designTokens.colors.bg.secondary,
+      border: 'border-emerald-500/30',
+      text: 'text-emerald-300',
+      label: 'text-emerald-400',
+    },
+    rejected: {
+      bg: designTokens.colors.bg.secondary,
+      border: 'border-red-500/30',
+      text: 'text-red-300',
+      label: 'text-red-400',
+    },
+    new: {
+      bg: designTokens.colors.bg.secondary,
+      border: 'border-cyan-500/30',
+      text: 'text-cyan-300',
+      label: 'text-cyan-400',
+    },
+  };
+  return colors[status] || colors.pending;
+};
+
+/**
+ * Get priority indicator bar color class
+ * @param {string} priority - Priority level
+ * @returns {string} Color class for priority bar
+ */
+export const getPriorityBarColor = (priority) => {
+  const colors = {
+    alta: 'bg-red-500',
+    media: 'bg-orange-500',
+    bassa: 'bg-slate-600',
+  };
+  return colors[priority] || colors.media;
+};
+
+/**
+ * Get priority indicator border color for subtask
+ * @param {string} priority - Priority level
+ * @returns {string} Border color class
+ */
+export const getPriorityBorderTopColor = (priority) => {
+  const colors = {
+    alta: 'border-t-2 border-t-danger-400',
+    media: 'border-t-2 border-t-warning-400',
+    bassa: 'border-t-2 border-t-slate-300',
+  };
+  return colors[priority] || colors.media;
+};
+
+/**
+ * Get status style with hex colors for inline styles (used in TaskTreeNode)
+ * @param {string} status - Task status
+ * @returns {object} Object with color, backgroundColor, and borderColor hex values
+ */
+export const getStatusStyleInline = (status) => {
+  const styles = {
+    todo: { color: '#475569', backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
+    in_progress: { color: '#0369a1', backgroundColor: '#ecf0fe', borderColor: '#93c5fd' },
+    blocked: { color: '#dc2626', backgroundColor: '#fee2e2', borderColor: '#fecaca' },
+    waiting_clarification: {
+      color: '#d97706',
+      backgroundColor: '#fef3c7',
+      borderColor: '#fcd34d',
+    },
+    completed: { color: '#16a34a', backgroundColor: '#f0fdf4', borderColor: '#86efac' },
+  };
+  return styles[status] || styles.todo;
 };
 
 // ==================== STATISTICS CALCULATIONS ====================
@@ -215,18 +309,18 @@ export const calculateTaskStats = (tasks) => {
       waiting_clarification: 0,
       completed: 0,
       totalTime: 0,
-      completionRate: 0
+      completionRate: 0,
     };
   }
 
   const stats = {
     total: tasks.length,
-    todo: tasks.filter(t => t.status === 'todo').length,
-    in_progress: tasks.filter(t => t.status === 'in_progress').length,
-    blocked: tasks.filter(t => t.status === 'blocked').length,
-    waiting_clarification: tasks.filter(t => t.status === 'waiting_clarification').length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    totalTime: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
+    todo: tasks.filter((t) => t.status === 'todo').length,
+    in_progress: tasks.filter((t) => t.status === 'in_progress').length,
+    blocked: tasks.filter((t) => t.status === 'blocked').length,
+    waiting_clarification: tasks.filter((t) => t.status === 'waiting_clarification').length,
+    completed: tasks.filter((t) => t.status === 'completed').length,
+    totalTime: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0),
   };
 
   stats.completionRate = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
@@ -241,11 +335,11 @@ export const calculateTaskStats = (tasks) => {
  */
 export const groupTasksByStatus = (tasks) => {
   return {
-    todo: tasks.filter(t => t.status === 'todo'),
-    in_progress: tasks.filter(t => t.status === 'in_progress'),
-    blocked: tasks.filter(t => t.status === 'blocked'),
-    waiting_clarification: tasks.filter(t => t.status === 'waiting_clarification'),
-    completed: tasks.filter(t => t.status === 'completed')
+    todo: tasks.filter((t) => t.status === 'todo'),
+    in_progress: tasks.filter((t) => t.status === 'in_progress'),
+    blocked: tasks.filter((t) => t.status === 'blocked'),
+    waiting_clarification: tasks.filter((t) => t.status === 'waiting_clarification'),
+    completed: tasks.filter((t) => t.status === 'completed'),
   };
 };
 
@@ -255,7 +349,7 @@ export const groupTasksByStatus = (tasks) => {
  * @returns {number} Average time in seconds
  */
 export const calculateAvgCompletionTime = (tasks) => {
-  const completedTasks = tasks.filter(t => t.status === 'completed' && t.time_spent > 0);
+  const completedTasks = tasks.filter((t) => t.status === 'completed' && t.time_spent > 0);
   if (completedTasks.length === 0) return 0;
   const totalTime = completedTasks.reduce((sum, t) => sum + t.time_spent, 0);
   return totalTime / completedTasks.length;
@@ -267,7 +361,7 @@ export const calculateAvgCompletionTime = (tasks) => {
  * @returns {Array} Overdue tasks
  */
 export const getOverdueTasks = (tasks) => {
-  return tasks.filter(task => {
+  return tasks.filter((task) => {
     if (!task.deadline || task.status === 'completed') return false;
     return isOverdue(task.deadline);
   });
@@ -280,7 +374,7 @@ export const getOverdueTasks = (tasks) => {
  * @returns {Array} Tasks with approaching deadlines
  */
 export const getApproachingTasks = (tasks, days = 3) => {
-  return tasks.filter(task => {
+  return tasks.filter((task) => {
     if (!task.deadline || task.status === 'completed') return false;
     return isApproaching(task.deadline, days);
   });

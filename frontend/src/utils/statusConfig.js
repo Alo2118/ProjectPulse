@@ -1,4 +1,5 @@
 import { CheckCircle2, Play, Circle, AlertCircle } from 'lucide-react';
+import { designTokens } from '../config/designTokens';
 
 /**
  * Centralized status configuration for consistent styling across the app
@@ -12,7 +13,7 @@ export const STATUS_CONFIGS = {
     glow: 'shadow-emerald-500/50',
     bgClass: 'bg-emerald-500',
     textClass: 'text-emerald-300',
-    borderClass: 'border-emerald-500'
+    borderClass: 'border-emerald-500',
   },
   in_progress: {
     color: 'blue',
@@ -22,7 +23,7 @@ export const STATUS_CONFIGS = {
     glow: 'shadow-blue-500/50',
     bgClass: 'bg-blue-500',
     textClass: 'text-blue-300',
-    borderClass: 'border-blue-500'
+    borderClass: 'border-blue-500',
   },
   todo: {
     color: 'slate',
@@ -30,9 +31,9 @@ export const STATUS_CONFIGS = {
     label: 'Da Fare',
     gradient: 'from-slate-500 to-gray-600',
     glow: 'shadow-slate-500/50',
-    bgClass: 'bg-slate-500',
-    textClass: 'text-slate-300',
-    borderClass: 'border-slate-500'
+    bgClass: designTokens.colors.bg.tertiary,
+    textClass: designTokens.colors.text.secondary,
+    borderClass: designTokens.colors.border,
   },
   blocked: {
     color: 'red',
@@ -42,7 +43,7 @@ export const STATUS_CONFIGS = {
     glow: 'shadow-red-500/50',
     bgClass: 'bg-red-500',
     textClass: 'text-red-300',
-    borderClass: 'border-red-500'
+    borderClass: 'border-red-500',
   },
   waiting_clarification: {
     color: 'yellow',
@@ -52,8 +53,8 @@ export const STATUS_CONFIGS = {
     glow: 'shadow-yellow-500/50',
     bgClass: 'bg-yellow-500',
     textClass: 'text-yellow-300',
-    borderClass: 'border-yellow-500'
-  }
+    borderClass: 'border-yellow-500',
+  },
 };
 
 /**
@@ -80,6 +81,6 @@ export function getProjectHealthColor(progress, hoursWorked, hoursEstimated) {
 export function calculateProjectProgress(project) {
   const total = project.tasks?.length || 0;
   if (total === 0) return 0;
-  const completed = project.tasks.filter(t => t.status === 'completed').length;
+  const completed = project.tasks.filter((t) => t.status === 'completed').length;
   return Math.round((completed / total) * 100);
 }

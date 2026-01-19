@@ -67,15 +67,19 @@ export const tasksApi = {
   getSubtasksStats: (parentTaskId) => api.get(`/tasks/${parentTaskId}/subtasks-stats`),
 
   // Advanced subtask operations
-  reorderSubtasks: (parentTaskId, subtaskIds) => api.put(`/tasks/${parentTaskId}/subtasks/reorder`, { subtaskIds }),
+  reorderSubtasks: (parentTaskId, subtaskIds) =>
+    api.put(`/tasks/${parentTaskId}/subtasks/reorder`, { subtaskIds }),
   bulkCompleteSubtasks: (parentTaskId) => api.put(`/tasks/${parentTaskId}/subtasks/bulk-complete`),
-  bulkDeleteSubtasks: (parentTaskId, subtaskIds) => api.post(`/tasks/${parentTaskId}/subtasks/bulk-delete`, { subtaskIds }),
+  bulkDeleteSubtasks: (parentTaskId, subtaskIds) =>
+    api.post(`/tasks/${parentTaskId}/subtasks/bulk-delete`, { subtaskIds }),
 
   // Task conversion and operations
-  convertToSubtask: (taskId, parentTaskId) => api.put(`/tasks/${taskId}/convert-to-subtask`, { parentTaskId }),
+  convertToSubtask: (taskId, parentTaskId) =>
+    api.put(`/tasks/${taskId}/convert-to-subtask`, { parentTaskId }),
   promoteToTask: (subtaskId) => api.put(`/tasks/${subtaskId}/promote-to-task`),
   toggleComplete: (taskId) => api.put(`/tasks/${taskId}/toggle-complete`),
-  setDependency: (subtaskId, dependsOnTaskId) => api.put(`/tasks/${subtaskId}/set-dependency`, { dependsOnTaskId }),
+  setDependency: (subtaskId, dependsOnTaskId) =>
+    api.put(`/tasks/${subtaskId}/set-dependency`, { dependsOnTaskId }),
 
   // Management Dashboard
   getManagementAlerts: () => api.get('/tasks/management/alerts'),

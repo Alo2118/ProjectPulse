@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 import { milestonesApi } from '../services/api';
 
 export default function MilestoneModal({ milestone, projectId, onClose, onSave }) {
+  const { colors, spacing } = useTheme();
   const [formData, setFormData] = useState({
     name: milestone?.name || '',
     description: milestone?.description || '',
     due_date: milestone?.due_date || '',
-    project_id: projectId
+    project_id: projectId,
   });
   const [loading, setLoading] = useState(false);
 
@@ -31,25 +33,24 @@ export default function MilestoneModal({ milestone, projectId, onClose, onSave }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg border-2 border-slate-200">
-        <div className="border-b-2 border-slate-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
-            {milestone ? 'Modifica Milestone' : 'Nuova Milestone'}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className={`${colors.bg.primary} ${colors.text.primary} rounded-lg border-2 ${colors.border} w-full max-w-lg ${spacing.cardP} shadow-lg`}>
+        <div className="mb-4 flex items-center justify-between border-b-2 pb-4">
+          <h2 className="text-2xl font-bold">{milestone ? 'Modifica Milestone' : 'Nuova Milestone'}</h2>
+          <button
+            onClick={onClose}
+            className="text-cyan-400/60 transition-colors hover:text-cyan-300"
+          >
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nome Milestone *
-            </label>
+            <label className={`${colors.text.secondary} mb-2 block text-sm font-semibold`}>Nome Milestone *</label>
             <input
               type="text"
-              className="input"
+              className={`w-full rounded-lg px-3 py-2 ${colors.bg.secondary} ${colors.text.primary} ${colors.border} border-2 transition-all focus:ring-2 focus:ring-cyan-500`}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -59,11 +60,9 @@ export default function MilestoneModal({ milestone, projectId, onClose, onSave }
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descrizione
-            </label>
+            <label className="text-label mb-2 block">Descrizione</label>
             <textarea
-              className="input"
+              className="textarea-dark w-full"
               rows="3"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -72,30 +71,20 @@ export default function MilestoneModal({ milestone, projectId, onClose, onSave }
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Scadenza
-            </label>
+            <label className="text-label mb-2 block">Data di Scadenza</label>
             <input
               type="date"
-              className="input"
+              className="input-dark w-full"
               value={formData.due_date}
               onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
             />
           </div>
 
-          <div className="flex gap-3 pt-4 border-t-2 border-slate-200 mt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary flex-1"
-            >
+          <div className="flex gap-3 border-t-2 border-cyan-500/20 pt-4">
+            <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? 'Salvataggio...' : milestone ? 'Salva Modifiche' : 'Crea Milestone'}
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary">
               Annulla
             </button>
           </div>

@@ -4,6 +4,8 @@ export { default as Button, IconButton, ButtonGroup } from './Button';
 export { default as Badge, StatusBadge, PriorityBadge, CategoryBadge } from './Badge';
 export { default as StatCard, StatCardGrid, SimpleStatCard } from './StatCard';
 export { default as Modal, ModalFooter, ConfirmModal } from './Modal';
+export { Input } from './Input';
+export { Alert } from './Alert';
 
 // Gaming Style Components
 export { default as GamingKPICard, GamingKPIGrid } from './GamingKPICard';

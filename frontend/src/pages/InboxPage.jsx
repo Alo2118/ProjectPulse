@@ -1,17 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '../hooks/useTheme';
 import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePendingRequestsCount } from '../hooks/usePendingRequestsCount';
+import { GamingLayout, GamingHeader, GamingCard, Button } from '../components/ui';
 import {
-  GamingLayout, GamingHeader, GamingCard, Button
-} from '../components/ui';
-import {
-  Inbox, Plus, Filter, Search, AlertCircle, CheckCircle, X,
-  Clock, ArrowRight, FileText, FolderPlus, ListTodo, Edit
+  Inbox,
+  Plus,
+  Filter,
+  Search,
+  AlertCircle,
+  CheckCircle,
+  X,
+  Clock,
+  ArrowRight,
+  FileText,
+  FolderPlus,
+  ListTodo,
+  Edit,
 } from 'lucide-react';
-import { formatDate, formatDateTime } from '../utils/helpers';
+import { formatDate, formatDateTime, getRequestStatusColors } from '../utils/helpers';
 
 const InboxPage = () => {
+  const { colors, gradients } = useTheme();
   const { user } = useAuth();
   const { incrementCount, decrementCount } = usePendingRequestsCount();
   const [requests, setRequests] = useState([]);
@@ -44,7 +55,7 @@ const InboxPage = () => {
     priority: 'normal',
     project_id: '',
     assigned_to: '',
-    due_date: ''
+    due_date: '',
   });
 
   const [editRequestData, setEditRequestData] = useState({
@@ -56,7 +67,7 @@ const InboxPage = () => {
     priority: 'normal',
     project_id: '',
     assigned_to: '',
-    due_date: ''
+    due_date: '',
   });
 
   useEffect(() => {
@@ -76,7 +87,7 @@ const InboxPage = () => {
         requestsApi.getAll(params),
         projectsApi.getAll(),
         usersApi.getAll({ active: true }),
-        requestsApi.getStats()
+        requestsApi.getStats(),
       ]);
 
       setRequests(requestsRes.data.data || requestsRes.data);
@@ -100,7 +111,7 @@ const InboxPage = () => {
         project_id: newRequestData.project_id || null,
         assigned_to: newRequestData.assigned_to || null,
         source_contact: newRequestData.source_contact || null,
-        due_date: newRequestData.due_date || null
+        due_date: newRequestData.due_date || null,
       };
 
       const response = await requestsApi.create(requestData);
@@ -120,7 +131,7 @@ const InboxPage = () => {
         priority: 'normal',
         project_id: '',
         assigned_to: '',
-        due_date: ''
+        due_date: '',
       });
       loadData();
     } catch (error) {
@@ -153,7 +164,7 @@ const InboxPage = () => {
         project_id: selectedRequest.project_id || e.target.project_id.value || null,
         assigned_to: parseInt(e.target.assigned_to.value) || null,
         priority: selectedRequest.priority,
-        deadline: e.target.deadline.value || null
+        deadline: e.target.deadline.value || null,
       };
       await requestsApi.convertToTask(selectedRequest.id, taskData);
       // If request was in 'new' status, decrement badge
@@ -176,7 +187,7 @@ const InboxPage = () => {
     try {
       const projectData = {
         name: e.target.name.value,
-        description: e.target.description.value
+        description: e.target.description.value,
       };
       await requestsApi.convertToProject(selectedRequest.id, projectData);
       // If request was in 'new' status, decrement badge
@@ -216,7 +227,7 @@ const InboxPage = () => {
   const handleUnarchive = async (request) => {
     try {
       await requestsApi.unarchive(request.id);
-      alert('Richiesta estratta dall\'archivio');
+      alert("Richiesta estratta dall'archivio");
       loadData();
     } catch (error) {
       alert('Errore: ' + (error.response?.data?.error || error.message));
@@ -234,7 +245,7 @@ const InboxPage = () => {
       priority: request.priority || 'normal',
       project_id: request.project_id || '',
       assigned_to: request.assigned_to || '',
-      due_date: request.due_date || ''
+      due_date: request.due_date || '',
     });
     setShowEditRequestModal(true);
   };
@@ -250,7 +261,7 @@ const InboxPage = () => {
         project_id: editRequestData.project_id || null,
         assigned_to: editRequestData.assigned_to || null,
         source_contact: editRequestData.source_contact || null,
-        due_date: editRequestData.due_date || null
+        due_date: editRequestData.due_date || null,
       };
 
       await requestsApi.update(selectedRequest.id, requestData);
@@ -259,7 +270,7 @@ const InboxPage = () => {
       setSelectedRequest(null);
       loadData();
     } catch (error) {
-      alert('Errore nell\'aggiornamento: ' + (error.response?.data?.error || error.message));
+      alert("Errore nell'aggiornamento: " + (error.response?.data?.error || error.message));
     }
   };
 
@@ -271,7 +282,7 @@ const InboxPage = () => {
       technical_issue: 'Problema Tecnico',
       customer_complaint: 'Reclamo Cliente',
       internal_request: 'Richiesta Interna',
-      other: 'Altro'
+      other: 'Altro',
     };
     return types[type] || type;
   };
@@ -283,7 +294,7 @@ const InboxPage = () => {
       support: 'Supporto',
       management: 'Direzione',
       sales: 'Commerciale',
-      production: 'Produzione'
+      production: 'Produzione',
     };
     return sources[source] || source;
   };
@@ -291,13 +302,9 @@ const InboxPage = () => {
   if (loading) {
     return (
       <GamingLayout>
-        <GamingHeader
-          title="Inbox"
-          subtitle="Richieste Ufficio Tecnico"
-          icon={Inbox}
-        />
-        <GamingCard className="text-center py-12">
-          <div className="text-lg text-slate-600">Caricamento...</div>
+        <GamingHeader title="Inbox" subtitle="Richieste Ufficio Tecnico" icon={Inbox} />
+        <GamingCard className="py-12 text-center">
+          <div className={`text-lg ${colors.text.tertiary}`}>Caricamento...</div>
         </GamingCard>
       </GamingLayout>
     );
@@ -310,11 +317,11 @@ const InboxPage = () => {
         subtitle="Richieste Ufficio Tecnico"
         icon={Inbox}
         actions={
-          <Button 
-            onClick={() => setShowNewRequestModal(true)} 
-            className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-xl shadow-primary-600/50 transition-all font-bold"
+          <Button
+            onClick={() => setShowNewRequestModal(true)}
+            className={`${gradients.primary} font-bold text-white shadow-xl shadow-primary-600/50 transition-all hover:from-primary-700 hover:to-primary-800`}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Nuova</span>
           </Button>
         }
@@ -322,20 +329,19 @@ const InboxPage = () => {
 
       {/* Stats */}
       {stats && stats.byStatus && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           {stats.byStatus.map((stat) => {
-            const emojis = {pending: '⏳', in_progress: '🚀', resolved: '✅', rejected: '❌', new: '📬'};
-            const colors = {
-              pending: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-900', label: 'text-yellow-700' },
-              in_progress: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900', label: 'text-blue-700' },
-              resolved: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', label: 'text-emerald-700' },
-              rejected: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-900', label: 'text-red-700' },
-              new: { bg: 'bg-primary-50', border: 'border-primary-200', text: 'text-primary-900', label: 'text-primary-700' }
+            const emojis = {
+              pending: '⏳',
+              in_progress: '🚀',
+              resolved: '✅',
+              rejected: '❌',
+              new: '📬',
             };
-            const color = colors[stat.status] || colors.pending;
+            const color = getRequestStatusColors(stat.status);
             return (
-              <GamingCard key={stat.status} className={`${color.bg} border-2 ${color.border}`}>
-                <div className="text-2xl mb-2">{emojis[stat.status] || '📋'}</div>
+              <GamingCard key={stat.status} className={`${color.bg} border ${color.border}`}>
+                <div className="mb-2 text-2xl">{emojis[stat.status] || '📋'}</div>
                 <div className={`text-2xl font-bold ${color.text}`}>{stat.count}</div>
                 {stat.avg_resolution_hours && (
                   <div className={`text-xs ${color.label} mt-1 font-semibold`}>
@@ -350,17 +356,17 @@ const InboxPage = () => {
 
       {/* Filters */}
       <GamingCard className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Filter className="w-5 h-5 text-primary-600" />
-          <span className="font-bold text-slate-900">Filtri</span>
+        <div className="mb-4 flex items-center gap-3">
+          <Filter className="h-5 w-5 text-cyan-400" />
+          <span className="font-bold text-cyan-300">Filtri</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <label className="block text-sm font-bold text-slate-900 mb-1">Stato</label>
+            <label className="text-label mb-1">Stato</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+              className="input-dark w-full"
             >
               <option value="">Tutti</option>
               <option value="new">Nuove</option>
@@ -372,11 +378,11 @@ const InboxPage = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-bold text-slate-900 mb-1">Priorità</label>
+            <label className="text-label mb-1">Priorità</label>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+              className="input-dark w-full"
             >
               <option value="">Tutte</option>
               <option value="urgent">Urgente</option>
@@ -386,11 +392,11 @@ const InboxPage = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-bold text-slate-900 mb-1">Tipo</label>
+            <label className="text-label mb-1">Tipo</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+              className="input-dark w-full"
             >
               <option value="">Tutti</option>
               <option value="bug">Bug</option>
@@ -403,15 +409,15 @@ const InboxPage = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-bold text-slate-900 mb-1">Ricerca</label>
+            <label className="text-label mb-1">Ricerca</label>
             <div className="relative">
-              <Search className="w-5 h-5 absolute left-2 top-2.5 text-slate-400" />
+              <Search className={`absolute left-2 top-2.5 h-5 w-5 ${colors.text.tertiary}`} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cerca..."
-                className="w-full bg-white border-2 border-slate-200 rounded-lg pl-9 px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                className="input-dark w-full pl-9"
               />
             </div>
           </div>
@@ -422,9 +428,12 @@ const InboxPage = () => {
             id="showArchived"
             checked={showArchived}
             onChange={(e) => setShowArchived(e.target.checked)}
-            className="rounded border-2 border-slate-300 text-primary-600 focus:ring-primary-500"
+            className={`rounded border-2 border-cyan-500/30 ${colors.bg.tertiary} ${colors.text.accent} focus:ring-cyan-500`}
           />
-          <label htmlFor="showArchived" className="text-sm font-medium text-slate-900 cursor-pointer">
+          <label
+            htmlFor="showArchived"
+            className={`cursor-pointer text-sm font-medium ${colors.text.secondary}`}
+          >
             Mostra richieste archiviate
           </label>
         </div>
@@ -433,75 +442,118 @@ const InboxPage = () => {
       {/* Requests List */}
       <div className="space-y-4">
         {requests.length === 0 ? (
-          <GamingCard className="text-center py-12">
-            <div className="text-6xl mb-4">📭</div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Nessuna richiesta trovata</h3>
-            <p className="text-slate-600">Tutte le richieste sono state elaborate</p>
+          <GamingCard className="py-12 text-center">
+            <div className="mb-4 text-6xl">📭</div>
+            <h3 className="mb-2 text-xl font-bold text-cyan-300">Nessuna richiesta trovata</h3>
+            <p className={colors.text.tertiary}>Tutte le richieste sono state elaborate</p>
           </GamingCard>
         ) : (
           requests
-            .filter(request => showArchived || request.status !== 'archived')
-            .map(request => {
+            .filter((request) => showArchived || request.status !== 'archived')
+            .map((request) => {
               const statusColors = {
-                new: { bg: 'bg-primary-50', border: 'border-primary-200', badge: 'bg-primary-100 text-primary-700' },
-                reviewing: { bg: 'bg-yellow-50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700' },
-                approved: { bg: 'bg-emerald-50', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700' },
-                rejected: { bg: 'bg-red-50', border: 'border-red-200', badge: 'bg-red-100 text-red-700' },
-                archived: { bg: 'bg-slate-50', border: 'border-slate-200', badge: 'bg-slate-100 text-slate-700' }
+                new: {
+                  bg: colors.bg.secondary,
+                  border: 'border-cyan-500/30',
+                  badge: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30',
+                },
+                reviewing: {
+                  bg: colors.bg.secondary,
+                  border: 'border-amber-500/30',
+                  badge: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+                },
+                approved: {
+                  bg: colors.bg.secondary,
+                  border: 'border-emerald-500/30',
+                  badge: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+                },
+                rejected: {
+                  bg: colors.bg.secondary,
+                  border: 'border-red-500/30',
+                  badge: 'bg-red-500/20 text-red-300 border border-red-500/30',
+                },
+                archived: {
+                  bg: colors.bg.secondary,
+                  border: colors.border,
+                  badge: `${colors.bg.tertiary} ${colors.text.tertiary} border ${colors.border}`,
+                },
               };
               const priorityColors = {
-                urgent: 'bg-red-100 text-red-700',
-                high: 'bg-orange-100 text-orange-700',
-                normal: 'bg-blue-100 text-blue-700',
-                low: 'bg-slate-100 text-slate-700'
+                urgent: 'bg-red-500/20 text-red-300 border border-red-500/40',
+                high: 'bg-orange-500/20 text-orange-300 border border-orange-500/40',
+                normal: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
+                low: 'bg-slate-800/40 text-slate-400 border border-slate-700/40',
               };
               const color = statusColors[request.status] || statusColors.new;
               return (
                 <GamingCard
                   key={request.id}
-                  className={`${color.bg} border-2 ${color.border} hover:shadow-lg transition-all`}
+                  className={`${color.bg} border-2 ${color.border} transition-all hover:shadow-lg`}
                 >
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="mb-4 flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h3 className="text-lg font-bold text-slate-900">{request.title}</h3>
-                        <span className={`text-xs px-2 py-1 rounded font-bold ${color.badge}`}>
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-bold text-white">{request.title}</h3>
+                        <span className={`rounded px-2 py-1 text-xs font-bold ${color.badge}`}>
                           {request.status.toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-1 rounded font-bold ${priorityColors[request.priority]}`}>
+                        <span
+                          className={`rounded px-2 py-1 text-xs font-bold ${priorityColors[request.priority]}`}
+                        >
                           {request.priority.toUpperCase()}
                         </span>
                       </div>
-                      <p className="text-slate-700 mb-4 font-medium">{request.description}</p>
-                      <div className="flex flex-wrap gap-4 text-sm text-slate-700 mb-2">
-                        <span className="font-semibold"><strong>Tipo:</strong> {getTypeName(request.type)}</span>
-                        <span className="font-semibold"><strong>Provenienza:</strong> {getSourceName(request.source)}</span>
-                        {request.source_contact && <span className="font-semibold"><strong>Contatto:</strong> {request.source_contact}</span>}
-                        {request.assigned_to_name && <span className="font-semibold"><strong>Assegnato a:</strong> {request.assigned_to_name}</span>}
-                        {request.project_name && <span className="font-semibold"><strong>Progetto:</strong> {request.project_name}</span>}
-                        {request.due_date && <span className="font-semibold"><strong>Scadenza:</strong> {formatDate(request.due_date)}</span>}
+                      <p className="mb-4 font-medium text-slate-200">{request.description}</p>
+                      <div className="mb-2 flex flex-wrap gap-4 text-sm text-slate-300">
+                        <span className="font-semibold">
+                          <strong>Tipo:</strong> {getTypeName(request.type)}
+                        </span>
+                        <span className="font-semibold">
+                          <strong>Provenienza:</strong> {getSourceName(request.source)}
+                        </span>
+                        {request.source_contact && (
+                          <span className="font-semibold">
+                            <strong>Contatto:</strong> {request.source_contact}
+                          </span>
+                        )}
+                        {request.assigned_to_name && (
+                          <span className="font-semibold">
+                            <strong>Assegnato a:</strong> {request.assigned_to_name}
+                          </span>
+                        )}
+                        {request.project_name && (
+                          <span className="font-semibold">
+                            <strong>Progetto:</strong> {request.project_name}
+                          </span>
+                        )}
+                        {request.due_date && (
+                          <span className="font-semibold">
+                            <strong>Scadenza:</strong> {formatDate(request.due_date)}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-slate-600 font-medium">
-                        Ricevuto: {formatDateTime(request.received_at)} | Creato da: {request.created_by_name}
+                      <div className="text-xs font-medium text-slate-400">
+                        Ricevuto: {formatDateTime(request.received_at)} | Creato da:{' '}
+                        {request.created_by_name}
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-2 ml-4">
+                    <div className="ml-4 flex flex-col gap-2">
                       {(request.status === 'new' || request.status === 'reviewing') && (
                         <>
                           <button
                             onClick={() => handleReview(request, 'approved')}
-                            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm flex items-center gap-1"
+                            className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-md"
                           >
-                            <CheckCircle className="w-4 h-4" />
+                            <CheckCircle className="h-4 w-4" />
                             Approva
                           </button>
                           <button
                             onClick={() => handleReview(request, 'rejected')}
-                            className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm flex items-center gap-1"
+                            className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="h-4 w-4" />
                             Rifiuta
                           </button>
                         </>
@@ -513,36 +565,34 @@ const InboxPage = () => {
                               setSelectedRequest(request);
                               setShowConvertTaskModal(true);
                             }}
-                            className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm flex items-center gap-1"
+                            className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md"
                           >
-                            <ListTodo className="w-4 h-4" />
-                            → Task
+                            <ListTodo className="h-4 w-4" />→ Task
                           </button>
                           <button
                             onClick={() => {
                               setSelectedRequest(request);
                               setShowConvertProjectModal(true);
                             }}
-                            className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm flex items-center gap-1"
+                            className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md"
                           >
-                            <FolderPlus className="w-4 h-4" />
-                            → Progetto
+                            <FolderPlus className="h-4 w-4" />→ Progetto
                           </button>
                         </>
                       )}
                       {!['converted_to_task', 'converted_to_project'].includes(request.status) && (
                         <button
                           onClick={() => handleEdit(request)}
-                          className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm flex items-center gap-1"
+                          className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-cyan-700 hover:shadow-md"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="h-4 w-4" />
                           Modifica
                         </button>
                       )}
                       {request.status !== 'new' && request.status !== 'archived' && (
                         <button
                           onClick={() => handleArchive(request)}
-                          className="px-3 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm"
+                          className="rounded-lg bg-slate-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-slate-700 hover:shadow-md"
                         >
                           Archivia
                         </button>
@@ -550,7 +600,7 @@ const InboxPage = () => {
                       {request.status === 'archived' && (
                         <button
                           onClick={() => handleUnarchive(request)}
-                          className="px-3 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm"
+                          className="rounded-lg bg-slate-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-slate-700 hover:shadow-md"
                         >
                           Estrai
                         </button>
@@ -558,7 +608,7 @@ const InboxPage = () => {
                       {user?.role === 'amministratore' && (
                         <button
                           onClick={() => handleDelete(request.id)}
-                          className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all shadow-sm hover:shadow-md text-sm"
+                          className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md"
                         >
                           Elimina
                         </button>
@@ -573,44 +623,53 @@ const InboxPage = () => {
 
       {/* New Request Modal */}
       {showNewRequestModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <GamingCard className="shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">Nuova Richiesta</h2>
-              <button onClick={() => setShowNewRequestModal(false)} className="text-slate-600 hover:text-slate-900 transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <GamingCard className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
+              <h2 className="text-2xl font-bold text-cyan-300">Nuova Richiesta</h2>
+              <button
+                onClick={() => setShowNewRequestModal(false)}
+                className="text-slate-400 transition-colors hover:text-cyan-300"
+              >
+                <X className="h-6 w-6" />
               </button>
             </div>
 
             <form onSubmit={handleCreateRequest}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Titolo *</label>
+                  <label className="text-label mb-2">Titolo *</label>
                   <input
                     type="text"
                     value={newRequestData.title}
-                    onChange={(e) => setNewRequestData({ ...newRequestData, title: e.target.value })}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    onChange={(e) =>
+                      setNewRequestData({ ...newRequestData, title: e.target.value })
+                    }
+                    className="input-dark w-full"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Descrizione *</label>
+                  <label className="text-label mb-2">Descrizione *</label>
                   <textarea
                     value={newRequestData.description}
-                    onChange={(e) => setNewRequestData({ ...newRequestData, description: e.target.value })}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    onChange={(e) =>
+                      setNewRequestData({ ...newRequestData, description: e.target.value })
+                    }
+                    className="textarea-dark w-full"
                     rows="4"
                     required
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Tipo *</label>
+                    <label className="text-label mb-1">Tipo *</label>
                     <select
                       value={newRequestData.type}
-                      onChange={(e) => setNewRequestData({ ...newRequestData, type: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setNewRequestData({ ...newRequestData, type: e.target.value })
+                      }
+                      className="input-dark w-full"
                       required
                     >
                       <option value="question">Domanda</option>
@@ -623,11 +682,13 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Provenienza *</label>
+                    <label className="text-label mb-1">Provenienza *</label>
                     <select
                       value={newRequestData.source}
-                      onChange={(e) => setNewRequestData({ ...newRequestData, source: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setNewRequestData({ ...newRequestData, source: e.target.value })
+                      }
+                      className="input-dark w-full"
                       required
                     >
                       <option value="internal">Interno</option>
@@ -641,11 +702,13 @@ const InboxPage = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Priorità</label>
+                    <label className="text-label mb-1">Priorità</label>
                     <select
                       value={newRequestData.priority}
-                      onChange={(e) => setNewRequestData({ ...newRequestData, priority: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setNewRequestData({ ...newRequestData, priority: e.target.value })
+                      }
+                      className="input-dark w-full"
                     >
                       <option value="low">Bassa</option>
                       <option value="normal">Normale</option>
@@ -654,39 +717,47 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Contatto Fonte</label>
+                    <label className="text-label mb-1">Contatto Fonte</label>
                     <input
                       type="text"
                       value={newRequestData.source_contact}
-                      onChange={(e) => setNewRequestData({ ...newRequestData, source_contact: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setNewRequestData({ ...newRequestData, source_contact: e.target.value })
+                      }
+                      className="input-dark w-full"
                       placeholder="Nome/Email/Telefono"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Progetto Collegato</label>
+                    <label className="text-label mb-1">Progetto Collegato</label>
                     <select
                       value={newRequestData.project_id}
-                      onChange={(e) => setNewRequestData({ ...newRequestData, project_id: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setNewRequestData({ ...newRequestData, project_id: e.target.value })
+                      }
+                      className="input-dark w-full"
                     >
                       <option value="">Nessuno</option>
-                      {projects.map(project => (
-                        <option key={project.id} value={project.id}>{project.name}</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Assegnato a</label>
+                    <label className="text-label mb-1">Assegnato a</label>
                     <select
                       value={newRequestData.assigned_to}
-                      onChange={(e) => setNewRequestData({ ...newRequestData, assigned_to: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setNewRequestData({ ...newRequestData, assigned_to: e.target.value })
+                      }
+                      className="input-dark w-full"
                     >
                       <option value="">Nessuno</option>
-                      {users.map(u => (
+                      {users.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.first_name} {u.last_name}
                         </option>
@@ -695,26 +766,28 @@ const InboxPage = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Scadenza</label>
+                  <label className="text-label mb-1">Scadenza</label>
                   <input
                     type="date"
                     value={newRequestData.due_date}
-                    onChange={(e) => setNewRequestData({ ...newRequestData, due_date: e.target.value })}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    onChange={(e) =>
+                      setNewRequestData({ ...newRequestData, due_date: e.target.value })
+                    }
+                    className="input-dark w-full"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6 pt-4 border-t-2 border-slate-200">
+              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowNewRequestModal(false)}
-                  className="flex-1 px-4 py-2 bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
+                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg font-bold transition-all shadow-lg shadow-primary-600/50 hover:shadow-xl"
+                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
                 >
                   Crea Richiesta
                 </button>
@@ -726,44 +799,56 @@ const InboxPage = () => {
 
       {/* Edit Request Modal */}
       {showEditRequestModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <GamingCard className="shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">Modifica Richiesta</h2>
-              <button onClick={() => { setShowEditRequestModal(false); setSelectedRequest(null); }} className="text-slate-600 hover:text-slate-900 transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <GamingCard className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
+              <h2 className="text-2xl font-bold text-cyan-300">Modifica Richiesta</h2>
+              <button
+                onClick={() => {
+                  setShowEditRequestModal(false);
+                  setSelectedRequest(null);
+                }}
+                className="text-slate-400 transition-colors hover:text-cyan-300"
+              >
+                <X className="h-6 w-6" />
               </button>
             </div>
 
             <form onSubmit={handleUpdateRequest}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Titolo *</label>
+                  <label className="text-label mb-1">Titolo *</label>
                   <input
                     type="text"
                     value={editRequestData.title}
-                    onChange={(e) => setEditRequestData({ ...editRequestData, title: e.target.value })}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    onChange={(e) =>
+                      setEditRequestData({ ...editRequestData, title: e.target.value })
+                    }
+                    className="input-dark w-full"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Descrizione *</label>
+                  <label className="text-label mb-1">Descrizione *</label>
                   <textarea
                     value={editRequestData.description}
-                    onChange={(e) => setEditRequestData({ ...editRequestData, description: e.target.value })}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    onChange={(e) =>
+                      setEditRequestData({ ...editRequestData, description: e.target.value })
+                    }
+                    className="textarea-dark w-full"
                     rows="4"
                     required
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Tipo *</label>
+                    <label className="text-label mb-1">Tipo *</label>
                     <select
                       value={editRequestData.type}
-                      onChange={(e) => setEditRequestData({ ...editRequestData, type: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setEditRequestData({ ...editRequestData, type: e.target.value })
+                      }
+                      className="input-dark w-full"
                       required
                     >
                       <option value="question">Domanda</option>
@@ -776,11 +861,13 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Provenienza *</label>
+                    <label className="text-label mb-1">Provenienza *</label>
                     <select
                       value={editRequestData.source}
-                      onChange={(e) => setEditRequestData({ ...editRequestData, source: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setEditRequestData({ ...editRequestData, source: e.target.value })
+                      }
+                      className="input-dark w-full"
                       required
                     >
                       <option value="internal">Interno</option>
@@ -794,11 +881,13 @@ const InboxPage = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Priorità</label>
+                    <label className="text-label mb-1">Priorità</label>
                     <select
                       value={editRequestData.priority}
-                      onChange={(e) => setEditRequestData({ ...editRequestData, priority: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setEditRequestData({ ...editRequestData, priority: e.target.value })
+                      }
+                      className="input-dark w-full"
                     >
                       <option value="low">Bassa</option>
                       <option value="normal">Normale</option>
@@ -807,39 +896,47 @@ const InboxPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Contatto Fonte</label>
+                    <label className="text-label mb-1">Contatto Fonte</label>
                     <input
                       type="text"
                       value={editRequestData.source_contact}
-                      onChange={(e) => setEditRequestData({ ...editRequestData, source_contact: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setEditRequestData({ ...editRequestData, source_contact: e.target.value })
+                      }
+                      className="input-dark w-full"
                       placeholder="Nome/Email/Telefono"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Progetto Collegato</label>
+                    <label className="text-label mb-1">Progetto Collegato</label>
                     <select
                       value={editRequestData.project_id}
-                      onChange={(e) => setEditRequestData({ ...editRequestData, project_id: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setEditRequestData({ ...editRequestData, project_id: e.target.value })
+                      }
+                      className="input-dark w-full"
                     >
                       <option value="">Nessuno</option>
-                      {projects.map(project => (
-                        <option key={project.id} value={project.id}>{project.name}</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Assegnato a</label>
+                    <label className="text-label mb-1">Assegnato a</label>
                     <select
                       value={editRequestData.assigned_to}
-                      onChange={(e) => setEditRequestData({ ...editRequestData, assigned_to: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                      onChange={(e) =>
+                        setEditRequestData({ ...editRequestData, assigned_to: e.target.value })
+                      }
+                      className="input-dark w-full"
                     >
                       <option value="">Nessuno</option>
-                      {users.map(u => (
+                      {users.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.first_name} {u.last_name}
                         </option>
@@ -848,29 +945,31 @@ const InboxPage = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Scadenza</label>
+                  <label className="text-label mb-1">Scadenza</label>
                   <input
                     type="date"
                     value={editRequestData.due_date}
-                    onChange={(e) => setEditRequestData({ ...editRequestData, due_date: e.target.value })}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    onChange={(e) =>
+                      setEditRequestData({ ...editRequestData, due_date: e.target.value })
+                    }
+                    className="input-dark w-full"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6 pt-4 border-t-2 border-slate-200">
+              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditRequestModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="flex-1 px-4 py-2 bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
+                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg font-bold transition-all shadow-lg shadow-primary-600/50 hover:shadow-xl"
+                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
                 >
                   Salva Modifiche
                 </button>
@@ -882,40 +981,50 @@ const InboxPage = () => {
 
       {/* Convert to Task Modal */}
       {showConvertTaskModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <GamingCard className="shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">Converti in Task</h2>
-              <button onClick={() => { setShowConvertTaskModal(false); setSelectedRequest(null); }} className="text-slate-600 hover:text-slate-900 transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <GamingCard className="w-full max-w-md p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
+              <h2 className="text-2xl font-bold text-cyan-300">Converti in Task</h2>
+              <button
+                onClick={() => {
+                  setShowConvertTaskModal(false);
+                  setSelectedRequest(null);
+                }}
+                className="text-slate-400 transition-colors hover:text-cyan-300"
+              >
+                <X className="h-6 w-6" />
               </button>
             </div>
 
             <form onSubmit={handleConvertToTask}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Progetto</label>
-                  <select 
-                    name="project_id" 
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                  <label className="text-label mb-1">Progetto</label>
+                  <select
+                    name="project_id"
+                    className="input-dark w-full"
                     defaultValue={selectedRequest?.project_id || ''}
                   >
                     <option value="">Nessuno</option>
-                    {projects.map(project => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Assegna a *</label>
-                  <select 
-                    name="assigned_to" 
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
-                    defaultValue={selectedRequest?.assigned_to || user?.id || ''} 
+                  <label className="text-label mb-1">Assegna a *</label>
+                  <select
+                    name="assigned_to"
+                    className="input-dark w-full"
+                    defaultValue={selectedRequest?.assigned_to || user?.id || ''}
                     required
                   >
-                    <option value="" disabled>Seleziona un utente...</option>
-                    {users.map(u => (
+                    <option value="" disabled>
+                      Seleziona un utente...
+                    </option>
+                    {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.first_name} {u.last_name} ({u.role})
                       </option>
@@ -923,29 +1032,29 @@ const InboxPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Deadline</label>
-                  <input 
-                    type="date" 
-                    name="deadline" 
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
-                    defaultValue={selectedRequest?.due_date || ''} 
+                  <label className="text-label mb-1">Deadline</label>
+                  <input
+                    type="date"
+                    name="deadline"
+                    className="input-dark w-full"
+                    defaultValue={selectedRequest?.due_date || ''}
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6 pt-4 border-t-2 border-slate-200">
+              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowConvertTaskModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="flex-1 px-4 py-2 bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
+                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg font-bold transition-all shadow-lg shadow-primary-600/50 hover:shadow-xl"
+                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
                 >
                   Converti in Task
                 </button>
@@ -957,52 +1066,58 @@ const InboxPage = () => {
 
       {/* Convert to Project Modal */}
       {showConvertProjectModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <GamingCard className="shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">Converti in Progetto</h2>
-              <button onClick={() => { setShowConvertProjectModal(false); setSelectedRequest(null); }} className="text-slate-600 hover:text-slate-900 transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <GamingCard className="w-full max-w-md p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between border-b-2 border-cyan-500/20 pb-4">
+              <h2 className="text-2xl font-bold text-cyan-300">Converti in Progetto</h2>
+              <button
+                onClick={() => {
+                  setShowConvertProjectModal(false);
+                  setSelectedRequest(null);
+                }}
+                className="text-slate-400 transition-colors hover:text-cyan-300"
+              >
+                <X className="h-6 w-6" />
               </button>
             </div>
 
             <form onSubmit={handleConvertToProject}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Nome Progetto *</label>
+                  <label className="text-label mb-1">Nome Progetto *</label>
                   <input
                     type="text"
                     name="name"
                     defaultValue={selectedRequest?.title || ''}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    className="input-dark w-full"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Descrizione *</label>
+                  <label className="text-label mb-1">Descrizione *</label>
                   <textarea
                     name="description"
                     defaultValue={selectedRequest?.description || ''}
-                    className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-medium"
+                    className="textarea-dark w-full"
                     rows="4"
                     required
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6 pt-4 border-t-2 border-slate-200">
+              <div className="mt-6 flex gap-3 border-t-2 border-cyan-500/20 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowConvertProjectModal(false);
                     setSelectedRequest(null);
                   }}
-                  className="flex-1 px-4 py-2 bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
+                  className="flex-1 rounded-lg border-2 border-cyan-500/20 bg-slate-700 px-4 py-2 font-bold text-slate-200 shadow-sm transition-all hover:bg-slate-600 hover:shadow-md"
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg font-bold transition-all shadow-lg shadow-primary-600/50 hover:shadow-xl"
+                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white shadow-lg shadow-cyan-600/50 transition-all hover:bg-cyan-700 hover:shadow-xl"
                 >
                   Converti in Progetto
                 </button>

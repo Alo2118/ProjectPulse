@@ -115,7 +115,7 @@ export const canAccessRoute = (user, route) => {
 
   // Routes that direzione CANNOT access
   const direzioneForbidden = ['templates', 'template-manager', 'users'];
-  
+
   if (user.role === 'direzione' && direzioneForbidden.includes(route)) {
     return false;
   }

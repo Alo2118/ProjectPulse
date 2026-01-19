@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Play, Square } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 import { timeApi } from '../services/api';
 
 export default function Timer({ onTimerChange }) {
+  const { colors, spacing } = useTheme();
   const [activeTimer, setActiveTimer] = useState(null);
   const [elapsed, setElapsed] = useState(0);
 
@@ -55,21 +57,16 @@ export default function Timer({ onTimerChange }) {
   if (!activeTimer) return null;
 
   return (
-    <div className="card-lg flex items-center justify-between">
+    <div className={`${colors.bg.primary} ${colors.text.primary} rounded-lg border-2 ${colors.border} ${spacing.cardP} flex items-center justify-between shadow-md`}>
       <div>
-        <div className="text-label">Timer attivo</div>
-        <div className="text-subtitle text-cyan-300 mt-1">{activeTimer.task_title}</div>
+        <div className={`${colors.text.secondary} text-sm font-semibold`}>Timer attivo</div>
+        <div className="text-subtitle mt-1 text-cyan-300">{activeTimer.task_title}</div>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="text-3xl font-mono font-bold text-cyan-400">
-          {formatTime(elapsed)}
-        </div>
-        <button
-          onClick={handleStop}
-          className="btn btn-danger flex items-center gap-2"
-        >
-          <Square className="w-4 h-4" />
+        <div className="font-mono text-3xl font-bold text-cyan-400">{formatTime(elapsed)}</div>
+        <button onClick={handleStop} className="btn-danger flex items-center gap-2">
+          <Square className="h-4 w-4" />
           Stop
         </button>
       </div>

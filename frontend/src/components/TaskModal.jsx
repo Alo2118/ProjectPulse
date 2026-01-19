@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Clock, MessageSquare, Send, User, Trash2, Save } from 'lucide-react';
 import { tasksApi, commentsApi, projectsApi, milestonesApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../hooks/useTheme';
 import SubtaskList from './SubtaskList';
 import { useTemplates } from '../hooks/useTemplates';
 
@@ -10,11 +11,12 @@ const statusLabels = {
   in_progress: 'In corso',
   blocked: 'Bloccato',
   waiting_clarification: 'Attesa chiarimenti',
-  completed: 'Completato'
+  completed: 'Completato',
 };
 
 export default function TaskModal({ task, onClose, onUpdate }) {
   const { user, isDirezione, isAmministratore } = useAuth();
+  const { colors, spacing } = useTheme();
   const { saveCustomTemplate } = useTemplates('task');
   const [editedTask, setEditedTask] = useState(task);
   const [comments, setComments] = useState([]);
@@ -61,7 +63,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const loadMilestones = async (projectId) => {
     try {
       const response = await milestonesApi.getByProject(projectId);
-      setMilestones(response.data.filter(m => m.status === 'active'));
+      setMilestones(response.data.filter((m) => m.status === 'active'));
     } catch (error) {
       console.error('Error loading milestones:', error);
     }
@@ -72,7 +74,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
       const response = await usersApi.getAll({ active: true });
       // API returns array directly, not wrapped in data
       const usersData = Array.isArray(response.data) ? response.data : [];
-      setUsers(usersData.filter(u => u.role === 'dipendente'));
+      setUsers(usersData.filter((u) => u.role === 'dipendente'));
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -101,7 +103,9 @@ export default function TaskModal({ task, onClose, onUpdate }) {
         milestone_id: editedTask.milestone_id ? parseInt(editedTask.milestone_id) : null,
         assigned_to: editedTask.assigned_to ? parseInt(editedTask.assigned_to) : null,
         estimated_hours: editedTask.estimated_hours ? parseInt(editedTask.estimated_hours) : 0,
-        progress_percentage: editedTask.progress_percentage ? parseInt(editedTask.progress_percentage) : 0
+        progress_percentage: editedTask.progress_percentage
+          ? parseInt(editedTask.progress_percentage)
+          : 0,
       };
 
       console.log('Sending updates to backend:', updates);
@@ -125,19 +129,23 @@ export default function TaskModal({ task, onClose, onUpdate }) {
     try {
       await commentsApi.create({
         task_id: task.id,
-        message: newComment
+        message: newComment,
       });
       setNewComment('');
       loadComments();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante l\'invio del commento');
+      alert(error.response?.data?.error || "Errore durante l'invio del commento");
     }
   };
 
   const handleDelete = async () => {
     if (!task || !task.id) return;
 
-    if (!confirm(`Sei sicuro di voler eliminare il task "${task.title}"?\n\nQuesta azione non può essere annullata.`)) {
+    if (
+      !confirm(
+        `Sei sicuro di voler eliminare il task "${task.title}"?\n\nQuesta azione non può essere annullata.`
+      )
+    ) {
       return;
     }
 
@@ -147,7 +155,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
       onUpdate();
       onClose();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante l\'eliminazione');
+      alert(error.response?.data?.error || "Errore durante l'eliminazione");
       setLoading(false);
     }
   };
@@ -161,7 +169,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
     try {
       // Get subtasks for this task
       const subtasksResponse = await tasksApi.getSubtasks(task.id);
-      const subtasks = subtasksResponse.data.map(st => st.title);
+      const subtasks = subtasksResponse.data.map((st) => st.title);
 
       const template = {
         name: templateName.trim(),
@@ -171,12 +179,14 @@ export default function TaskModal({ task, onClose, onUpdate }) {
         data: {
           description: task.description || '',
           priority: task.priority || 'medium',
-          subtasks: subtasks
-        }
+          subtasks: subtasks,
+        },
       };
 
       saveCustomTemplate(template);
-      alert(`Template "${templateName}" salvato con successo!\n\n${subtasks.length > 0 ? `Include ${subtasks.length} subtask` : 'Nessuna subtask inclusa'}`);
+      alert(
+        `Template "${templateName}" salvato con successo!\n\n${subtasks.length > 0 ? `Include ${subtasks.length} subtask` : 'Nessuna subtask inclusa'}`
+      );
     } catch (error) {
       console.error('Error saving template:', error);
       alert('Errore durante il salvataggio del template');
@@ -195,30 +205,25 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div 
-        className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transform transition-all animate-slide-up border-2 border-slate-200 shadow-2xl"
-        style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}
-      >
-        <div className="sticky top-0 bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4 flex items-center justify-between z-10 shadow-lg">
-          <h2 className="text-2xl font-bold text-white">Dettagli Task</h2>
-          <button 
-            onClick={onClose} 
-            className="text-white hover:bg-white/20 rounded-lg p-2 transition-all hover:scale-110"
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="card-lg max-h-[90vh] w-full max-w-3xl animate-slide-up overflow-y-auto">
+        <div className={`sticky top-0 z-10 flex items-center justify-between border-b-2 ${colors.border} ${colors.bg.secondary} px-6 py-4`}>
+          <h2 className="card-header">Dettagli Task</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-cyan-400/60 transition-all hover:text-cyan-300"
           >
-            <X className="w-6 h-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 bg-slate-50">
+        <div className={`space-y-6 ${colors.bg.primary} p-6`}>
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Titolo
-            </label>
+            <label className="text-label mb-2 block">Titolo</label>
             <input
               type="text"
-              className="input"
+              className="input-dark w-full"
               value={editedTask.title}
               onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
               disabled={isDirezione}
@@ -227,62 +232,68 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descrizione
-            </label>
+            <label className="text-label mb-2 block">Descrizione</label>
             <textarea
-              className="input"
+              className="input-dark w-full"
               rows="3"
               value={editedTask?.description || ''}
-              onChange={(e) => editedTask && setEditedTask({ ...editedTask, description: e.target.value })}
+              onChange={(e) =>
+                editedTask && setEditedTask({ ...editedTask, description: e.target.value })
+              }
               disabled={isDirezione}
             />
           </div>
 
           {/* Project */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Progetto
-            </label>
+            <label className="text-label mb-2 block">Progetto</label>
             <select
-              className="input"
+              className="input-dark w-full"
               value={editedTask.project_id || ''}
-              onChange={(e) => setEditedTask({ ...editedTask, project_id: e.target.value ? parseInt(e.target.value) : null, milestone_id: null })}
+              onChange={(e) =>
+                setEditedTask({
+                  ...editedTask,
+                  project_id: e.target.value ? parseInt(e.target.value) : null,
+                  milestone_id: null,
+                })
+              }
               disabled={isDirezione}
             >
               <option value="">Nessun progetto</option>
-              {projects.map(project => (
+              {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Seleziona un progetto per spostare il task
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Seleziona un progetto per spostare il task</p>
           </div>
 
           {/* Milestone */}
           {editedTask.project_id && milestones.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Milestone (Opzionale)
-              </label>
+              <label className="text-label mb-2 block">Milestone (Opzionale)</label>
               <select
-                className="input"
+                className="input-dark w-full"
                 value={editedTask.milestone_id || ''}
-                onChange={(e) => setEditedTask({ ...editedTask, milestone_id: e.target.value ? parseInt(e.target.value) : null })}
+                onChange={(e) =>
+                  setEditedTask({
+                    ...editedTask,
+                    milestone_id: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
                 disabled={isDirezione}
               >
                 <option value="">Nessuna milestone</option>
-                {milestones.map(milestone => (
+                {milestones.map((milestone) => (
                   <option key={milestone.id} value={milestone.id}>
                     {milestone.name}
-                    {milestone.due_date && ` (scad. ${new Date(milestone.due_date).toLocaleDateString('it-IT')})`}
+                    {milestone.due_date &&
+                      ` (scad. ${new Date(milestone.due_date).toLocaleDateString('it-IT')})`}
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-xs text-gray-500">
                 Assegna il task a una milestone specifica
               </p>
             </div>
@@ -291,23 +302,28 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           {/* Assigned User (only for amministratore) */}
           {isAmministratore && users.length > 0 && (
             <div>
-              <label className="label flex items-center gap-2 mb-2">
-                <User className="w-4 h-4" />
+              <label className="label mb-2 flex items-center gap-2">
+                <User className="h-4 w-4" />
                 Assegnato a
               </label>
               <select
-                className="input"
+                className="input-dark w-full"
                 value={editedTask.assigned_to || ''}
-                onChange={(e) => setEditedTask({ ...editedTask, assigned_to: e.target.value ? parseInt(e.target.value) : null })}
+                onChange={(e) =>
+                  setEditedTask({
+                    ...editedTask,
+                    assigned_to: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
               >
                 <option value="">Nessun assegnatario</option>
-                {users.map(u => (
+                {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.first_name} {u.last_name} ({u.email})
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-xs text-gray-500">
                 Assegna o riassegna il task a un dipendente
               </p>
             </div>
@@ -316,27 +332,25 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           {/* Status, Priority and Deadline */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stato
-              </label>
+              <label className="text-label mb-2 block">Stato</label>
               <select
-                className="input"
+                className="input-dark w-full"
                 value={editedTask.status}
                 onChange={(e) => setEditedTask({ ...editedTask, status: e.target.value })}
                 disabled={isDirezione}
               >
                 {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Priorità
-              </label>
+              <label className="text-label mb-2 block">Priorità</label>
               <select
-                className="input"
+                className="input-dark w-full"
                 value={editedTask.priority}
                 onChange={(e) => setEditedTask({ ...editedTask, priority: e.target.value })}
                 disabled={isDirezione}
@@ -348,12 +362,10 @@ export default function TaskModal({ task, onClose, onUpdate }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Scadenza
-              </label>
+              <label className="text-label mb-2 block">Scadenza</label>
               <input
                 type="date"
-                className="input"
+                className="input-dark w-full"
                 value={editedTask.deadline || ''}
                 onChange={(e) => setEditedTask({ ...editedTask, deadline: e.target.value })}
                 disabled={isDirezione}
@@ -363,54 +375,46 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
           {/* Gantt Planning Fields */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
               📊 Pianificazione Gantt
             </h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Data inizio
-                </label>
+                <label className="text-label mb-2 block">Data inizio</label>
                 <input
                   type="date"
-                  className="input"
+                  className="input-dark w-full"
                   value={editedTask.start_date || ''}
                   onChange={(e) => setEditedTask({ ...editedTask, start_date: e.target.value })}
                   disabled={isDirezione}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Quando inizia il lavoro
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Quando inizia il lavoro</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ore stimate
-                </label>
+                <label className="text-label mb-2 block">Ore stimate</label>
                 <input
                   type="number"
                   min="0"
                   step="1"
-                  className="input"
+                  className="input-dark w-full"
                   value={editedTask.estimated_hours || 0}
-                  onChange={(e) => setEditedTask({ ...editedTask, estimated_hours: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setEditedTask({ ...editedTask, estimated_hours: parseInt(e.target.value) || 0 })
+                  }
                   disabled={isDirezione}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Durata prevista in ore
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Durata prevista in ore</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Progresso %
-                </label>
+                <label className="text-label mb-2 block">Progresso %</label>
                 <input
                   type="number"
                   min="0"
                   max="100"
                   step="5"
-                  className="input"
+                  className="input-dark w-full"
                   value={editedTask.progress_percentage || 0}
                   onChange={(e) => {
                     const val = parseInt(e.target.value) || 0;
@@ -419,9 +423,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
                   }}
                   disabled={isDirezione}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Completamento visuale
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Completamento visuale</p>
               </div>
             </div>
           </div>
@@ -429,11 +431,9 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           {/* Blocked reason */}
           {editedTask.status === 'blocked' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Motivo blocco
-              </label>
+              <label className="text-label mb-2 block">Motivo blocco</label>
               <textarea
-                className="input"
+                className="input-dark w-full"
                 rows="2"
                 value={editedTask.blocked_reason || ''}
                 onChange={(e) => setEditedTask({ ...editedTask, blocked_reason: e.target.value })}
@@ -446,14 +446,14 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           {/* Clarification needed */}
           {editedTask.status === 'waiting_clarification' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chiarimenti richiesti
-              </label>
+              <label className="text-label mb-2 block">Chiarimenti richiesti</label>
               <textarea
-                className="input"
+                className="input-dark w-full"
                 rows="2"
                 value={editedTask.clarification_needed || ''}
-                onChange={(e) => setEditedTask({ ...editedTask, clarification_needed: e.target.value })}
+                onChange={(e) =>
+                  setEditedTask({ ...editedTask, clarification_needed: e.target.value })
+                }
                 disabled={isDirezione}
                 placeholder="Cosa necessita di chiarimento?"
               />
@@ -462,10 +462,10 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
           {/* Time spent */}
           {task.time_spent > 0 && (
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-              <Clock className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center gap-3 rounded-xl border-2 border-blue-200 bg-blue-50 p-4 shadow-sm">
+              <Clock className="h-5 w-5 text-blue-600" />
               <div>
-                <div className="text-sm text-blue-600 font-medium">Tempo lavorato</div>
+                <div className="text-sm font-medium text-blue-600">Tempo lavorato</div>
                 <div className="text-lg font-bold text-blue-900">{formatTime(task.time_spent)}</div>
               </div>
             </div>
@@ -473,28 +473,26 @@ export default function TaskModal({ task, onClose, onUpdate }) {
 
           {/* Comments */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <MessageSquare className="w-5 h-5 text-gray-500" />
+            <div className="mb-4 flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-gray-500" />
               <h3 className="text-lg font-semibold text-gray-900">Comunicazioni</h3>
             </div>
 
-            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+            <div className="mb-4 max-h-64 space-y-3 overflow-y-auto">
               {comments.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-4">
-                  Nessun commento ancora
-                </p>
+                <p className="py-4 text-center text-sm text-gray-500">Nessun commento ancora</p>
               ) : (
                 comments.map((comment) => (
                   <div
                     key={comment.id}
-                    className={`p-3 rounded-xl shadow-sm ${
+                    className={`rounded-xl p-3 shadow-sm ${
                       comment.is_from_direction
-                        ? 'bg-yellow-50 border-2 border-yellow-200'
-                        : 'bg-gray-50 border-2 border-gray-200'
+                        ? 'border-2 border-yellow-200 bg-yellow-50'
+                        : 'border-2 border-gray-200 bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between mb-1">
-                      <span className="font-medium text-sm text-gray-900">
+                    <div className="mb-1 flex items-start justify-between">
+                      <span className="text-sm font-medium text-gray-900">
                         {comment.user_name}
                         {comment.is_from_direction && ' (Direzione)'}
                       </span>
@@ -517,7 +515,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
                 onChange={(e) => setNewComment(e.target.value)}
               />
               <button type="submit" className="btn-primary">
-                <Send className="w-4 h-4" />
+                <Send className="h-4 w-4" />
               </button>
             </form>
           </div>
@@ -536,28 +534,32 @@ export default function TaskModal({ task, onClose, onUpdate }) {
           />
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t-2 border-slate-200">
+          <div className={`flex gap-3 border-t-2 ${colors.border} pt-4`}>
             {!isDirezione && (
               <>
                 <button onClick={handleSave} disabled={loading} className="btn-primary flex-1">
-                  {loading ? 'Salvataggio...' : isAmministratore ? 'Salva assegnazione' : 'Salva modifiche'}
+                  {loading
+                    ? 'Salvataggio...'
+                    : isAmministratore
+                      ? 'Salva assegnazione'
+                      : 'Salva modifiche'}
                 </button>
                 <button
                   onClick={handleSaveAsTemplate}
                   disabled={loading}
-                  className="btn-secondary text-primary-600 hover:bg-primary-50 hover:border-primary-300 flex items-center gap-2"
+                  className="btn-secondary flex items-center gap-2 text-primary-600 hover:border-primary-300 hover:bg-primary-50"
                   title="Salva come template personalizzato"
                 >
-                  <Save className="w-4 h-4" />
+                  <Save className="h-4 w-4" />
                   Template
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={loading}
-                  className="btn-secondary text-red-600 hover:bg-red-50 hover:border-red-300 flex items-center gap-2"
+                  className="btn-secondary flex items-center gap-2 text-red-600 hover:border-red-300 hover:bg-red-50"
                   title="Elimina task"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="h-4 w-4" />
                   Elimina
                 </button>
               </>

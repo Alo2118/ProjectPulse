@@ -1,4 +1,5 @@
 import React from 'react';
+import { designTokens } from '../../config/designTokens';
 
 /**
  * Card Component - Design System
@@ -27,16 +28,16 @@ export default function Card({
 
   // Variant styles
   const variantStyles = {
-    default: 'bg-slate-800/50 border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/10',
+    default: 'bg-slate-100 dark:bg-slate-800/50 border-2 border-cyan-400 dark:border-cyan-500/30 shadow-lg shadow-cyan-500/10',
     gradient: 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white',
-    flat: 'bg-slate-800/30 border-2 border-cyan-500/20'
+    flat: 'bg-slate-50 dark:bg-slate-800/30 border-2 border-cyan-300 dark:border-cyan-500/20',
   };
 
   // Padding styles
   const paddingStyles = {
     sm: 'p-3',
     md: 'p-4',
-    lg: 'p-6'
+    lg: 'p-6',
   };
 
   // Shadow styles
@@ -44,7 +45,7 @@ export default function Card({
     none: '',
     sm: 'shadow-sm',
     md: 'shadow-md',
-    lg: 'shadow-lg'
+    lg: 'shadow-lg',
   };
 
   // Hover effect
@@ -57,7 +58,9 @@ export default function Card({
     ${shadowStyles[shadow]}
     ${hoverStyles}
     ${className}
-  `.trim().replace(/\s+/g, ' ');
+  `
+    .trim()
+    .replace(/\s+/g, ' ');
 
   return (
     <div className={combinedClassName} {...props}>
@@ -72,10 +75,16 @@ export default function Card({
  */
 export function CardHeader({ title, subtitle, action, compact = false, className = '' }) {
   return (
-    <div className={`flex justify-between items-start ${compact ? 'mb-3' : 'mb-4'} ${className}`}>
+    <div className={`flex items-start justify-between ${compact ? 'mb-3' : 'mb-4'} ${className}`}>
       <div>
-        {title && <h3 className={`${compact ? 'text-base' : 'text-lg'} font-semibold text-cyan-300`}>{title}</h3>}
-        {subtitle && <p className={`${compact ? 'text-xs' : 'text-sm'} text-cyan-400/60 mt-1`}>{subtitle}</p>}
+        {title && (
+          <h3 className={`${compact ? 'text-base' : 'text-lg'} font-semibold ${designTokens.colors.cyan.text}`}>
+            {title}
+          </h3>
+        )}
+        {subtitle && (
+          <p className={`${compact ? 'text-xs' : 'text-sm'} mt-1 ${designTokens.colors.cyan.textLight} opacity-60`}>{subtitle}</p>
+        )}
       </div>
       {action && <div className="ml-4">{action}</div>}
     </div>
@@ -87,11 +96,7 @@ export function CardHeader({ title, subtitle, action, compact = false, className
  * For card content area
  */
 export function CardBody({ className = '', children }) {
-  return (
-    <div className={className}>
-      {children}
-    </div>
-  );
+  return <div className={className}>{children}</div>;
 }
 
 /**
@@ -99,9 +104,5 @@ export function CardBody({ className = '', children }) {
  * For card footer with actions or additional info
  */
 export function CardFooter({ className = '', children }) {
-  return (
-    <div className={`mt-4 pt-4 border-t-2 border-cyan-500/20 ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`mt-4 border-t-2 border-cyan-500/20 pt-4 ${className}`}>{children}</div>;
 }

@@ -32,7 +32,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -41,7 +42,8 @@
 }
 
 @keyframes bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -79,12 +81,16 @@
 }
 
 .hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 .hover-scale {
@@ -99,9 +105,21 @@
   animation: slideInUp 0.4s ease-out backwards;
 }
 
-.stagger-animation > *:nth-child(1) { animation-delay: 0.05s; }
-.stagger-animation > *:nth-child(2) { animation-delay: 0.1s; }
-.stagger-animation > *:nth-child(3) { animation-delay: 0.15s; }
-.stagger-animation > *:nth-child(4) { animation-delay: 0.2s; }
-.stagger-animation > *:nth-child(5) { animation-delay: 0.25s; }
-.stagger-animation > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-animation > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.stagger-animation > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.stagger-animation > *:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.stagger-animation > *:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.stagger-animation > *:nth-child(5) {
+  animation-delay: 0.25s;
+}
+.stagger-animation > *:nth-child(6) {
+  animation-delay: 0.3s;
+}

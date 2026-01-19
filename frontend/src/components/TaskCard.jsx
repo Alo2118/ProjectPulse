@@ -1,48 +1,62 @@
-import { Clock, MessageSquare, Play, AlertCircle, HelpCircle, Calendar, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
+import {
+  Clock,
+  MessageSquare,
+  Play,
+  AlertCircle,
+  HelpCircle,
+  Calendar,
+  ArrowUp,
+  ArrowRight,
+  ArrowDown,
+} from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
+import { 
+  getStatusColors, 
+  getPriorityColors,
+  getPriorityBarColor,
+  getPriorityBorderTopColor 
+} from '../utils/helpers';
 import { timeApi } from '../services/api';
-
-const statusColors = {
-  todo: 'bg-slate-100 text-slate-700 border-2 border-slate-200',
-  in_progress: 'bg-primary-50 text-primary-700 border-2 border-primary-200',
-  blocked: 'bg-danger-50 text-danger-700 border-2 border-danger-200',
-  waiting_clarification: 'bg-warning-50 text-warning-700 border-2 border-warning-200',
-  completed: 'bg-success-50 text-success-700 border-2 border-success-200'
-};
 
 const statusLabels = {
   todo: 'Da fare',
   in_progress: 'In corso',
   blocked: 'Bloccato',
   waiting_clarification: 'Attesa chiarimenti',
-  completed: 'Completato'
+  completed: 'Completato',
 };
 
 const priorityConfig = {
   low: {
-    color: 'text-slate-700 bg-slate-50 border-2 border-slate-200',
     icon: ArrowDown,
-    label: 'Bassa'
+    label: 'Bassa',
   },
   medium: {
-    color: 'text-warning-700 bg-warning-50 border-2 border-warning-200',
     icon: ArrowRight,
-    label: 'Media'
+    label: 'Media',
   },
   high: {
-    color: 'text-danger-700 bg-danger-50 border-2 border-danger-200',
     icon: ArrowUp,
-    label: 'Alta'
-  }
+    label: 'Alta',
+  },
 };
 
-export default function TaskCard({ task, onClick, onTimerStart, showProject = true, expandButton = null, hasSubtasks = false }) {
+export default function TaskCard({
+  task,
+  onClick,
+  onTimerStart,
+  showProject = true,
+  expandButton = null,
+  hasSubtasks = false,
+}) {
+  const { colors } = useTheme();
   const handleStartTimer = async (e) => {
     e.stopPropagation();
     try {
       await timeApi.start(task.id);
       if (onTimerStart) onTimerStart();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante l\'avvio del timer');
+      alert(error.response?.data?.error || "Errore durante l'avvio del timer");
     }
   };
 
@@ -69,147 +83,152 @@ export default function TaskCard({ task, onClick, onTimerStart, showProject = tr
         text: `In ritardo di ${Math.abs(diffDays)} gg`,
         color: 'text-danger-700 bg-danger-50',
         icon: AlertCircle,
-        urgent: true
+        urgent: true,
       };
     } else if (diffDays === 0) {
       return {
         text: 'Scade oggi',
         color: 'text-warning-700 bg-warning-50',
         icon: Calendar,
-        urgent: true
+        urgent: true,
       };
     } else if (diffDays <= 3) {
       return {
         text: `Scade tra ${diffDays} gg`,
         color: 'text-warning-600 bg-warning-50',
         icon: Calendar,
-        urgent: false
+        urgent: false,
       };
     } else if (diffDays <= 7) {
       return {
         text: `Scade tra ${diffDays} gg`,
         color: 'text-slate-600 bg-slate-100',
         icon: Calendar,
-        urgent: false
+        urgent: false,
       };
     } else {
       return {
         text: deadline.toLocaleDateString('it-IT'),
         color: 'text-slate-500 bg-slate-50',
         icon: Calendar,
-        urgent: false
+        urgent: false,
       };
     }
   };
 
   const deadlineInfo = getDeadlineInfo();
+  const statusColor = getStatusColors(task.status);
   const priorityInfo = priorityConfig[task.priority] || priorityConfig.medium;
+  const priorityColors = getPriorityColors(task.priority);
 
   const isSubtask = task.parent_task_id;
-  const borderTopColor = isSubtask ? (
-    task.priority === 'high' ? 'border-t-2 border-t-danger-400' :
-    task.priority === 'medium' ? 'border-t-2 border-t-warning-400' :
-    'border-t-2 border-t-slate-300'
-  ) : '';
+  const borderTopColor = isSubtask ? getPriorityBorderTopColor(task.priority) : '';
 
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer transition-all rounded-xl ${
-        isSubtask
-          ? `ml-4 card ${borderTopColor}`
-          : 'card-lg'
-      }`}
+      className={`group cursor-pointer rounded-xl transition-all ${colors.bg.primary} ${colors.border} border-2 ${colors.text.primary} ${isSubtask ? `card ml-4 ${borderTopColor}` : 'card-lg shadow-md'}`}
     >
       {/* Priority Indicator Bar - diverso per subtask */}
       {!isSubtask && (
-        <div className={`h-0.5 ${
-          task.priority === 'high' ? 'bg-danger-500' :
-          task.priority === 'medium' ? 'bg-warning-500' :
-          'bg-slate-400'
-        }`} />
+        <div
+          className={`h-0.5 ${getPriorityBarColor(task.priority)}`}
+        />
       )}
-           
+
       <div className="p-2">
         {/* Header Compatto */}
-        <div className="flex items-start justify-between gap-1 mb-1">
-          <div className="flex-1 min-w-0">
+        <div className="mb-1 flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
             {/* Badges compatti in una riga */}
-            <div className="flex items-center gap-1 mb-1 flex-wrap">
+            <div className="mb-1 flex flex-wrap items-center gap-1">
               {/* Project Name compatto - non mostrare se è un subtask */}
               {showProject && !isSubtask && task.project_name && (
-                <div className="inline-flex items-center gap-0.5 text-xs text-slate-600 bg-slate-50 rounded px-1.5 py-0.5">
+                <div className={`inline-flex items-center gap-0.5 rounded border ${colors.border} ${colors.bg.secondary} px-1.5 py-0.5 text-xs ${colors.text.secondary}`}>
                   <span>📁</span>
-                  <span className="font-medium truncate max-w-[100px]">{task.project_name}</span>
+                  <span className="max-w-[100px] truncate font-medium">{task.project_name}</span>
                 </div>
               )}
-              <span className={`inline-flex items-center px-1.5 py-0 rounded text-xs font-bold ${statusColors[task.status]}`}>
+              <span
+                className={`inline-flex items-center rounded px-1.5 py-0 text-xs font-bold ${statusColor.bg} ${statusColor.text} border-2 ${statusColor.border}`}
+              >
                 {statusLabels[task.status]}
               </span>
-              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0 rounded text-xs font-bold ${priorityInfo.color}`}>
-                <priorityInfo.icon className="w-3 h-3" />
+              <span
+                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0 text-xs font-bold ${priorityColors.bg} ${priorityColors.text} border-2 ${priorityColors.border}`}
+              >
+                <priorityInfo.icon className="h-3 w-3" />
               </span>
             </div>
 
             {/* Task Title più compatto - diverso per subtask */}
             <div className="flex items-start gap-1">
               {/* Expand Button allineato con il titolo */}
-              {expandButton && (
-                <div className="flex-shrink-0">
-                  {expandButton}
-                </div>
-              )}
-              <h3 className={`${isSubtask ? 'font-medium' : 'font-semibold'} text-slate-900 mb-1 text-xs leading-normal group-hover:text-primary-600 transition-colors line-clamp-2 flex-1`}>
-                {isSubtask && <span className="text-slate-500">└ </span>}
+              {expandButton && <div className="flex-shrink-0">{expandButton}</div>}
+              <h3
+                className={`${isSubtask ? 'font-medium' : 'font-semibold'} mb-1 line-clamp-2 flex-1 text-xs leading-normal ${colors.text.primary} transition-colors group-hover:${colors.accent}`}
+              >
+                {isSubtask && <span className={colors.text.tertiary}>└ </span>}
                 {task.title}
               </h3>
             </div>
 
             {/* Description più compatta (opzionale, solo 1 riga) */}
-            {task.description && (
-              <p className="text-xs text-slate-600 line-clamp-1"></p>
-            )}
+            {task.description && <p className={`line-clamp-1 text-xs ${colors.text.tertiary}`}></p>}
           </div>
 
           {/* Timer Button compatto */}
           {task.status !== 'completed' && task.status !== 'blocked' && (
             <button
               onClick={handleStartTimer}
-              className="btn-primary btn-xs shadow-sm flex-shrink-0"
+              className="btn-xs btn-primary flex-shrink-0 shadow-sm"
             >
-              <Play className="w-3 h-3" />
-              <span className="hidden sm:inline text-xs">Start</span>
+              <Play className="h-3 w-3" />
+              <span className="hidden text-xs sm:inline">Start</span>
             </button>
           )}
         </div>
 
         {/* Footer compatto */}
-        {(task.time_spent > 0 || deadlineInfo || task.blocked_reason || task.clarification_needed) && (
-          <div className="flex items-center gap-1 text-xs pt-1 border-t-2 border-slate-200 flex-wrap mt-1">
+        {(task.time_spent > 0 ||
+          deadlineInfo ||
+          task.blocked_reason ||
+          task.clarification_needed) && (
+          <div className={`mt-1 flex flex-wrap items-center gap-1 border-t-2 ${colors.borderLight} pt-1 text-xs`}>
             {task.time_spent > 0 && (
-              <div className="flex items-center gap-0.5 text-slate-600 bg-slate-50 px-1.5 py-0 rounded text-xs">
-                <Clock className="w-2.5 h-2.5" />
+              <div className={`flex items-center gap-0.5 rounded border ${colors.border} ${colors.bg.secondary} px-1.5 py-0 text-xs ${colors.text.secondary}`}>
+                <Clock className="h-2.5 w-2.5" />
                 <span className="font-medium">{formatTime(task.time_spent)}</span>
               </div>
             )}
 
             {deadlineInfo && (
-              <div className={`flex items-center gap-0.5 px-1.5 py-0 rounded font-bold text-xs ${deadlineInfo.color}`}>
-                <deadlineInfo.icon className="w-2.5 h-2.5" />
+              <div
+                className={`flex items-center gap-0.5 rounded px-1.5 py-0 text-xs font-bold ${
+                  deadlineInfo.color === 'bg-danger-50 text-danger-700'
+                    ? 'border border-red-500/30 bg-red-500/20 text-red-300'
+                    : deadlineInfo.color === 'text-warning-700 bg-warning-50'
+                      ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300'
+                      : deadlineInfo.color === 'bg-warning-50 text-warning-600'
+                        ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300'
+                        : 'border border-cyan-500/20 bg-slate-700/50 text-slate-400'
+                }`}
+              >
+                <deadlineInfo.icon className="h-2.5 w-2.5" />
                 <span>{deadlineInfo.text}</span>
               </div>
             )}
 
             {task.blocked_reason && (
-              <div className="flex items-center gap-0.5 text-danger-700 bg-danger-50 px-1.5 py-0 rounded font-bold text-xs border-2 border-danger-200">
-                <AlertCircle className="w-2.5 h-2.5" />
+              <div className="flex items-center gap-0.5 rounded border-2 border-red-500/30 bg-red-500/20 px-1.5 py-0 text-xs font-bold text-red-300">
+                <AlertCircle className="h-2.5 w-2.5" />
                 <span>Bloccato</span>
               </div>
             )}
 
             {task.clarification_needed && (
-              <div className="flex items-center gap-0.5 text-warning-700 bg-warning-50 px-1.5 py-0 rounded font-bold text-xs border-2 border-warning-200">
-                <HelpCircle className="w-2.5 h-2.5" />
+              <div className="flex items-center gap-0.5 rounded border-2 border-amber-500/30 bg-amber-500/20 px-1.5 py-0 text-xs font-bold text-amber-300">
+                <HelpCircle className="h-2.5 w-2.5" />
                 <span>Chiarimenti</span>
               </div>
             )}

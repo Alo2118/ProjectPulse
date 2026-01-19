@@ -30,13 +30,13 @@ export default function StatCard({
   iconColor = 'text-primary-600',
   className = '',
   onClick,
-  compact = false
+  compact = false,
 }) {
   // Trend colors
   const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    neutral: 'text-gray-600'
+    up: 'text-green-400',
+    down: 'text-red-400',
+    neutral: 'text-slate-400',
   };
 
   return (
@@ -50,26 +50,38 @@ export default function StatCard({
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium ${variant === 'gradient' ? 'text-white/80' : 'text-gray-600'}`}>
+          <p
+            className={`${compact ? 'text-xs' : 'text-sm'} font-medium ${variant === 'gradient' ? 'text-white/80' : 'text-slate-400'}`}
+          >
             {title}
           </p>
-          <p className={`${compact ? 'mt-1 text-2xl' : 'mt-2 text-3xl'} font-bold ${variant === 'gradient' ? 'text-white' : 'text-gray-900'}`}>
+          <p
+            className={`${compact ? 'mt-1 text-2xl' : 'mt-2 text-3xl'} font-bold ${variant === 'gradient' ? 'text-white' : 'text-slate-100'}`}
+          >
             {value}
           </p>
           {subtitle && (
-            <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} ${variant === 'gradient' ? 'text-white/70' : 'text-gray-500'}`}>
+            <p
+              className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} ${variant === 'gradient' ? 'text-white/70' : 'text-slate-500'}`}
+            >
               {subtitle}
             </p>
           )}
           {trend && (
-            <p className={`${compact ? 'mt-1' : 'mt-2'} text-sm font-medium ${variant === 'gradient' ? 'text-white/90' : trendColors[trendDirection]}`}>
+            <p
+              className={`${compact ? 'mt-1' : 'mt-2'} text-sm font-medium ${variant === 'gradient' ? 'text-white/90' : trendColors[trendDirection]}`}
+            >
               {trend}
             </p>
           )}
         </div>
         {Icon && (
-          <div className={`${compact ? 'p-2' : 'p-3'} rounded-lg ${variant === 'gradient' ? 'bg-white/20' : iconBg}`}>
-            <Icon className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} ${variant === 'gradient' ? 'text-white' : iconColor}`} />
+          <div
+            className={`${compact ? 'p-2' : 'p-3'} rounded-lg ${variant === 'gradient' ? 'bg-white/20' : iconBg}`}
+          >
+            <Icon
+              className={`${compact ? 'h-4 w-4' : 'h-6 w-6'} ${variant === 'gradient' ? 'text-white' : iconColor}`}
+            />
           </div>
         )}
       </div>
@@ -86,7 +98,7 @@ export function StatCardGrid({ children, columns = 4, className = '', compact = 
     2: 'grid-cols-1 md:grid-cols-2',
     3: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
     4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
-    6: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
+    6: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6',
   };
 
   return (
@@ -103,10 +115,14 @@ export function StatCardGrid({ children, columns = 4, className = '', compact = 
 export function SimpleStatCard({ title, value, subtitle, variant = 'default', className = '' }) {
   return (
     <Card variant={variant} padding="md" shadow="sm" className={className}>
-      <p className={`text-xs font-medium uppercase tracking-wide ${variant === 'gradient' ? 'text-white/80' : 'text-gray-500'}`}>
+      <p
+        className={`text-xs font-medium uppercase tracking-wide ${variant === 'gradient' ? 'text-white/80' : 'text-gray-500'}`}
+      >
         {title}
       </p>
-      <p className={`mt-2 text-2xl font-bold ${variant === 'gradient' ? 'text-white' : 'text-gray-900'}`}>
+      <p
+        className={`mt-2 text-2xl font-bold ${variant === 'gradient' ? 'text-white' : 'text-gray-900'}`}
+      >
         {value}
       </p>
       {subtitle && (

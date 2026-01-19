@@ -1,6 +1,21 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Archive, Clock, CheckCircle, AlertCircle, Target, Calendar, ChevronDown, ChevronRight, Zap } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
+import { designTokens } from '../config/designTokens';
+import {
+  ArrowLeft,
+  Plus,
+  Edit,
+  Archive,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Target,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Zap,
+} from 'lucide-react';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
 import TaskTreeList from '../components/TaskTreeList';
 import TaskModal from '../components/TaskModal';
@@ -8,9 +23,18 @@ import CreateTaskModal from '../components/CreateTaskModal';
 import ProjectModal from '../components/ProjectModal';
 import MilestoneModal from '../components/MilestoneModal';
 import { formatTime } from '../utils/helpers';
-import { GamingLayout, GamingHeader, GamingCard, GamingLoader, GamingKPICard, GamingKPIGrid } from '../components/ui';
+import {
+  GamingLayout,
+  GamingHeader,
+  GamingCard,
+  GamingLoader,
+  GamingKPICard,
+  GamingKPIGrid,
+  Button,
+} from '../components/ui';
 
 export default function ProjectDetailPage() {
+  const { colors } = useTheme();
   const { id } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
@@ -36,7 +60,7 @@ export default function ProjectDetailPage() {
       const [projectRes, tasksRes, milestonesRes] = await Promise.all([
         projectsApi.getById(id),
         tasksApi.getAll({ project_id: id }),
-        milestonesApi.getByProject(id)
+        milestonesApi.getByProject(id),
       ]);
       setProject(projectRes.data);
       const tasksData = tasksRes.data.data || tasksRes.data;
@@ -65,7 +89,7 @@ export default function ProjectDetailPage() {
       await milestonesApi.delete(milestoneId);
       loadData();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante l\'eliminazione');
+      alert(error.response?.data?.error || "Errore durante l'eliminazione");
     }
   };
 
@@ -76,12 +100,12 @@ export default function ProjectDetailPage() {
       await projectsApi.update(id, { archived: true });
       navigate('/projects');
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante l\'archiviazione');
+      alert(error.response?.data?.error || "Errore durante l'archiviazione");
     }
   };
 
   const toggleMilestone = (milestoneId) => {
-    setExpandedMilestones(prev => {
+    setExpandedMilestones((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(milestoneId)) {
         newSet.delete(milestoneId);
@@ -92,24 +116,30 @@ export default function ProjectDetailPage() {
     });
   };
 
-  const getTasksForMilestone = useCallback((milestoneId) => {
-    return tasks.filter(t => t.milestone_id === milestoneId);
-  }, [tasks]);
+  const getTasksForMilestone = useCallback(
+    (milestoneId) => {
+      return tasks.filter((t) => t.milestone_id === milestoneId);
+    },
+    [tasks]
+  );
 
   const unassignedTasks = useMemo(() => {
-    return tasks.filter(t => !t.milestone_id && !t.parent_task_id);
+    return tasks.filter((t) => !t.milestone_id && !t.parent_task_id);
   }, [tasks]);
 
-  const stats = useMemo(() => ({
-    total: tasks.length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    in_progress: tasks.filter(t => t.status === 'in_progress').length,
-    blocked: tasks.filter(t => t.status === 'blocked').length,
-    total_time: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
-  }), [tasks]);
+  const stats = useMemo(
+    () => ({
+      total: tasks.length,
+      completed: tasks.filter((t) => t.status === 'completed').length,
+      in_progress: tasks.filter((t) => t.status === 'in_progress').length,
+      blocked: tasks.filter((t) => t.status === 'blocked').length,
+      total_time: tasks.reduce((sum, t) => sum + (t.time_spent || 0), 0),
+    }),
+    [tasks]
+  );
 
-  const completionRate = useMemo(() =>
-    stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0,
+  const completionRate = useMemo(
+    () => (stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0),
     [stats]
   );
 
@@ -122,13 +152,15 @@ export default function ProjectDetailPage() {
   return (
     <GamingLayout>
       {/* Back Button */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => navigate('/projects')}
-        className="mb-4 px-4 py-2 bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 rounded-lg font-medium transition-all flex items-center gap-2"
+        className={`mb-4 ${colors.border} ${colors.text.primary} hover:text-white`}
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="h-4 w-4" />
         Torna ai Progetti
-      </button>
+      </Button>
 
       <GamingHeader
         title={project.name}
@@ -136,27 +168,18 @@ export default function ProjectDetailPage() {
         icon={Target}
         actions={
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowEditProject(true)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
-            >
-              <Edit className="w-4 h-4" />
+            <Button variant="secondary" size="sm" onClick={() => setShowEditProject(true)}>
+              <Edit className="h-4 w-4" />
               Modifica
-            </button>
-            <button
-              onClick={handleArchive}
-              className="px-4 py-2 bg-slate-800 hover:bg-red-900/50 text-white rounded-lg font-medium transition-all flex items-center gap-2"
-            >
-              <Archive className="w-4 h-4" />
+            </Button>
+            <Button variant="danger" size="sm" onClick={handleArchive}>
+              <Archive className="h-4 w-4" />
               Archivia
-            </button>
-            <button
-              onClick={() => setShowCreateTask(true)}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold shadow-xl hover:shadow-2xl transition-all flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
+            </Button>
+            <Button size="sm" onClick={() => setShowCreateTask(true)}>
+              <Plus className="h-4 w-4" />
               Nuovo Task
-            </button>
+            </Button>
           </div>
         }
       />
@@ -202,20 +225,20 @@ export default function ProjectDetailPage() {
 
       {/* Progress Bar */}
       {stats.total > 0 && (
-        <GamingCard className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Progresso Complessivo</h3>
-            <span className="text-3xl font-bold text-blue-600">{completionRate}%</span>
+        <GamingCard className={`mb-6 ${colors.border} ${colors.bg.secondary}`}>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-white">Progresso Complessivo</h3>
+            <span className={`text-3xl font-bold ${designTokens.colors.cyan.text}`}>{completionRate}%</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden mb-2">
+          <div className={`mb-2 h-3 w-full overflow-hidden rounded-full ${colors.border} ${colors.bg.tertiary}`}>
             <div
-              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-1000 relative"
+              className="relative h-3 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-1000"
               style={{ width: `${completionRate}%` }}
             >
-              <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              <div className="absolute inset-0 animate-pulse bg-white/10" />
             </div>
           </div>
-          <p className="text-sm text-slate-800 font-semibold">
+          <p className={`text-sm font-semibold ${colors.text.primary}`}>
             {stats.completed} di {stats.total} task completati
           </p>
         </GamingCard>
@@ -223,42 +246,34 @@ export default function ProjectDetailPage() {
 
       {/* Milestones and Tasks */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-            <Target className="w-7 h-7 text-blue-600" />
+        <div className="mb-6 flex items-center justify-between">
+          <h3 className="flex items-center gap-3 text-2xl font-bold text-white">
+            <Target className={`h-7 w-7 ${designTokens.colors.cyan.text}`} />
             Milestone e Attività
           </h3>
           <div className="flex gap-3">
-            <button
-              onClick={() => setShowCreateTask(true)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
+            <Button variant="secondary" size="sm" onClick={() => setShowCreateTask(true)}>
+              <Plus className="h-4 w-4" />
               Nuova Attività
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
               onClick={() => {
                 setSelectedMilestone(null);
                 setShowMilestoneModal(true);
               }}
-              className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-bold shadow-xl hover:shadow-2xl transition-all flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Nuova Milestone
-            </button>
+            </Button>
           </div>
         </div>
 
         {tasks.length === 0 ? (
-          <GamingCard className="text-center py-12">
-            <Target className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-700 mb-6">Nessun task in questo progetto</p>
-            <button
-              onClick={() => setShowCreateTask(true)}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold shadow-xl hover:shadow-2xl transition-all"
-            >
-              Crea il primo task
-            </button>
+          <GamingCard className="py-12 text-center">
+            <Target className="mx-auto mb-4 h-16 w-16 text-slate-500" />
+            <p className={`mb-6 ${colors.text.secondary}`}>Nessun task in questo progetto</p>
+            <Button onClick={() => setShowCreateTask(true)}>Crea il primo task</Button>
           </GamingCard>
         ) : (
           <div className="space-y-4">
@@ -266,74 +281,86 @@ export default function ProjectDetailPage() {
             {milestones.map((milestone) => {
               const milestoneTasks = getTasksForMilestone(milestone.id);
               const isExpanded = expandedMilestones.has(milestone.id);
-              const milestoneProgress = milestoneTasks.length > 0
-                ? Math.round((milestoneTasks.filter(t => t.status === 'completed').length / milestoneTasks.length) * 100)
-                : 0;
+              const milestoneProgress =
+                milestoneTasks.length > 0
+                  ? Math.round(
+                      (milestoneTasks.filter((t) => t.status === 'completed').length /
+                        milestoneTasks.length) *
+                        100
+                    )
+                  : 0;
               const isCompleted = milestone.status === 'completed';
               const isCancelled = milestone.status === 'cancelled';
               const dueDate = milestone.due_date ? new Date(milestone.due_date) : null;
               const isOverdue = dueDate && dueDate < new Date() && !isCompleted;
 
               return (
-                <GamingCard key={milestone.id} className={
-                  `bg-slate-800/90 ${
-                  isCompleted ? 'border-emerald-500/50' :
-                  isCancelled ? 'opacity-70' :
-                  isOverdue ? 'border-red-500/50' :
-                  ''}`
-                }>
+                <GamingCard
+                  key={milestone.id}
+                  className={`${colors.bg.secondary} ${
+                    isCompleted
+                      ? `border ${designTokens.colors.success.border}`
+                      : isCancelled
+                        ? 'opacity-70'
+                        : isOverdue
+                          ? `border ${designTokens.colors.error.border}`
+                          : ''
+                  }`}
+                >
                   {/* Milestone Header */}
                   <div
-                    className="flex items-center gap-3 cursor-pointer hover:bg-slate-800/30 -m-6 p-6 rounded-xl transition-colors"
+                    className={`-m-6 flex cursor-pointer items-center gap-3 rounded-xl p-6 transition-colors ${colors.bg.hover}`}
                     onClick={() => toggleMilestone(milestone.id)}
                   >
-                    <button className="text-slate-500 hover:text-blue-600">
+                    <button className={`${colors.text.tertiary} hover:${colors.text.accent}`}>
                       {isExpanded ? (
-                        <ChevronDown className="w-5 h-5" />
+                        <ChevronDown className="h-5 w-5" />
                       ) : (
-                        <ChevronRight className="w-5 h-5" />
+                        <ChevronRight className="h-5 w-5" />
                       )}
                     </button>
 
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-lg text-slate-900">
-                          {milestone.name}
-                        </h4>
-                        {isCompleted && (
-                          <CheckCircle className="w-4 h-4 text-emerald-400" />
-                        )}
-                        <span className="text-sm text-slate-600">
+                      <div className="mb-1 flex items-center gap-2">
+                        <h4 className="text-lg font-bold text-white">{milestone.name}</h4>
+                        {isCompleted && <CheckCircle className={`h-4 w-4 ${designTokens.colors.success.text}`} />}
+                        <span className={`text-sm ${colors.text.tertiary}`}>
                           ({milestoneTasks.length} task)
                         </span>
                       </div>
 
                       {milestone.description && !isExpanded && (
-                        <p className="text-sm text-slate-700 line-clamp-1">
+                        <p className={`line-clamp-1 text-sm ${colors.text.secondary}`}>
                           {milestone.description}
                         </p>
                       )}
 
-                      <div className="flex items-center gap-4 mt-2">
+                      <div className="mt-2 flex items-center gap-4">
                         {/* Progress */}
                         <div className="flex items-center gap-2">
-                          <div className="w-32 bg-slate-200 rounded-full h-2.5 overflow-hidden shadow-inner border border-slate-300">
+                          <div className={`h-2.5 w-32 overflow-hidden rounded-full ${colors.border} ${colors.bg.tertiary} shadow-inner`}>
                             <div
-                              className={`h-full rounded-full transition-all shadow-sm ${
-                                isCompleted ? 'bg-gradient-to-r from-emerald-600 to-emerald-500' : 'bg-gradient-to-r from-blue-600 to-blue-500'
+                              className={`h-full rounded-full shadow-sm transition-all ${
+                                isCompleted
+                                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                                  : 'bg-gradient-to-r from-cyan-500 to-blue-500'
                               }`}
                               style={{ width: `${milestoneProgress}%` }}
                             />
                           </div>
-                          <span className="text-xs text-slate-800 font-bold">{milestoneProgress}%</span>
+                          <span className={`text-xs font-bold ${colors.text.primary}`}>
+                            {milestoneProgress}%
+                          </span>
                         </div>
 
                         {/* Due Date */}
                         {dueDate && (
-                          <div className={`flex items-center gap-1 text-xs font-semibold ${
-                            isOverdue ? 'text-red-700' : 'text-slate-700'
-                          }`}>
-                            <Calendar className="w-3.5 h-3.5" />
+                          <div
+                            className={`flex items-center gap-1 text-xs font-semibold ${
+                              isOverdue ? designTokens.colors.error.text : colors.text.secondary
+                            }`}
+                          >
+                            <Calendar className="h-3.5 w-3.5" />
                             {dueDate.toLocaleDateString('it-IT')}
                             {isOverdue && ' (In ritardo)'}
                           </div>
@@ -345,48 +372,54 @@ export default function ProjectDetailPage() {
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       {!isCompleted && !isCancelled && (
                         <>
-                          <button
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => {
                               setSelectedMilestone(milestone);
                               setShowMilestoneModal(true);
                             }}
-                            className="px-3 py-1.5 bg-white border-2 border-blue-300 hover:bg-blue-50 hover:border-blue-400 text-blue-700 rounded-lg text-xs font-bold transition-all shadow-sm hover:shadow-md"
+                            className="px-3 py-1 text-xs"
                             title="Modifica milestone"
                           >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="success"
+                            size="sm"
                             onClick={() => handleMilestoneComplete(milestone.id)}
-                            className="px-3 py-1.5 bg-white border-2 border-emerald-300 hover:bg-emerald-50 hover:border-emerald-400 text-emerald-700 rounded-lg text-xs font-bold transition-all shadow-sm hover:shadow-md"
+                            className="px-3 py-1 text-xs"
                             title="Completa milestone"
                           >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          </button>
+                            <CheckCircle className="h-3.5 w-3.5" />
+                          </Button>
                         </>
                       )}
                       {(isCompleted || isCancelled) && (
-                        <button
+                        <Button
+                          variant="danger"
+                          size="sm"
                           onClick={() => handleMilestoneDelete(milestone.id)}
-                          className="px-3 py-1.5 bg-white border-2 border-red-300 hover:bg-red-50 hover:border-red-400 text-red-700 rounded-lg text-xs font-bold transition-all shadow-sm hover:shadow-md"
+                          className="px-3 py-1 text-xs"
                           title="Elimina milestone"
                         >
                           Elimina
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
 
                   {/* Expanded Tasks */}
                   {isExpanded && (
-                    <div className="mt-4 pt-4 border-t-2 border-slate-200">
+                    <div className={`mt-4 border-t ${colors.border} pt-4`}>
                       {milestone.description && (
-                        <p className="text-sm text-slate-800 mb-4 font-medium">
+                        <p className={`mb-4 text-sm font-medium ${colors.text.primary}`}>
                           {milestone.description}
                         </p>
                       )}
 
                       {milestoneTasks.length === 0 ? (
-                        <p className="text-center text-slate-600 text-sm py-4">
+                        <p className={`py-4 text-center text-sm ${colors.text.tertiary}`}>
                           Nessun task assegnato a questa milestone
                         </p>
                       ) : (
@@ -407,31 +440,31 @@ export default function ProjectDetailPage() {
 
             {/* Unassigned Tasks Section */}
             {unassignedTasks.length > 0 && (
-              <GamingCard className="bg-slate-800/80">
+              <GamingCard className="border border-slate-800 bg-slate-900/70">
                 <div
-                  className="flex items-center gap-3 cursor-pointer hover:bg-slate-800/30 -m-6 p-6 rounded-xl transition-colors"
+                  className="-m-6 flex cursor-pointer items-center gap-3 rounded-xl p-6 transition-colors hover:bg-slate-800/30"
                   onClick={() => setShowUnassignedTasks(!showUnassignedTasks)}
                 >
                   <button className="text-slate-400 hover:text-cyan-400">
                     {showUnassignedTasks ? (
-                      <ChevronDown className="w-5 h-5" />
+                      <ChevronDown className="h-5 w-5" />
                     ) : (
-                      <ChevronRight className="w-5 h-5" />
+                      <ChevronRight className="h-5 w-5" />
                     )}
                   </button>
 
                   <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900">
+                    <h4 className="font-semibold text-white">
                       Task senza milestone ({unassignedTasks.length})
                     </h4>
-                    <p className="text-sm text-slate-700">
+                    <p className="text-sm text-slate-300">
                       Attività non ancora assegnate a una fase specifica
                     </p>
                   </div>
                 </div>
 
                 {showUnassignedTasks && (
-                  <div className="mt-4 pt-4 border-t border-slate-700/50">
+                  <div className="mt-4 border-t border-slate-700/50 pt-4">
                     <TaskTreeList
                       tasks={unassignedTasks}
                       allTasks={tasks}
@@ -447,21 +480,20 @@ export default function ProjectDetailPage() {
 
             {/* Empty State for No Milestones */}
             {milestones.length === 0 && (
-              <GamingCard className="text-center py-12">
-                <Target className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                <p className="text-slate-700 mb-4">Nessuna milestone definita</p>
-                <p className="text-sm text-slate-600 mb-6">
+              <GamingCard className="py-12 text-center">
+                <Target className="mx-auto mb-4 h-16 w-16 text-slate-500" />
+                <p className="mb-4 text-slate-300">Nessuna milestone definita</p>
+                <p className="mb-6 text-sm text-slate-400">
                   Organizza i task in fasi (milestone) per una migliore pianificazione
                 </p>
-                <button
+                <Button
                   onClick={() => {
                     setSelectedMilestone(null);
                     setShowMilestoneModal(true);
                   }}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium shadow-lg shadow-purple-500/50 transition-all"
                 >
                   Crea la prima milestone
-                </button>
+                </Button>
               </GamingCard>
             )}
           </div>
@@ -470,11 +502,7 @@ export default function ProjectDetailPage() {
 
       {/* Modals */}
       {selectedTask && (
-        <TaskModal
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onUpdate={loadData}
-        />
+        <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} onUpdate={loadData} />
       )}
 
       {showCreateTask && (

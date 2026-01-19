@@ -11,13 +11,7 @@ import React from 'react';
  * @param {'sm'|'md'|'lg'} props.size - Badge size
  * @param {string} props.className - Additional CSS classes
  */
-export default function Badge({
-  type = 'category',
-  value,
-  size = 'md',
-  className = '',
-  children
-}) {
+export default function Badge({ type = 'category', value, size = 'md', className = '', children }) {
   // Base styles
   const baseStyles = 'inline-flex items-center font-medium rounded-full';
 
@@ -25,47 +19,47 @@ export default function Badge({
   const sizeStyles = {
     sm: 'px-2 py-0.5 text-xs',
     md: 'px-2.5 py-1 text-xs',
-    lg: 'px-3 py-1.5 text-sm'
+    lg: 'px-3 py-1.5 text-sm',
   };
 
   // Status color mappings
   const statusColors = {
-    'da_fare': 'bg-gray-100 text-gray-700 border border-gray-300',
-    'in_corso': 'bg-blue-100 text-blue-700 border border-blue-300',
-    'in_revisione': 'bg-purple-100 text-purple-700 border border-purple-300',
-    'completato': 'bg-green-100 text-green-700 border border-green-300',
-    'in_pausa': 'bg-yellow-100 text-yellow-700 border border-yellow-300',
-    'bloccato': 'bg-red-100 text-red-700 border border-red-300',
-    'annullato': 'bg-gray-100 text-gray-500 border border-gray-300',
+    da_fare: 'bg-slate-800/50 text-slate-300 border-2 border-slate-700/50',
+    in_corso: 'bg-blue-500/20 text-blue-300 border-2 border-blue-500/30',
+    in_revisione: 'bg-purple-500/20 text-purple-300 border-2 border-purple-500/30',
+    completato: 'bg-green-500/20 text-green-300 border-2 border-green-500/30',
+    in_pausa: 'bg-yellow-500/20 text-yellow-300 border-2 border-yellow-500/30',
+    bloccato: 'bg-red-500/20 text-red-300 border-2 border-red-500/30',
+    annullato: 'bg-slate-800/50 text-slate-500 border-2 border-slate-700/50',
     // Request status
-    'new': 'bg-blue-100 text-blue-700 border border-blue-300',
-    'reviewing': 'bg-purple-100 text-purple-700 border border-purple-300',
-    'approved': 'bg-green-100 text-green-700 border border-green-300',
-    'rejected': 'bg-red-100 text-red-700 border border-red-300',
-    'converted_to_task': 'bg-teal-100 text-teal-700 border border-teal-300',
-    'converted_to_project': 'bg-indigo-100 text-indigo-700 border border-indigo-300',
+    new: 'bg-blue-500/20 text-blue-300 border-2 border-blue-500/30',
+    reviewing: 'bg-purple-500/20 text-purple-300 border-2 border-purple-500/30',
+    approved: 'bg-green-500/20 text-green-300 border-2 border-green-500/30',
+    rejected: 'bg-red-500/20 text-red-300 border-2 border-red-500/30',
+    converted_to_task: 'bg-teal-500/20 text-teal-300 border-2 border-teal-500/30',
+    converted_to_project: 'bg-indigo-500/20 text-indigo-300 border-2 border-indigo-500/30',
     // Project status
-    'pianificazione': 'bg-blue-100 text-blue-700 border border-blue-300',
-    'attivo': 'bg-green-100 text-green-700 border border-green-300',
-    'sospeso': 'bg-yellow-100 text-yellow-700 border border-yellow-300',
-    'archiviato': 'bg-gray-100 text-gray-500 border border-gray-300'
+    pianificazione: 'bg-blue-500/20 text-blue-300 border-2 border-blue-500/30',
+    attivo: 'bg-green-500/20 text-green-300 border-2 border-green-500/30',
+    sospeso: 'bg-yellow-500/20 text-yellow-300 border-2 border-yellow-500/30',
+    archiviato: 'bg-slate-800/50 text-slate-500 border-2 border-slate-700/50',
   };
 
   // Priority color mappings
   const priorityColors = {
-    'bassa': 'bg-gray-100 text-gray-700 border border-gray-300',
-    'media': 'bg-blue-100 text-blue-700 border border-blue-300',
-    'alta': 'bg-orange-100 text-orange-700 border border-orange-300',
-    'urgente': 'bg-red-100 text-red-700 border border-red-300',
+    bassa: 'bg-slate-800/50 text-slate-300 border-2 border-slate-700/50',
+    media: 'bg-blue-500/20 text-blue-300 border-2 border-blue-500/30',
+    alta: 'bg-orange-500/20 text-orange-300 border-2 border-orange-500/30',
+    urgente: 'bg-red-500/20 text-red-300 border-2 border-red-500/30',
     // English variants
-    'low': 'bg-gray-100 text-gray-700 border border-gray-300',
-    'medium': 'bg-blue-100 text-blue-700 border border-blue-300',
-    'high': 'bg-orange-100 text-orange-700 border border-orange-300',
-    'urgent': 'bg-red-100 text-red-700 border border-red-300'
+    low: 'bg-slate-800/50 text-slate-300 border-2 border-slate-700/50',
+    medium: 'bg-blue-500/20 text-blue-300 border-2 border-blue-500/30',
+    high: 'bg-orange-500/20 text-orange-300 border-2 border-orange-500/30',
+    urgent: 'bg-red-500/20 text-red-300 border-2 border-red-500/30',
   };
 
   // Default category colors
-  const categoryColors = 'bg-primary-100 text-primary-700 border border-primary-300';
+  const categoryColors = 'bg-cyan-500/20 text-cyan-300 border-2 border-cyan-500/30';
 
   // Get color based on type and value
   const getColorClass = () => {
@@ -90,13 +84,11 @@ export default function Badge({
     ${sizeStyles[size]}
     ${getColorClass()}
     ${className}
-  `.trim().replace(/\s+/g, ' ');
+  `
+    .trim()
+    .replace(/\s+/g, ' ');
 
-  return (
-    <span className={combinedClassName}>
-      {displayText}
-    </span>
-  );
+  return <span className={combinedClassName}>{displayText}</span>;
 }
 
 /**
@@ -109,7 +101,7 @@ function formatBadgeText(value) {
   return value
     .replace(/_/g, ' ')
     .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
@@ -131,5 +123,9 @@ export function PriorityBadge({ priority, ...props }) {
  * CategoryBadge - Shortcut for category badges
  */
 export function CategoryBadge({ category, children, ...props }) {
-  return <Badge type="category" value={category} {...props}>{children}</Badge>;
+  return (
+    <Badge type="category" value={category} {...props}>
+      {children}
+    </Badge>
+  );
 }

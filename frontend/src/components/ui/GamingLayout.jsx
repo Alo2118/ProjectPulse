@@ -1,4 +1,5 @@
 import React from 'react';
+import { designTokens } from '../../config/designTokens';
 
 /**
  * Gaming-style page layout with gradient background
@@ -6,9 +7,7 @@ import React from 'react';
 export function GamingLayout({ children }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
-      <div className="max-w-7xl mx-auto">
-        {children}
-      </div>
+      <div className="mx-auto max-w-7xl">{children}</div>
     </div>
   );
 }
@@ -18,13 +17,13 @@ export function GamingLayout({ children }) {
  */
 export function GamingHeader({ title, subtitle, icon: Icon, actions }) {
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="mb-6 flex items-center justify-between">
       <div>
-        <h1 className="text-3xl font-bold text-cyan-300 mb-1 flex items-center gap-2">
-          {Icon && <Icon className="w-8 h-8 text-cyan-400" />}
+        <h1 className={`mb-1 flex items-center gap-2 text-3xl font-bold ${designTokens.colors.cyan.text}`}>
+          {Icon && <Icon className={`h-8 w-8 ${designTokens.colors.cyan.textLight}`} />}
           {title}
         </h1>
-        {subtitle && <p className="text-base text-cyan-400/60 font-medium">{subtitle}</p>}
+        {subtitle && <p className={`text-base font-medium ${designTokens.colors.cyan.textLight} opacity-60`}>{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-3">{actions}</div>}
     </div>
@@ -36,7 +35,7 @@ export function GamingHeader({ title, subtitle, icon: Icon, actions }) {
  */
 export function GamingCard({ children, className = '', ...props }) {
   return (
-    <div className={`bg-slate-800/50 border-2 border-cyan-500/30 rounded-lg p-6 shadow-lg shadow-cyan-500/10 hover:shadow-xl hover:shadow-cyan-500/20 transition-all ${className}`} {...props}>
+    <div className={`card-lg ${className}`} {...props}>
       {children}
     </div>
   );
@@ -47,10 +46,10 @@ export function GamingCard({ children, className = '', ...props }) {
  */
 export function GamingLoader({ message = 'Caricamento...' }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+    <div className="page-container flex items-center justify-center">
       <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-cyan-500 shadow-xl shadow-cyan-500/50"></div>
-        <p className="mt-4 text-cyan-300 font-medium animate-pulse">{message}</p>
+        <div className="loading-spinner h-16 w-16"></div>
+        <p className="loading-text mt-4">{message}</p>
       </div>
     </div>
   );

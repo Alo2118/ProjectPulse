@@ -1,47 +1,29 @@
 import { ChevronDown, ChevronRight, Clock, User, Calendar, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useTheme } from '../hooks/useTheme';
+import { getStatusStyleInline } from '../utils/helpers';
 
 const statusLabels = {
   todo: 'Da fare',
   in_progress: 'In corso',
   blocked: 'Bloccato',
   waiting_clarification: 'Attesa chiarimenti',
-  completed: 'Completato'
+  completed: 'Completato',
 };
 
-const TaskTreeNode = ({ 
-  task, 
-  subtasks = [], 
-  onTaskClick, 
+const TaskTreeNode = ({
+  task,
+  subtasks = [],
+  onTaskClick,
   onTaskUpdate,
   depth = 0,
   expandedTasks = {},
-  onToggleExpand
+  onToggleExpand,
 }) => {
+  const { colors } = useTheme();
   const isExpanded = expandedTasks[task.id] || false;
   const hasSubtasks = subtasks && subtasks.length > 0;
-
-  const getPriorityColor = (priority) => {
-    const colors = {
-      bassa: 'text-slate-500',
-      media: 'text-primary-600',
-      alta: 'text-danger-700',
-      critica: 'text-slate-900'
-    };
-    return colors[priority] || 'text-slate-500';
-  };
-
-  const getStatusStyle = (status) => {
-    const styles = {
-      todo: { color: '#475569', backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
-      in_progress: { color: '#0369a1', backgroundColor: '#ecf0fe', borderColor: '#93c5fd' },
-      blocked: { color: '#dc2626', backgroundColor: '#fee2e2', borderColor: '#fecaca' },
-      waiting_clarification: { color: '#d97706', backgroundColor: '#fef3c7', borderColor: '#fcd34d' },
-      completed: { color: '#16a34a', backgroundColor: '#f0fdf4', borderColor: '#86efac' }
-    };
-    return styles[status] || styles.todo;
-  };
 
   const isOverdue = (deadline) => {
     if (!deadline) return false;
@@ -63,77 +45,104 @@ const TaskTreeNode = ({
     onTaskClick && onTaskClick(task);
   };
 
-  const statusStyle = getStatusStyle(task.status);
-  const borderColor = task.priority === 'high' ? '#ef4444' : 
-                      task.priority === 'medium' ? '#f59e0b' :
-                      task.priority === 'low' ? '#3b82f6' : '#cbd5e1';
+  const statusColor = getStatusStyleInline(task.status);
+
+  // Priority border colors for left border
+  const priorityBorderColor =
+    task.priority === 'alta'
+      ? '#ef4444'
+      : task.priority === 'media'
+        ? '#f59e0b'
+        : task.priority === 'bassa'
+          ? '#3b82f6'
+          : '#cbd5e1';
 
   return (
     <div>
       <div
         onClick={handleClick}
-        className="card mb-2 cursor-pointer transition-all p-3 rounded-xl flex items-start gap-3"
-        style={{ borderLeftColor: borderColor, borderLeftWidth: '8px' }}
+        className="card mb-2 flex cursor-pointer items-start gap-3 rounded-xl p-3 transition-all"
+        style={{ borderLeftColor: priorityBorderColor, borderLeftWidth: '8px' }}
       >
-        <div className="flex items-start justify-between gap-1 mb-1">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1 text-xs mb-1 flex-wrap">
-              <span 
-                className="inline-flex items-center px-1.5 py-0 rounded text-xs font-medium border"
+        <div className="mb-1 flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex flex-wrap items-center gap-1 text-xs">
+              <span
+                className="inline-flex items-center rounded border px-1.5 py-0 text-xs font-medium"
                 style={{
-                  color: statusStyle.color,
-                  backgroundColor: statusStyle.backgroundColor,
-                  borderColor: statusStyle.borderColor
+                  color: statusColor.color,
+                  backgroundColor: statusColor.backgroundColor,
+                  borderColor: statusColor.borderColor,
                 }}
               >
                 {statusLabels[task.status]}
               </span>
 
               {task.project_name && !task.parent_task_id && (
-                <div className="flex items-center gap-0.5 text-slate-600 font-medium bg-slate-100 px-1.5 py-0 rounded">
+                <div className="flex items-center gap-0.5 rounded border-2 border-cyan-500/20 bg-cyan-500/10 px-1.5 py-0 font-medium text-cyan-400">
                   <span>📁</span>
-                  <span className="truncate max-w-[100px]">{task.project_name}</span>
+                  <span className="max-w-[100px] truncate">{task.project_name}</span>
                 </div>
               )}
 
               {task.assigned_to_name && (
-                <div className="flex items-center gap-0.5 text-primary-600 bg-primary-50 px-1.5 py-0 rounded">
-                  <User className="w-2.5 h-2.5" />
-                  <span className="truncate max-w-[70px]">{task.assigned_to_name.split(' ')[0]}</span>
+                <div className="flex items-center gap-0.5 rounded border-2 border-cyan-500/20 bg-cyan-500/10 px-1.5 py-0 text-cyan-300">
+                  <User className="h-2.5 w-2.5" />
+                  <span className="max-w-[70px] truncate">
+                    {task.assigned_to_name.split(' ')[0]}
+                  </span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-start gap-0.5 mb-1">
-              <h4 className={`${task.parent_task_id ? 'font-normal' : 'font-medium'} text-xs text-slate-800 line-clamp-2 flex-1`}>
-                {task.parent_task_id && <span className="text-slate-400">└ </span>}
+            <div className="mb-1 flex items-start gap-0.5">
+              <h4
+                className={`${task.parent_task_id ? 'font-normal' : 'font-medium'} line-clamp-2 flex-1 text-xs ${colors.text.primary}`}
+              >
+                {task.parent_task_id && <span className={colors.text.tertiary}>└ </span>}
                 {task.title}
               </h4>
             </div>
 
             {(hasSubtasks || task.deadline || task.total_time_spent > 0) && (
-              <div className="flex items-center gap-1 text-xs text-slate-500 flex-wrap">
+              <div className={`flex flex-wrap items-center gap-1 text-xs ${colors.text.tertiary}`}>
                 {hasSubtasks && (
-                  <div className="text-primary-600 font-medium">
-                    📋 {subtasks.filter(s => s.status === 'completed').length}/{subtasks.length}
+                  <div className="font-medium text-cyan-300">
+                    📋 {subtasks.filter((s) => s.status === 'completed').length}/{subtasks.length}
                   </div>
                 )}
 
                 {task.deadline && (
-                  <div className="flex items-center gap-0.5 px-1.5 py-0 rounded text-xs" style={{
-                    color: isOverdue(task.deadline) ? '#dc2626' : isApproaching(task.deadline) ? '#d97706' : undefined,
-                    backgroundColor: isOverdue(task.deadline) ? '#fee2e2' : isApproaching(task.deadline) ? '#fef3c7' : '#f1f5f9',
-                    fontWeight: isOverdue(task.deadline) ? '500' : 'normal'
-                  }}>
-                    <Calendar className="w-2.5 h-2.5" />
+                  <div
+                    className="flex items-center gap-0.5 rounded border-2 px-1.5 py-0 text-xs"
+                    style={{
+                      color: isOverdue(task.deadline)
+                        ? '#f87171'
+                        : isApproaching(task.deadline)
+                          ? '#fbbf24'
+                          : undefined,
+                      backgroundColor: isOverdue(task.deadline)
+                        ? '#7f1d1d30'
+                        : isApproaching(task.deadline)
+                          ? '#78350f30'
+                          : '#1e293b50',
+                      borderColor: isOverdue(task.deadline)
+                        ? '#dc262630'
+                        : isApproaching(task.deadline)
+                          ? '#d9700630'
+                          : '#64748b30',
+                      fontWeight: isOverdue(task.deadline) ? '500' : 'normal',
+                    }}
+                  >
+                    <Calendar className="h-2.5 w-2.5" />
                     <span>{format(new Date(task.deadline), 'dd/MM', { locale: it })}</span>
-                    {isOverdue(task.deadline) && <AlertCircle className="w-2.5 h-2.5" />}
+                    {isOverdue(task.deadline) && <AlertCircle className="h-2.5 w-2.5" />}
                   </div>
                 )}
 
                 {task.total_time_spent > 0 && (
-                  <div className="flex items-center gap-0.5 bg-slate-100 px-1.5 py-0 rounded text-xs">
-                    <Clock className="w-2.5 h-2.5" />
+                  <div className="flex items-center gap-0.5 rounded border-2 border-cyan-500/20 bg-cyan-500/10 px-1.5 py-0 text-xs">
+                    <Clock className="h-2.5 w-2.5" />
                     <span>{Math.round(task.total_time_spent / 60)}m</span>
                   </div>
                 )}
@@ -144,13 +153,13 @@ const TaskTreeNode = ({
           {hasSubtasks && (
             <button
               onClick={handleToggleExpand}
-              className="flex-shrink-0 p-1 hover:bg-slate-100 rounded transition-colors -mt-0.5"
+              className={`-mt-0.5 flex-shrink-0 rounded p-1 transition-colors ${colors.bg.hover}`}
               title={isExpanded ? 'Comprimi' : 'Espandi'}
             >
               {isExpanded ? (
-                <ChevronDown className="w-3.5 h-3.5 text-primary-600" />
+                <ChevronDown className="h-3.5 w-3.5 text-cyan-400" />
               ) : (
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronRight className={`h-3.5 w-3.5 ${colors.text.tertiary}`} />
               )}
             </button>
           )}
@@ -160,8 +169,8 @@ const TaskTreeNode = ({
       {isExpanded && hasSubtasks && (
         <div className="px-2 py-1">
           <div className="space-y-1">
-            {subtasks.map(subtask => {
-              const subtaskChildren = subtasks.filter(s => s.parent_task_id === subtask.id);
+            {subtasks.map((subtask) => {
+              const subtaskChildren = subtasks.filter((s) => s.parent_task_id === subtask.id);
               return (
                 <TaskTreeNode
                   key={subtask.id}

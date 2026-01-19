@@ -18,7 +18,7 @@ export const ToastProvider = ({ children }) => {
     const id = Date.now();
     const toast = { id, message, type };
 
-    setToasts(prev => [...prev, toast]);
+    setToasts((prev) => [...prev, toast]);
 
     if (duration) {
       setTimeout(() => {
@@ -30,7 +30,7 @@ export const ToastProvider = ({ children }) => {
   }, []);
 
   const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const value = {
@@ -50,8 +50,8 @@ export const ToastProvider = ({ children }) => {
 
 function ToastContainer({ toasts, removeToast }) {
   return (
-    <div className="fixed bottom-6 right-6 space-y-3 z-50 pointer-events-none">
-      {toasts.map(toast => (
+    <div className="pointer-events-none fixed bottom-6 right-6 z-50 space-y-3">
+      {toasts.map((toast) => (
         <Toast key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
       ))}
     </div>
@@ -63,35 +63,35 @@ function Toast({ id, message, type, onClose }) {
     switch (type) {
       case 'success':
         return {
-          bg: 'bg-success-50',
-          border: 'border-success-200',
-          text: 'text-success-800',
+          bg: 'bg-green-500/20',
+          border: 'border-green-500/30',
+          text: 'text-green-300',
           icon: Check,
-          iconColor: 'text-success-600',
+          iconColor: 'text-green-400',
         };
       case 'error':
         return {
-          bg: 'bg-danger-50',
-          border: 'border-danger-200',
-          text: 'text-danger-800',
+          bg: 'bg-red-500/20',
+          border: 'border-red-500/30',
+          text: 'text-red-300',
           icon: AlertCircle,
-          iconColor: 'text-danger-600',
+          iconColor: 'text-red-400',
         };
       case 'warning':
         return {
-          bg: 'bg-warning-50',
-          border: 'border-warning-200',
-          text: 'text-warning-800',
+          bg: 'bg-amber-500/20',
+          border: 'border-amber-500/30',
+          text: 'text-amber-300',
           icon: AlertTriangle,
-          iconColor: 'text-warning-600',
+          iconColor: 'text-amber-400',
         };
       default:
         return {
-          bg: 'bg-slate-50',
-          border: 'border-slate-200',
-          text: 'text-slate-800',
+          bg: 'bg-slate-700/50',
+          border: 'border-cyan-500/30',
+          text: 'text-slate-200',
           icon: Info,
-          iconColor: 'text-slate-600',
+          iconColor: 'text-cyan-400',
         };
     }
   };
@@ -101,19 +101,15 @@ function Toast({ id, message, type, onClose }) {
 
   return (
     <div
-      className={`
-        ${styles.bg} ${styles.border} ${styles.text}
-        flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg
-        animate-slide-up pointer-events-auto max-w-sm
-      `}
+      className={` ${styles.bg} ${styles.border} ${styles.text} pointer-events-auto flex max-w-sm animate-slide-up items-center gap-3 rounded-lg border px-4 py-3 shadow-lg`}
     >
-      <Icon className={`w-5 h-5 flex-shrink-0 ${styles.iconColor}`} />
-      <p className="text-sm font-medium flex-1">{message}</p>
+      <Icon className={`h-5 w-5 flex-shrink-0 ${styles.iconColor}`} />
+      <p className="flex-1 text-sm font-medium">{message}</p>
       <button
         onClick={onClose}
-        className="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+        className="flex-shrink-0 text-slate-500 transition-colors hover:text-slate-300"
       >
-        <X className="w-4 h-4" />
+        <X className="h-4 w-4" />
       </button>
     </div>
   );

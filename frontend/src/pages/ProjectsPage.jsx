@@ -1,15 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FolderOpen, CheckCircle, Clock, AlertCircle, Briefcase } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 import { projectsApi, tasksApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { canCreate } from '../utils/permissions';
+import { designTokens } from '../config/designTokens';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectModal from '../components/ProjectModal';
 import { formatTime } from '../utils/helpers';
-import { GamingLayout, GamingHeader, GamingCard, GamingLoader, GamingKPICard, GamingKPIGrid, Button } from '../components/ui';
+import {
+  GamingLayout,
+  GamingHeader,
+  GamingCard,
+  GamingLoader,
+  GamingKPICard,
+  GamingKPIGrid,
+  Button,
+} from '../components/ui';
 
 export default function ProjectsPage() {
+  const { colors } = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [projects, setProjects] = useState([]);
@@ -26,10 +37,7 @@ export default function ProjectsPage() {
   const loadProjects = async () => {
     setLoading(true);
     try {
-      const [projectsRes, tasksRes] = await Promise.all([
-        projectsApi.getAll(),
-        tasksApi.getAll()
-      ]);
+      const [projectsRes, tasksRes] = await Promise.all([projectsApi.getAll(), tasksApi.getAll()]);
 
       setProjects(projectsRes.data);
       // Handle paginated response from tasks API
@@ -44,14 +52,14 @@ export default function ProjectsPage() {
   // Memoize project stats calculation
   const projectStats = useMemo(() => {
     const stats = {};
-    projects.forEach(project => {
-      const projectTasks = tasks.filter(t => t.project_id === project.id);
+    projects.forEach((project) => {
+      const projectTasks = tasks.filter((t) => t.project_id === project.id);
       stats[project.id] = {
         total: projectTasks.length,
-        completed: projectTasks.filter(t => t.status === 'completed').length,
-        in_progress: projectTasks.filter(t => t.status === 'in_progress').length,
-        blocked: projectTasks.filter(t => t.status === 'blocked').length,
-        total_time: projectTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0)
+        completed: projectTasks.filter((t) => t.status === 'completed').length,
+        in_progress: projectTasks.filter((t) => t.status === 'in_progress').length,
+        blocked: projectTasks.filter((t) => t.status === 'blocked').length,
+        total_time: projectTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0),
       };
     });
     return stats;
@@ -73,7 +81,7 @@ export default function ProjectsPage() {
       await projectsApi.update(project.id, { archived: true });
       loadProjects();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante l\'archiviazione');
+      alert(error.response?.data?.error || "Errore durante l'archiviazione");
     }
   };
 
@@ -90,12 +98,8 @@ export default function ProjectsPage() {
         subtitle="Dispositivi ortopedici, protesi e strumenti chirurgici"
         icon={Briefcase}
         actions={
-          <Button
-            onClick={handleCreate}
-            disabled={!canCreate(user, 'project')}
-            className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-xl shadow-primary-600/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-bold"
-          >
-            <Plus className="w-4 h-4" />
+          <Button onClick={handleCreate} disabled={!canCreate(user, 'project')} variant="primary">
+            <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Nuovo Progetto</span>
             <span className="inline sm:hidden">Nuovo</span>
           </Button>
@@ -104,33 +108,33 @@ export default function ProjectsPage() {
 
       {/* Stats */}
       <GamingKPIGrid columns={4} className="mb-6">
-        <GamingKPICard 
-          title="Progetti" 
-          value={projects.length} 
-          icon={FolderOpen} 
-          gradient="from-blue-600 to-cyan-700" 
-          shadowColor="blue" 
+        <GamingKPICard
+          title="Progetti"
+          value={projects.length}
+          icon={FolderOpen}
+          gradient="from-blue-600 to-cyan-700"
+          shadowColor="blue"
         />
-        <GamingKPICard 
-          title="Completati" 
-          value={Object.values(projectStats).reduce((sum, s) => sum + s.completed, 0)} 
-          icon={CheckCircle} 
-          gradient="from-emerald-600 to-green-700" 
-          shadowColor="emerald" 
+        <GamingKPICard
+          title="Completati"
+          value={Object.values(projectStats).reduce((sum, s) => sum + s.completed, 0)}
+          icon={CheckCircle}
+          gradient="from-emerald-600 to-green-700"
+          shadowColor="emerald"
         />
-        <GamingKPICard 
-          title="In Corso" 
-          value={Object.values(projectStats).reduce((sum, s) => sum + s.in_progress, 0)} 
-          icon={Clock} 
-          gradient="from-purple-600 to-pink-700" 
-          shadowColor="purple" 
+        <GamingKPICard
+          title="In Corso"
+          value={Object.values(projectStats).reduce((sum, s) => sum + s.in_progress, 0)}
+          icon={Clock}
+          gradient="from-purple-600 to-pink-700"
+          shadowColor="purple"
         />
-        <GamingKPICard 
-          title="Bloccati" 
-          value={Object.values(projectStats).reduce((sum, s) => sum + s.blocked, 0)} 
-          icon={AlertCircle} 
-          gradient="from-red-600 to-rose-700" 
-          shadowColor="red" 
+        <GamingKPICard
+          title="Bloccati"
+          value={Object.values(projectStats).reduce((sum, s) => sum + s.blocked, 0)}
+          icon={AlertCircle}
+          gradient="from-red-600 to-rose-700"
+          shadowColor="red"
         />
       </GamingKPIGrid>
 
@@ -138,45 +142,44 @@ export default function ProjectsPage() {
       {loading ? (
         <GamingLoader message="Caricamento progetti..." />
       ) : projects.length === 0 ? (
-        <GamingCard className="text-center py-12">
-          <div className="text-6xl mb-4">🔬</div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">Nessun progetto R&D</h3>
-          <p className="text-slate-600 mb-6">
+        <GamingCard className="py-12 text-center">
+          <div className="mb-4 text-6xl">🔬</div>
+          <h3 className={`mb-2 text-xl font-bold ${colors.text.primary}`}>Nessun progetto R&D</h3>
+          <p className={`mb-6 ${colors.text.tertiary}`}>
             Inizia creando un progetto per lo sviluppo di dispositivi medici
           </p>
-          <button 
-            onClick={handleCreate} 
+          <Button
+            onClick={handleCreate}
             disabled={!canCreate(user, 'project')}
-            className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg font-bold shadow-xl shadow-primary-600/50 hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="primary"
+            size="lg"
           >
             Crea il primo progetto
-          </button>
+          </Button>
         </GamingCard>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map(project => {
+          {projects.map((project) => {
             const stats = projectStats[project.id] || {};
             const completionRate = getCompletionRate(project.id);
 
             return (
               <GamingCard
                 key={project.id}
-                className="cursor-pointer group hover:border-primary-500/50 transition-all duration-300"
+                className="group cursor-pointer transition-all duration-300 hover:border-cyan-400 dark:hover:border-cyan-500/50"
                 onClick={(e) => {
                   console.log('Card clicked!', project.id);
                   navigate(`/projects/${project.id}`);
                 }}
               >
-                <div className="flex items-start justify-between mb-4">
+                <div className="mb-4 flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-2">
+                    <h3 className={`mb-2 flex items-center gap-2 text-xl font-bold ${colors.text.primary}`}>
                       <span>📐</span>
                       {project.name}
                     </h3>
                     {project.description && (
-                      <p className="text-sm text-slate-600 line-clamp-2">
-                        {project.description}
-                      </p>
+                      <p className={`line-clamp-2 text-sm ${colors.text.secondary}`}>{project.description}</p>
                     )}
                   </div>
                 </div>
@@ -184,84 +187,81 @@ export default function ProjectsPage() {
                 {/* Progress Bar */}
                 {stats.total > 0 && (
                   <div className="mb-4">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="text-primary-600 font-bold">Progresso</span>
-                      <span className="font-bold text-slate-900">{completionRate}%</span>
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className={`font-bold ${designTokens.colors.cyan.text}`}>Progresso</span>
+                      <span className={`font-bold ${colors.text.primary}`}>{completionRate}%</span>
                     </div>
-                    <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden shadow-inner border-2 border-primary-300">
+                    <div className={`h-4 w-full overflow-hidden rounded-full border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} shadow-inner`}>
                       <div
-                        className="bg-gradient-to-r from-primary-600 to-primary-500 h-4 rounded-full transition-all duration-1000 relative shadow-sm"
+                        className="relative h-4 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-500 dark:to-blue-500 shadow-cyan-500/40 transition-all duration-1000"
                         style={{ width: `${completionRate}%` }}
                       >
-                        <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                        <div className={`absolute inset-0 animate-pulse ${designTokens.colors.cyan.bg} opacity-10`}></div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-3 mb-4">
-                  <div className="text-center p-3 bg-white rounded-lg border-2 border-slate-200">
-                    <div className="text-xl mb-1">📊</div>
-                    <div className="text-xl font-bold text-slate-900">
-                      {stats.total || 0}
-                    </div>
-                    <div className="text-xs text-slate-600 font-semibold">Tot</div>
+                <div className="mb-4 grid grid-cols-4 gap-3">
+                  <div className={`rounded-lg border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} p-3 text-center`}>
+                    <div className="mb-1 text-xl">📊</div>
+                    <div className={`text-xl font-bold ${colors.text.primary}`}>{stats.total || 0}</div>
+                    <div className={`text-xs font-semibold ${colors.text.secondary}`}>Tot</div>
                   </div>
 
-                  <div className="text-center p-3 bg-white rounded-lg border-2 border-emerald-200">
-                    <div className="text-xl mb-1">✅</div>
-                    <div className="text-xl font-bold text-emerald-700">
-                      {stats.completed || 0}
-                    </div>
-                    <div className="text-xs text-emerald-600 font-semibold">OK</div>
+                  <div className={`rounded-lg border ${designTokens.colors.success.border} ${colors.bg.secondary} p-3 text-center`}>
+                    <div className="mb-1 text-xl">✅</div>
+                    <div className={`text-xl font-bold ${designTokens.colors.success.text}`}>{stats.completed || 0}</div>
+                    <div className={`text-xs font-semibold ${designTokens.colors.success.textLight}`}>OK</div>
                   </div>
 
-                  <div className="text-center p-3 bg-white rounded-lg border-2 border-blue-200">
-                    <div className="text-xl mb-1">🚀</div>
-                    <div className="text-xl font-bold text-blue-700">
-                      {stats.in_progress || 0}
-                    </div>
-                    <div className="text-xs text-blue-600 font-semibold">WIP</div>
+                  <div className={`rounded-lg border ${designTokens.colors.info.border} ${colors.bg.secondary} p-3 text-center`}>
+                    <div className="mb-1 text-xl">🚀</div>
+                    <div className={`text-xl font-bold ${designTokens.colors.info.text}`}>{stats.in_progress || 0}</div>
+                    <div className={`text-xs font-semibold ${designTokens.colors.info.textLight}`}>WIP</div>
                   </div>
 
-                  <div className="text-center p-3 bg-white rounded-lg border-2 border-red-200">
-                    <div className="text-xl mb-1">🚫</div>
-                    <div className="text-xl font-bold text-red-700">
-                      {stats.blocked || 0}
-                    </div>
-                    <div className="text-xs text-red-600 font-semibold">Block</div>
+                  <div className={`rounded-lg border ${designTokens.colors.error.border} ${colors.bg.secondary} p-3 text-center`}>
+                    <div className="mb-1 text-xl">🚫</div>
+                    <div className={`text-xl font-bold ${designTokens.colors.error.text}`}>{stats.blocked || 0}</div>
+                    <div className={`text-xs font-semibold ${designTokens.colors.error.textLight}`}>Block</div>
                   </div>
                 </div>
 
                 {/* Time Badge */}
                 {stats.total_time > 0 && (
-                  <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200 mb-4 shadow-sm">
+                  <div className={`mb-4 flex items-center justify-center gap-2 rounded-lg border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} px-4 py-2 shadow-sm`}>
                     <span className="text-lg">⏱️</span>
-                    <span className="text-sm font-bold text-blue-700">{formatTime(stats.total_time)}</span>
+                    <span className={`text-sm font-bold ${designTokens.colors.cyan.textBright}`}>
+                      {formatTime(stats.total_time)}
+                    </span>
                   </div>
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t-2 border-slate-200">
-                  <button
+                <div className={`flex gap-3 border-t ${designTokens.colors.cyan.borderLight} pt-4`}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEdit(project);
                     }}
-                    className="flex-1 px-4 py-2 bg-white border-2 border-primary-300 hover:bg-primary-50 hover:border-primary-400 text-primary-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
                   >
                     Modifica
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleArchive(project);
                     }}
-                    className="px-4 py-2 bg-white border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 text-slate-700 rounded-lg font-bold transition-all shadow-sm hover:shadow-md"
                   >
                     Archivia
-                  </button>
+                  </Button>
                 </div>
               </GamingCard>
             );
@@ -271,10 +271,7 @@ export default function ProjectsPage() {
 
       {/* Create Project Modal */}
       {showCreateModal && (
-        <CreateProjectModal
-          onClose={() => setShowCreateModal(false)}
-          onCreate={loadProjects}
-        />
+        <CreateProjectModal onClose={() => setShowCreateModal(false)} onCreate={loadProjects} />
       )}
 
       {/* Edit Project Modal */}

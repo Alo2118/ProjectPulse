@@ -1,13 +1,11 @@
+import { designTokens } from '../../config/designTokens';
+
 // Card Component - Elegant with shadows and transitions
 export function Card({ children, className = '', interactive = false, hover = true }) {
   return (
     <div
-      className={`
-        bg-white rounded-lg border border-slate-200
-        ${hover ? 'hover:shadow-lg hover:border-slate-300 transition-all duration-200' : 'shadow-sm'}
-        ${interactive ? 'cursor-pointer' : ''}
-        ${className}
-      `}
+      className={`card-lg animate-fade-in transition-shadow hover:shadow-md ${className}`}
+      onClick={onClick}
     >
       {children}
     </div>
@@ -15,24 +13,18 @@ export function Card({ children, className = '', interactive = false, hover = tr
 }
 
 export function CardHeader({ children, className = '' }) {
-  return (
-    <div className={`px-6 py-4 border-b border-slate-100 ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`border-b border-slate-100 px-6 py-4 ${className}`}>{children}</div>;
 }
 
 export function CardBody({ children, className = '' }) {
-  return (
-    <div className={`px-6 py-4 ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`px-6 py-4 ${className}`}>{children}</div>;
 }
 
 export function CardFooter({ children, className = '' }) {
   return (
-    <div className={`px-6 py-3 bg-slate-50 rounded-b-lg border-t border-slate-100 flex gap-3 justify-end ${className}`}>
+    <div
+      className={`flex justify-end gap-3 rounded-b-lg border-t-2 ${designTokens.colors.cyan.borderLight} bg-slate-100/50 dark:bg-slate-800/50 px-6 py-3 ${className}`}
+    >
       {children}
     </div>
   );
@@ -41,10 +33,10 @@ export function CardFooter({ children, className = '' }) {
 // KPI Card - For dashboard metrics
 export function KPICard({ title, value, change, icon: Icon, color = 'primary' }) {
   const colors = {
-    primary: 'bg-primary-50 text-primary-700 border-primary-200',
-    success: 'bg-success-50 text-success-700 border-success-200',
-    warning: 'bg-warning-50 text-warning-700 border-warning-200',
-    danger: 'bg-danger-50 text-danger-700 border-danger-200',
+    primary: `${designTokens.colors.cyan.bg} ${designTokens.colors.cyan.text} border ${designTokens.colors.cyan.borderLight}`,
+    success: `${designTokens.colors.success.bg} ${designTokens.colors.success.text} border ${designTokens.colors.success.borderLight}`,
+    warning: `${designTokens.colors.warning.bg} ${designTokens.colors.warning.text} border ${designTokens.colors.warning.borderLight}`,
+    danger: `${designTokens.colors.error.bg} ${designTokens.colors.error.text} border ${designTokens.colors.error.borderLight}`,
   };
 
   const isPositive = change >= 0;
@@ -57,9 +49,9 @@ export function KPICard({ title, value, change, icon: Icon, color = 'primary' })
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-medium opacity-75">{title}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
+            <p className="mt-1 text-2xl font-bold">{value}</p>
           </div>
-          {Icon && <Icon className="w-8 h-8 opacity-30" />}
+          {Icon && <Icon className="h-8 w-8 opacity-30" />}
         </div>
         {change !== undefined && (
           <p className={`text-xs font-semibold ${changeColor}`}>
@@ -72,11 +64,12 @@ export function KPICard({ title, value, change, icon: Icon, color = 'primary' })
 }
 
 // Button Styles
-const buttonBase = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
+const buttonBase =
+  'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
 
 const buttonVariants = {
   primary: `${buttonBase} bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 focus:ring-primary-500 disabled:bg-slate-400 disabled:cursor-not-allowed`,
-  secondary: `${buttonBase} bg-slate-200 text-slate-900 hover:bg-slate-300 active:bg-slate-400 focus:ring-slate-400 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed`,
+  secondary: `${buttonBase} bg-slate-700 text-slate-100 hover:bg-slate-600 active:bg-slate-500 focus:ring-slate-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed`,
   outline: `${buttonBase} border-2 border-primary-600 text-primary-600 hover:bg-primary-50 active:bg-primary-100 focus:ring-primary-500 disabled:border-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed`,
   danger: `${buttonBase} bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 focus:ring-danger-500 disabled:bg-slate-400 disabled:cursor-not-allowed`,
   ghost: `${buttonBase} text-slate-600 hover:bg-slate-100 active:bg-slate-200 focus:ring-slate-400 disabled:text-slate-400 disabled:cursor-not-allowed`,
@@ -88,15 +81,15 @@ const buttonSizes = {
   lg: 'px-6 py-3 text-lg',
 };
 
-export function Button({ 
-  children, 
-  variant = 'primary', 
+export function Button({
+  children,
+  variant = 'primary',
   size = 'md',
   icon: Icon,
   isLoading = false,
   disabled = false,
   className = '',
-  ...props 
+  ...props
 }) {
   return (
     <button
@@ -105,9 +98,9 @@ export function Button({
       {...props}
     >
       {isLoading && (
-        <span className="animate-spin inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full" />
+        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
       )}
-      {Icon && !isLoading && <Icon className="w-4 h-4" />}
+      {Icon && !isLoading && <Icon className="h-4 w-4" />}
       {children}
     </button>
   );
@@ -124,7 +117,9 @@ const badgeVariants = {
 
 export function Badge({ children, variant = 'primary', className = '' }) {
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeVariants[variant]} ${className}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${badgeVariants[variant]} ${className}`}
+    >
       {children}
     </span>
   );
@@ -137,18 +132,11 @@ export function Input({ label, error, className = '', ...props }) {
       {label && (
         <label className="block text-sm font-medium text-slate-700">
           {label}
-          {props.required && <span className="text-danger-600 ml-1">*</span>}
+          {props.required && <span className="ml-1 text-danger-600">*</span>}
         </label>
       )}
       <input
-        className={`
-          w-full px-4 py-2.5 rounded-lg border-2 border-slate-200
-          focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100
-          transition-colors duration-200
-          disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
-          ${error ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-100' : ''}
-          ${className}
-        `}
+        className={`w-full rounded-lg border-2 border-slate-200 px-4 py-2.5 transition-colors duration-200 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 ${error ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-100' : ''} ${className} `}
         {...props}
       />
       {error && <p className="text-sm text-danger-600">{error}</p>}
@@ -163,18 +151,11 @@ export function Select({ label, error, options, className = '', ...props }) {
       {label && (
         <label className="block text-sm font-medium text-slate-700">
           {label}
-          {props.required && <span className="text-danger-600 ml-1">*</span>}
+          {props.required && <span className="ml-1 text-danger-600">*</span>}
         </label>
       )}
       <select
-        className={`
-          w-full px-4 py-2.5 rounded-lg border-2 border-slate-200
-          focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100
-          transition-colors duration-200
-          disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
-          ${error ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-100' : ''}
-          ${className}
-        `}
+        className={`w-full rounded-lg border-2 border-slate-200 px-4 py-2.5 transition-colors duration-200 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 ${error ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-100' : ''} ${className} `}
         {...props}
       >
         <option value="">Seleziona un'opzione</option>

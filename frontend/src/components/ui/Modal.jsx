@@ -28,7 +28,7 @@ export default function Modal({
   showCloseButton = true,
   compact = false,
   children,
-  footer
+  footer,
 }) {
   // Close on Escape key
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function Modal({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
-    full: 'max-w-full mx-4'
+    full: 'max-w-full mx-4',
   };
 
   const handleOverlayClick = (e) => {
@@ -68,40 +68,47 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={handleOverlayClick}
     >
       <div
-        className={`bg-white rounded-xl shadow-2xl w-full ${sizeStyles[size]} max-h-[90vh] flex flex-col transform transition-all animate-slide-up border border-slate-200`}
-        style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}
+        className={`card-lg w-full ${sizeStyles[size]} flex max-h-[90vh] animate-slide-up flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`flex items-start justify-between ${compact ? 'p-4' : 'p-6'} border-b border-slate-200 bg-gradient-to-r from-primary-50 to-white`}>
+        <div
+          className={`flex items-start justify-between ${compact ? 'p-4' : 'p-6'} border-b-2 ${designTokens.colors.cyan.borderLight} bg-slate-100/50 dark:bg-slate-800/50`}
+        >
           <div className="flex-1">
-            <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-bold text-slate-900`}>{title}</h2>
+            <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-bold ${designTokens.colors.cyan.text}`}>
+              {title}
+            </h2>
             {description && (
-              <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} text-slate-600`}>{description}</p>
+              <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} text-slate-400`}>
+                {description}
+              </p>
             )}
           </div>
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="ml-4 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-all hover:scale-110"
+              className={`ml-4 rounded-lg p-1.5 ${designTokens.colors.cyan.textLight} opacity-60 transition-all hover:bg-slate-200 dark:hover:bg-slate-700 hover:${designTokens.colors.cyan.text}`}
             >
-              <X className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
+              <X className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
             </button>
           )}
         </div>
 
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} bg-slate-50`}>
+        <div className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} bg-slate-50/30 dark:bg-slate-800/30`}>
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className={`${compact ? 'p-4' : 'p-6'} border-t border-slate-200 bg-white flex justify-end gap-3`}>
+          <div
+            className={`${compact ? 'p-4' : 'p-6'} flex justify-end gap-3 border-t-2 ${designTokens.colors.cyan.borderLight} bg-slate-100/50 dark:bg-slate-800/50`}
+          >
             {footer}
           </div>
         )}
@@ -122,7 +129,7 @@ export function ModalFooter({
   confirmVariant = 'primary',
   confirmLoading = false,
   confirmDisabled = false,
-  children
+  children,
 }) {
   if (children) {
     return <>{children}</>;
@@ -157,7 +164,7 @@ export function ConfirmModal({
   message,
   confirmText = 'Conferma',
   cancelText = 'Annulla',
-  variant = 'danger'
+  variant = 'danger',
 }) {
   return (
     <Modal

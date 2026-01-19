@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart3, Filter } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
+import { designTokens } from '../config/designTokens';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
 import GanttChart from '../components/GanttChart';
 import TaskModal from '../components/TaskModal';
@@ -7,6 +9,7 @@ import MilestoneModal from '../components/MilestoneModal';
 import { GamingLayout, GamingHeader, GamingCard, GamingLoader } from '../components/ui';
 
 export default function GanttPage() {
+  const { colors } = useTheme();
   const [projects, setProjects] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
   const [allMilestones, setAllMilestones] = useState([]);
@@ -23,10 +26,7 @@ export default function GanttPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [projectsRes, tasksRes] = await Promise.all([
-        projectsApi.getAll(),
-        tasksApi.getAll()
-      ]);
+      const [projectsRes, tasksRes] = await Promise.all([projectsApi.getAll(), tasksApi.getAll()]);
 
       setProjects(projectsRes.data);
       // Handle paginated response from tasks API
@@ -34,11 +34,11 @@ export default function GanttPage() {
       setAllTasks(tasksData);
 
       // Load milestones for all projects
-      const milestonesPromises = projectsRes.data.map(p =>
+      const milestonesPromises = projectsRes.data.map((p) =>
         milestonesApi.getByProject(p.id).catch(() => ({ data: [] }))
       );
       const milestonesResults = await Promise.all(milestonesPromises);
-      const allMilestonesData = milestonesResults.flatMap(r => r.data);
+      const allMilestonesData = milestonesResults.flatMap((r) => r.data);
       setAllMilestones(allMilestonesData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -48,22 +48,24 @@ export default function GanttPage() {
   };
 
   // Memoize filtered data
-  const filteredMilestones = useMemo(() =>
-    selectedProject === 'all'
-      ? allMilestones
-      : allMilestones.filter(m => m.project_id === parseInt(selectedProject)),
+  const filteredMilestones = useMemo(
+    () =>
+      selectedProject === 'all'
+        ? allMilestones
+        : allMilestones.filter((m) => m.project_id === parseInt(selectedProject)),
     [allMilestones, selectedProject]
   );
 
-  const filteredTasks = useMemo(() =>
-    selectedProject === 'all'
-      ? allTasks
-      : allTasks.filter(t => t.project_id === parseInt(selectedProject)),
+  const filteredTasks = useMemo(
+    () =>
+      selectedProject === 'all'
+        ? allTasks
+        : allTasks.filter((t) => t.project_id === parseInt(selectedProject)),
     [allTasks, selectedProject]
   );
 
   const handleTaskClick = (task) => {
-    const fullTask = allTasks.find(t => t.id === task.id);
+    const fullTask = allTasks.find((t) => t.id === task.id);
     setSelectedTask(fullTask);
   };
 
@@ -78,27 +80,21 @@ export default function GanttPage() {
 
   return (
     <GamingLayout>
-      <GamingHeader
-        title="Diagramma di Gantt"
-        subtitle="Timeline progetti R&D"
-        icon={BarChart3}
-      />
+      <GamingHeader title="Diagramma di Gantt" subtitle="Timeline progetti R&D" icon={BarChart3} />
 
       {/* Filter */}
-      <GamingCard>
-        <div className="flex items-center gap-3 mb-4">
-          <Filter className="w-5 h-5 text-blue-600" />
-          <label className="text-sm font-bold text-slate-900">
-            Filtra per progetto
-          </label>
+      <GamingCard className="mb-4">
+        <div className="mb-4 flex items-center gap-3">
+          <Filter className={`h-5 w-5 ${designTokens.colors.cyan.text}`} />
+          <label className={`text-sm font-bold ${colors.text.primary}`}>Filtra per progetto</label>
         </div>
         <select
-          className="w-full bg-white border-2 border-slate-300 rounded-lg px-4 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
+          className="input-dark w-full"
           value={selectedProject}
           onChange={(e) => setSelectedProject(e.target.value)}
         >
           <option value="all">Tutti i progetti R&D</option>
-          {projects.map(project => (
+          {projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>
@@ -119,26 +115,26 @@ export default function GanttPage() {
       {/* Info Box */}
       <GamingCard>
         <div className="flex gap-4">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-            <BarChart3 className="w-6 h-6 text-white" />
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 shadow-md">
+            <BarChart3 className="h-6 w-6 text-white" />
           </div>
-          <div className="text-sm text-slate-600">
-            <p className="font-bold text-slate-900 mb-3">Informazioni sul Gantt</p>
+          <div className={`text-sm ${colors.text.primary}`}>
+            <p className="mb-3 font-bold text-white">Informazioni sul Gantt</p>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
+                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
                 <span>Le barre rappresentano la durata delle milestone e attività</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
+                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
                 <span>La linea rossa verticale indica la data odierna</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
+                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
                 <span>Clicca su una barra per visualizzare i dettagli</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
+                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
                 <span>Le attività sono raggruppate sotto le rispettive milestone</span>
               </li>
             </ul>

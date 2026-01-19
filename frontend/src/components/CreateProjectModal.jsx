@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 import { projectsApi, milestonesApi, tasksApi, templatesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TemplateSelector from './TemplateSelector';
@@ -8,6 +9,7 @@ import { useTemplates } from '../hooks/useTemplates';
 
 export default function CreateProjectModal({ onClose, onCreate }) {
   const { user, isDirezione } = useAuth();
+  const { colors, spacing } = useTheme();
   const { getAllTemplates, refresh: refreshTemplates } = useTemplates('project');
 
   const projectTemplates = getAllTemplates();
@@ -17,7 +19,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    status: 'active'
+    status: 'active',
   });
   const [createMilestones, setCreateMilestones] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -38,14 +40,14 @@ export default function CreateProjectModal({ onClose, onCreate }) {
   // Apply template data when template changes
   useEffect(() => {
     if (selectedTemplate && selectedTemplate.data) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        description: selectedTemplate.data.description || ''
+        description: selectedTemplate.data.description || '',
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        description: ''
+        description: '',
       }));
     }
   }, [selectedTemplate]);
@@ -80,7 +82,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
             description: milestoneTemplate.description,
             project_id: newProject.id,
             due_date: dueDate.toISOString().split('T')[0],
-            status: 'active'
+            status: 'active',
           });
 
           const newMilestone = milestoneResponse.data;
@@ -89,17 +91,20 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           if (milestoneTemplate.tasks && milestoneTemplate.tasks.length > 0) {
             for (const taskTemplateId of milestoneTemplate.tasks) {
               // Find the task template by ID or name in database
-              let taskTemplate = taskTemplates.find(t =>
-                t.id === taskTemplateId ||
-                t.name === taskTemplateId ||
-                (typeof t.data === 'string' ? JSON.parse(t.data).id : t.data?.id) === taskTemplateId
+              let taskTemplate = taskTemplates.find(
+                (t) =>
+                  t.id === taskTemplateId ||
+                  t.name === taskTemplateId ||
+                  (typeof t.data === 'string' ? JSON.parse(t.data).id : t.data?.id) ===
+                    taskTemplateId
               );
 
               if (taskTemplate) {
                 // Parse data if it's a string
-                const taskData = typeof taskTemplate.data === 'string'
-                  ? JSON.parse(taskTemplate.data)
-                  : taskTemplate.data;
+                const taskData =
+                  typeof taskTemplate.data === 'string'
+                    ? JSON.parse(taskTemplate.data)
+                    : taskTemplate.data;
 
                 // Create the task with template data
                 const taskResponse = await tasksApi.create({
@@ -109,7 +114,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
                   milestone_id: newMilestone.id,
                   priority: taskData.priority || 'medium',
                   estimated_hours: taskData.estimated_hours || 0,
-                  status: 'todo'
+                  status: 'todo',
                 });
 
                 const newTask = taskResponse.data;
@@ -126,7 +131,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
                       parent_task_id: newTask.id,
                       order_index: i,
                       priority: 'medium',
-                      status: 'todo'
+                      status: 'todo',
                     });
                   }
                 }
@@ -149,16 +154,16 @@ export default function CreateProjectModal({ onClose, onCreate }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className={`max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl ${colors.bg.primary} shadow-2xl`}>
+        <div className={`sticky top-0 flex items-center justify-between border-b ${colors.border} ${colors.bg.primary} px-6 py-4`}>
           <h2 className="text-xl font-bold text-gray-900">Nuovo Progetto R&D</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
           {/* Template Selector */}
           <div className="flex items-end gap-2">
             <div className="flex-1">
@@ -175,7 +180,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
                 className="btn-secondary flex items-center gap-2 whitespace-nowrap"
                 title="Gestisci template personalizzati"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="h-4 w-4" />
                 Gestisci
               </button>
             )}
@@ -183,12 +188,10 @@ export default function CreateProjectModal({ onClose, onCreate }) {
 
           {/* Project Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nome Progetto *
-            </label>
+            <label className="text-label mb-2 block">Nome Progetto *</label>
             <input
               type="text"
-              className="input"
+              className="input-dark w-full"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="es. Fissatore Esapodiale Gen 2"
@@ -199,18 +202,16 @@ export default function CreateProjectModal({ onClose, onCreate }) {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descrizione
-            </label>
+            <label className="text-label mb-2 block">Descrizione</label>
             <textarea
-              className="input"
+              className="textarea-dark w-full"
               rows="4"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Descrizione dettagliata del progetto..."
             />
             {selectedTemplate?.data && (
-              <p className="text-xs text-primary-600 mt-1">
+              <p className="mt-1 text-xs text-primary-600">
                 💡 Template applicato: descrizione pre-compilata
               </p>
             )}
@@ -218,8 +219,8 @@ export default function CreateProjectModal({ onClose, onCreate }) {
 
           {/* Create Milestones Option */}
           {selectedTemplate?.data?.milestones && (
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 shadow-sm">
-              <label className="flex items-start gap-3 cursor-pointer">
+            <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4 shadow-sm">
+              <label className="flex cursor-pointer items-start gap-3">
                 <input
                   type="checkbox"
                   checked={createMilestones}
@@ -227,13 +228,14 @@ export default function CreateProjectModal({ onClose, onCreate }) {
                   className="mt-1"
                 />
                 <div>
-                  <div className="font-medium text-blue-900 text-sm mb-1">
+                  <div className="mb-1 text-sm font-medium text-blue-900">
                     Crea milestone automaticamente
                   </div>
                   <div className="text-xs text-blue-700">
-                    Verranno create {selectedTemplate.data.milestones.length} milestone predefinite per questo tipo di progetto:
+                    Verranno create {selectedTemplate.data.milestones.length} milestone predefinite
+                    per questo tipo di progetto:
                   </div>
-                  <ul className="text-xs text-blue-600 mt-2 space-y-1 ml-4">
+                  <ul className="ml-4 mt-2 space-y-1 text-xs text-blue-600">
                     {selectedTemplate.data.milestones.map((m, i) => (
                       <li key={i}>
                         • {m.name} ({m.duration_days} giorni)
@@ -246,19 +248,11 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t-2 border-slate-200">
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary flex-1"
-            >
+          <div className={`flex gap-3 border-t-2 ${colors.border} pt-4`}>
+            <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? 'Creazione...' : 'Crea Progetto'}
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary">
               Annulla
             </button>
           </div>

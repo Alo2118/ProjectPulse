@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  isToday,
+  startOfWeek,
+  endOfWeek,
+} from 'date-fns';
 import { it } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
@@ -15,7 +25,7 @@ const TaskCalendar = ({ tasks, onDateClick }) => {
   const weekDays = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 
   const getTasksForDate = (date) => {
-    return tasks.filter(task => {
+    return tasks.filter((task) => {
       if (!task.deadline) return false;
       return isSameDay(new Date(task.deadline), date);
     });
@@ -34,50 +44,51 @@ const TaskCalendar = ({ tasks, onDateClick }) => {
   };
 
   return (
-    <div className="card p-4 sm:p-6">
+    <div className="card-lg">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-primary-600" />
-          <h3 className="text-lg font-semibold text-slate-800">
-            Calendario Scadenze
-          </h3>
+          <Calendar className="h-5 w-5 text-cyan-400" />
+          <h3 className="card-header">Calendario Scadenze</h3>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={previousMonth}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            className="rounded-lg p-2 transition-colors hover:bg-slate-700"
             aria-label="Mese precedente"
           >
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
+            <ChevronLeft className="h-5 w-5 text-slate-400 hover:text-cyan-400" />
           </button>
           <button
             onClick={goToToday}
-            className="px-3 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            className="rounded-lg px-3 py-1 text-sm font-medium text-cyan-300 transition-colors hover:border hover:border-cyan-500/30 hover:bg-cyan-500/10"
           >
             Oggi
           </button>
           <button
             onClick={nextMonth}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            className="rounded-lg p-2 transition-colors hover:bg-slate-700"
             aria-label="Mese successivo"
           >
-            <ChevronRight className="w-5 h-5 text-slate-600" />
+            <ChevronRight className="h-5 w-5 text-slate-400 hover:text-cyan-400" />
           </button>
         </div>
       </div>
 
       {/* Month/Year */}
-      <div className="text-center mb-4">
-        <h4 className="text-xl font-bold text-slate-800">
+      <div className="mb-4 text-center">
+        <h4 className="text-xl font-bold text-cyan-300">
           {format(currentDate, 'MMMM yyyy', { locale: it })}
         </h4>
       </div>
 
       {/* Week Days */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {weekDays.map(day => (
-          <div key={day} className="text-center text-xs sm:text-sm font-semibold text-slate-600 py-2">
+      <div className="mb-2 grid grid-cols-7 gap-1">
+        {weekDays.map((day) => (
+          <div
+            key={day}
+            className="py-2 text-center text-xs font-semibold text-slate-400 sm:text-sm"
+          >
             {day}
           </div>
         ))}
@@ -94,15 +105,12 @@ const TaskCalendar = ({ tasks, onDateClick }) => {
             <div
               key={index}
               onClick={() => onDateClick && tasksOnDay.length > 0 && onDateClick(day, tasksOnDay)}
-              className={`
-                min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border rounded-lg cursor-pointer transition-all
-                ${!isCurrentMonth ? 'bg-slate-50 text-slate-400' : 'bg-white'}
-                ${isDayToday ? 'ring-2 ring-primary-500 bg-primary-50' : ''}
-                ${tasksOnDay.length > 0 ? 'hover:shadow-md hover:border-primary-300' : 'hover:bg-slate-50'}
-              `}
+              className={`min-h-[60px] cursor-pointer rounded-lg border p-1 transition-all sm:min-h-[80px] sm:p-2 ${!isCurrentMonth ? 'border-slate-700/30 bg-slate-800/20 text-slate-500' : 'border-slate-700/50 bg-slate-800/40'} ${isDayToday ? 'border-cyan-500 bg-cyan-500/10 ring-2 ring-cyan-500' : ''} ${tasksOnDay.length > 0 ? 'hover:border-cyan-500/50 hover:shadow-md hover:shadow-cyan-500/10' : 'hover:bg-slate-800/50'}`}
             >
               {/* Day Number */}
-              <div className={`text-xs sm:text-sm font-medium mb-1 ${isDayToday ? 'text-primary-600 font-bold' : ''}`}>
+              <div
+                className={`mb-1 text-xs font-medium sm:text-sm ${isDayToday ? 'font-bold text-cyan-300' : 'text-slate-200'}`}
+              >
                 {format(day, 'd')}
               </div>
 
@@ -111,17 +119,17 @@ const TaskCalendar = ({ tasks, onDateClick }) => {
                 <div className="space-y-1">
                   {tasksOnDay.slice(0, 2).map((task, i) => {
                     const statusColors = {
-                      todo: 'bg-slate-500',
-                      in_progress: 'bg-primary-500',
-                      blocked: 'bg-danger-500',
-                      waiting_clarification: 'bg-warning-500',
-                      completed: 'bg-success-500'
+                      todo: 'bg-slate-600 text-slate-200',
+                      in_progress: 'bg-blue-600 text-blue-100',
+                      blocked: 'bg-red-600 text-red-100',
+                      waiting_clarification: 'bg-amber-600 text-amber-100',
+                      completed: 'bg-green-600 text-green-100',
                     };
 
                     return (
                       <div
                         key={i}
-                        className={`text-xs px-1 py-0.5 rounded text-white truncate ${statusColors[task.status] || 'bg-slate-400'}`}
+                        className={`truncate rounded border-2 border-transparent px-1 py-0.5 text-xs text-white ${statusColors[task.status] || 'bg-slate-600'}`}
                         title={task.title}
                       >
                         {task.title}
@@ -129,7 +137,7 @@ const TaskCalendar = ({ tasks, onDateClick }) => {
                     );
                   })}
                   {tasksOnDay.length > 2 && (
-                    <div className="text-xs text-slate-500 text-center font-medium">
+                    <div className="text-center text-xs font-medium text-slate-400">
                       +{tasksOnDay.length - 2}
                     </div>
                   )}
@@ -141,26 +149,26 @@ const TaskCalendar = ({ tasks, onDateClick }) => {
       </div>
 
       {/* Legend */}
-      <div className="mt-6 pt-4 border-t border-slate-200 flex flex-wrap gap-3 text-xs">
+      <div className="mt-6 flex flex-wrap gap-3 border-t-2 border-cyan-500/20 pt-4 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-slate-500"></div>
-          <span className="text-slate-600">Da fare</span>
+          <div className="h-3 w-3 rounded bg-slate-600"></div>
+          <span className="text-slate-400">Da fare</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-primary-500"></div>
-          <span className="text-slate-600">In corso</span>
+          <div className="h-3 w-3 rounded bg-blue-600"></div>
+          <span className="text-slate-400">In corso</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-danger-500"></div>
-          <span className="text-slate-600">Bloccato</span>
+          <div className="h-3 w-3 rounded bg-red-600"></div>
+          <span className="text-slate-400">Bloccato</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-warning-500"></div>
-          <span className="text-slate-600">In attesa</span>
+          <div className="h-3 w-3 rounded bg-amber-600"></div>
+          <span className="text-slate-400">In attesa</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-success-500"></div>
-          <span className="text-slate-600">Completato</span>
+          <div className="h-3 w-3 rounded bg-green-600"></div>
+          <span className="text-slate-400">Completato</span>
         </div>
       </div>
     </div>

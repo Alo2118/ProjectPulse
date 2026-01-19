@@ -16,7 +16,7 @@ export const SMART_DEFAULTS = {
       protesi: 'high',
       strumentario: 'medium',
       ricerca: 'medium',
-      default: 'medium'
+      default: 'medium',
     },
     // Default deadline offset in days
     deadlineOffset: 7,
@@ -27,22 +27,22 @@ export const SMART_DEFAULTS = {
     // Falls back to today if no deadline or no estimated hours
     autoCalculateStartDate: true,
     // Hours per working day for start date calculation
-    hoursPerWorkingDay: 8
+    hoursPerWorkingDay: 8,
   },
   project: {
     // Default status for new projects
     status: 'active',
     // Auto-create first milestone
-    createDefaultMilestone: true
+    createDefaultMilestone: true,
   },
   milestone: {
     // Default duration in days
     defaultDuration: 30,
     // Auto-calculate due date based on project start + duration
-    autoCalculateDueDate: true
-  }
+    autoCalculateDueDate: true,
+  },
 };
 
 export default {
-  SMART_DEFAULTS
+  SMART_DEFAULTS,
 };

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class', // Enable class-based dark mode
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -206,8 +207,22 @@ export default {
         '.btn-danger': {
           '@apply btn bg-red-600/20 text-red-400 border-2 border-red-500/30 hover:bg-red-600/30': {},
         },
+        '.btn-success': {
+          '@apply btn bg-green-600/20 text-green-400 border-2 border-green-500/30 hover:bg-green-600/30': {},
+        },
         '.btn-ghost': {
           '@apply btn text-cyan-400 hover:bg-slate-800/50 hover:text-cyan-300': {},
+        },
+        
+        // Button Sizes
+        '.btn-sm': {
+          '@apply px-3 py-1.5 text-sm gap-1.5': {},
+        },
+        '.btn-md': {
+          '@apply px-4 py-2 text-sm gap-2': {},
+        },
+        '.btn-lg': {
+          '@apply px-6 py-3 text-base gap-2.5': {},
         },
         
         // Text & Typography
@@ -243,10 +258,33 @@ export default {
         '.badge-warning': {
           '@apply badge bg-yellow-600/20 text-yellow-300 border-yellow-500/40': {},
         },
+        '.badge-role-admin': {
+          '@apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700/50 text-slate-200 border border-slate-600': {},
+        },
+        '.badge-role-direzione': {
+          '@apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-700': {},
+        },
+        '.badge-role-dipendente': {
+          '@apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-700': {},
+        },
+        '.badge-status-active': {
+          '@apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-900/50 text-emerald-300 border border-emerald-700': {},
+        },
+        '.badge-status-inactive': {
+          '@apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-900/50 text-yellow-300 border border-yellow-700': {},
+        },
         
         // Dividers & Separators
         '.divider': {
           '@apply border-t-2 border-cyan-500/20': {},
+        },
+        
+        // Loading & Spinners
+        '.loading-spinner': {
+          '@apply inline-block animate-spin rounded-full border-t-4 border-b-4 border-cyan-500 shadow-xl shadow-cyan-500/50': {},
+        },
+        '.loading-text': {
+          '@apply text-cyan-300 font-medium animate-pulse': {},
         },
         
         // Page & Layout

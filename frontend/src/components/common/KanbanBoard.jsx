@@ -3,25 +3,52 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Clock, User, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useTheme } from '../../hooks/useTheme';
 import TaskTreeNode from '../TaskTreeNode';
 
 const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
+  const { colors, spacing } = useTheme();
   const [expandedTasks, setExpandedTasks] = useState({});
 
   const defaultColumns = [
-    { id: 'todo', title: 'Da fare', color: 'bg-slate-200 border-2 border-slate-300', textColor: 'text-slate-900' },
-    { id: 'in_progress', title: 'In corso', color: 'bg-blue-100 border-2 border-blue-300', textColor: 'text-blue-900' },
-    { id: 'blocked', title: 'Bloccato', color: 'bg-red-100 border-2 border-red-300', textColor: 'text-red-900' },
-    { id: 'waiting_clarification', title: 'In attesa', color: 'bg-amber-100 border-2 border-amber-300', textColor: 'text-amber-900' },
-    { id: 'completed', title: 'Completato', color: 'bg-emerald-100 border-2 border-emerald-300', textColor: 'text-emerald-900' }
+    {
+      id: 'todo',
+      title: 'Da fare',
+      color: 'bg-slate-800/50 border-2 border-slate-700/50',
+      textColor: 'text-slate-200',
+    },
+    {
+      id: 'in_progress',
+      title: 'In corso',
+      color: 'bg-blue-500/20 border-2 border-blue-500/30',
+      textColor: 'text-blue-300',
+    },
+    {
+      id: 'blocked',
+      title: 'Bloccato',
+      color: 'bg-red-500/20 border-2 border-red-500/30',
+      textColor: 'text-red-300',
+    },
+    {
+      id: 'waiting_clarification',
+      title: 'In attesa',
+      color: 'bg-amber-500/20 border-2 border-amber-500/30',
+      textColor: 'text-amber-300',
+    },
+    {
+      id: 'completed',
+      title: 'Completato',
+      color: 'bg-green-500/20 border-2 border-green-500/30',
+      textColor: 'text-green-300',
+    },
   ];
 
   const kanbanColumns = columns || defaultColumns;
 
   const handleToggleExpand = (taskId) => {
-    setExpandedTasks(prev => ({
+    setExpandedTasks((prev) => ({
       ...prev,
-      [taskId]: !prev[taskId]
+      [taskId]: !prev[taskId],
     }));
   };
 
@@ -32,7 +59,7 @@ const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
     const newStatus = result.destination.droppableId;
 
     // Trova il task
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find((t) => t.id === taskId);
     if (!task || task.status === newStatus) return;
 
     // Aggiorna il task
@@ -47,12 +74,12 @@ const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
 
   const getTasksByStatus = (status) => {
     // Filtra solo i task root (senza parent)
-    return tasks.filter(task => task.status === status && !task.parent_task_id);
+    return tasks.filter((task) => task.status === status && !task.parent_task_id);
   };
 
   const getSubtasksForTask = (taskId) => {
     // Ritorna tutti i subtask di un task
-    return tasks.filter(task => task.parent_task_id === taskId);
+    return tasks.filter((task) => task.parent_task_id === taskId);
   };
 
   const isOverdue = (deadline) => {
@@ -68,27 +95,27 @@ const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
 
   const getPriorityColor = (priority) => {
     const colors = {
-      bassa: 'text-slate-500',
-      media: 'text-primary-600',
-      alta: 'text-primary-700',
-      critica: 'text-slate-900'
+      bassa: 'text-slate-400',
+      media: 'text-cyan-400',
+      alta: 'text-orange-400',
+      critica: 'text-red-400',
     };
     return colors[priority] || 'text-slate-500';
   };
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 overflow-x-auto pb-4">
-        {kanbanColumns.map(column => {
+      <div className="grid grid-cols-1 gap-3 overflow-x-auto pb-4 sm:grid-cols-2 lg:grid-cols-5">
+        {kanbanColumns.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
 
           return (
-            <div key={column.id} className="flex flex-col min-w-[280px] sm:min-w-0">
+            <div key={column.id} className="flex min-w-[280px] flex-col sm:min-w-0">
               {/* Column Header */}
-              <div className={`${column.color} ${column.textColor} p-4 rounded-t-xl shadow-md`}>
+              <div className={`${column.color} ${column.textColor} rounded-t-xl p-4 shadow-md`}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-base">{column.title}</h3>
-                  <span className="text-xs sm:text-sm font-medium bg-white px-2 py-1 rounded shadow-sm">
+                  <h3 className="text-base font-bold">{column.title}</h3>
+                  <span className="rounded border border-cyan-500/20 bg-slate-700/50 px-2 py-1 text-xs font-medium text-cyan-300 shadow-sm sm:text-sm">
                     {columnTasks.length}
                   </span>
                 </div>
@@ -100,27 +127,25 @@ const KanbanBoard = ({ tasks, onTaskClick, onTaskUpdate, columns }) => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex-1 p-2 bg-white rounded-b-xl min-h-[400px] sm:min-h-[500px] transition-colors shadow-md border-2 border-slate-200 ${
-                      snapshot.isDraggingOver ? 'bg-blue-50 ring-2 ring-blue-300' : ''
+                    className={`min-h-[400px] flex-1 rounded-b-xl border-2 border-cyan-500/20 bg-slate-800/30 p-2 shadow-md transition-colors sm:min-h-[500px] ${
+                      snapshot.isDraggingOver ? 'bg-cyan-500/10 ring-2 ring-cyan-500/50' : ''
                     }`}
                   >
                     {columnTasks.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500 text-sm">
-                        Nessun task
-                      </div>
+                      <div className="py-8 text-center text-sm text-slate-500">Nessun task</div>
                     ) : (
                       columnTasks.map((task, index) => (
-                        <Draggable
-                          key={task.id}
-                          draggableId={task.id.toString()}
-                          index={index}
-                        >
+                        <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={snapshot.isDragging ? 'shadow-lg ring-2 ring-primary-400 scale-105' : ''}
+                              className={
+                                snapshot.isDragging
+                                  ? 'scale-105 shadow-lg shadow-cyan-500/20 ring-2 ring-cyan-500'
+                                  : ''
+                              }
                             >
                               <TaskTreeNode
                                 task={task}

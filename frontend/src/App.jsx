@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { canAccessUserManagement, canAccessTemplates } from './utils/permissions';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
@@ -23,7 +24,7 @@ function PrivateRoute({ children, requirePermission = null }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-gray-500">Caricamento...</div>
       </div>
     );
@@ -43,14 +44,16 @@ function PrivateRoute({ children, requirePermission = null }) {
 
 function AppLayout({ children }) {
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-blue-950 dark:to-slate-900">
       <Sidebar />
       <main className="flex-1 overflow-auto lg:ml-64">
-        <Suspense fallback={
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-cyan-300">Caricamento...</div>
-          </div>
-        }>
+        <Suspense
+          fallback={
+            <div className="flex min-h-screen items-center justify-center">
+              <div className="text-cyan-300">Caricamento...</div>
+            </div>
+          }
+        >
           {children}
         </Suspense>
       </main>
@@ -71,8 +74,9 @@ function DashboardRouter() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route
             path="/"
@@ -177,6 +181,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
+    </ThemeProvider>
     </AuthProvider>
   );
 }

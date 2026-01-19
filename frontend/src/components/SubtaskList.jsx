@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
-  Plus, ChevronRight, CheckCircle, Circle, GripVertical, Trash2,
-  CheckSquare, ArrowUpCircle, Link2, X, AlertCircle
+  Plus,
+  ChevronRight,
+  CheckCircle,
+  Circle,
+  GripVertical,
+  Trash2,
+  CheckSquare,
+  ArrowUpCircle,
+  Link2,
+  X,
+  AlertCircle,
 } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 import { tasksApi } from '../services/api';
 import { Button, Card, StatusBadge, PriorityBadge } from './ui';
 
 export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
+  const { colors, spacing } = useTheme();
   const [subtasks, setSubtasks] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +31,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
   const [newSubtask, setNewSubtask] = useState({
     title: '',
     description: '',
-    priority: 'medium'
+    priority: 'medium',
   });
 
   useEffect(() => {
@@ -36,7 +47,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
       setLoading(true);
       const [subtasksRes, statsRes] = await Promise.all([
         tasksApi.getSubtasks(parentTask.id),
-        tasksApi.getSubtasksStats(parentTask.id)
+        tasksApi.getSubtasksStats(parentTask.id),
       ]);
       setSubtasks(subtasksRes.data);
       setStats(statsRes.data);
@@ -58,14 +69,16 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
         parent_task_id: parentTask.id,
         project_id: parentTask.project_id || null,
         assigned_to: parentTask.assigned_to,
-        status: 'todo'
+        status: 'todo',
       });
       setNewSubtask({ title: '', description: '', priority: 'medium' });
       setShowCreateForm(false);
       loadSubtasks();
       if (onUpdate) onUpdate();
     } catch (error) {
-      alert('Errore nella creazione del subtask: ' + (error.response?.data?.error || error.message));
+      alert(
+        'Errore nella creazione del subtask: ' + (error.response?.data?.error || error.message)
+      );
     }
   };
 
@@ -80,7 +93,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
     setSubtasks(items);
 
     try {
-      const subtaskIds = items.map(item => item.id);
+      const subtaskIds = items.map((item) => item.id);
       await tasksApi.reorderSubtasks(parentTask.id, subtaskIds);
     } catch (error) {
       console.error('Error reordering subtasks:', error);
@@ -103,10 +116,8 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
   // Selection
   const handleSelectSubtask = (subtaskId, e) => {
     e.stopPropagation();
-    setSelectedSubtasks(prev =>
-      prev.includes(subtaskId)
-        ? prev.filter(id => id !== subtaskId)
-        : [...prev, subtaskId]
+    setSelectedSubtasks((prev) =>
+      prev.includes(subtaskId) ? prev.filter((id) => id !== subtaskId) : [...prev, subtaskId]
     );
   };
 
@@ -114,7 +125,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
     if (selectedSubtasks.length === subtasks.length) {
       setSelectedSubtasks([]);
     } else {
-      setSelectedSubtasks(subtasks.map(st => st.id));
+      setSelectedSubtasks(subtasks.map((st) => st.id));
     }
   };
 
@@ -186,11 +197,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
   }
 
   if (loading) {
-    return (
-      <div className="text-center py-4 text-gray-500">
-        Caricamento subtask...
-      </div>
-    );
+    return <div className="py-4 text-center text-gray-500">Caricamento subtask...</div>;
   }
 
   const progress = calculateProgress();
@@ -199,15 +206,15 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
   return (
     <div className="mt-6 border-t pt-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <ChevronRight className="w-5 h-5" />
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <ChevronRight className="h-5 w-5" />
             Subtask ({stats?.total || 0})
           </h3>
           {stats && stats.total > 0 && (
             <div className="mt-2">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+              <div className="mb-1 flex items-center gap-2 text-sm text-gray-600">
                 <span>{stats.completed} completati</span>
                 <span>•</span>
                 <span>{stats.in_progress} in corso</span>
@@ -218,13 +225,13 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
                   </>
                 )}
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="h-2 w-full rounded-full bg-gray-200">
                 <div
-                  className="bg-green-600 h-2 rounded-full transition-all"
+                  className="h-2 rounded-full bg-green-600 transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">{progress}% completato</p>
+              <p className="mt-1 text-xs text-gray-500">{progress}% completato</p>
             </div>
           )}
         </div>
@@ -236,15 +243,12 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
               variant="secondary"
               onClick={() => setShowBulkActions(!showBulkActions)}
             >
-              <CheckSquare className="w-4 h-4" />
+              <CheckSquare className="h-4 w-4" />
               Seleziona
             </Button>
           )}
-          <Button
-            size="sm"
-            onClick={() => setShowCreateForm(!showCreateForm)}
-          >
-            <Plus className="w-4 h-4" />
+          <Button size="sm" onClick={() => setShowCreateForm(!showCreateForm)}>
+            <Plus className="h-4 w-4" />
             Aggiungi
           </Button>
         </div>
@@ -252,35 +256,25 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
       {/* Bulk Actions Bar */}
       {showBulkActions && (
-        <Card className="mb-4 bg-blue-50 border-2 border-blue-200 shadow-md">
+        <Card className="mb-4 border-2 border-blue-200 bg-blue-50 shadow-md">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
                 checked={selectedSubtasks.length === subtasks.length}
                 onChange={handleSelectAll}
-                className="w-4 h-4 text-primary-600"
+                className="h-4 w-4 text-primary-600"
               />
-              <span className="text-sm font-medium">
-                {selectedSubtasks.length} selezionati
-              </span>
+              <span className="text-sm font-medium">{selectedSubtasks.length} selezionati</span>
             </div>
             {hasSelection && (
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="success"
-                  onClick={handleBulkComplete}
-                >
-                  <CheckCircle className="w-4 h-4" />
+                <Button size="sm" variant="success" onClick={handleBulkComplete}>
+                  <CheckCircle className="h-4 w-4" />
                   Completa tutti
                 </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={handleBulkDelete}
-                >
-                  <Trash2 className="w-4 h-4" />
+                <Button size="sm" variant="danger" onClick={handleBulkDelete}>
+                  <Trash2 className="h-4 w-4" />
                   Elimina
                 </Button>
               </div>
@@ -291,36 +285,36 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
       {/* Create Form */}
       {showCreateForm && (
-        <Card className="mb-4 bg-blue-50 border-2 border-blue-200 shadow-md">
+        <Card className="mb-4 border-2 border-blue-200 bg-blue-50 shadow-md">
           <form onSubmit={handleCreateSubtask} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Titolo *</label>
+              <label className="text-label mb-1 block">Titolo *</label>
               <input
                 type="text"
                 value={newSubtask.title}
                 onChange={(e) => setNewSubtask({ ...newSubtask, title: e.target.value })}
-                className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                className="input-dark w-full"
                 placeholder="Titolo del subtask..."
                 required
                 autoFocus
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Descrizione</label>
+              <label className="text-label mb-1 block">Descrizione</label>
               <textarea
                 value={newSubtask.description}
                 onChange={(e) => setNewSubtask({ ...newSubtask, description: e.target.value })}
-                className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                className="textarea-dark w-full"
                 rows="2"
                 placeholder="Descrizione opzionale..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Priorità</label>
+              <label className="text-label mb-1 block">Priorità</label>
               <select
                 value={newSubtask.priority}
                 onChange={(e) => setNewSubtask({ ...newSubtask, priority: e.target.value })}
-                className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                className="input-dark w-full"
               >
                 <option value="low">Bassa</option>
                 <option value="medium">Media</option>
@@ -346,25 +340,19 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
       {/* Subtasks List with Drag & Drop */}
       {subtasks.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+        <div className="rounded-lg bg-gray-50 py-8 text-center text-gray-500">
           <p className="text-sm">Nessun subtask ancora creato</p>
-          <p className="text-xs mt-1">Suddividi questo task in subtask più piccoli per organizzare meglio il lavoro</p>
+          <p className="mt-1 text-xs">
+            Suddividi questo task in subtask più piccoli per organizzare meglio il lavoro
+          </p>
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="subtasks">
             {(provided) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="space-y-2"
-              >
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                 {subtasks.map((subtask, index) => (
-                  <Draggable
-                    key={subtask.id}
-                    draggableId={String(subtask.id)}
-                    index={index}
-                  >
+                  <Draggable key={subtask.id} draggableId={String(subtask.id)} index={index}>
                     {(provided, snapshot) => (
                       <Card
                         ref={provided.innerRef}
@@ -374,15 +362,17 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
                         className={`cursor-pointer ${
                           snapshot.isDragging ? 'shadow-lg ring-2 ring-primary-500' : ''
                         } ${selectedSubtasks.includes(subtask.id) ? 'ring-2 ring-blue-400' : ''}`}
-                        onClick={() => !showBulkActions && onSubtaskClick && onSubtaskClick(subtask)}
+                        onClick={() =>
+                          !showBulkActions && onSubtaskClick && onSubtaskClick(subtask)
+                        }
                       >
                         <div className="flex items-start gap-3">
                           {/* Drag Handle */}
                           <div
                             {...provided.dragHandleProps}
-                            className="mt-0.5 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+                            className="mt-0.5 cursor-grab text-gray-400 hover:text-gray-600 active:cursor-grabbing"
                           >
-                            <GripVertical className="w-5 h-5" />
+                            <GripVertical className="h-5 w-5" />
                           </div>
 
                           {/* Selection Checkbox */}
@@ -391,7 +381,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
                               type="checkbox"
                               checked={selectedSubtasks.includes(subtask.id)}
                               onChange={(e) => handleSelectSubtask(subtask.id, e)}
-                              className="mt-1 w-4 h-4 text-primary-600"
+                              className="mt-1 h-4 w-4 text-primary-600"
                               onClick={(e) => e.stopPropagation()}
                             />
                           )}
@@ -402,16 +392,18 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
                             onClick={(e) => handleToggleComplete(subtask, e)}
                           >
                             {subtask.status === 'completed' ? (
-                              <CheckCircle className="w-5 h-5 text-green-600" />
+                              <CheckCircle className="h-5 w-5 text-green-600" />
                             ) : (
-                              <Circle className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                              <Circle className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                             )}
                           </div>
 
                           {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h4 className={`font-medium ${subtask.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <h4
+                                className={`font-medium ${subtask.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+                              >
                                 {subtask.title}
                               </h4>
                               <StatusBadge status={subtask.status} size="sm" />
@@ -419,18 +411,20 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
                               {/* Dependency indicator */}
                               {subtask.depends_on_task_id && (
-                                <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-                                  <Link2 className="w-3 h-3" />
+                                <div className="flex items-center gap-1 rounded border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs text-orange-600">
+                                  <Link2 className="h-3 w-3" />
                                   <span>Dipende da: {subtask.depends_on_task_title}</span>
                                   {subtask.depends_on_task_status !== 'completed' && (
-                                    <AlertCircle className="w-3 h-3" />
+                                    <AlertCircle className="h-3 w-3" />
                                   )}
                                 </div>
                               )}
                             </div>
 
                             {subtask.description && (
-                              <p className="text-sm text-gray-600 line-clamp-1 mb-1">{subtask.description}</p>
+                              <p className="mb-1 line-clamp-1 text-sm text-gray-600">
+                                {subtask.description}
+                              </p>
                             )}
 
                             <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -449,17 +443,17 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
                                 setDependencySubtask(subtask);
                                 setShowDependencyModal(true);
                               }}
-                              className="p-1 text-gray-400 hover:text-primary-600 rounded"
+                              className="rounded p-1 text-gray-400 hover:text-primary-600"
                               title="Imposta dipendenza"
                             >
-                              <Link2 className="w-4 h-4" />
+                              <Link2 className="h-4 w-4" />
                             </button>
                             <button
                               onClick={(e) => handlePromoteToTask(subtask, e)}
-                              className="p-1 text-gray-400 hover:text-green-600 rounded"
+                              className="rounded p-1 text-gray-400 hover:text-green-600"
                               title="Promuovi a task indipendente"
                             >
-                              <ArrowUpCircle className="w-4 h-4" />
+                              <ArrowUpCircle className="h-4 w-4" />
                             </button>
                           </div>
                         </div>
@@ -476,12 +470,10 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
 
       {/* Dependency Modal */}
       {showDependencyModal && dependencySubtask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="card shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">
-                Imposta Dipendenza
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="card w-full max-w-md p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Imposta Dipendenza</h3>
               <button
                 onClick={() => {
                   setShowDependencyModal(false);
@@ -489,31 +481,29 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4">
-              "{dependencySubtask.title}" dipende da:
-            </p>
+            <p className="mb-4 text-sm text-gray-600">"{dependencySubtask.title}" dipende da:</p>
 
-            <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+            <div className="mb-4 max-h-60 space-y-2 overflow-y-auto">
               <button
                 onClick={() => handleSetDependency(null)}
-                className="w-full text-left p-2 rounded border hover:bg-gray-50"
+                className="w-full rounded border p-2 text-left hover:bg-gray-50"
               >
-                <span className="text-sm font-medium text-gray-700">
-                  Nessuna dipendenza
-                </span>
+                <span className="text-sm font-medium text-gray-700">Nessuna dipendenza</span>
               </button>
               {subtasks
-                .filter(st => st.id !== dependencySubtask.id)
-                .map(st => (
+                .filter((st) => st.id !== dependencySubtask.id)
+                .map((st) => (
                   <button
                     key={st.id}
                     onClick={() => handleSetDependency(st.id)}
-                    className={`w-full text-left p-2 rounded border hover:bg-gray-50 ${
-                      st.id === dependencySubtask.depends_on_task_id ? 'bg-blue-50 border-blue-300' : ''
+                    className={`w-full rounded border p-2 text-left hover:bg-gray-50 ${
+                      st.id === dependencySubtask.depends_on_task_id
+                        ? 'border-blue-300 bg-blue-50'
+                        : ''
                     }`}
                   >
                     <div className="flex items-center justify-between">

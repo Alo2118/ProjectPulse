@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { X, Download, Calendar } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 import { tasksApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function DailyReportModal({ onClose }) {
   const { user } = useAuth();
+  const { colors, spacing } = useTheme();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -39,20 +41,20 @@ export default function DailyReportModal({ onClose }) {
     text += `Tempo totale: ${formatTime(report.total_time_seconds)}\n\n`;
 
     text += `=== TASK COMPLETATI (${report.completed_tasks.length}) ===\n`;
-    report.completed_tasks.forEach(task => {
+    report.completed_tasks.forEach((task) => {
       text += `- ${task.title}\n`;
       if (task.time_spent > 0) text += `  Tempo: ${formatTime(task.time_spent)}\n`;
     });
 
     text += `\n=== TASK IN CORSO (${report.in_progress_tasks.length}) ===\n`;
-    report.in_progress_tasks.forEach(task => {
+    report.in_progress_tasks.forEach((task) => {
       text += `- ${task.title}\n`;
       if (task.time_spent > 0) text += `  Tempo: ${formatTime(task.time_spent)}\n`;
     });
 
     if (report.blocked_tasks.length > 0) {
       text += `\n=== TASK BLOCCATI (${report.blocked_tasks.length}) ===\n`;
-      report.blocked_tasks.forEach(task => {
+      report.blocked_tasks.forEach((task) => {
         text += `- ${task.title}\n`;
         if (task.blocked_reason) text += `  Motivo: ${task.blocked_reason}\n`;
       });
@@ -60,7 +62,7 @@ export default function DailyReportModal({ onClose }) {
 
     if (report.waiting_clarification_tasks.length > 0) {
       text += `\n=== IN ATTESA DI CHIARIMENTI (${report.waiting_clarification_tasks.length}) ===\n`;
-      report.waiting_clarification_tasks.forEach(task => {
+      report.waiting_clarification_tasks.forEach((task) => {
         text += `- ${task.title}\n`;
         if (task.clarification_needed) text += `  Richiesta: ${task.clarification_needed}\n`;
       });
@@ -76,24 +78,22 @@ export default function DailyReportModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border-2 border-slate-200">
-        <div className="sticky top-0 bg-white border-b-2 border-slate-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Report Giornaliero</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="card-lg max-h-[90vh] w-full max-w-3xl overflow-y-auto">
+        <div className={`sticky top-0 flex items-center justify-between border-b-2 ${colors.border} ${colors.bg.secondary} px-6 py-4`}>
+          <h2 className="card-header">Report Giornaliero</h2>
+          <button onClick={onClose} className="text-cyan-400/60 hover:text-cyan-300">
+            <X className="h-6 w-6" />
           </button>
         </div>
 
         <div className="p-6">
-          <div className="flex items-center gap-4 mb-6">
+          <div className="mb-6 flex items-center gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data
-              </label>
+              <label className="text-label mb-2 block">Data</label>
               <input
                 type="date"
-                className="input"
+                className="input-dark w-full"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
@@ -102,22 +102,22 @@ export default function DailyReportModal({ onClose }) {
             <button
               onClick={exportReport}
               disabled={!report || loading}
-              className="btn-secondary flex items-center gap-2 mt-7"
+              className="btn-secondary mt-7 flex items-center gap-2"
             >
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
               Esporta
             </button>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-500">Caricamento...</div>
+            <div className="py-12 text-center text-gray-500">Caricamento...</div>
           ) : !report ? (
-            <div className="text-center py-12 text-gray-500">Nessun dato disponibile</div>
+            <div className="py-12 text-center text-gray-500">Nessun dato disponibile</div>
           ) : (
             <div className="space-y-6">
               {/* Summary */}
-              <div className="bg-white border-2 border-primary-200 rounded-xl p-4 shadow-md">
-                <h3 className="font-semibold text-primary-900 mb-2">Riepilogo</h3>
+              <div className={`rounded-xl border-2 ${colors.border} ${colors.bg.primary} p-4 shadow-md`}>
+                <h3 className="mb-2 font-semibold text-primary-900">Riepilogo</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <div className="text-2xl font-bold text-primary-600">
@@ -143,13 +143,16 @@ export default function DailyReportModal({ onClose }) {
               {/* Completed */}
               {report.completed_tasks.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                  <h3 className="mb-3 flex items-center gap-2 font-semibold text-gray-900">
+                    <span className="h-3 w-3 rounded-full bg-green-500"></span>
                     Completati ({report.completed_tasks.length})
                   </h3>
                   <div className="space-y-2">
-                    {report.completed_tasks.map(task => (
-                      <div key={task.id} className="bg-white border-2 border-primary-200 rounded-xl p-3 shadow-sm">
+                    {report.completed_tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className={`rounded-xl border-2 ${colors.border} ${colors.bg.primary} p-3 shadow-sm`}
+                      >
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.time_spent > 0 && (
                           <div className="text-sm text-gray-600">
@@ -165,13 +168,16 @@ export default function DailyReportModal({ onClose }) {
               {/* In Progress */}
               {report.in_progress_tasks.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                  <h3 className="mb-3 flex items-center gap-2 font-semibold text-gray-900">
+                    <span className="h-3 w-3 rounded-full bg-blue-500"></span>
                     In Corso ({report.in_progress_tasks.length})
                   </h3>
                   <div className="space-y-2">
-                    {report.in_progress_tasks.map(task => (
-                      <div key={task.id} className="bg-white border-2 border-primary-300 rounded-xl p-3 shadow-sm">
+                    {report.in_progress_tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="rounded-xl border-2 border-primary-300 bg-white p-3 shadow-sm"
+                      >
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.time_spent > 0 && (
                           <div className="text-sm text-gray-600">
@@ -187,16 +193,19 @@ export default function DailyReportModal({ onClose }) {
               {/* Blocked */}
               {report.blocked_tasks.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                  <h3 className="mb-3 flex items-center gap-2 font-semibold text-gray-900">
+                    <span className="h-3 w-3 rounded-full bg-red-500"></span>
                     Bloccati ({report.blocked_tasks.length})
                   </h3>
                   <div className="space-y-2">
-                    {report.blocked_tasks.map(task => (
-                      <div key={task.id} className="card-stat from-slate-50 to-slate-100 border-slate-200">
+                    {report.blocked_tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className={`card-stat ${colors.border} ${colors.bg.primary}`}
+                      >
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.blocked_reason && (
-                          <div className="text-sm text-red-700 mt-1">
+                          <div className="mt-1 text-sm text-red-700">
                             Motivo: {task.blocked_reason}
                           </div>
                         )}
@@ -209,16 +218,19 @@ export default function DailyReportModal({ onClose }) {
               {/* Waiting */}
               {report.waiting_clarification_tasks.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                  <h3 className="mb-3 flex items-center gap-2 font-semibold text-gray-900">
+                    <span className="h-3 w-3 rounded-full bg-yellow-500"></span>
                     In Attesa di Chiarimenti ({report.waiting_clarification_tasks.length})
                   </h3>
                   <div className="space-y-2">
-                    {report.waiting_clarification_tasks.map(task => (
-                      <div key={task.id} className="card-stat from-slate-100 to-slate-200 border-slate-300">
+                    {report.waiting_clarification_tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="card-stat border-slate-300 from-slate-100 to-slate-200"
+                      >
                         <div className="font-medium text-gray-900">{task.title}</div>
                         {task.clarification_needed && (
-                          <div className="text-sm text-yellow-700 mt-1">
+                          <div className="mt-1 text-sm text-yellow-700">
                             Richiesta: {task.clarification_needed}
                           </div>
                         )}

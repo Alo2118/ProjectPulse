@@ -4,7 +4,7 @@ import { Card } from '../ui';
 const BurndownChart = ({ projectId, velocityData }) => {
   if (!velocityData || velocityData.length === 0) {
     return (
-      <Card className="text-center py-8 text-gray-500">
+      <Card className="py-8 text-center text-slate-400">
         <p>Nessun dato disponibile per il burndown chart</p>
       </Card>
     );
@@ -18,8 +18,8 @@ const BurndownChart = ({ projectId, velocityData }) => {
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
   // Prepare data
-  const weeks = velocityData.map(d => d.week_label);
-  const remainingTasks = velocityData.map(d => d.remaining_tasks);
+  const weeks = velocityData.map((d) => d.week_label);
+  const remainingTasks = velocityData.map((d) => d.remaining_tasks);
   const idealLine = velocityData.map((d, i) => {
     const totalWeeks = velocityData.length;
     const initialTasks = velocityData[0].total_tasks;
@@ -61,12 +61,16 @@ const BurndownChart = ({ projectId, velocityData }) => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrendingDown className="w-5 h-5 text-gray-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Burndown Chart</h3>
+            <TrendingDown className="h-5 w-5 text-cyan-400" />
+            <h3 className="text-lg font-semibold text-cyan-300">Burndown Chart</h3>
           </div>
-          <div className={`text-sm font-medium px-3 py-1 rounded-full ${
-            isAhead ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-          }`}>
+          <div
+            className={`rounded-full border px-3 py-1 text-sm font-medium ${
+              isAhead
+                ? 'border-green-500/30 bg-green-500/20 text-green-300'
+                : 'border-orange-500/30 bg-orange-500/20 text-orange-300'
+            }`}
+          >
             {isAhead ? '🎯 In anticipo' : '⚠️ In ritardo'}
           </div>
         </div>
@@ -85,7 +89,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
                     y1={y}
                     x2={chartWidth - padding.right}
                     y2={y}
-                    stroke="#e5e7eb"
+                    stroke="#334155"
                     strokeWidth="1"
                   />
                   <text
@@ -93,7 +97,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
                     y={y + 5}
                     textAnchor="end"
                     fontSize="12"
-                    fill="#6b7280"
+                    fill="#94a3b8"
                   >
                     {value}
                   </text>
@@ -106,14 +110,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
               const x = xScale(index) + padding.left;
               const y = chartHeight - padding.bottom + 20;
               return (
-                <text
-                  key={index}
-                  x={x}
-                  y={y}
-                  textAnchor="middle"
-                  fontSize="12"
-                  fill="#6b7280"
-                >
+                <text key={index} x={x} y={y} textAnchor="middle" fontSize="12" fill="#94a3b8">
                   {week}
                 </text>
               );
@@ -123,7 +120,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
             <path
               d={idealPath}
               fill="none"
-              stroke="#94a3b8"
+              stroke="#64748b"
               strokeWidth="2"
               strokeDasharray="5,5"
             />
@@ -132,7 +129,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
             <path
               d={actualPath}
               fill="none"
-              stroke={isAhead ? '#10b981' : '#f59e0b'}
+              stroke={isAhead ? '#22c55e' : '#f97316'}
               strokeWidth="3"
             />
 
@@ -146,7 +143,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
                     cx={x}
                     cy={y}
                     r="4"
-                    fill={isAhead ? '#10b981' : '#f59e0b'}
+                    fill={isAhead ? '#22c55e' : '#f97316'}
                     stroke="white"
                     strokeWidth="2"
                   />
@@ -162,16 +159,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
             {idealLine.map((value, index) => {
               const x = xScale(index) + padding.left;
               const y = yScale(value) + padding.top;
-              return (
-                <circle
-                  key={index}
-                  cx={x}
-                  cy={y}
-                  r="3"
-                  fill="#94a3b8"
-                  opacity="0.5"
-                />
-              );
+              return <circle key={index} cx={x} cy={y} r="3" fill="#64748b" opacity="0.5" />;
             })}
 
             {/* Axis labels */}
@@ -180,7 +168,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
               y={chartHeight - 5}
               textAnchor="middle"
               fontSize="14"
-              fill="#374151"
+              fill="#cbd5e1"
               fontWeight="500"
             >
               Settimane
@@ -190,7 +178,7 @@ const BurndownChart = ({ projectId, velocityData }) => {
               y={chartHeight / 2}
               textAnchor="middle"
               fontSize="14"
-              fill="#374151"
+              fill="#cbd5e1"
               fontWeight="500"
               transform={`rotate(-90, 15, ${chartHeight / 2})`}
             >
@@ -200,44 +188,55 @@ const BurndownChart = ({ projectId, velocityData }) => {
         </div>
 
         {/* Legend and Stats */}
-        <div className="flex items-center justify-between pt-4 border-t-2 border-slate-200">
+        <div className="flex items-center justify-between border-t-2 border-cyan-500/20 pt-4">
           <div className="flex items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5 bg-gray-400" style={{ borderTop: '2px dashed #94a3b8' }}></div>
-              <span className="text-gray-600">Ideale</span>
+              <div
+                className="h-0.5 w-8 bg-slate-600"
+                style={{ borderTop: '2px dashed #64748b' }}
+              ></div>
+              <span className="text-slate-400">Ideale</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-1 ${isAhead ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-              <span className="text-gray-600">Effettivo</span>
+              <div className={`h-1 w-8 ${isAhead ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+              <span className="text-slate-400">Effettivo</span>
             </div>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-slate-400">
             <span className="font-medium">Completamento: </span>
-            <span className={completionRate >= 70 ? 'text-green-600' : completionRate >= 50 ? 'text-orange-600' : 'text-red-600'}>
+            <span
+              className={
+                completionRate >= 70
+                  ? 'text-green-400'
+                  : completionRate >= 50
+                    ? 'text-orange-400'
+                    : 'text-red-400'
+              }
+            >
               {completionRate}%
             </span>
           </div>
         </div>
 
         {/* Additional Stats */}
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t-2 border-slate-200 text-center">
+        <div className="grid grid-cols-3 gap-4 border-t-2 border-cyan-500/20 pt-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-slate-100">
               {velocityData[velocityData.length - 1].remaining_tasks}
             </div>
-            <div className="text-sm text-gray-600">Task rimanenti</div>
+            <div className="text-sm text-slate-400">Task rimanenti</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-slate-100">
               {velocityData[velocityData.length - 1].completed_count}
             </div>
-            <div className="text-sm text-gray-600">Completati</div>
+            <div className="text-sm text-slate-400">Completati</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-slate-100">
               {velocityData[velocityData.length - 1].avg_per_week.toFixed(1)}
             </div>
-            <div className="text-sm text-gray-600">Task/settimana</div>
+            <div className="text-sm text-slate-400">Task/settimana</div>
           </div>
         </div>
       </div>

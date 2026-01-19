@@ -39,7 +39,7 @@ export function useTemplates(type = 'task') {
             type: type,
             icon: template.icon || '📋',
             data: template.data,
-            is_public: false
+            is_public: false,
           });
           console.log(`✅ Migrated: ${template.name}`);
         } catch (error) {
@@ -95,7 +95,7 @@ export function useTemplates(type = 'task') {
           description: template.description,
           icon: template.icon,
           data: template.data,
-          is_public: template.is_public || false
+          is_public: template.is_public || false,
         });
         saved = response.data;
       } else {
@@ -106,7 +106,7 @@ export function useTemplates(type = 'task') {
           type: type,
           icon: template.icon || '📋',
           data: template.data,
-          is_public: template.is_public || false
+          is_public: template.is_public || false,
         });
         saved = response.data;
       }
@@ -142,7 +142,7 @@ export function useTemplates(type = 'task') {
           name: 'Progetto Personalizzato',
           description: 'Crea un progetto da zero',
           icon: '📝',
-          data: null
+          data: null,
         };
         break;
       case 'task':
@@ -151,7 +151,7 @@ export function useTemplates(type = 'task') {
           name: 'Task Personalizzato',
           description: 'Crea un task da zero',
           icon: '📋',
-          data: null
+          data: null,
         };
         break;
       case 'milestone':
@@ -160,7 +160,7 @@ export function useTemplates(type = 'task') {
           name: 'Milestone Personalizzata',
           description: 'Crea una milestone da zero',
           icon: '🎯',
-          data: null
+          data: null,
         };
         break;
       default:
@@ -169,14 +169,14 @@ export function useTemplates(type = 'task') {
           name: 'Personalizzato',
           description: 'Crea da zero',
           icon: '📝',
-          data: null
+          data: null,
         };
     }
 
     // Parse JSON data for templates from DB
-    const templatesWithParsedData = customTemplates.map(t => ({
+    const templatesWithParsedData = customTemplates.map((t) => ({
       ...t,
-      data: typeof t.data === 'string' ? JSON.parse(t.data) : t.data
+      data: typeof t.data === 'string' ? JSON.parse(t.data) : t.data,
     }));
 
     // Return custom option first, then all DB templates
@@ -189,6 +189,6 @@ export function useTemplates(type = 'task') {
     saveCustomTemplate,
     deleteCustomTemplate,
     refresh: loadTemplates,
-    loading
+    loading,
   };
 }

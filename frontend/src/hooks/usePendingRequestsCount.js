@@ -8,7 +8,7 @@ export const usePendingRequestsCount = () => {
     try {
       const statsRes = await requestsApi.getStats();
       const byStatus = statsRes.data?.byStatus || [];
-      const newRequests = byStatus?.find(s => s.status === 'new');
+      const newRequests = byStatus?.find((s) => s.status === 'new');
       setPendingCount(newRequests?.count || 0);
     } catch (error) {
       console.error('Errore caricamento conteggio richieste:', error);
@@ -16,11 +16,11 @@ export const usePendingRequestsCount = () => {
   }, []);
 
   const incrementCount = useCallback(() => {
-    setPendingCount(prev => prev + 1);
+    setPendingCount((prev) => prev + 1);
   }, []);
 
   const decrementCount = useCallback(() => {
-    setPendingCount(prev => Math.max(0, prev - 1));
+    setPendingCount((prev) => Math.max(0, prev - 1));
   }, []);
 
   return {
@@ -28,6 +28,6 @@ export const usePendingRequestsCount = () => {
     setPendingCount,
     refetchCount,
     incrementCount,
-    decrementCount
+    decrementCount,
   };
 };

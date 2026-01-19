@@ -9,14 +9,14 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
 
   if (totalAlerts === 0) {
     return (
-      <Card className="alert-success mb-0">
+      <Card className="mb-0 border-2 border-green-500/30 bg-green-500/20">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <AlertCircle className="w-6 h-6 text-green-600" />
+          <div className="rounded-lg bg-green-500/20 p-2">
+            <AlertCircle className="h-6 w-6 text-green-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-green-900">Tutto OK!</h3>
-            <p className="text-sm text-green-700">Nessun blocco o problema rilevato</p>
+            <h3 className="text-lg font-semibold text-green-300">Tutto OK!</h3>
+            <p className="text-sm text-green-400/70">Nessun blocco o problema rilevato</p>
           </div>
         </div>
       </Card>
@@ -26,18 +26,19 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
   return (
     <div className="space-y-4">
       {/* Summary Card */}
-      <Card className="alert-critical mb-0">
+      <Card className="mb-0 border-2 border-red-500/30 bg-red-500/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-red-600" />
+            <div className="rounded-lg bg-red-500/20 p-2">
+              <AlertCircle className="h-6 w-6 text-red-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-red-900">
+              <h3 className="text-lg font-semibold text-red-300">
                 {totalAlerts} Alert {totalAlerts === 1 ? 'Attivo' : 'Attivi'}
               </h3>
-              <p className="text-sm text-red-700">
-                {summary.blocked_count} bloccati • {summary.overdue_count} scaduti • {summary.waiting_count} in attesa
+              <p className="text-sm text-red-400/70">
+                {summary.blocked_count} bloccati • {summary.overdue_count} scaduti •{' '}
+                {summary.waiting_count} in attesa
               </p>
             </div>
           </div>
@@ -47,33 +48,31 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
       {/* Blocked Tasks */}
       {blocked && blocked.length > 0 && (
         <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <XCircle className="w-5 h-5 text-red-600" />
-            <h4 className="font-semibold text-gray-900">
-              Task Bloccati ({blocked.length})
-            </h4>
+          <div className="mb-3 flex items-center gap-2">
+            <XCircle className="h-5 w-5 text-red-400" />
+            <h4 className="font-semibold text-cyan-300">Task Bloccati ({blocked.length})</h4>
           </div>
           <div className="space-y-2">
-            {blocked.map(task => (
+            {blocked.map((task) => (
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 alert-critical mb-2 rounded-xl border-2 border-red-200 shadow-sm hover:shadow-md cursor-pointer transition-all"
+                className="cursor-pointer rounded-xl border-2 border-red-500/30 bg-red-500/10 p-3 shadow-sm transition-all hover:bg-red-500/15 hover:shadow-md"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">{task.title}</h5>
-                    <p className="text-sm text-gray-600">
+                    <h5 className="font-medium text-slate-200">{task.title}</h5>
+                    <p className="text-sm text-slate-400">
                       {task.project_name && `${task.project_name} • `}
                       Assegnato a: {task.assigned_to_name}
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-red-700 bg-red-100 px-2 py-1 rounded">
+                  <span className="rounded border border-red-500/40 bg-red-500/30 px-2 py-1 text-xs font-semibold text-red-300">
                     {task.days_blocked} {task.days_blocked === 1 ? 'giorno' : 'giorni'}
                   </span>
                 </div>
                 {task.blocked_reason && (
-                  <p className="text-sm text-gray-700 mt-2 italic">
+                  <p className="mt-2 text-sm italic text-slate-400">
                     Motivo: {task.blocked_reason}
                   </p>
                 )}
@@ -86,29 +85,28 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
       {/* Overdue Tasks */}
       {overdue && overdue.length > 0 && (
         <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
-            <h4 className="font-semibold text-gray-900">
-              Task Scaduti ({overdue.length})
-            </h4>
+          <div className="mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-orange-400" />
+            <h4 className="font-semibold text-cyan-300">Task Scaduti ({overdue.length})</h4>
           </div>
           <div className="space-y-2">
-            {overdue.map(task => (
+            {overdue.map((task) => (
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 alert-warning mb-2 rounded-xl border-2 border-orange-200 shadow-sm hover:shadow-md cursor-pointer transition-all"
+                className="cursor-pointer rounded-xl border-2 border-orange-500/30 bg-orange-500/10 p-3 shadow-sm transition-all hover:bg-orange-500/15 hover:shadow-md"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">{task.title}</h5>
-                    <p className="text-sm text-gray-600">
+                    <h5 className="font-medium text-slate-200">{task.title}</h5>
+                    <p className="text-sm text-slate-400">
                       {task.project_name && `${task.project_name} • `}
                       Assegnato a: {task.assigned_to_name}
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-1 rounded">
-                    Scaduto {task.days_overdue} {task.days_overdue === 1 ? 'giorno fa' : 'giorni fa'}
+                  <span className="rounded border border-orange-500/40 bg-orange-500/30 px-2 py-1 text-xs font-semibold text-orange-300">
+                    Scaduto {task.days_overdue}{' '}
+                    {task.days_overdue === 1 ? 'giorno fa' : 'giorni fa'}
                   </span>
                 </div>
               </div>
@@ -120,33 +118,33 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
       {/* Waiting Clarification */}
       {waiting_clarification && waiting_clarification.length > 0 && (
         <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-5 h-5 text-yellow-600" />
-            <h4 className="font-semibold text-gray-900">
+          <div className="mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-amber-400" />
+            <h4 className="font-semibold text-cyan-300">
               In Attesa Chiarimenti ({waiting_clarification.length})
             </h4>
           </div>
           <div className="space-y-2">
-            {waiting_clarification.map(task => (
+            {waiting_clarification.map((task) => (
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 alert-warning mb-2 rounded-xl border-2 border-amber-200 shadow-sm hover:shadow-md cursor-pointer transition-all"
+                className="cursor-pointer rounded-xl border-2 border-amber-500/30 bg-amber-500/10 p-3 shadow-sm transition-all hover:bg-amber-500/15 hover:shadow-md"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">{task.title}</h5>
-                    <p className="text-sm text-gray-600">
+                    <h5 className="font-medium text-slate-200">{task.title}</h5>
+                    <p className="text-sm text-slate-400">
                       {task.project_name && `${task.project_name} • `}
                       Assegnato a: {task.assigned_to_name}
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                  <span className="rounded border border-amber-500/40 bg-amber-500/30 px-2 py-1 text-xs font-semibold text-amber-300">
                     {task.days_waiting} {task.days_waiting === 1 ? 'giorno' : 'giorni'}
                   </span>
                 </div>
                 {task.clarification_needed && (
-                  <p className="text-sm text-gray-700 mt-2 italic">
+                  <p className="mt-2 text-sm italic text-slate-400">
                     "{task.clarification_needed}"
                   </p>
                 )}
@@ -159,29 +157,30 @@ const AlertsPanel = ({ alerts, onTaskClick }) => {
       {/* Approaching Deadline */}
       {approaching_deadline && approaching_deadline.length > 0 && (
         <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-5 h-5 text-blue-600" />
-            <h4 className="font-semibold text-gray-900">
+          <div className="mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-cyan-400" />
+            <h4 className="font-semibold text-cyan-300">
               Scadenze Imminenti ({approaching_deadline.length})
             </h4>
           </div>
           <div className="space-y-2">
-            {approaching_deadline.map(task => (
+            {approaching_deadline.map((task) => (
               <div
                 key={task.id}
                 onClick={() => onTaskClick && onTaskClick(task)}
-                className="p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 cursor-pointer transition-colors"
+                className="cursor-pointer rounded-xl border-2 border-cyan-500/30 bg-cyan-500/10 p-3 shadow-sm transition-all hover:bg-cyan-500/15 hover:shadow-md"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">{task.title}</h5>
-                    <p className="text-sm text-gray-600">
+                    <h5 className="font-medium text-slate-200">{task.title}</h5>
+                    <p className="text-sm text-slate-400">
                       {task.project_name && `${task.project_name} • `}
                       Assegnato a: {task.assigned_to_name}
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                    {task.days_until_deadline} {task.days_until_deadline === 1 ? 'giorno' : 'giorni'}
+                  <span className="rounded border border-cyan-500/40 bg-cyan-500/30 px-2 py-1 text-xs font-semibold text-cyan-300">
+                    {task.days_until_deadline}{' '}
+                    {task.days_until_deadline === 1 ? 'giorno' : 'giorni'}
                   </span>
                 </div>
               </div>
