@@ -12,18 +12,16 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
+import theme, { cn } from '../styles/theme';
 import { useToast } from '../context/ToastContext';
 import { templatesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { canModify, canDelete, canCreate } from '../utils/permissions';
-import { designTokens } from '../config/designTokens';
 import { GamingLayout, GamingHeader, GamingCard, Button } from '../components/ui';
 
 export default function TemplateManagerPage() {
   const { user } = useAuth();
   const { error: showError } = useToast();
-  const { colors, spacing } = useTheme();
   const [templates, setTemplates] = useState([]);
   const [taskTemplates, setTaskTemplates] = useState([]); // For milestone and project editors
   const [milestoneTemplates, setMilestoneTemplates] = useState([]); // For project editor
@@ -214,7 +212,7 @@ export default function TemplateManagerPage() {
       />
 
       {/* Tabs */}
-      <div className={`mb-6 flex flex-wrap gap-2 border-b ${designTokens.colors.cyan.borderLight}`}>
+      <div className={cn(theme.layout.spacing.section, 'flex flex-wrap gap-2', theme.borders.bottom)}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -222,18 +220,37 @@ export default function TemplateManagerPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-3 text-sm font-bold transition-all sm:text-base ${
+              className={cn(
+                'flex items-center gap-2 px-4 py-3 text-sm font-bold transition-all sm:text-base',
+                theme.effects.rounded.lg,
+                'rounded-t-lg border-b-2',
                 isActive
-                  ? `${designTokens.colors.cyan.border} ${colors.bg.secondary} ${designTokens.colors.cyan.text} shadow-[0_6px_18px_rgba(0,200,255,0.18)]`
-                  : `border-transparent ${colors.text.tertiary} ${colors.bg.hover} ${colors.text.primary}`
-              }`}
+                  ? cn(
+                      theme.colors.border.accent,
+                      theme.colors.bg.secondary,
+                      theme.colors.text.accent,
+                      theme.effects.shadow.glow
+                    )
+                  : cn(
+                      'border-transparent',
+                      theme.colors.text.tertiary,
+                      theme.effects.hover.bg,
+                      'hover:text-slate-200 dark:hover:text-white'
+                    )
+              )}
             >
               <Icon size={18} className="shrink-0" />
               <span className="hidden sm:inline">{tab.label}</span>
               <span className="inline text-xs sm:hidden">
                 ({templates.filter((t) => t.type === tab.id).length})
               </span>
-              <span className={`ml-2 hidden rounded-full border ${designTokens.colors.cyan.borderLight} ${colors.bg.tertiary} px-2 py-0.5 text-xs font-semibold ${colors.text.primary} sm:inline`}>
+              <span className={cn(
+                'ml-2 hidden px-2 py-0.5 text-xs font-semibold sm:inline',
+                theme.effects.rounded.full,
+                theme.borders.default,
+                theme.colors.bg.tertiary,
+                theme.colors.text.primary
+              )}>
                 {templates.filter((t) => t.type === tab.id).length}
               </span>
             </button>
@@ -250,8 +267,12 @@ export default function TemplateManagerPage() {
       ) : filteredTemplates.length === 0 ? (
         <GamingCard className="py-12 text-center">
           <div className="mb-4 text-6xl">📋</div>
-          <h3 className={`mb-2 text-lg font-bold ${colors.text.primary}`}>Nessun template trovato</h3>
-          <p className={`${colors.text.tertiary} mb-6`}>Crea il tuo primo template per iniziare</p>
+          <h3 className={cn('mb-2 text-lg font-bold', theme.colors.text.primary)}>
+            Nessun template trovato
+          </h3>
+          <p className={cn(theme.colors.text.tertiary, 'mb-6')}>
+            Crea il tuo primo template per iniziare
+          </p>
           <Button onClick={() => handleCreate(activeTab)} variant="primary">
             Crea Template
           </Button>
@@ -261,25 +282,32 @@ export default function TemplateManagerPage() {
           {filteredTemplates.map((template) => (
             <GamingCard
               key={template.id}
-              className="group cursor-pointer transition-all hover:border-cyan-400 dark:hover:border-cyan-500/30"
+              className={cn(
+                'group cursor-pointer transition-all',
+                'hover:border-cyan-400 dark:hover:border-cyan-500/30'
+              )}
               onClick={() => handleEdit(template)}
             >
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="text-4xl">{template.icon}</div>
                   <div>
-                    <h3 className={`font-bold ${colors.text.primary}`}>{template.name}</h3>
+                    <h3 className={cn('font-bold', theme.colors.text.primary)}>
+                      {template.name}
+                    </h3>
                     {template.is_public && <span className="badge-status-active">Pubblico</span>}
                   </div>
                 </div>
               </div>
 
               {template.description && (
-                <p className={`mb-4 line-clamp-2 text-sm ${colors.text.secondary}`}>{template.description}</p>
+                <p className={cn('mb-4 line-clamp-2 text-sm', theme.colors.text.secondary)}>
+                  {template.description}
+                </p>
               )}
 
               {/* Template Details */}
-              <div className={`mb-4 text-sm ${colors.text.secondary}`}>
+              <div className={cn('mb-4 text-sm', theme.colors.text.secondary)}>
                 {template.type === 'project' && template.data?.milestones && (
                   <div className="font-semibold">
                     📊 {template.data.milestones.length} milestone
@@ -296,12 +324,12 @@ export default function TemplateManagerPage() {
                 )}
               </div>
 
-              <div className={`mb-4 text-xs font-medium ${colors.text.tertiary}`}>
+              <div className={cn('mb-4 text-xs font-medium', theme.colors.text.tertiary)}>
                 Creato da: {template.created_by_name || 'N/A'}
               </div>
 
               {/* Actions */}
-              <div className={`flex gap-2 border-t ${designTokens.colors.cyan.borderLight} pt-4`}>
+              <div className={cn('flex gap-2 pt-4', theme.borders.top)}>
                 <Button
                   type="button"
                   size="sm"
@@ -325,7 +353,7 @@ export default function TemplateManagerPage() {
                     handleDuplicate(template);
                   }}
                   title="Duplica template"
-                  className={`${designTokens.colors.cyan.textBright} hover:text-white`}
+                  className={cn(theme.colors.text.accentBright, 'hover:text-white')}
                 >
                   <Copy size={16} />
                 </Button>
@@ -351,16 +379,29 @@ export default function TemplateManagerPage() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <GamingCard className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-2xl">
-            <div className={`mb-6 flex items-center justify-between border-b ${designTokens.colors.cyan.borderLight} pb-4`}>
-              <h2 className={`flex items-center gap-2 text-2xl font-bold ${designTokens.colors.cyan.text}`}>
-                <FileText className={`h-6 w-6 ${designTokens.colors.cyan.textLight}`} />
+        <div className={cn(
+          'fixed inset-0 z-50 flex items-center justify-center p-4',
+          theme.effects.backdrop.dark
+        )}>
+          <GamingCard className={cn(
+            'max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6',
+            theme.effects.shadow.xl
+          )}>
+            <div className={cn('mb-6 flex items-center justify-between pb-4', theme.borders.bottom)}>
+              <h2 className={cn(
+                'flex items-center gap-2 text-2xl font-bold',
+                theme.colors.text.accent
+              )}>
+                <FileText className={cn('h-6 w-6', theme.colors.text.accentLight)} />
                 {selectedTemplate ? 'Modifica Template' : 'Nuovo Template'}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className={`${colors.text.light} transition-colors hover:text-cyan-600 dark:hover:text-cyan-300`}
+                className={cn(
+                  theme.colors.text.secondary,
+                  theme.effects.transition.colors,
+                  'hover:text-cyan-600 dark:hover:text-cyan-300'
+                )}
               >
                 <X size={24} />
               </button>
@@ -405,9 +446,13 @@ export default function TemplateManagerPage() {
                   id="is_public"
                   checked={formData.is_public}
                   onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
-                  className={`rounded border-slate-700 bg-slate-900 ${designTokens.colors.cyan.text} focus:ring-2 focus:ring-cyan-400`}
+                  className={cn(
+                    'rounded border-slate-700 bg-slate-900',
+                    theme.colors.text.accent,
+                    'focus:ring-2 focus:ring-cyan-400'
+                  )}
                 />
-                <label htmlFor="is_public" className={`text-sm font-medium ${colors.text.primary}`}>
+                <label htmlFor="is_public" className={cn('text-sm font-medium', theme.colors.text.primary)}>
                   Template pubblico (visibile a tutti gli utenti)
                 </label>
               </div>
@@ -422,7 +467,7 @@ export default function TemplateManagerPage() {
               />
 
               {/* Actions */}
-              <div className={`flex gap-3 border-t ${designTokens.colors.cyan.borderLight} pt-4`}>
+              <div className={cn('flex gap-3 pt-4', theme.borders.top)}>
                 <Button
                   type="button"
                   onClick={() => setShowModal(false)}
@@ -462,8 +507,8 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
     };
 
     return (
-      <div className={`rounded-lg border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} p-4`}>
-        <h4 className={`mb-3 font-bold ${colors.text.primary}`}>Dati Progetto</h4>
+      <div className={cn(theme.effects.rounded.lg, theme.borders.default, theme.colors.bg.secondary, 'p-4')}>
+        <h4 className={cn('mb-3 font-bold', theme.colors.text.primary)}>Dati Progetto</h4>
         <div className="space-y-3">
           {/* Descrizione generale */}
           <div>
@@ -483,39 +528,73 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
               Milestone da Creare ({selectedMilestones.length} selezionate)
             </label>
             {milestoneTemplates.length === 0 ? (
-              <p className={`rounded border border-dashed ${designTokens.colors.cyan.borderLight} p-3 text-center text-sm font-medium ${colors.text.light}`}>
+              <p className={cn(
+                'rounded border border-dashed p-3 text-center text-sm font-medium',
+                theme.borders.default,
+                theme.colors.text.secondary
+              )}>
                 Nessun milestone template disponibile. Crea prima dei milestone template.
               </p>
             ) : (
-              <div className={`max-h-60 space-y-2 overflow-y-auto rounded border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} p-3`}>
+              <div className={cn(
+                'max-h-60 space-y-2 overflow-y-auto p-3',
+                theme.effects.rounded.DEFAULT,
+                theme.borders.default,
+                theme.colors.bg.secondary
+              )}>
                 {milestoneTemplates.map((milestone) => (
                   <label
                     key={milestone.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded p-2 transition-colors ${colors.bg.hover}`}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 p-2 transition-colors',
+                      theme.effects.rounded.DEFAULT,
+                      theme.effects.hover.bg
+                    )}
                   >
                     <input
                       type="checkbox"
                       checked={selectedMilestones.includes(milestone.name)}
                       onChange={() => toggleMilestoneForProject(milestone.name)}
-                      className={`rounded ${colors.border} ${colors.bg.tertiary} ${designTokens.colors.cyan.textLight} focus:ring-cyan-400`}
+                      className={cn(
+                        'rounded focus:ring-cyan-400',
+                        theme.borders.default,
+                        theme.colors.bg.tertiary,
+                        theme.colors.text.accentLight
+                      )}
                     />
                     <span className="text-2xl">{milestone.icon}</span>
                     <div className="flex-1">
-                      <div className={`text-sm font-bold ${colors.text.primary}`}>{milestone.name}</div>
+                      <div className={cn('text-sm font-bold', theme.colors.text.primary)}>
+                        {milestone.name}
+                      </div>
                       {milestone.description && (
-                        <div className={`text-xs ${colors.text.light}`}>{milestone.description}</div>
+                        <div className={cn('text-xs', theme.colors.text.secondary)}>
+                          {milestone.description}
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       {milestone.data && milestone.data.duration_days && (
-                        <span className={`rounded border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} px-2 py-1 text-xs font-semibold ${colors.text.primary}`}>
+                        <span className={cn(
+                          'px-2 py-1 text-xs font-semibold',
+                          theme.effects.rounded.DEFAULT,
+                          theme.borders.default,
+                          theme.colors.bg.secondary,
+                          theme.colors.text.primary
+                        )}>
                           {milestone.data.duration_days} giorni
                         </span>
                       )}
                       {milestone.data &&
                         milestone.data.tasks &&
                         milestone.data.tasks.length > 0 && (
-                          <span className={`rounded border ${designTokens.colors.cyan.borderLight} ${designTokens.colors.cyan.bg} px-2 py-1 text-xs font-semibold ${designTokens.colors.cyan.textBright}`}>
+                          <span className={cn(
+                            'px-2 py-1 text-xs font-semibold',
+                            theme.effects.rounded.DEFAULT,
+                            theme.borders.default,
+                            theme.colors.bg.accent,
+                            theme.colors.text.accentBright
+                          )}>
                             {milestone.data.tasks.length} task
                           </span>
                         )}
@@ -524,7 +603,7 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
                 ))}
               </div>
             )}
-            <p className={`mt-2 text-xs font-medium ${colors.text.light}`}>
+            <p className={cn('mt-2 text-xs font-medium', theme.colors.text.secondary)}>
               💡 Queste milestone (con le loro task) verranno create automaticamente quando si crea
               un progetto con questo template
             </p>
@@ -536,8 +615,8 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
 
   if (type === 'task') {
     return (
-      <div className={`rounded-lg border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} p-4`}>
-        <h4 className={`mb-3 font-bold ${colors.text.primary}`}>Dati Task</h4>
+      <div className={cn(theme.effects.rounded.lg, theme.borders.default, theme.colors.bg.secondary, 'p-4')}>
+        <h4 className={cn('mb-3 font-bold', theme.colors.text.primary)}>Dati Task</h4>
         <div className="space-y-3">
           <div>
             <label className="text-label mb-1">Descrizione Task</label>
@@ -588,7 +667,7 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
               }
               placeholder="Prepara ambiente di test&#10;Esegui test funzionali&#10;Documenta risultati"
             />
-            <p className={`mt-1 text-xs font-medium ${colors.text.light}`}>
+            <p className={cn('mt-1 text-xs font-medium', theme.colors.text.secondary)}>
               {(data.subtasks || []).length} subtask configurati
             </p>
           </div>
@@ -609,8 +688,8 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
     };
 
     return (
-      <div className={`rounded-lg border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} p-4`}>
-        <h4 className={`mb-3 font-bold ${colors.text.primary}`}>Dati Milestone</h4>
+      <div className={cn(theme.effects.rounded.lg, theme.borders.default, theme.colors.bg.secondary, 'p-4')}>
+        <h4 className={cn('mb-3 font-bold', theme.colors.text.primary)}>Dati Milestone</h4>
         <div className="space-y-3">
           <div>
             <label className="text-label mb-1">Descrizione Milestone</label>
@@ -640,31 +719,59 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
               Task da Creare ({selectedTasks.length} selezionati)
             </label>
             {taskTemplates.length === 0 ? (
-              <p className={`rounded border border-dashed ${designTokens.colors.cyan.borderLight} p-3 text-center text-sm font-medium ${colors.text.light}`}>
+              <p className={cn(
+                'rounded border border-dashed p-3 text-center text-sm font-medium',
+                theme.borders.default,
+                theme.colors.text.secondary
+              )}>
                 Nessun task template disponibile. Crea prima dei task template.
               </p>
             ) : (
-              <div className={`max-h-60 space-y-2 overflow-y-auto rounded border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} p-3`}>
+              <div className={cn(
+                'max-h-60 space-y-2 overflow-y-auto p-3',
+                theme.effects.rounded.DEFAULT,
+                theme.borders.default,
+                theme.colors.bg.secondary
+              )}>
                 {taskTemplates.map((task) => (
                   <label
                     key={task.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded p-2 transition-colors ${colors.bg.hover}`}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 p-2 transition-colors',
+                      theme.effects.rounded.DEFAULT,
+                      theme.effects.hover.bg
+                    )}
                   >
                     <input
                       type="checkbox"
                       checked={selectedTasks.includes(task.name)}
                       onChange={() => toggleTaskForMilestone(task.name)}
-                      className={`rounded ${colors.border} ${colors.bg.tertiary} ${designTokens.colors.cyan.textLight} focus:ring-cyan-400`}
+                      className={cn(
+                        'rounded focus:ring-cyan-400',
+                        theme.borders.default,
+                        theme.colors.bg.tertiary,
+                        theme.colors.text.accentLight
+                      )}
                     />
                     <span className="text-2xl">{task.icon}</span>
                     <div className="flex-1">
-                      <div className={`text-sm font-bold ${colors.text.primary}`}>{task.name}</div>
+                      <div className={cn('text-sm font-bold', theme.colors.text.primary)}>
+                        {task.name}
+                      </div>
                       {task.description && (
-                        <div className={`text-xs ${colors.text.light}`}>{task.description}</div>
+                        <div className={cn('text-xs', theme.colors.text.secondary)}>
+                          {task.description}
+                        </div>
                       )}
                     </div>
                     {task.data && task.data.estimated_hours > 0 && (
-                      <span className={`rounded border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} px-2 py-1 text-xs font-semibold ${colors.text.primary}`}>
+                      <span className={cn(
+                        'px-2 py-1 text-xs font-semibold',
+                        theme.effects.rounded.DEFAULT,
+                        theme.borders.default,
+                        theme.colors.bg.secondary,
+                        theme.colors.text.primary
+                      )}>
                         {task.data.estimated_hours}h
                       </span>
                     )}
@@ -672,7 +779,7 @@ function TemplateDataEditor({ type, data, onChange, taskTemplates = [], mileston
                 ))}
               </div>
             )}
-            <p className={`mt-2 text-xs font-medium ${colors.text.light}`}>
+            <p className={cn('mt-2 text-xs font-medium', theme.colors.text.secondary)}>
               💡 Questi task verranno creati automaticamente quando si crea un progetto con questa
               milestone
             </p>

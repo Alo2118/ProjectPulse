@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTheme } from '../hooks/useTheme';
 import { useToast } from '../context/ToastContext';
-import { designTokens } from '../config/designTokens';
+import theme, { cn } from '../styles/theme';
 import {
   ArrowLeft,
   Plus,
@@ -35,7 +34,6 @@ import {
 } from '../components/ui';
 
 export default function ProjectDetailPage() {
-  const { colors } = useTheme();
   const { error: showError } = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -158,9 +156,9 @@ export default function ProjectDetailPage() {
         variant="ghost"
         size="sm"
         onClick={() => navigate('/projects')}
-        className={`mb-4 ${colors.border} ${colors.text.primary} hover:text-white`}
+        className={cn(theme.spacing.mb4, theme.border.default, theme.text.primary, 'hover:text-white')}
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className={theme.icon.sm} />
         Torna ai Progetti
       </Button>
 
@@ -169,17 +167,17 @@ export default function ProjectDetailPage() {
         subtitle={project.description || `Creato da ${project.creator_name}`}
         icon={Target}
         actions={
-          <div className="flex gap-2">
+          <div className={cn(theme.layout.flexRow, theme.spacing.gap2)}>
             <Button variant="secondary" size="sm" onClick={() => setShowEditProject(true)}>
-              <Edit className="h-4 w-4" />
+              <Edit className={theme.icon.sm} />
               Modifica
             </Button>
             <Button variant="danger" size="sm" onClick={handleArchive}>
-              <Archive className="h-4 w-4" />
+              <Archive className={theme.icon.sm} />
               Archivia
             </Button>
             <Button size="sm" onClick={() => setShowCreateTask(true)}>
-              <Plus className="h-4 w-4" />
+              <Plus className={theme.icon.sm} />
               Nuovo Task
             </Button>
           </div>
@@ -187,7 +185,7 @@ export default function ProjectDetailPage() {
       />
 
       {/* Stats */}
-      <GamingKPIGrid columns={5} className="mb-6">
+      <GamingKPIGrid columns={5} className={theme.spacing.mb6}>
         <GamingKPICard
           title="Task Totali"
           value={stats.total}
@@ -227,12 +225,12 @@ export default function ProjectDetailPage() {
 
       {/* Progress Bar */}
       {stats.total > 0 && (
-        <GamingCard className={`mb-6 ${colors.border} ${colors.bg.secondary}`}>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Progresso Complessivo</h3>
-            <span className={`text-3xl font-bold ${designTokens.colors.cyan.text}`}>{completionRate}%</span>
+        <GamingCard className={cn(theme.spacing.mb6, theme.border.default, theme.bg.secondary)}>
+          <div className={cn(theme.spacing.mb4, theme.layout.flexRow, theme.layout.itemsCenter, theme.layout.justifyBetween)}>
+            <h3 className={cn(theme.text.lg, theme.font.semibold, theme.text.white)}>Progresso Complessivo</h3>
+            <span className={cn(theme.text.heading, theme.font.bold, theme.colors.accent)}>{completionRate}%</span>
           </div>
-          <div className={`mb-2 h-3 w-full overflow-hidden rounded-full ${colors.border} ${colors.bg.tertiary}`}>
+          <div className={cn(theme.spacing.mb2, 'h-3 w-full overflow-hidden rounded-full', theme.border.default, theme.bg.tertiary)}>
             <div
               className="relative h-3 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-1000"
               style={{ width: `${completionRate}%` }}
@@ -240,22 +238,22 @@ export default function ProjectDetailPage() {
               <div className="absolute inset-0 animate-pulse bg-white/10" />
             </div>
           </div>
-          <p className={`text-sm font-semibold ${colors.text.primary}`}>
+          <p className={cn(theme.text.sm, theme.font.semibold, theme.text.primary)}>
             {stats.completed} di {stats.total} task completati
           </p>
         </GamingCard>
       )}
 
       {/* Milestones and Tasks */}
-      <div className="mb-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h3 className="flex items-center gap-3 text-2xl font-bold text-white">
-            <Target className={`h-7 w-7 ${designTokens.colors.cyan.text}`} />
+      <div className={theme.spacing.mb6}>
+        <div className={cn(theme.spacing.mb6, theme.layout.flexRow, theme.layout.itemsCenter, theme.layout.justifyBetween)}>
+          <h3 className={cn(theme.layout.flexRow, theme.layout.itemsCenter, theme.spacing.gap3, theme.text.heading, theme.font.bold, theme.text.white)}>
+            <Target className={cn('h-7 w-7', theme.colors.accent)} />
             Milestone e Attività
           </h3>
-          <div className="flex gap-3">
+          <div className={cn(theme.layout.flexRow, theme.spacing.gap3)}>
             <Button variant="secondary" size="sm" onClick={() => setShowCreateTask(true)}>
-              <Plus className="h-4 w-4" />
+              <Plus className={theme.icon.sm} />
               Nuova Attività
             </Button>
             <Button
@@ -265,7 +263,7 @@ export default function ProjectDetailPage() {
                 setShowMilestoneModal(true);
               }}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className={theme.icon.sm} />
               Nuova Milestone
             </Button>
           </div>
@@ -273,12 +271,12 @@ export default function ProjectDetailPage() {
 
         {tasks.length === 0 ? (
           <GamingCard className="py-12 text-center">
-            <Target className="mx-auto mb-4 h-16 w-16 text-slate-500" />
-            <p className={`mb-6 ${colors.text.secondary}`}>Nessun task in questo progetto</p>
+            <Target className={cn('mx-auto', theme.spacing.mb4, 'h-16 w-16', theme.text.muted)} />
+            <p className={cn(theme.spacing.mb6, theme.text.secondary)}>Nessun task in questo progetto</p>
             <Button onClick={() => setShowCreateTask(true)}>Crea il primo task</Button>
           </GamingCard>
         ) : (
-          <div className="space-y-4">
+          <div className={theme.spacing.gap4}>
             {/* Milestone Accordion Items */}
             {milestones.map((milestone) => {
               const milestoneTasks = getTasksForMilestone(milestone.id);
@@ -299,58 +297,65 @@ export default function ProjectDetailPage() {
               return (
                 <GamingCard
                   key={milestone.id}
-                  className={`${colors.bg.secondary} ${
-                    isCompleted
-                      ? `border ${designTokens.colors.success.border}`
-                      : isCancelled
-                        ? 'opacity-70'
-                        : isOverdue
-                          ? `border ${designTokens.colors.error.border}`
-                          : ''
-                  }`}
+                  className={cn(
+                    theme.bg.secondary,
+                    isCompleted && cn('border', theme.border.success),
+                    isCancelled && 'opacity-70',
+                    isOverdue && cn('border', theme.border.error)
+                  )}
                 >
                   {/* Milestone Header */}
                   <div
-                    className={`-m-6 flex cursor-pointer items-center gap-3 rounded-xl p-6 transition-colors ${colors.bg.hover}`}
+                    className={cn(
+                      '-m-6',
+                      theme.layout.flexRow,
+                      theme.layout.itemsCenter,
+                      theme.spacing.gap3,
+                      'rounded-xl',
+                      theme.spacing.p6,
+                      'cursor-pointer transition-colors',
+                      theme.bg.hover
+                    )}
                     onClick={() => toggleMilestone(milestone.id)}
                   >
-                    <button className={`${colors.text.tertiary} hover:${colors.text.accent}`}>
+                    <button className={cn(theme.text.tertiary, 'hover:' + theme.colors.accent)}>
                       {isExpanded ? (
-                        <ChevronDown className="h-5 w-5" />
+                        <ChevronDown className={theme.icon.base} />
                       ) : (
-                        <ChevronRight className="h-5 w-5" />
+                        <ChevronRight className={theme.icon.base} />
                       )}
                     </button>
 
-                    <div className="flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <h4 className="text-lg font-bold text-white">{milestone.name}</h4>
-                        {isCompleted && <CheckCircle className={`h-4 w-4 ${designTokens.colors.success.text}`} />}
-                        <span className={`text-sm ${colors.text.tertiary}`}>
+                    <div className={theme.layout.flex1}>
+                      <div className={cn(theme.spacing.mb1, theme.layout.flexRow, theme.layout.itemsCenter, theme.spacing.gap2)}>
+                        <h4 className={cn(theme.text.lg, theme.font.bold, theme.text.white)}>{milestone.name}</h4>
+                        {isCompleted && <CheckCircle className={cn(theme.icon.sm, theme.colors.success)} />}
+                        <span className={cn(theme.text.sm, theme.text.tertiary)}>
                           ({milestoneTasks.length} task)
                         </span>
                       </div>
 
                       {milestone.description && !isExpanded && (
-                        <p className={`line-clamp-1 text-sm ${colors.text.secondary}`}>
+                        <p className={cn('line-clamp-1', theme.text.sm, theme.text.secondary)}>
                           {milestone.description}
                         </p>
                       )}
 
-                      <div className="mt-2 flex items-center gap-4">
+                      <div className={cn(theme.spacing.mt2, theme.layout.flexRow, theme.layout.itemsCenter, theme.spacing.gap4)}>
                         {/* Progress */}
-                        <div className="flex items-center gap-2">
-                          <div className={`h-2.5 w-32 overflow-hidden rounded-full ${colors.border} ${colors.bg.tertiary} shadow-inner`}>
+                        <div className={cn(theme.layout.flexRow, theme.layout.itemsCenter, theme.spacing.gap2)}>
+                          <div className={cn('h-2.5 w-32 overflow-hidden rounded-full', theme.border.default, theme.bg.tertiary, 'shadow-inner')}>
                             <div
-                              className={`h-full rounded-full shadow-sm transition-all ${
+                              className={cn(
+                                'h-full rounded-full shadow-sm transition-all',
                                 isCompleted
                                   ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
                                   : 'bg-gradient-to-r from-cyan-500 to-blue-500'
-                              }`}
+                              )}
                               style={{ width: `${milestoneProgress}%` }}
                             />
                           </div>
-                          <span className={`text-xs font-bold ${colors.text.primary}`}>
+                          <span className={cn(theme.text.xs, theme.font.bold, theme.text.primary)}>
                             {milestoneProgress}%
                           </span>
                         </div>
@@ -358,9 +363,14 @@ export default function ProjectDetailPage() {
                         {/* Due Date */}
                         {dueDate && (
                           <div
-                            className={`flex items-center gap-1 text-xs font-semibold ${
-                              isOverdue ? designTokens.colors.error.text : colors.text.secondary
-                            }`}
+                            className={cn(
+                              theme.layout.flexRow,
+                              theme.layout.itemsCenter,
+                              'gap-1',
+                              theme.text.xs,
+                              theme.font.semibold,
+                              isOverdue ? theme.colors.error : theme.text.secondary
+                            )}
                           >
                             <Calendar className="h-3.5 w-3.5" />
                             {dueDate.toLocaleDateString('it-IT')}
@@ -371,7 +381,7 @@ export default function ProjectDetailPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className={cn(theme.layout.flexRow, theme.spacing.gap2)} onClick={(e) => e.stopPropagation()}>
                       {!isCompleted && !isCancelled && (
                         <>
                           <Button
@@ -381,7 +391,7 @@ export default function ProjectDetailPage() {
                               setSelectedMilestone(milestone);
                               setShowMilestoneModal(true);
                             }}
-                            className="px-3 py-1 text-xs"
+                            className={cn('px-3 py-1', theme.text.xs)}
                             title="Modifica milestone"
                           >
                             <Edit className="h-3.5 w-3.5" />
@@ -390,7 +400,7 @@ export default function ProjectDetailPage() {
                             variant="success"
                             size="sm"
                             onClick={() => handleMilestoneComplete(milestone.id)}
-                            className="px-3 py-1 text-xs"
+                            className={cn('px-3 py-1', theme.text.xs)}
                             title="Completa milestone"
                           >
                             <CheckCircle className="h-3.5 w-3.5" />
@@ -402,7 +412,7 @@ export default function ProjectDetailPage() {
                           variant="danger"
                           size="sm"
                           onClick={() => handleMilestoneDelete(milestone.id)}
-                          className="px-3 py-1 text-xs"
+                          className={cn('px-3 py-1', theme.text.xs)}
                           title="Elimina milestone"
                         >
                           Elimina
@@ -413,15 +423,15 @@ export default function ProjectDetailPage() {
 
                   {/* Expanded Tasks */}
                   {isExpanded && (
-                    <div className={`mt-4 border-t ${colors.border} pt-4`}>
+                    <div className={cn(theme.spacing.mt4, 'border-t', theme.border.default, theme.spacing.pt4)}>
                       {milestone.description && (
-                        <p className={`mb-4 text-sm font-medium ${colors.text.primary}`}>
+                        <p className={cn(theme.spacing.mb4, theme.text.sm, theme.font.medium, theme.text.primary)}>
                           {milestone.description}
                         </p>
                       )}
 
                       {milestoneTasks.length === 0 ? (
-                        <p className={`py-4 text-center text-sm ${colors.text.tertiary}`}>
+                        <p className={cn('py-4 text-center', theme.text.sm, theme.text.tertiary)}>
                           Nessun task assegnato a questa milestone
                         </p>
                       ) : (
@@ -442,31 +452,40 @@ export default function ProjectDetailPage() {
 
             {/* Unassigned Tasks Section */}
             {unassignedTasks.length > 0 && (
-              <GamingCard className="border border-slate-800 bg-slate-900/70">
+              <GamingCard className={cn('border', theme.border.default, theme.bg.secondary)}>
                 <div
-                  className="-m-6 flex cursor-pointer items-center gap-3 rounded-xl p-6 transition-colors hover:bg-slate-800/30"
+                  className={cn(
+                    '-m-6',
+                    theme.layout.flexRow,
+                    theme.layout.itemsCenter,
+                    theme.spacing.gap3,
+                    'rounded-xl',
+                    theme.spacing.p6,
+                    'cursor-pointer transition-colors',
+                    theme.bg.hover
+                  )}
                   onClick={() => setShowUnassignedTasks(!showUnassignedTasks)}
                 >
-                  <button className="text-slate-400 hover:text-cyan-400">
+                  <button className={cn(theme.text.tertiary, 'hover:' + theme.colors.accent)}>
                     {showUnassignedTasks ? (
-                      <ChevronDown className="h-5 w-5" />
+                      <ChevronDown className={theme.icon.base} />
                     ) : (
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className={theme.icon.base} />
                     )}
                   </button>
 
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-white">
+                  <div className={theme.layout.flex1}>
+                    <h4 className={cn(theme.font.semibold, theme.text.white)}>
                       Task senza milestone ({unassignedTasks.length})
                     </h4>
-                    <p className="text-sm text-slate-300">
+                    <p className={cn(theme.text.sm, theme.text.primary)}>
                       Attività non ancora assegnate a una fase specifica
                     </p>
                   </div>
                 </div>
 
                 {showUnassignedTasks && (
-                  <div className="mt-4 border-t border-slate-700/50 pt-4">
+                  <div className={cn(theme.spacing.mt4, 'border-t', theme.border.default, theme.spacing.pt4)}>
                     <TaskTreeList
                       tasks={unassignedTasks}
                       allTasks={tasks}
@@ -483,9 +502,9 @@ export default function ProjectDetailPage() {
             {/* Empty State for No Milestones */}
             {milestones.length === 0 && (
               <GamingCard className="py-12 text-center">
-                <Target className="mx-auto mb-4 h-16 w-16 text-slate-500" />
-                <p className="mb-4 text-slate-300">Nessuna milestone definita</p>
-                <p className="mb-6 text-sm text-slate-400">
+                <Target className={cn('mx-auto', theme.spacing.mb4, 'h-16 w-16', theme.text.muted)} />
+                <p className={cn(theme.spacing.mb4, theme.text.primary)}>Nessuna milestone definita</p>
+                <p className={cn(theme.spacing.mb6, theme.text.sm, theme.text.tertiary)}>
                   Organizza i task in fasi (milestone) per una migliore pianificazione
                 </p>
                 <Button
