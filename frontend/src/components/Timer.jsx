@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Play, Square } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { timeApi } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 export default function Timer({ onTimerChange }) {
   const { colors, spacing } = useTheme();
+  const { error: showError } = useToast();
   const [activeTimer, setActiveTimer] = useState(null);
   const [elapsed, setElapsed] = useState(0);
 
@@ -43,7 +45,7 @@ export default function Timer({ onTimerChange }) {
       setElapsed(0);
       if (onTimerChange) onTimerChange();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante lo stop del timer');
+      showError(error.response?.data?.error || 'Errore durante lo stop del timer');
     }
   };
 

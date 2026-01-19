@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { useToast } from '../context/ToastContext';
 import { projectsApi } from '../services/api';
 
 export default function ProjectModal({ project, onClose, onSave }) {
   const { colors, spacing } = useTheme();
+  const { error: showError } = useToast();
   const [formData, setFormData] = useState({
     name: project?.name || '',
     description: project?.description || '',
@@ -24,7 +26,7 @@ export default function ProjectModal({ project, onClose, onSave }) {
       onSave();
       onClose();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante il salvataggio');
+      showError(error.response?.data?.error || 'Errore durante il salvataggio');
     } finally {
       setLoading(false);
     }

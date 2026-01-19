@@ -1,11 +1,15 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import Button from './Button';
+import theme, { cn } from '../../styles/theme';
 
 /**
- * Modal Component - Design System
+ * Modal Component - Design System v2.0
  *
- * Unified modal dialog component with consistent styling
+ * ✅ Migrato a theme system
+ * ✅ Accessibility completa (role, aria-*, focus trap)
+ * ✅ ESC key + overlay click
+ * ✅ Body scroll lock
  *
  * @param {Object} props
  * @param {boolean} props.isOpen - Modal open state
@@ -30,7 +34,7 @@ export default function Modal({
   children,
   footer,
 }) {
-  // Close on Escape key
+  // Close on Escape key + Lock body scroll
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -68,23 +72,60 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className={cn(
+        'fixed inset-0 z-50',
+        theme.layout.flex.center,
+        'bg-black/60 backdrop-blur-sm',
+        theme.spacing.p.md,
+        theme.animation.fadeIn
+      )}
       onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      aria-describedby={description ? 'modal-description' : undefined}
     >
       <div
-        className={`card-lg w-full ${sizeStyles[size]} flex max-h-[90vh] animate-slide-up flex-col`}
+        className={cn(
+          theme.card.elevated,
+          'w-full',
+          sizeStyles[size],
+          'flex max-h-[90vh] flex-col',
+          theme.animation.slideUp
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className={`flex items-start justify-between ${compact ? 'p-4' : 'p-6'} border-b-2 ${designTokens.colors.cyan.borderLight} bg-slate-100/50 dark:bg-slate-800/50`}
+          className={cn(
+            theme.layout.flex.between,
+            'items-start',
+            compact ? theme.spacing.p.sm : theme.spacing.p.lg,
+            'border-b-2',
+            theme.colors.border.lightAlpha,
+            theme.colors.bg.secondaryAlpha
+          )}
         >
-          <div className="flex-1">
-            <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-bold ${designTokens.colors.cyan.text}`}>
+          <div className="flex-1 min-w-0">
+            <h2
+              id="modal-title"
+              className={cn(
+                compact ? 'text-lg' : 'text-xl',
+                'font-bold',
+                theme.colors.text.accent
+              )}
+            >
               {title}
             </h2>
             {description && (
-              <p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} text-slate-400`}>
+              <p
+                id="modal-description"
+                className={cn(
+                  'mt-1',
+                  compact ? 'text-xs' : 'text-sm',
+                  theme.colors.text.muted
+                )}
+              >
                 {description}
               </p>
             )}
@@ -92,7 +133,15 @@ export default function Modal({
           {showCloseButton && (
             <button
               onClick={onClose}
-              className={`ml-4 rounded-lg p-1.5 ${designTokens.colors.cyan.textLight} opacity-60 transition-all hover:bg-slate-200 dark:hover:bg-slate-700 hover:${designTokens.colors.cyan.text}`}
+              className={cn(
+                'ml-4 rounded-lg',
+                compact ? 'p-1.5' : 'p-2',
+                theme.colors.text.muted,
+                'opacity-60 hover:opacity-100',
+                theme.utils.transition.default,
+                theme.colors.bg.hover
+              )}
+              aria-label="Chiudi"
             >
               <X className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
             </button>
@@ -100,14 +149,28 @@ export default function Modal({
         </div>
 
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} bg-slate-50/30 dark:bg-slate-800/30`}>
+        <div
+          className={cn(
+            'flex-1 overflow-y-auto',
+            compact ? theme.spacing.p.sm : theme.spacing.p.lg,
+            theme.colors.bg.tertiaryAlpha,
+            theme.utils.scrollbar
+          )}
+        >
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
           <div
-            className={`${compact ? 'p-4' : 'p-6'} flex justify-end gap-3 border-t-2 ${designTokens.colors.cyan.borderLight} bg-slate-100/50 dark:bg-slate-800/50`}
+            className={cn(
+              compact ? theme.spacing.p.sm : theme.spacing.p.lg,
+              theme.layout.flex.end,
+              theme.spacing.gap.sm,
+              'border-t-2',
+              theme.colors.border.lightAlpha,
+              theme.colors.bg.secondaryAlpha
+            )}
           >
             {footer}
           </div>
@@ -120,6 +183,14 @@ export default function Modal({
 /**
  * ModalFooter Component
  * Pre-styled footer with common action buttons
+ *
+ * @example
+ * <ModalFooter
+ *   onCancel={handleClose}
+ *   onConfirm={handleSave}
+ *   confirmText="Salva"
+ *   confirmLoading={isSaving}
+ * />
  */
 export function ModalFooter({
   onCancel,
@@ -137,7 +208,7 @@ export function ModalFooter({
 
   return (
     <>
-      <Button variant="secondary" onClick={onCancel}>
+      <Button variant="secondary" onClick={onCancel} size="md">
         {cancelText}
       </Button>
       <Button
@@ -145,6 +216,7 @@ export function ModalFooter({
         onClick={onConfirm}
         loading={confirmLoading}
         disabled={confirmDisabled}
+        size="md"
       >
         {confirmText}
       </Button>
@@ -154,7 +226,17 @@ export function ModalFooter({
 
 /**
  * ConfirmModal Component
- * Quick confirmation dialog
+ * Quick confirmation dialog (sostituisce window.confirm())
+ *
+ * @example
+ * <ConfirmModal
+ *   isOpen={showConfirm}
+ *   onClose={() => setShowConfirm(false)}
+ *   onConfirm={handleDelete}
+ *   title="Elimina Task"
+ *   message="Sei sicuro di voler eliminare questo task? Questa azione non può essere annullata."
+ *   variant="danger"
+ * />
  */
 export function ConfirmModal({
   isOpen,
@@ -165,7 +247,18 @@ export function ConfirmModal({
   confirmText = 'Conferma',
   cancelText = 'Annulla',
   variant = 'danger',
+  loading = false,
 }) {
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+      onClose();
+    } catch (error) {
+      // Error will be handled by parent
+      console.error('Confirm action failed:', error);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -175,17 +268,17 @@ export function ConfirmModal({
       footer={
         <ModalFooter
           onCancel={onClose}
-          onConfirm={() => {
-            onConfirm();
-            onClose();
-          }}
+          onConfirm={handleConfirm}
           cancelText={cancelText}
           confirmText={confirmText}
           confirmVariant={variant}
+          confirmLoading={loading}
         />
       }
     >
-      <p className="text-gray-600">{message}</p>
+      <p className={cn(theme.typography.body, theme.colors.text.secondary)}>
+        {message}
+      </p>
     </Modal>
   );
 }

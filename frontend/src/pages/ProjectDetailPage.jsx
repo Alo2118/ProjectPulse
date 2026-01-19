@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
+import { useToast } from '../context/ToastContext';
 import { designTokens } from '../config/designTokens';
 import {
   ArrowLeft,
@@ -35,6 +36,7 @@ import {
 
 export default function ProjectDetailPage() {
   const { colors } = useTheme();
+  const { error: showError } = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
@@ -79,7 +81,7 @@ export default function ProjectDetailPage() {
       await milestonesApi.complete(milestoneId);
       loadData();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante il completamento');
+      showError(error.response?.data?.error || 'Errore durante il completamento');
     }
   };
 
@@ -89,7 +91,7 @@ export default function ProjectDetailPage() {
       await milestonesApi.delete(milestoneId);
       loadData();
     } catch (error) {
-      alert(error.response?.data?.error || "Errore durante l'eliminazione");
+      showError(error.response?.data?.error || "Errore durante l'eliminazione");
     }
   };
 
@@ -100,7 +102,7 @@ export default function ProjectDetailPage() {
       await projectsApi.update(id, { archived: true });
       navigate('/projects');
     } catch (error) {
-      alert(error.response?.data?.error || "Errore durante l'archiviazione");
+      showError(error.response?.data?.error || "Errore durante l'archiviazione");
     }
   };
 

@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useToast } from '../context/ToastContext';
 import { X, Plus, Edit2, Trash2, Save, Settings } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useTemplates } from '../hooks/useTemplates';
 
 export default function TemplateManagerModal({ type = 'task', onClose, onTemplateSelect }) {
   const { colors, spacing } = useTheme();
+  const { error: showError, warning } = useToast();
   const { customTemplates, getAllTemplates, saveCustomTemplate, deleteCustomTemplate } =
     useTemplates(type);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -39,7 +41,7 @@ export default function TemplateManagerModal({ type = 'task', onClose, onTemplat
 
   const handleSave = () => {
     if (!editingTemplate.name.trim()) {
-      alert('Il nome del template è obbligatorio');
+      warning('Il nome del template è obbligatorio');
       return;
     }
 
@@ -48,7 +50,7 @@ export default function TemplateManagerModal({ type = 'task', onClose, onTemplat
       setEditingTemplate(null);
       setIsCreating(false);
     } catch (error) {
-      alert('Errore durante il salvataggio del template');
+      showError('Errore durante il salvataggio del template');
     }
   };
 
@@ -58,7 +60,7 @@ export default function TemplateManagerModal({ type = 'task', onClose, onTemplat
     try {
       deleteCustomTemplate(templateId);
     } catch (error) {
-      alert("Errore durante l'eliminazione del template");
+      showError("Errore durante l'eliminazione del template");
     }
   };
 

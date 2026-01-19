@@ -9,6 +9,7 @@ import { designTokens } from '../config/designTokens';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectModal from '../components/ProjectModal';
 import { formatTime } from '../utils/helpers';
+import { useToast } from '../context/ToastContext';
 import {
   GamingLayout,
   GamingHeader,
@@ -23,6 +24,7 @@ export default function ProjectsPage() {
   const { colors } = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { error: showError } = useToast();
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -81,7 +83,7 @@ export default function ProjectsPage() {
       await projectsApi.update(project.id, { archived: true });
       loadProjects();
     } catch (error) {
-      alert(error.response?.data?.error || "Errore durante l'archiviazione");
+      showError(error.response?.data?.error || "Errore durante l'archiviazione");
     }
   };
 

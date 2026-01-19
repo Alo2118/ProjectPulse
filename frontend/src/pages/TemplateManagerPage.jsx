@@ -13,6 +13,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { useToast } from '../context/ToastContext';
 import { templatesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { canModify, canDelete, canCreate } from '../utils/permissions';
@@ -21,6 +22,7 @@ import { GamingLayout, GamingHeader, GamingCard, Button } from '../components/ui
 
 export default function TemplateManagerPage() {
   const { user } = useAuth();
+  const { error: showError } = useToast();
   const { colors, spacing } = useTheme();
   const [templates, setTemplates] = useState([]);
   const [taskTemplates, setTaskTemplates] = useState([]); // For milestone and project editors
@@ -51,7 +53,7 @@ export default function TemplateManagerPage() {
       setTemplates(response.data);
     } catch (error) {
       console.error('Error loading templates:', error);
-      alert('Errore nel caricamento dei template');
+      showError('Errore nel caricamento dei template');
     } finally {
       setLoading(false);
     }
@@ -122,7 +124,7 @@ export default function TemplateManagerPage() {
       loadMilestoneTemplates();
     } catch (error) {
       console.error('Error deleting template:', error);
-      alert(error.response?.data?.error || "Errore durante l'eliminazione");
+      showError(error.response?.data?.error || "Errore durante l'eliminazione");
     }
   };
 
@@ -155,7 +157,7 @@ export default function TemplateManagerPage() {
       setShowModal(false);
     } catch (error) {
       console.error('Error saving template:', error);
-      alert(error.response?.data?.error || 'Errore durante il salvataggio');
+      showError(error.response?.data?.error || 'Errore durante il salvataggio');
     }
   };
 

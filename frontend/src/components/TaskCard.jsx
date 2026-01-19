@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import theme, { cn } from '../styles/theme';
 import { timeApi } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 const statusLabels = {
   todo: 'Da fare',
@@ -47,14 +48,15 @@ export default function TaskCard({
   expandButton = null,
   hasSubtasks = false,
 }) {
+  const { error: showError } = useToast();
+
   const handleStartTimer = async (e) => {
     e.stopPropagation();
     try {
       await timeApi.start(task.id);
       if (onTimerStart) onTimerStart();
     } catch (error) {
-      // TODO: Usare toast invece di alert
-      alert(error.response?.data?.error || "Errore durante l'avvio del timer");
+      showError(error.response?.data?.error || "Errore durante l'avvio del timer");
     }
   };
 

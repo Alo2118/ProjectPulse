@@ -6,11 +6,13 @@ import { useAuth } from '../context/AuthContext';
 import TemplateSelector from './TemplateSelector';
 import TemplateManagerModal from './TemplateManagerModal';
 import { useTemplates } from '../hooks/useTemplates';
+import { useToast } from '../context/ToastContext';
 
 export default function CreateProjectModal({ onClose, onCreate }) {
   const { user, isDirezione } = useAuth();
   const { colors, spacing } = useTheme();
   const { getAllTemplates, refresh: refreshTemplates } = useTemplates('project');
+  const { warning, error: showError } = useToast();
 
   const projectTemplates = getAllTemplates();
   const [taskTemplates, setTaskTemplates] = useState([]);
@@ -55,7 +57,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      alert('Il nome del progetto è obbligatorio');
+      warning('Il nome del progetto è obbligatorio');
       return;
     }
 
@@ -147,7 +149,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
       onClose();
     } catch (error) {
       console.error('Error creating project:', error);
-      alert(error.response?.data?.error || 'Errore durante la creazione del progetto');
+      showError(error.response?.data?.error || 'Errore durante la creazione del progetto');
     } finally {
       setLoading(false);
     }

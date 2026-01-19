@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../hooks/useTheme';
+import { useToast } from '../context/ToastContext';
 import { requestsApi, projectsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePendingRequestsCount } from '../hooks/usePendingRequestsCount';
@@ -25,6 +26,7 @@ const InboxPage = () => {
   const { colors, gradients } = useTheme();
   const { user } = useAuth();
   const { incrementCount, decrementCount } = usePendingRequestsCount();
+  const { error: showError, success } = useToast();
   const [requests, setRequests] = useState([]);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
@@ -96,7 +98,7 @@ const InboxPage = () => {
       setStats(statsRes.data);
     } catch (error) {
       console.error('Errore caricamento dati:', error);
-      alert('Errore nel caricamento dei dati');
+      showError('Errore nel caricamento dei dati');
     } finally {
       setLoading(false);
     }
@@ -120,7 +122,7 @@ const InboxPage = () => {
       if (createdRequest?.status === 'new') {
         incrementCount();
       }
-      alert('Richiesta creata con successo!');
+      success('Richiesta creata con successo!');
       setShowNewRequestModal(false);
       setNewRequestData({
         title: '',
@@ -135,7 +137,7 @@ const InboxPage = () => {
       });
       loadData();
     } catch (error) {
-      alert('Errore nella creazione: ' + (error.response?.data?.error || error.message));
+      showError('Errore nella creazione: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -146,10 +148,10 @@ const InboxPage = () => {
       if (request.status === 'new') {
         decrementCount();
       }
-      alert(`Richiesta ${status === 'approved' ? 'approvata' : 'rifiutata'}`);
+      success(`Richiesta ${status === 'approved' ? 'approvata' : 'rifiutata'}`);
       loadData();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -171,12 +173,12 @@ const InboxPage = () => {
       if (selectedRequest.status === 'new') {
         decrementCount();
       }
-      alert('Richiesta convertita in task!');
+      success('Richiesta convertita in task!');
       setShowConvertTaskModal(false);
       setSelectedRequest(null);
       loadData();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -194,12 +196,12 @@ const InboxPage = () => {
       if (selectedRequest.status === 'new') {
         decrementCount();
       }
-      alert('Richiesta convertita in progetto!');
+      success('Richiesta convertita in progetto!');
       setShowConvertProjectModal(false);
       setSelectedRequest(null);
       loadData();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -207,30 +209,30 @@ const InboxPage = () => {
     if (!confirm('Eliminare questa richiesta?')) return;
     try {
       await requestsApi.delete(id);
-      alert('Richiesta eliminata');
+      success('Richiesta eliminata');
       loadData();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
   const handleArchive = async (request) => {
     try {
       await requestsApi.archive(request.id);
-      alert('Richiesta archiviata');
+      success('Richiesta archiviata');
       loadData();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
   const handleUnarchive = async (request) => {
     try {
       await requestsApi.unarchive(request.id);
-      alert("Richiesta estratta dall'archivio");
+      success("Richiesta estratta dall'archivio");
       loadData();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -265,12 +267,12 @@ const InboxPage = () => {
       };
 
       await requestsApi.update(selectedRequest.id, requestData);
-      alert('Richiesta aggiornata con successo!');
+      success('Richiesta aggiornata con successo!');
       setShowEditRequestModal(false);
       setSelectedRequest(null);
       loadData();
     } catch (error) {
-      alert("Errore nell'aggiornamento: " + (error.response?.data?.error || error.message));
+      showError("Errore nell'aggiornamento: " + (error.response?.data?.error || error.message));
     }
   };
 

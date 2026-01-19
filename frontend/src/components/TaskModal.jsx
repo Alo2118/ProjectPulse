@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../hooks/useTheme';
 import SubtaskList from './SubtaskList';
 import { useTemplates } from '../hooks/useTemplates';
+import { useToast } from '../context/ToastContext';
 
 const statusLabels = {
   todo: 'Da fare',
@@ -18,6 +19,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
   const { user, isDirezione, isAmministratore } = useAuth();
   const { colors, spacing } = useTheme();
   const { saveCustomTemplate } = useTemplates('task');
+  const { success, error: showError } = useToast();
   const [editedTask, setEditedTask] = useState(task);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -116,7 +118,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
     } catch (error) {
       console.error('Error updating task:', error);
       console.error('Error response:', error.response?.data);
-      alert(error.response?.data?.error || 'Errore durante il salvataggio');
+      showError(error.response?.data?.error || 'Errore durante il salvataggio');
     } finally {
       setLoading(false);
     }
@@ -134,7 +136,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
       setNewComment('');
       loadComments();
     } catch (error) {
-      alert(error.response?.data?.error || "Errore durante l'invio del commento");
+      showError(error.response?.data?.error || "Errore durante l'invio del commento");
     }
   };
 
@@ -155,7 +157,7 @@ export default function TaskModal({ task, onClose, onUpdate }) {
       onUpdate();
       onClose();
     } catch (error) {
-      alert(error.response?.data?.error || "Errore durante l'eliminazione");
+      showError(error.response?.data?.error || "Errore durante l'eliminazione");
       setLoading(false);
     }
   };
@@ -184,12 +186,15 @@ export default function TaskModal({ task, onClose, onUpdate }) {
       };
 
       saveCustomTemplate(template);
-      alert(
-        `Template "${templateName}" salvato con successo!\n\n${subtasks.length > 0 ? `Include ${subtasks.length} subtask` : 'Nessuna subtask inclusa'}`
+      success(
+        `Template "${templateName}" salvato con successo!`,
+        {
+          title: 'Template salvato',
+        }
       );
     } catch (error) {
       console.error('Error saving template:', error);
-      alert('Errore durante il salvataggio del template');
+      showError('Errore durante il salvataggio del template');
     }
   };
 

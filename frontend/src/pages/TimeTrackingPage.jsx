@@ -16,6 +16,7 @@ import { designTokens } from '../config/designTokens';
 import { timeApi, projectsApi, tasksApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { formatTime, formatDate, formatDateTime } from '../utils/helpers';
+import { useToast } from '../context/ToastContext';
 import {
   GamingLayout,
   GamingHeader,
@@ -29,6 +30,7 @@ import {
 export default function TimeTrackingPage() {
   const { user, isAmministratore } = useAuth();
   const { colors, spacing } = useTheme();
+  const { error: showError } = useToast();
   const [timeEntries, setTimeEntries] = useState([]);
   const [statistics, setStatistics] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -85,7 +87,7 @@ export default function TimeTrackingPage() {
       setStatistics(statsRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
-      alert('Errore nel caricamento dei dati');
+      showError('Errore nel caricamento dei dati');
     } finally {
       setLoading(false);
     }
@@ -100,7 +102,7 @@ export default function TimeTrackingPage() {
       await timeApi.delete(entry.id);
       loadData();
     } catch (error) {
-      alert(error.response?.data?.error || "Errore durante l'eliminazione");
+      showError(error.response?.data?.error || "Errore durante l'eliminazione");
     }
   };
 
@@ -518,7 +520,7 @@ function ManualTimeEntryModal({ entry, onClose, onSave }) {
       onSave();
       onClose();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante il salvataggio');
+      showError(error.response?.data?.error || 'Errore durante il salvataggio');
     } finally {
       setLoading(false);
     }

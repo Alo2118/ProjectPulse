@@ -12,6 +12,7 @@ import {
   UserX,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { useToast } from '../context/ToastContext';
 import { usersApi } from '../services/api';
 import { isValidEmail, formatDate } from '../utils/helpers';
 import { designTokens } from '../config/designTokens';
@@ -28,6 +29,7 @@ import {
 
 export default function UserManagementPage() {
   const { colors, spacing } = useTheme();
+  const { error: showError, warning } = useToast();
   const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -56,7 +58,7 @@ export default function UserManagementPage() {
       setUsers(response.data);
     } catch (error) {
       console.error('Error loading users:', error);
-      alert('Errore nel caricamento degli utenti');
+      showError('Errore nel caricamento degli utenti');
     } finally {
       setLoading(false);
     }
@@ -92,7 +94,7 @@ export default function UserManagementPage() {
 
   const handleDelete = async (user) => {
     if (user.id === currentUser.id) {
-      alert('Non puoi eliminare il tuo account!');
+      warning('Non puoi eliminare il tuo account!');
       return;
     }
 
@@ -109,13 +111,13 @@ export default function UserManagementPage() {
       await usersApi.delete(user.id);
       loadUsers();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante la disattivazione');
+      showError(error.response?.data?.error || 'Errore durante la disattivazione');
     }
   };
 
   const handleToggleActive = async (user) => {
     if (user.id === currentUser.id && user.active) {
-      alert('Non puoi disattivare il tuo account!');
+      warning('Non puoi disattivare il tuo account!');
       return;
     }
 
@@ -133,7 +135,7 @@ export default function UserManagementPage() {
       }
       loadUsers();
     } catch (error) {
-      alert(error.response?.data?.error || `Errore durante la ${action}zione`);
+      showError(error.response?.data?.error || `Errore durante la ${action}zione`);
     }
   };
 
@@ -148,7 +150,7 @@ export default function UserManagementPage() {
       await usersApi.reactivate(user.id);
       loadUsers();
     } catch (error) {
-      alert(error.response?.data?.error || "Errore durante l'approvazione");
+      showError(error.response?.data?.error || "Errore durante l'approvazione");
     }
   };
 
@@ -226,7 +228,7 @@ export default function UserManagementPage() {
       setShowModal(false);
       loadUsers();
     } catch (error) {
-      alert(error.response?.data?.error || 'Errore durante il salvataggio');
+      showError(error.response?.data?.error || 'Errore durante il salvataggio');
     }
   };
 

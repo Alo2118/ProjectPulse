@@ -16,9 +16,11 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { tasksApi } from '../services/api';
 import { Button, Card, StatusBadge, PriorityBadge } from './ui';
+import { useToast } from '../context/ToastContext';
 
 export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
   const { colors, spacing } = useTheme();
+  const { error: showError } = useToast();
   const [subtasks, setSubtasks] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
       loadSubtasks();
       if (onUpdate) onUpdate();
     } catch (error) {
-      alert(
+      showError(
         'Errore nella creazione del subtask: ' + (error.response?.data?.error || error.message)
       );
     }
@@ -109,7 +111,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
       loadSubtasks();
       if (onUpdate) onUpdate();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -140,7 +142,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
       setSelectedSubtasks([]);
       setShowBulkActions(false);
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -154,7 +156,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
       setSelectedSubtasks([]);
       setShowBulkActions(false);
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -168,7 +170,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
       loadSubtasks();
       if (onUpdate) onUpdate();
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -182,7 +184,7 @@ export default function SubtaskList({ parentTask, onSubtaskClick, onUpdate }) {
       setShowDependencyModal(false);
       setDependencySubtask(null);
     } catch (error) {
-      alert('Errore: ' + (error.response?.data?.error || error.message));
+      showError('Errore: ' + (error.response?.data?.error || error.message));
     }
   };
 

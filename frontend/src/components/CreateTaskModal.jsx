@@ -7,6 +7,7 @@ import TemplateSelector from './TemplateSelector';
 import TemplateManagerModal from './TemplateManagerModal';
 import { useTemplates } from '../hooks/useTemplates';
 import { SMART_DEFAULTS } from '../config/templates';
+import { useToast } from '../context/ToastContext';
 
 export default function CreateTaskModal({
   projects,
@@ -19,6 +20,7 @@ export default function CreateTaskModal({
   const { colors, spacing } = useTheme();
   const { user, isAmministratore, isDirezione } = useAuth();
   const { getAllTemplates, refresh: refreshTemplates } = useTemplates('task');
+  const { error: showError } = useToast();
 
   // Smart default: calcola deadline predefinita (+7 giorni)
   const getDefaultDeadline = () => {
@@ -204,7 +206,7 @@ export default function CreateTaskModal({
       onClose();
     } catch (error) {
       console.error('Error creating task:', error);
-      alert(error.response?.data?.error || 'Errore durante la creazione del task');
+      showError(error.response?.data?.error || 'Errore durante la creazione del task');
     } finally {
       setLoading(false);
     }
