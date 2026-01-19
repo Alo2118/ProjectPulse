@@ -1,9 +1,13 @@
 import React from 'react';
+import theme, { cn } from '../../styles/theme';
 
 /**
- * Button Component - Design System
+ * Button Component - Design System v2.0
  *
- * Uses centralized utility classes from tailwind.config.js
+ * ✅ Migrato al nuovo design system unificato
+ * ✅ Usa theme.js invece di tailwind.config.js plugin
+ * ✅ Type-safe con autocomplete
+ *
  * Variants: primary (default), secondary, danger, success, ghost
  * Sizes: sm, md (default), lg
  *
@@ -26,30 +30,35 @@ export default function Button({
   children,
   ...props
 }) {
-  // Variant utility classes (all defined in tailwind.config.js)
-  const variantMap = {
-    primary: 'btn-primary',
-    secondary: 'btn-secondary',
-    danger: 'btn-danger',
-    success: 'btn-success',
-    ghost: 'btn-ghost',
+  // Get styles from centralized theme
+  const variantClasses = {
+    primary: theme.button.primary,
+    secondary: theme.button.secondary,
+    danger: theme.button.danger,
+    success: theme.button.success,
+    ghost: theme.button.ghost,
   };
 
-  // Size utility classes
-  const sizeMap = {
-    sm: 'btn-sm',
-    md: 'btn-md',
-    lg: 'btn-lg',
+  const sizeClasses = {
+    sm: theme.button.size.sm,
+    md: theme.button.size.md,
+    lg: theme.button.size.lg,
   };
 
-  const width = fullWidth ? 'w-full' : '';
-  const variantClass = variantMap[variant] || variantMap.primary;
-  const sizeClass = sizeMap[size] || sizeMap.md;
-
-  const combined = `${variantClass} ${sizeClass} ${width} ${className}`.trim();
+  const buttonClasses = cn(
+    theme.button.base,
+    variantClasses[variant] || variantClasses.primary,
+    sizeClasses[size] || sizeClasses.md,
+    fullWidth && 'w-full',
+    className
+  );
 
   return (
-    <button className={combined} disabled={disabled || loading} {...props}>
+    <button
+      className={buttonClasses}
+      disabled={disabled || loading}
+      {...props}
+    >
       {loading && (
         <svg
           className="h-4 w-4 animate-spin"
@@ -64,12 +73,12 @@ export default function Button({
             r="10"
             stroke="currentColor"
             strokeWidth="4"
-          ></circle>
+          />
           <path
             className="opacity-75"
             fill="currentColor"
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
+          />
         </svg>
       )}
       {children}
@@ -80,6 +89,9 @@ export default function Button({
 /**
  * IconButton Component
  * For icon-only buttons
+ *
+ * @example
+ * <IconButton icon={TrashIcon} variant="danger" size="sm" onClick={handleDelete} />
  */
 export function IconButton({
   variant = 'ghost',
@@ -101,7 +113,11 @@ export function IconButton({
   };
 
   return (
-    <Button variant={variant} className={`${sizeStyles[size]} ${className}`} {...props}>
+    <Button
+      variant={variant}
+      className={cn(sizeStyles[size], className)}
+      {...props}
+    >
       {Icon && <Icon className={iconSizes[size]} />}
     </Button>
   );
@@ -110,7 +126,17 @@ export function IconButton({
 /**
  * ButtonGroup Component
  * For grouping buttons together
+ *
+ * @example
+ * <ButtonGroup>
+ *   <Button variant="secondary">Cancel</Button>
+ *   <Button variant="primary">Save</Button>
+ * </ButtonGroup>
  */
 export function ButtonGroup({ className = '', children }) {
-  return <div className={`inline-flex gap-2 ${className}`}>{children}</div>;
+  return (
+    <div className={cn(theme.layout.flex.start, theme.spacing.gap.sm, className)}>
+      {children}
+    </div>
+  );
 }

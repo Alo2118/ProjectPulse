@@ -1,171 +1,235 @@
-import { designTokens } from '../../config/designTokens';
+/**
+ * FormComponents - Design System v2.0
+ *
+ * ✅ Centralizzato con design system unificato
+ * ✅ Re-esporta componenti migrati per backward compatibility
+ * ✅ Mantiene solo componenti unici (KPICard, Alert, etc.)
+ *
+ * NOTA: Questo file re-esporta i componenti base migrati
+ * (Button, Card, Badge, Input) per mantenere la backward compatibility.
+ */
 
-// Card Component - Elegant with shadows and transitions
-export function Card({ children, className = '', interactive = false, hover = true }) {
-  return (
-    <div
-      className={`card-lg animate-fade-in transition-shadow hover:shadow-md ${className}`}
-      onClick={onClick}
-    >
-      {children}
-    </div>
-  );
-}
+import theme, { cn } from '../../styles/theme';
 
-export function CardHeader({ children, className = '' }) {
-  return <div className={`border-b border-slate-100 px-6 py-4 ${className}`}>{children}</div>;
-}
+// Re-export migrated components for backward compatibility
+export { default as Button, IconButton, ButtonGroup } from './Button';
+export { default as Card, CardHeader, CardBody, CardFooter } from './Card';
+export { default as Badge, StatusBadge, PriorityBadge, RoleBadge, CategoryBadge } from './Badge';
+export { default as Input, Textarea, Select, Checkbox } from './Input';
 
-export function CardBody({ children, className = '' }) {
-  return <div className={`px-6 py-4 ${className}`}>{children}</div>;
-}
-
-export function CardFooter({ children, className = '' }) {
-  return (
-    <div
-      className={`flex justify-end gap-3 rounded-b-lg border-t-2 ${designTokens.colors.cyan.borderLight} bg-slate-100/50 dark:bg-slate-800/50 px-6 py-3 ${className}`}
-    >
-      {children}
-    </div>
-  );
-}
-
-// KPI Card - For dashboard metrics
+/**
+ * KPICard - For dashboard metrics
+ *
+ * @example
+ * <KPICard
+ *   title="Total Tasks"
+ *   value="142"
+ *   change={12.5}
+ *   icon={TaskIcon}
+ *   color="primary"
+ * />
+ */
 export function KPICard({ title, value, change, icon: Icon, color = 'primary' }) {
-  const colors = {
-    primary: `${designTokens.colors.cyan.bg} ${designTokens.colors.cyan.text} border ${designTokens.colors.cyan.borderLight}`,
-    success: `${designTokens.colors.success.bg} ${designTokens.colors.success.text} border ${designTokens.colors.success.borderLight}`,
-    warning: `${designTokens.colors.warning.bg} ${designTokens.colors.warning.text} border ${designTokens.colors.warning.borderLight}`,
-    danger: `${designTokens.colors.error.bg} ${designTokens.colors.error.text} border ${designTokens.colors.error.borderLight}`,
+  const colorVariants = {
+    primary: {
+      container: cn(theme.colors.status.info.bg, theme.colors.status.info.border, 'border'),
+      text: theme.colors.status.info.text,
+    },
+    success: {
+      container: cn(theme.colors.status.success.bg, theme.colors.status.success.border, 'border'),
+      text: theme.colors.status.success.text,
+    },
+    warning: {
+      container: cn(theme.colors.status.warning.bg, theme.colors.status.warning.border, 'border'),
+      text: theme.colors.status.warning.text,
+    },
+    danger: {
+      container: cn(theme.colors.status.error.bg, theme.colors.status.error.border, 'border'),
+      text: theme.colors.status.error.text,
+    },
   };
 
+  const selectedColor = colorVariants[color] || colorVariants.primary;
   const isPositive = change >= 0;
   const arrow = isPositive ? '↑' : '↓';
-  const changeColor = isPositive ? 'text-success-600' : 'text-danger-600';
+  const changeColorClass = isPositive
+    ? theme.colors.status.success.textDark
+    : theme.colors.status.error.textDark;
 
   return (
-    <Card className={`${colors[color]} border`}>
-      <CardBody className="space-y-3">
-        <div className="flex items-start justify-between">
+    <div className={cn(theme.card.base, theme.spacing.p.md, selectedColor.container)}>
+      <div className="space-y-3">
+        <div className={theme.layout.flex.between}>
           <div>
-            <p className="text-sm font-medium opacity-75">{title}</p>
-            <p className="mt-1 text-2xl font-bold">{value}</p>
+            <p className={cn(theme.typography.bodySmall, 'opacity-75')}>{title}</p>
+            <p className={cn('mt-1 text-2xl font-bold', selectedColor.text)}>{value}</p>
           </div>
           {Icon && <Icon className="h-8 w-8 opacity-30" />}
         </div>
         {change !== undefined && (
-          <p className={`text-xs font-semibold ${changeColor}`}>
+          <p className={cn('text-xs font-semibold', changeColorClass)}>
             {arrow} {Math.abs(change)}% vs mese scorso
           </p>
         )}
-      </CardBody>
-    </Card>
-  );
-}
-
-// Button Styles
-const buttonBase =
-  'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
-
-const buttonVariants = {
-  primary: `${buttonBase} bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 focus:ring-primary-500 disabled:bg-slate-400 disabled:cursor-not-allowed`,
-  secondary: `${buttonBase} bg-slate-700 text-slate-100 hover:bg-slate-600 active:bg-slate-500 focus:ring-slate-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed`,
-  outline: `${buttonBase} border-2 border-primary-600 text-primary-600 hover:bg-primary-50 active:bg-primary-100 focus:ring-primary-500 disabled:border-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed`,
-  danger: `${buttonBase} bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 focus:ring-danger-500 disabled:bg-slate-400 disabled:cursor-not-allowed`,
-  ghost: `${buttonBase} text-slate-600 hover:bg-slate-100 active:bg-slate-200 focus:ring-slate-400 disabled:text-slate-400 disabled:cursor-not-allowed`,
-};
-
-const buttonSizes = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg',
-};
-
-export function Button({
-  children,
-  variant = 'primary',
-  size = 'md',
-  icon: Icon,
-  isLoading = false,
-  disabled = false,
-  className = '',
-  ...props
-}) {
-  return (
-    <button
-      className={`${buttonVariants[variant]} ${buttonSizes[size]} ${className}`}
-      disabled={disabled || isLoading}
-      {...props}
-    >
-      {isLoading && (
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
-      )}
-      {Icon && !isLoading && <Icon className="h-4 w-4" />}
-      {children}
-    </button>
-  );
-}
-
-// Badge Component
-const badgeVariants = {
-  primary: 'bg-primary-100 text-primary-800 border border-primary-200',
-  success: 'bg-success-100 text-success-800 border border-success-200',
-  warning: 'bg-warning-100 text-warning-800 border border-warning-200',
-  danger: 'bg-danger-100 text-danger-800 border border-danger-200',
-  slate: 'bg-slate-100 text-slate-800 border border-slate-200',
-};
-
-export function Badge({ children, variant = 'primary', className = '' }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${badgeVariants[variant]} ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-// Input Component
-export function Input({ label, error, className = '', ...props }) {
-  return (
-    <div className="space-y-1.5">
-      {label && (
-        <label className="block text-sm font-medium text-slate-700">
-          {label}
-          {props.required && <span className="ml-1 text-danger-600">*</span>}
-        </label>
-      )}
-      <input
-        className={`w-full rounded-lg border-2 border-slate-200 px-4 py-2.5 transition-colors duration-200 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 ${error ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-100' : ''} ${className} `}
-        {...props}
-      />
-      {error && <p className="text-sm text-danger-600">{error}</p>}
+      </div>
     </div>
   );
 }
 
-// Select Component
-export function Select({ label, error, options, className = '', ...props }) {
+/**
+ * Alert Component - For notifications and messages
+ *
+ * @example
+ * <Alert type="success" title="Success!" message="Operation completed" />
+ */
+export function Alert({ type = 'info', title, message, onClose, className = '' }) {
+  const alertVariants = {
+    success: {
+      container: theme.colors.status.success.bg,
+      border: theme.colors.status.success.border,
+      text: theme.colors.status.success.text,
+      icon: '✓',
+    },
+    error: {
+      container: theme.colors.status.error.bg,
+      border: theme.colors.status.error.border,
+      text: theme.colors.status.error.text,
+      icon: '✕',
+    },
+    warning: {
+      container: theme.colors.status.warning.bg,
+      border: theme.colors.status.warning.border,
+      text: theme.colors.status.warning.text,
+      icon: '⚠',
+    },
+    info: {
+      container: theme.colors.status.info.bg,
+      border: theme.colors.status.info.border,
+      text: theme.colors.status.info.text,
+      icon: 'ℹ',
+    },
+  };
+
+  const variant = alertVariants[type] || alertVariants.info;
+
   return (
-    <div className="space-y-1.5">
-      {label && (
-        <label className="block text-sm font-medium text-slate-700">
-          {label}
-          {props.required && <span className="ml-1 text-danger-600">*</span>}
-        </label>
+    <div
+      className={cn(
+        'rounded-lg border p-4',
+        variant.container,
+        variant.border,
+        theme.animation.fadeIn,
+        className
       )}
-      <select
-        className={`w-full rounded-lg border-2 border-slate-200 px-4 py-2.5 transition-colors duration-200 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 ${error ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-100' : ''} ${className} `}
-        {...props}
-      >
-        <option value="">Seleziona un'opzione</option>
-        {options?.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      {error && <p className="text-sm text-danger-600">{error}</p>}
+    >
+      <div className={theme.layout.flex.between}>
+        <div className={theme.layout.flex.start}>
+          <span className={cn('mr-3 text-xl', variant.text)}>{variant.icon}</span>
+          <div>
+            {title && (
+              <h4 className={cn('font-semibold', variant.text)}>{title}</h4>
+            )}
+            {message && (
+              <p className={cn(theme.typography.bodySmall, 'mt-1', variant.text)}>
+                {message}
+              </p>
+            )}
+          </div>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className={cn(
+              'ml-4 text-lg leading-none opacity-60 hover:opacity-100',
+              variant.text
+            )}
+          >
+            ×
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Divider Component
+ *
+ * @example
+ * <Divider />
+ * <Divider text="OR" />
+ */
+export function Divider({ text, className = '' }) {
+  if (text) {
+    return (
+      <div className={cn(theme.layout.flex.center, 'my-4', className)}>
+        <div className={cn('flex-1 border-t-2', theme.colors.border.lightAlpha)} />
+        <span className={cn('px-4', theme.typography.caption, theme.colors.text.muted)}>
+          {text}
+        </span>
+        <div className={cn('flex-1 border-t-2', theme.colors.border.lightAlpha)} />
+      </div>
+    );
+  }
+
+  return <hr className={cn('my-4 border-t-2', theme.colors.border.lightAlpha, className)} />;
+}
+
+/**
+ * LoadingSpinner Component
+ *
+ * @example
+ * <LoadingSpinner size="md" />
+ */
+export function LoadingSpinner({ size = 'md', className = '' }) {
+  const sizes = {
+    sm: 'w-4 h-4 border-2',
+    md: 'w-8 h-8 border-3',
+    lg: 'w-12 h-12 border-4',
+  };
+
+  return (
+    <div
+      className={cn(
+        'inline-block animate-spin rounded-full',
+        'border-cyan-500 border-t-transparent',
+        sizes[size],
+        className
+      )}
+    />
+  );
+}
+
+/**
+ * EmptyState Component
+ *
+ * @example
+ * <EmptyState
+ *   icon={InboxIcon}
+ *   title="No tasks found"
+ *   description="Create your first task to get started"
+ *   action={<Button onClick={onCreate}>Create Task</Button>}
+ * />
+ */
+export function EmptyState({ icon: Icon, title, description, action, className = '' }) {
+  return (
+    <div className={cn('text-center py-12', className)}>
+      {Icon && (
+        <div className={cn(theme.layout.flex.center, 'mb-4')}>
+          <Icon className={cn('w-16 h-16', theme.colors.text.muted, 'opacity-30')} />
+        </div>
+      )}
+      {title && (
+        <h3 className={cn(theme.typography.h4, theme.colors.text.secondary, 'mb-2')}>
+          {title}
+        </h3>
+      )}
+      {description && (
+        <p className={cn(theme.typography.body, theme.colors.text.muted, 'mb-6')}>
+          {description}
+        </p>
+      )}
+      {action && <div>{action}</div>}
     </div>
   );
 }

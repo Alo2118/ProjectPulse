@@ -1,69 +1,54 @@
 import React from 'react';
-import { designTokens } from '../../config/designTokens';
+import theme, { cn } from '../../styles/theme';
 
 /**
- * Card Component - Design System
+ * Card Component - Design System v2.0
  *
- * Unified card component for consistent styling across the app
+ * ✅ Migrato al nuovo design system unificato
+ * ✅ Usa theme.js invece di designTokens.js
+ * ✅ Supporto completo dark mode
  *
  * @param {Object} props
- * @param {'default'|'gradient'|'flat'} props.variant - Card style variant
+ * @param {'base'|'hover'|'flat'|'elevated'} props.variant - Card style variant
  * @param {'sm'|'md'|'lg'} props.padding - Padding size
- * @param {'sm'|'md'|'lg'|'none'} props.shadow - Shadow depth
- * @param {boolean} props.hover - Enable hover effect
+ * @param {boolean} props.hover - Enable hover effect (deprecated, use variant="hover")
  * @param {string} props.className - Additional CSS classes
  * @param {React.ReactNode} props.children - Card content
  */
 export default function Card({
-  variant = 'default',
+  variant = 'base',
   padding = 'md',
-  shadow = 'md',
   hover = false,
   className = '',
   children,
   ...props
 }) {
-  // Base styles
-  const baseStyles = 'rounded-lg transition-all duration-200';
-
-  // Variant styles
-  const variantStyles = {
-    default: 'bg-slate-100 dark:bg-slate-800/50 border-2 border-cyan-400 dark:border-cyan-500/30 shadow-lg shadow-cyan-500/10',
-    gradient: 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white',
-    flat: 'bg-slate-50 dark:bg-slate-800/30 border-2 border-cyan-300 dark:border-cyan-500/20',
+  // Get variant styles from theme
+  const variantClasses = {
+    base: theme.card.base,
+    hover: theme.card.hover,
+    flat: theme.card.flat,
+    elevated: theme.card.elevated,
   };
 
-  // Padding styles
-  const paddingStyles = {
-    sm: 'p-3',
-    md: 'p-4',
-    lg: 'p-6',
+  // Get padding from theme
+  const paddingClasses = {
+    sm: theme.card.padding.sm,
+    md: theme.card.padding.md,
+    lg: theme.card.padding.lg,
   };
 
-  // Shadow styles
-  const shadowStyles = {
-    none: '',
-    sm: 'shadow-sm',
-    md: 'shadow-md',
-    lg: 'shadow-lg',
-  };
+  // Backward compatibility: if hover prop is true, use hover variant
+  const effectiveVariant = hover ? 'hover' : variant;
 
-  // Hover effect
-  const hoverStyles = hover ? 'hover:shadow-lg hover:scale-[1.02] cursor-pointer' : '';
-
-  const combinedClassName = `
-    ${baseStyles}
-    ${variantStyles[variant]}
-    ${paddingStyles[padding]}
-    ${shadowStyles[shadow]}
-    ${hoverStyles}
-    ${className}
-  `
-    .trim()
-    .replace(/\s+/g, ' ');
+  const cardClasses = cn(
+    variantClasses[effectiveVariant] || variantClasses.base,
+    paddingClasses[padding] || paddingClasses.md,
+    className
+  );
 
   return (
-    <div className={combinedClassName} {...props}>
+    <div className={cardClasses} {...props}>
       {children}
     </div>
   );
@@ -72,18 +57,34 @@ export default function Card({
 /**
  * CardHeader Component
  * For consistent card headers with title and optional actions
+ *
+ * @example
+ * <CardHeader
+ *   title="Task Details"
+ *   subtitle="Updated 2 hours ago"
+ *   action={<Button size="sm">Edit</Button>}
+ * />
  */
 export function CardHeader({ title, subtitle, action, compact = false, className = '' }) {
   return (
-    <div className={`flex items-start justify-between ${compact ? 'mb-3' : 'mb-4'} ${className}`}>
+    <div
+      className={cn(
+        theme.layout.flex.between,
+        'items-start',
+        compact ? theme.spacing.mb.sm : theme.spacing.mb.md,
+        className
+      )}
+    >
       <div>
         {title && (
-          <h3 className={`${compact ? 'text-base' : 'text-lg'} font-semibold ${designTokens.colors.cyan.text}`}>
+          <h3 className={cn(compact ? 'text-base' : 'text-lg', 'font-semibold', theme.colors.text.accent)}>
             {title}
           </h3>
         )}
         {subtitle && (
-          <p className={`${compact ? 'text-xs' : 'text-sm'} mt-1 ${designTokens.colors.cyan.textLight} opacity-60`}>{subtitle}</p>
+          <p className={cn(compact ? 'text-xs' : 'text-sm', 'mt-1', theme.colors.text.muted, 'opacity-60')}>
+            {subtitle}
+          </p>
         )}
       </div>
       {action && <div className="ml-4">{action}</div>}
@@ -94,6 +95,11 @@ export function CardHeader({ title, subtitle, action, compact = false, className
 /**
  * CardBody Component
  * For card content area
+ *
+ * @example
+ * <CardBody>
+ *   <p>Card content goes here</p>
+ * </CardBody>
  */
 export function CardBody({ className = '', children }) {
   return <div className={className}>{children}</div>;
@@ -102,7 +108,26 @@ export function CardBody({ className = '', children }) {
 /**
  * CardFooter Component
  * For card footer with actions or additional info
+ *
+ * @example
+ * <CardFooter>
+ *   <ButtonGroup>
+ *     <Button variant="secondary">Cancel</Button>
+ *     <Button variant="primary">Save</Button>
+ *   </ButtonGroup>
+ * </CardFooter>
  */
 export function CardFooter({ className = '', children }) {
-  return <div className={`mt-4 border-t-2 border-cyan-500/20 pt-4 ${className}`}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        'mt-4 pt-4',
+        'border-t-2',
+        theme.colors.border.lightAlpha,
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
 }

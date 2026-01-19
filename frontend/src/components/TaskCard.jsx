@@ -1,3 +1,16 @@
+/**
+ * TASK CARD - Versione Refactored
+ *
+ * Questo file mostra come usare il nuovo design system.
+ * Confronta con TaskCard.jsx originale per vedere le differenze.
+ *
+ * PRIMA (hardcode):
+ * className="rounded-lg border-2 border-cyan-500/30 bg-slate-800/50 p-4"
+ *
+ * DOPO (design system):
+ * className={cn(theme.card.base, theme.spacing.p.md)}
+ */
+
 import {
   Clock,
   MessageSquare,
@@ -9,13 +22,7 @@ import {
   ArrowRight,
   ArrowDown,
 } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
-import { 
-  getStatusColors, 
-  getPriorityColors,
-  getPriorityBarColor,
-  getPriorityBorderTopColor 
-} from '../utils/helpers';
+import theme, { cn } from '../styles/theme';
 import { timeApi } from '../services/api';
 
 const statusLabels = {
@@ -27,18 +34,9 @@ const statusLabels = {
 };
 
 const priorityConfig = {
-  low: {
-    icon: ArrowDown,
-    label: 'Bassa',
-  },
-  medium: {
-    icon: ArrowRight,
-    label: 'Media',
-  },
-  high: {
-    icon: ArrowUp,
-    label: 'Alta',
-  },
+  low: { icon: ArrowDown, label: 'Bassa' },
+  medium: { icon: ArrowRight, label: 'Media' },
+  high: { icon: ArrowUp, label: 'Alta' },
 };
 
 export default function TaskCard({
@@ -49,13 +47,13 @@ export default function TaskCard({
   expandButton = null,
   hasSubtasks = false,
 }) {
-  const { colors } = useTheme();
   const handleStartTimer = async (e) => {
     e.stopPropagation();
     try {
       await timeApi.start(task.id);
       if (onTimerStart) onTimerStart();
     } catch (error) {
+      // TODO: Usare toast invece di alert
       alert(error.response?.data?.error || "Errore durante l'avvio del timer");
     }
   };
@@ -81,160 +79,158 @@ export default function TaskCard({
     if (diffDays < 0) {
       return {
         text: `In ritardo di ${Math.abs(diffDays)} gg`,
-        color: 'text-danger-700 bg-danger-50',
+        classes: cn(theme.badge.error, theme.spacing.px.sm, theme.spacing.py.xs),
         icon: AlertCircle,
         urgent: true,
       };
     } else if (diffDays === 0) {
       return {
         text: 'Scade oggi',
-        color: 'text-warning-700 bg-warning-50',
+        classes: cn(theme.badge.warning, theme.spacing.px.sm, theme.spacing.py.xs),
         icon: Calendar,
         urgent: true,
       };
     } else if (diffDays <= 3) {
       return {
         text: `Scade tra ${diffDays} gg`,
-        color: 'text-warning-600 bg-warning-50',
-        icon: Calendar,
-        urgent: false,
-      };
-    } else if (diffDays <= 7) {
-      return {
-        text: `Scade tra ${diffDays} gg`,
-        color: 'text-slate-600 bg-slate-100',
-        icon: Calendar,
-        urgent: false,
-      };
-    } else {
-      return {
-        text: deadline.toLocaleDateString('it-IT'),
-        color: 'text-slate-500 bg-slate-50',
+        classes: cn(theme.badge.warning, theme.spacing.px.sm, theme.spacing.py.xs),
         icon: Calendar,
         urgent: false,
       };
     }
+
+    return null;
   };
 
+  const PriorityIcon = priorityConfig[task.priority]?.icon || ArrowRight;
   const deadlineInfo = getDeadlineInfo();
-  const statusColor = getStatusColors(task.status);
-  const priorityInfo = priorityConfig[task.priority] || priorityConfig.medium;
-  const priorityColors = getPriorityColors(task.priority);
-
-  const isSubtask = task.parent_task_id;
-  const borderTopColor = isSubtask ? getPriorityBorderTopColor(task.priority) : '';
 
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer rounded-xl transition-all ${colors.bg.primary} ${colors.border} border-2 ${colors.text.primary} ${isSubtask ? `card ml-4 ${borderTopColor}` : 'card-lg shadow-md'}`}
+      className={cn(
+        theme.card.hover,
+        theme.spacing.p.md,
+        'cursor-pointer group'
+      )}
     >
-      {/* Priority Indicator Bar - diverso per subtask */}
-      {!isSubtask && (
-        <div
-          className={`h-0.5 ${getPriorityBarColor(task.priority)}`}
-        />
+      {/* Header */}
+      <div className={cn(theme.layout.flex.between, theme.spacing.mb.sm)}>
+        <div className={theme.layout.flex.start}>
+          {/* Status Badge */}
+          <span className={theme.badge.status[task.status]}>
+            {statusLabels[task.status]}
+          </span>
+
+          {/* Priority Badge */}
+          <span className={cn(theme.badge.priority[task.priority], 'ml-2')}>
+            <PriorityIcon className="w-3 h-3" />
+            <span>{priorityConfig[task.priority]?.label}</span>
+          </span>
+        </div>
+
+        {/* Expand button se ha subtask */}
+        {expandButton}
+      </div>
+
+      {/* Title */}
+      <h3
+        className={cn(
+          theme.typography.h5,
+          theme.spacing.mb.xs,
+          'group-hover:text-cyan-200'
+        )}
+      >
+        {task.title}
+      </h3>
+
+      {/* Description (se presente) */}
+      {task.description && (
+        <p className={cn(theme.typography.bodySmall, theme.utils.lineClamp[2], theme.spacing.mb.sm)}>
+          {task.description}
+        </p>
       )}
 
-      <div className="p-2">
-        {/* Header Compatto */}
-        <div className="mb-1 flex items-start justify-between gap-1">
-          <div className="min-w-0 flex-1">
-            {/* Badges compatti in una riga */}
-            <div className="mb-1 flex flex-wrap items-center gap-1">
-              {/* Project Name compatto - non mostrare se è un subtask */}
-              {showProject && !isSubtask && task.project_name && (
-                <div className={`inline-flex items-center gap-0.5 rounded border ${colors.border} ${colors.bg.secondary} px-1.5 py-0.5 text-xs ${colors.text.secondary}`}>
-                  <span>📁</span>
-                  <span className="max-w-[100px] truncate font-medium">{task.project_name}</span>
-                </div>
+      {/* Footer */}
+      <div className={cn(theme.layout.flex.between, 'mt-4 pt-3 border-t', theme.border.defaultAlpha)}>
+        <div className={theme.layout.flex.start}>
+          {/* Deadline warning */}
+          {deadlineInfo && (
+            <span className={deadlineInfo.classes}>
+              <deadlineInfo.icon className="w-3 h-3" />
+              {deadlineInfo.text}
+            </span>
+          )}
+
+          {/* Project name */}
+          {showProject && task.project_name && (
+            <span
+              className={cn(
+                theme.typography.caption,
+                theme.colors.text.muted,
+                'ml-2'
               )}
-              <span
-                className={`inline-flex items-center rounded px-1.5 py-0 text-xs font-bold ${statusColor.bg} ${statusColor.text} border-2 ${statusColor.border}`}
-              >
-                {statusLabels[task.status]}
-              </span>
-              <span
-                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0 text-xs font-bold ${priorityColors.bg} ${priorityColors.text} border-2 ${priorityColors.border}`}
-              >
-                <priorityInfo.icon className="h-3 w-3" />
-              </span>
-            </div>
-
-            {/* Task Title più compatto - diverso per subtask */}
-            <div className="flex items-start gap-1">
-              {/* Expand Button allineato con il titolo */}
-              {expandButton && <div className="flex-shrink-0">{expandButton}</div>}
-              <h3
-                className={`${isSubtask ? 'font-medium' : 'font-semibold'} mb-1 line-clamp-2 flex-1 text-xs leading-normal ${colors.text.primary} transition-colors group-hover:${colors.accent}`}
-              >
-                {isSubtask && <span className={colors.text.tertiary}>└ </span>}
-                {task.title}
-              </h3>
-            </div>
-
-            {/* Description più compatta (opzionale, solo 1 riga) */}
-            {task.description && <p className={`line-clamp-1 text-xs ${colors.text.tertiary}`}></p>}
-          </div>
-
-          {/* Timer Button compatto */}
-          {task.status !== 'completed' && task.status !== 'blocked' && (
-            <button
-              onClick={handleStartTimer}
-              className="btn-xs btn-primary flex-shrink-0 shadow-sm"
             >
-              <Play className="h-3 w-3" />
-              <span className="hidden text-xs sm:inline">Start</span>
-            </button>
+              📁 {task.project_name}
+            </span>
           )}
         </div>
 
-        {/* Footer compatto */}
-        {(task.time_spent > 0 ||
-          deadlineInfo ||
-          task.blocked_reason ||
-          task.clarification_needed) && (
-          <div className={`mt-1 flex flex-wrap items-center gap-1 border-t-2 ${colors.borderLight} pt-1 text-xs`}>
-            {task.time_spent > 0 && (
-              <div className={`flex items-center gap-0.5 rounded border ${colors.border} ${colors.bg.secondary} px-1.5 py-0 text-xs ${colors.text.secondary}`}>
-                <Clock className="h-2.5 w-2.5" />
-                <span className="font-medium">{formatTime(task.time_spent)}</span>
-              </div>
-            )}
+        {/* Actions */}
+        <div className={cn(theme.layout.flex.end, theme.spacing.gap.sm)}>
+          {/* Time spent */}
+          {task.time_spent > 0 && (
+            <span
+              className={cn(
+                theme.layout.flex.start,
+                theme.typography.caption,
+                theme.colors.text.muted
+              )}
+            >
+              <Clock className="w-3 h-3 mr-1" />
+              {formatTime(task.time_spent)}
+            </span>
+          )}
 
-            {deadlineInfo && (
-              <div
-                className={`flex items-center gap-0.5 rounded px-1.5 py-0 text-xs font-bold ${
-                  deadlineInfo.color === 'bg-danger-50 text-danger-700'
-                    ? 'border border-red-500/30 bg-red-500/20 text-red-300'
-                    : deadlineInfo.color === 'text-warning-700 bg-warning-50'
-                      ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300'
-                      : deadlineInfo.color === 'bg-warning-50 text-warning-600'
-                        ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300'
-                        : 'border border-cyan-500/20 bg-slate-700/50 text-slate-400'
-                }`}
-              >
-                <deadlineInfo.icon className="h-2.5 w-2.5" />
-                <span>{deadlineInfo.text}</span>
-              </div>
-            )}
+          {/* Comments count */}
+          {task.comments_count > 0 && (
+            <span
+              className={cn(
+                theme.layout.flex.start,
+                theme.typography.caption,
+                theme.colors.text.muted
+              )}
+            >
+              <MessageSquare className="w-3 h-3 mr-1" />
+              {task.comments_count}
+            </span>
+          )}
 
-            {task.blocked_reason && (
-              <div className="flex items-center gap-0.5 rounded border-2 border-red-500/30 bg-red-500/20 px-1.5 py-0 text-xs font-bold text-red-300">
-                <AlertCircle className="h-2.5 w-2.5" />
-                <span>Bloccato</span>
-              </div>
-            )}
-
-            {task.clarification_needed && (
-              <div className="flex items-center gap-0.5 rounded border-2 border-amber-500/30 bg-amber-500/20 px-1.5 py-0 text-xs font-bold text-amber-300">
-                <HelpCircle className="h-2.5 w-2.5" />
-                <span>Chiarimenti</span>
-              </div>
-            )}
-          </div>
-        )}
+          {/* Start timer button */}
+          {task.status !== 'completed' && (
+            <button
+              onClick={handleStartTimer}
+              className={cn(
+                theme.button.ghost,
+                theme.button.size.sm,
+                'opacity-0 group-hover:opacity-100'
+              )}
+              aria-label="Avvia timer"
+            >
+              <Play className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Subtask indicator */}
+      {hasSubtasks && (
+        <div className={cn('mt-2 pt-2 border-t', theme.border.lightAlpha)}>
+          <span className={cn(theme.typography.caption, theme.colors.text.muted)}>
+            Contiene sottotask
+          </span>
+        </div>
+      )}
     </div>
   );
 }
