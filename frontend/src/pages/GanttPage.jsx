@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart3, Filter } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
-import { designTokens } from '../config/designTokens';
+import theme, { cn } from '../styles/theme';
 import { projectsApi, tasksApi, milestonesApi } from '../services/api';
 import GanttChart from '../components/GanttChart';
 import TaskModal from '../components/TaskModal';
@@ -9,7 +8,6 @@ import MilestoneModal from '../components/MilestoneModal';
 import { GamingLayout, GamingHeader, GamingCard, GamingLoader } from '../components/ui';
 
 export default function GanttPage() {
-  const { colors } = useTheme();
   const [projects, setProjects] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
   const [allMilestones, setAllMilestones] = useState([]);
@@ -83,13 +81,15 @@ export default function GanttPage() {
       <GamingHeader title="Diagramma di Gantt" subtitle="Timeline progetti R&D" icon={BarChart3} />
 
       {/* Filter */}
-      <GamingCard className="mb-4">
-        <div className="mb-4 flex items-center gap-3">
-          <Filter className={`h-5 w-5 ${designTokens.colors.cyan.text}`} />
-          <label className={`text-sm font-bold ${colors.text.primary}`}>Filtra per progetto</label>
+      <GamingCard className={theme.spacing.mb.md}>
+        <div className={cn(theme.layout.flex.start, theme.spacing.gap.md, theme.spacing.mb.md)}>
+          <Filter className={cn('h-5 w-5', theme.colors.text.accent)} />
+          <label className={cn(theme.typography.bodySmall, 'font-bold', theme.colors.text.primary)}>
+            Filtra per progetto
+          </label>
         </div>
         <select
-          className="input-dark w-full"
+          className={cn(theme.input.base, theme.input.size.md, 'w-full')}
           value={selectedProject}
           onChange={(e) => setSelectedProject(e.target.value)}
         >
@@ -114,27 +114,33 @@ export default function GanttPage() {
 
       {/* Info Box */}
       <GamingCard>
-        <div className="flex gap-4">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 shadow-md">
-            <BarChart3 className="h-6 w-6 text-white" />
+        <div className={cn(theme.layout.flex.start, theme.spacing.gap.md)}>
+          <div className={cn(
+            theme.layout.flex.center,
+            'h-10 w-10 flex-shrink-0 rounded-lg shadow-md',
+            theme.effects.gradient.primary
+          )}>
+            <BarChart3 className={cn('h-6 w-6', theme.colors.text.primary)} />
           </div>
-          <div className={`text-sm ${colors.text.primary}`}>
-            <p className="mb-3 font-bold text-white">Informazioni sul Gantt</p>
+          <div className={cn(theme.typography.bodySmall, theme.colors.text.secondary)}>
+            <p className={cn(theme.spacing.mb.sm, 'font-bold', theme.colors.text.primary)}>
+              Informazioni sul Gantt
+            </p>
             <ul className="space-y-2">
-              <li className="flex items-start gap-2">
-                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
+              <li className={cn(theme.layout.flex.start, theme.spacing.gap.sm)}>
+                <span className={cn('font-bold', theme.colors.text.accent)}>•</span>
                 <span>Le barre rappresentano la durata delle milestone e attività</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
+              <li className={cn(theme.layout.flex.start, theme.spacing.gap.sm)}>
+                <span className={cn('font-bold', theme.colors.text.accent)}>•</span>
                 <span>La linea rossa verticale indica la data odierna</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
+              <li className={cn(theme.layout.flex.start, theme.spacing.gap.sm)}>
+                <span className={cn('font-bold', theme.colors.text.accent)}>•</span>
                 <span>Clicca su una barra per visualizzare i dettagli</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className={`font-bold ${designTokens.colors.cyan.text}`}>•</span>
+              <li className={cn(theme.layout.flex.start, theme.spacing.gap.sm)}>
+                <span className={cn('font-bold', theme.colors.text.accent)}>•</span>
                 <span>Le attività sono raggruppate sotto le rispettive milestone</span>
               </li>
             </ul>

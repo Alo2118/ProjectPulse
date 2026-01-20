@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
+import theme, { cn } from '../styles/theme';
 import { tasksApi } from '../services/api';
 import TaskModal from '../components/TaskModal';
 import { GamingLayout, GamingHeader, GamingCard, GamingLoader, Button } from '../components/ui';
 
 export default function CalendarPage() {
-  const { colors, spacing } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -107,7 +106,7 @@ export default function CalendarPage() {
         {/* Day headers */}
         <div className="mb-4 grid grid-cols-7 gap-2">
           {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((day) => (
-            <div key={day} className="py-2 text-center text-sm font-semibold text-cyan-300">
+            <div key={day} className={cn('py-2 text-center text-sm font-semibold', theme.text.accent)}>
               {day}
             </div>
           ))}
@@ -125,23 +124,25 @@ export default function CalendarPage() {
             return (
               <div
                 key={day}
-                className={`aspect-square rounded-lg border p-2 transition-all hover:shadow-lg hover:shadow-cyan-500/20 ${
+                className={cn(
+                  'aspect-square rounded-lg border p-2 transition-all',
                   isToday(day)
                     ? 'border-2 border-cyan-500 bg-gradient-to-br from-cyan-500/20 to-blue-500/20'
                     : isPast(day)
-                      ? `${colors.border} ${colors.bg.tertiary}`
-                      : `border-cyan-500/20 ${colors.bg.secondary} hover:border-cyan-500/50`
-                }`}
+                      ? cn(theme.border, theme.bg.tertiary)
+                      : cn('border-cyan-500/20', theme.bg.secondary, 'hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/20')
+                )}
               >
                 <div className="flex h-full flex-col">
                   <div
-                    className={`mb-1 text-right text-sm font-medium ${
+                    className={cn(
+                      'mb-1 text-right text-sm font-medium',
                       isToday(day)
-                        ? 'text-cyan-300'
+                        ? theme.text.accent
                         : isPast(day)
-                          ? `${colors.text.tertiary}`
-                          : `${colors.text.primary}`
-                    }`}
+                          ? theme.text.tertiary
+                          : theme.text.primary
+                    )}
                   >
                     {day}
                   </div>
@@ -151,7 +152,8 @@ export default function CalendarPage() {
                       <button
                         key={task.id}
                         onClick={() => setSelectedTask(task)}
-                        className={`w-full truncate rounded border-2 border-transparent px-2 py-1 text-left text-xs transition-all ${
+                        className={cn(
+                          'w-full truncate rounded border-2 border-transparent px-2 py-1 text-left text-xs transition-all',
                           task.status === 'completed'
                             ? 'bg-green-500/20 text-green-300 hover:border-green-500/50 hover:bg-green-500/30'
                             : task.status === 'blocked'
@@ -159,14 +161,14 @@ export default function CalendarPage() {
                               : task.priority === 'high'
                                 ? 'bg-orange-500/20 text-orange-300 hover:border-orange-500/50 hover:bg-orange-500/30'
                                 : 'bg-cyan-500/20 text-cyan-300 hover:border-cyan-500/50 hover:bg-cyan-500/30'
-                        }`}
+                        )}
                         title={task.title}
                       >
                         {task.title}
                       </button>
                     ))}
                     {dayTasks.length > 3 && (
-                      <div className={`text-center text-xs font-medium ${colors.text.tertiary}`}>
+                      <div className={cn('text-center text-xs font-medium', theme.text.tertiary)}>
                         +{dayTasks.length - 3}
                       </div>
                     )}
@@ -178,31 +180,31 @@ export default function CalendarPage() {
         </div>
 
         {/* Legend */}
-        <div className={`mt-6 flex flex-wrap gap-6 border-t ${colors.border} pt-6 text-xs`}>
+        <div className={cn('mt-6 flex flex-wrap gap-6 border-t pt-6 text-xs', theme.border)}>
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded border-2 border-cyan-500 bg-gradient-to-br from-cyan-900/50 to-blue-900/50"></div>
-            <span className={colors.text.secondary}>Oggi</span>
+            <span className={theme.text.secondary}>Oggi</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded bg-orange-900/50"></div>
-            <span className={colors.text.secondary}>Alta priorità</span>
+            <span className={theme.text.secondary}>Alta priorità</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded bg-cyan-900/50"></div>
-            <span className={colors.text.secondary}>Normale</span>
+            <span className={theme.text.secondary}>Normale</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded bg-red-900/50"></div>
-            <span className={colors.text.secondary}>Bloccato</span>
+            <span className={theme.text.secondary}>Bloccato</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded bg-emerald-900/50"></div>
-            <span className={colors.text.secondary}>Completato</span>
+            <span className={theme.text.secondary}>Completato</span>
           </div>
         </div>
 
         {/* Task count */}
-        <div className={`mt-4 text-center text-sm ${colors.text.tertiary}`}>
+        <div className={cn('mt-4 text-center text-sm', theme.text.tertiary)}>
           {tasks.length} attività con scadenza nel database
         </div>
       </GamingCard>

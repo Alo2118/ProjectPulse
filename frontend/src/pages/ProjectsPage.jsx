@@ -10,6 +10,7 @@ import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectModal from '../components/ProjectModal';
 import { formatTime } from '../utils/helpers';
 import { useToast } from '../context/ToastContext';
+import theme, { cn } from '../styles/theme';
 import {
   GamingLayout,
   GamingHeader,
@@ -109,7 +110,7 @@ export default function ProjectsPage() {
       />
 
       {/* Stats */}
-      <GamingKPIGrid columns={4} className="mb-6">
+      <GamingKPIGrid columns={4} className={theme.spacing.mb.lg}>
         <GamingKPICard
           title="Progetti"
           value={projects.length}
@@ -144,10 +145,12 @@ export default function ProjectsPage() {
       {loading ? (
         <GamingLoader message="Caricamento progetti..." />
       ) : projects.length === 0 ? (
-        <GamingCard className="py-12 text-center">
-          <div className="mb-4 text-6xl">🔬</div>
-          <h3 className={`mb-2 text-xl font-bold ${colors.text.primary}`}>Nessun progetto R&D</h3>
-          <p className={`mb-6 ${colors.text.tertiary}`}>
+        <GamingCard className={cn(theme.spacing.py.xl, 'text-center')}>
+          <div className={cn(theme.spacing.mb.md, 'text-6xl')}>🔬</div>
+          <h3 className={cn(theme.spacing.mb.sm, 'text-xl font-bold', colors.text.primary)}>
+            Nessun progetto R&D
+          </h3>
+          <p className={cn(theme.spacing.mb.lg, colors.text.tertiary)}>
             Inizia creando un progetto per lo sviluppo di dispositivi medici
           </p>
           <Button
@@ -160,7 +163,7 @@ export default function ProjectsPage() {
           </Button>
         </GamingCard>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className={theme.layout.grid.cols3}>
           {projects.map((project) => {
             const stats = projectStats[project.id] || {};
             const completionRate = getCompletionRate(project.id);
@@ -168,81 +171,158 @@ export default function ProjectsPage() {
             return (
               <GamingCard
                 key={project.id}
-                className="group cursor-pointer transition-all duration-300 hover:border-cyan-400 dark:hover:border-cyan-500/50"
+                className={cn(
+                  'group cursor-pointer',
+                  theme.utils.transition.default,
+                  'hover:border-cyan-400 dark:hover:border-cyan-500/50'
+                )}
                 onClick={(e) => {
                   console.log('Card clicked!', project.id);
                   navigate(`/projects/${project.id}`);
                 }}
               >
-                <div className="mb-4 flex items-start justify-between">
+                <div className={cn(theme.spacing.mb.md, theme.layout.flex.between, 'items-start')}>
                   <div className="flex-1">
-                    <h3 className={`mb-2 flex items-center gap-2 text-xl font-bold ${colors.text.primary}`}>
+                    <h3 className={cn(
+                      theme.spacing.mb.sm,
+                      'flex items-center',
+                      theme.spacing.gap.sm,
+                      'text-xl font-bold',
+                      colors.text.primary
+                    )}>
                       <span>📐</span>
                       {project.name}
                     </h3>
                     {project.description && (
-                      <p className={`line-clamp-2 text-sm ${colors.text.secondary}`}>{project.description}</p>
+                      <p className={cn(theme.utils.lineClamp[2], 'text-sm', colors.text.secondary)}>
+                        {project.description}
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {/* Progress Bar */}
                 {stats.total > 0 && (
-                  <div className="mb-4">
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className={`font-bold ${designTokens.colors.cyan.text}`}>Progresso</span>
-                      <span className={`font-bold ${colors.text.primary}`}>{completionRate}%</span>
+                  <div className={theme.spacing.mb.md}>
+                    <div className={cn(
+                      theme.spacing.mb.sm,
+                      theme.layout.flex.between,
+                      'text-sm'
+                    )}>
+                      <span className={cn('font-bold', designTokens.colors.cyan.text)}>Progresso</span>
+                      <span className={cn('font-bold', colors.text.primary)}>{completionRate}%</span>
                     </div>
-                    <div className={`h-4 w-full overflow-hidden rounded-full border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} shadow-inner`}>
+                    <div className={cn(
+                      'h-4 w-full overflow-hidden rounded-full border',
+                      designTokens.colors.cyan.borderLight,
+                      colors.bg.secondary,
+                      'shadow-inner'
+                    )}>
                       <div
-                        className="relative h-4 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-500 dark:to-blue-500 shadow-cyan-500/40 transition-all duration-1000"
+                        className={cn(
+                          'relative h-4 rounded-full',
+                          'bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-500 dark:to-blue-500',
+                          'shadow-cyan-500/40',
+                          theme.utils.transition.slow
+                        )}
                         style={{ width: `${completionRate}%` }}
                       >
-                        <div className={`absolute inset-0 animate-pulse ${designTokens.colors.cyan.bg} opacity-10`}></div>
+                        <div className={cn(
+                          'absolute inset-0',
+                          theme.animation.pulse,
+                          designTokens.colors.cyan.bg,
+                          'opacity-10'
+                        )}></div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {/* Stats Grid */}
-                <div className="mb-4 grid grid-cols-4 gap-3">
-                  <div className={`rounded-lg border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} p-3 text-center`}>
-                    <div className="mb-1 text-xl">📊</div>
-                    <div className={`text-xl font-bold ${colors.text.primary}`}>{stats.total || 0}</div>
-                    <div className={`text-xs font-semibold ${colors.text.secondary}`}>Tot</div>
+                <div className={cn(theme.spacing.mb.md, 'grid grid-cols-4 gap-3')}>
+                  <div className={cn(
+                    'rounded-lg border',
+                    designTokens.colors.cyan.borderLight,
+                    colors.bg.secondary,
+                    theme.spacing.p.sm,
+                    'text-center'
+                  )}>
+                    <div className={cn(theme.spacing.mb.xs, 'text-xl')}>📊</div>
+                    <div className={cn('text-xl font-bold', colors.text.primary)}>{stats.total || 0}</div>
+                    <div className={cn('text-xs font-semibold', colors.text.secondary)}>Tot</div>
                   </div>
 
-                  <div className={`rounded-lg border ${designTokens.colors.success.border} ${colors.bg.secondary} p-3 text-center`}>
-                    <div className="mb-1 text-xl">✅</div>
-                    <div className={`text-xl font-bold ${designTokens.colors.success.text}`}>{stats.completed || 0}</div>
-                    <div className={`text-xs font-semibold ${designTokens.colors.success.textLight}`}>OK</div>
+                  <div className={cn(
+                    'rounded-lg border',
+                    designTokens.colors.success.border,
+                    colors.bg.secondary,
+                    theme.spacing.p.sm,
+                    'text-center'
+                  )}>
+                    <div className={cn(theme.spacing.mb.xs, 'text-xl')}>✅</div>
+                    <div className={cn('text-xl font-bold', designTokens.colors.success.text)}>
+                      {stats.completed || 0}
+                    </div>
+                    <div className={cn('text-xs font-semibold', designTokens.colors.success.textLight)}>OK</div>
                   </div>
 
-                  <div className={`rounded-lg border ${designTokens.colors.info.border} ${colors.bg.secondary} p-3 text-center`}>
-                    <div className="mb-1 text-xl">🚀</div>
-                    <div className={`text-xl font-bold ${designTokens.colors.info.text}`}>{stats.in_progress || 0}</div>
-                    <div className={`text-xs font-semibold ${designTokens.colors.info.textLight}`}>WIP</div>
+                  <div className={cn(
+                    'rounded-lg border',
+                    designTokens.colors.info.border,
+                    colors.bg.secondary,
+                    theme.spacing.p.sm,
+                    'text-center'
+                  )}>
+                    <div className={cn(theme.spacing.mb.xs, 'text-xl')}>🚀</div>
+                    <div className={cn('text-xl font-bold', designTokens.colors.info.text)}>
+                      {stats.in_progress || 0}
+                    </div>
+                    <div className={cn('text-xs font-semibold', designTokens.colors.info.textLight)}>WIP</div>
                   </div>
 
-                  <div className={`rounded-lg border ${designTokens.colors.error.border} ${colors.bg.secondary} p-3 text-center`}>
-                    <div className="mb-1 text-xl">🚫</div>
-                    <div className={`text-xl font-bold ${designTokens.colors.error.text}`}>{stats.blocked || 0}</div>
-                    <div className={`text-xs font-semibold ${designTokens.colors.error.textLight}`}>Block</div>
+                  <div className={cn(
+                    'rounded-lg border',
+                    designTokens.colors.error.border,
+                    colors.bg.secondary,
+                    theme.spacing.p.sm,
+                    'text-center'
+                  )}>
+                    <div className={cn(theme.spacing.mb.xs, 'text-xl')}>🚫</div>
+                    <div className={cn('text-xl font-bold', designTokens.colors.error.text)}>
+                      {stats.blocked || 0}
+                    </div>
+                    <div className={cn('text-xs font-semibold', designTokens.colors.error.textLight)}>Block</div>
                   </div>
                 </div>
 
                 {/* Time Badge */}
                 {stats.total_time > 0 && (
-                  <div className={`mb-4 flex items-center justify-center gap-2 rounded-lg border ${designTokens.colors.cyan.borderLight} ${colors.bg.secondary} px-4 py-2 shadow-sm`}>
+                  <div className={cn(
+                    theme.spacing.mb.md,
+                    theme.layout.flex.center,
+                    theme.spacing.gap.sm,
+                    'rounded-lg border',
+                    designTokens.colors.cyan.borderLight,
+                    colors.bg.secondary,
+                    theme.spacing.px.md,
+                    theme.spacing.py.sm,
+                    theme.effects.shadow.sm
+                  )}>
                     <span className="text-lg">⏱️</span>
-                    <span className={`text-sm font-bold ${designTokens.colors.cyan.textBright}`}>
+                    <span className={cn('text-sm font-bold', designTokens.colors.cyan.textBright)}>
                       {formatTime(stats.total_time)}
                     </span>
                   </div>
                 )}
 
                 {/* Actions */}
-                <div className={`flex gap-3 border-t ${designTokens.colors.cyan.borderLight} pt-4`}>
+                <div className={cn(
+                  'flex',
+                  theme.spacing.gap.sm,
+                  'border-t',
+                  designTokens.colors.cyan.borderLight,
+                  theme.spacing.pt.md
+                )}>
                   <Button
                     type="button"
                     variant="secondary"
