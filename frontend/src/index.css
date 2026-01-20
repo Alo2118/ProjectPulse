@@ -4,44 +4,325 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== DESIGN SYSTEM CENTRALIZZATO ===== */
-/* All design system utilities are now in tailwind.config.js for dark gaming theme */
+/* ===== CYBER HOLOGRAPHIC BASE STYLES ===== */
+
+@layer base {
+  /* Custom Font Loading - Futuristic */
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+  * {
+    @apply border-cyan-500/30;
+  }
+
+  body {
+    @apply bg-black text-cyan-100 antialiased;
+    font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    letter-spacing: 0.025em;
+  }
+
+  /* Headings use Orbitron font */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', 'Rajdhani', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  /* Custom Scrollbar - Cyber Style */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-black;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-cyan-500/40 rounded-full;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-cyan-400/60;
+  }
+
+  /* Selection Color */
+  ::selection {
+    @apply bg-cyan-500/30 text-cyan-100;
+  }
+
+  ::-moz-selection {
+    @apply bg-cyan-500/30 text-cyan-100;
+  }
+}
 
 @layer components {
-  /* Alerts - Generic styling */
+  /* ===== CYBER GRID BACKGROUND ===== */
+  .cyber-grid-bg {
+    background-image:
+      linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* ===== HEXAGON GRID PATTERN ===== */
+  .hex-pattern {
+    background-image:
+      radial-gradient(circle at center, rgba(0, 217, 255, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ===== SCANLINE EFFECT ===== */
+  .scanlines {
+    position: relative;
+  }
+
+  .scanlines::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      transparent 50%,
+      rgba(0, 217, 255, 0.03) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ===== GLOWING TEXT ===== */
+  .text-glow {
+    text-shadow:
+      0 0 10px rgba(0, 217, 255, 0.8),
+      0 0 20px rgba(0, 217, 255, 0.6),
+      0 0 30px rgba(0, 217, 255, 0.4);
+  }
+
+  .text-glow-gold {
+    text-shadow:
+      0 0 10px rgba(255, 215, 0, 0.8),
+      0 0 20px rgba(255, 215, 0, 0.6),
+      0 0 30px rgba(255, 215, 0, 0.4);
+  }
+
+  /* ===== GLASS PANEL ===== */
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-xl border-2 border-cyan-500/30 rounded-lg;
+    box-shadow:
+      0 0 20px rgba(0, 217, 255, 0.2),
+      inset 0 1px 0 rgba(0, 217, 255, 0.1);
+  }
+
+  /* ===== CYBER BUTTON ===== */
+  .cyber-btn {
+    @apply relative inline-flex items-center justify-center gap-2 px-6 py-3 font-bold text-white bg-gradient-to-r from-cyan-600 to-cyan-500 border-2 border-cyan-400/50 rounded-lg overflow-hidden transition-all duration-300;
+    box-shadow:
+      0 0 20px rgba(0, 217, 255, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .cyber-btn:hover {
+    @apply scale-105;
+    box-shadow:
+      0 0 40px rgba(0, 217, 255, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .cyber-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+  }
+
+  .cyber-btn:hover::before {
+    transform: translateX(100%);
+  }
+
+  /* ===== CYBER CARD ===== */
+  .cyber-card {
+    @apply relative bg-black/60 backdrop-blur-lg border-2 border-cyan-500/40 rounded-lg p-6 overflow-hidden transition-all duration-300;
+    box-shadow: 0 0 30px rgba(0, 217, 255, 0.2);
+  }
+
+  .cyber-card:hover {
+    @apply border-cyan-400/60;
+    box-shadow: 0 0 50px rgba(0, 217, 255, 0.4);
+  }
+
+  /* Corner Accents */
+  .cyber-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid rgba(255, 215, 0, 0.6);
+    border-bottom: 2px solid rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+  }
+
+  /* ===== CYBER INPUT ===== */
+  .cyber-input {
+    @apply bg-black/40 backdrop-blur-lg border-2 border-cyan-500/30 text-cyan-100 placeholder-cyan-700 rounded-lg px-4 py-2.5 transition-all;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .cyber-input:focus {
+    @apply outline-none border-cyan-400/50;
+    box-shadow:
+      inset 0 2px 10px rgba(0, 0, 0, 0.5),
+      0 0 20px rgba(0, 217, 255, 0.3);
+  }
+
+  /* ===== HOLOGRAPHIC BORDER ===== */
+  .holo-border {
+    position: relative;
+  }
+
+  .holo-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(
+      45deg,
+      rgba(0, 217, 255, 0.5),
+      rgba(255, 215, 0, 0.5),
+      rgba(0, 217, 255, 0.5)
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  /* ===== DATA DISPLAY (HUD style) ===== */
+  .data-display {
+    @apply font-mono text-cyan-400 bg-black/80 px-3 py-1.5 rounded border border-cyan-500/40;
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+  }
+
+  /* ===== BADGE STYLES ===== */
+  .cyber-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border-2 backdrop-blur-lg uppercase tracking-wider;
+  }
+
+  /* ===== DIVIDER ===== */
+  .cyber-divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent;
+  }
+
+  /* ===== LOADING SPINNER ===== */
+  .cyber-spinner {
+    @apply inline-block w-8 h-8 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
+  }
+
+  /* ===== TOOLTIP ===== */
+  .cyber-tooltip {
+    @apply absolute z-50 px-3 py-2 text-xs font-bold text-cyan-100 bg-black/90 backdrop-blur-lg border border-cyan-500/50 rounded shadow-lg whitespace-nowrap;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+  }
+
+  /* ===== ALERT STYLES ===== */
   .alert {
-    @apply mb-3 animate-fade-in rounded-r-lg border-l-4 p-3;
+    @apply mb-4 p-4 rounded-lg border-l-4 backdrop-blur-lg animate-slide-right;
   }
 
   .alert-info {
-    @apply alert border-l-blue-500 bg-blue-900/20 text-blue-300;
-  }
-
-  .alert-warning {
-    @apply alert border-l-amber-500 bg-amber-900/20 text-amber-300;
-  }
-
-  .alert-critical {
-    @apply alert border-l-red-500 bg-red-900/20 text-red-300;
+    @apply bg-blue-500/10 border-l-blue-500 text-blue-300;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
   }
 
   .alert-success {
-    @apply alert border-l-green-500 bg-green-900/20 text-green-300;
+    @apply bg-green-500/10 border-l-green-500 text-green-300;
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
+  }
+
+  .alert-warning {
+    @apply bg-yellow-500/10 border-l-yellow-500 text-yellow-300;
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.2);
+  }
+
+  .alert-error {
+    @apply bg-red-500/10 border-l-red-500 text-red-300;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
   }
 }
 
-/* Custom utility classes */
+/* ===== UTILITY CLASSES ===== */
 @layer utilities {
-  .animate-pulse-slow {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* Glow utilities */
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
   }
-}
 
-body {
-  margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  }
+
+  /* Arc Reactor Circle */
+  .arc-reactor {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      rgba(0, 217, 255, 0.6) 0%,
+      rgba(0, 217, 255, 0.3) 40%,
+      transparent 70%
+    );
+    border: 3px solid rgba(0, 217, 255, 0.8);
+    box-shadow:
+      0 0 20px rgba(0, 217, 255, 0.6),
+      0 0 40px rgba(0, 217, 255, 0.4),
+      inset 0 0 20px rgba(0, 217, 255, 0.3);
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+
+  .arc-reactor::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+
+  .arc-reactor::after {
+    content: '';
+    position: absolute;
+    inset: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 215, 0, 1);
+    border-radius: 50%;
+    box-shadow:
+      0 0 10px rgba(255, 215, 0, 1),
+      0 0 20px rgba(255, 215, 0, 0.8);
+  }
 }
