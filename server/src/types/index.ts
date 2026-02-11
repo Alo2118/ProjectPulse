@@ -1,0 +1,443 @@
+/**
+ * Shared types for ProjectPulse backend
+ * Enum values defined locally (SQL Server non supporta enum in Prisma)
+ * @module types
+ */
+
+// Re-export Prisma model types
+import type { Task } from '@prisma/client'
+export type {
+  User,
+  Project,
+  Task,
+  Risk,
+  Document,
+  Comment,
+  TimeEntry,
+  Notification,
+  AuditLog,
+  ProjectTemplate,
+  RefreshToken,
+  UserInput,
+  TaskDependency,
+  Note,
+  Attachment,
+} from '@prisma/client'
+
+// ============================================================
+// ENUM TYPES (string literal unions - SQL Server compatibility)
+// ============================================================
+
+export type UserRole = 'admin' | 'direzione' | 'dipendente'
+export type ProjectStatus = 'planning' | 'design' | 'verification' | 'validation' | 'transfer' | 'maintenance' | 'completed' | 'on_hold' | 'cancelled'
+export type ProjectPriority = 'low' | 'medium' | 'high'
+export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'blocked' | 'done' | 'cancelled'
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical'
+export type TaskType = 'milestone' | 'task' | 'subtask'
+export type RiskCategory = 'technical' | 'regulatory' | 'resource' | 'schedule'
+export type RiskProbability = 'low' | 'medium' | 'high'
+export type RiskImpact = 'low' | 'medium' | 'high'
+export type RiskStatus = 'open' | 'mitigated' | 'accepted' | 'closed'
+export type DocumentType = 'design_input' | 'design_output' | 'verification_report' | 'validation_report' | 'change_control'
+export type DocumentStatus = 'draft' | 'review' | 'approved' | 'obsolete'
+export type InputCategory = 'bug' | 'feature_request' | 'improvement' | 'question' | 'other'
+export type InputStatus = 'pending' | 'processing' | 'resolved'
+export type ResolutionType = 'converted_to_task' | 'converted_to_project' | 'acknowledged' | 'rejected' | 'duplicate'
+export type ReportStatus = 'pending' | 'completed' | 'failed'
+
+// ============================================================
+// CUSTOM ENUMS (for business logic, not in database)
+// ============================================================
+
+export enum AuditAction {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  STATUS_CHANGE = 'status_change',
+  LOGIN = 'login',
+  LOGOUT = 'logout',
+}
+
+export enum EntityType {
+  USER = 'user',
+  PROJECT = 'project',
+  TASK = 'task',
+  RISK = 'risk',
+  DOCUMENT = 'document',
+  COMMENT = 'comment',
+  TIME_ENTRY = 'time_entry',
+  USER_INPUT = 'user_input',
+  NOTE = 'note',
+  ATTACHMENT = 'attachment',
+}
+
+// ============================================================
+// INPUT TYPES
+// ============================================================
+
+export interface CreateProjectInput {
+  name: string
+  description?: string
+  ownerId: string
+  templateId?: string
+  startDate?: Date
+  targetEndDate?: Date
+  budget?: number
+  priority?: string
+}
+
+export interface UpdateProjectInput {
+  name?: string
+  description?: string
+  ownerId?: string
+  status?: string
+  startDate?: Date
+  targetEndDate?: Date
+  actualEndDate?: Date
+  budget?: number
+  priority?: string
+}
+
+export interface CreateTaskInput {
+  title: string
+  description?: string
+  taskType?: string // 'milestone' | 'task' | 'subtask'
+  projectId?: string
+  parentTaskId?: string
+  assigneeId?: string
+  priority?: string
+  startDate?: Date
+  dueDate?: Date
+  estimatedHours?: number
+  tags?: Record<string, unknown>
+}
+
+export interface UpdateTaskInput {
+  title?: string
+  description?: string
+  taskType?: string // 'milestone' | 'task' | 'subtask' - changing type has hierarchy restrictions
+  projectId?: string
+  parentTaskId?: string | null
+  assigneeId?: string
+  status?: string
+  priority?: string
+  startDate?: Date
+  dueDate?: Date
+  estimatedHours?: number
+  actualHours?: number
+  tags?: Record<string, unknown>
+  blockedReason?: string
+}
+
+export interface CreateTimeEntryInput {
+  taskId: string
+  description?: string
+  startTime: Date
+  endTime?: Date
+  duration?: number
+}
+
+export interface UpdateTimeEntryInput {
+  description?: string
+  startTime?: Date
+  endTime?: Date
+  duration?: number
+}
+
+export interface CreateCommentInput {
+  taskId: string
+  content: string
+  isInternal?: boolean
+}
+
+export interface UpdateCommentInput {
+  content?: string
+  isInternal?: boolean
+}
+
+export interface CreateRiskInput {
+  projectId: string
+  title: string
+  description?: string
+  category?: string
+  probability?: string
+  impact?: string
+  mitigationPlan?: string
+  ownerId?: string
+}
+
+export interface UpdateRiskInput {
+  title?: string
+  description?: string
+  category?: string
+  probability?: string
+  impact?: string
+  mitigationPlan?: string
+  status?: string
+  ownerId?: string
+}
+
+// ============================================================
+// QUERY TYPES
+// ============================================================
+
+export interface PaginationParams {
+  page?: number
+  limit?: number
+}
+
+export interface ProjectQueryParams extends PaginationParams {
+  status?: string
+  priority?: string
+  ownerId?: string
+  search?: string
+}
+
+export interface TaskQueryParams extends PaginationParams {
+  projectId?: string
+  taskType?: string // 'milestone' | 'task' | 'subtask'
+  status?: string
+  priority?: string
+  assigneeId?: string
+  search?: string
+  standalone?: boolean
+  parentTaskId?: string
+  includeSubtasks?: boolean // Include subtasks in main list (default: false)
+}
+
+export interface TimeEntryQueryParams extends PaginationParams {
+  taskId?: string
+  userId?: string
+  projectId?: string
+  startDate?: Date
+  endDate?: Date
+}
+
+// ============================================================
+// RESPONSE TYPES
+// ============================================================
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+}
+
+export interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
+}
+
+// ============================================================
+// USER TYPES
+// ============================================================
+
+export type Theme = 'light' | 'dark' | 'system'
+
+export interface UserWithoutPassword {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  avatarUrl: string | null
+  theme: Theme
+  isActive: boolean
+  createdAt: Date
+  lastLoginAt: Date | null
+}
+
+export interface JwtPayload {
+  userId: string
+  email: string
+  role: string
+  iat?: number
+  exp?: number
+}
+
+// ============================================================
+// AUDIT TYPES
+// ============================================================
+
+export interface AuditLogInput {
+  entityType: EntityType
+  entityId: string
+  action: AuditAction
+  userId: string
+  oldData?: Record<string, unknown> | null
+  newData?: Record<string, unknown> | null
+  ipAddress?: string
+  userAgent?: string
+}
+
+// ============================================================
+// GANTT TYPES
+// ============================================================
+
+export interface GanttQueryParams {
+  projectId?: string
+  assigneeId?: string
+  startDateFrom?: Date
+  startDateTo?: Date
+}
+
+export interface GanttTask {
+  id: string
+  code: string
+  title: string
+  taskType: string // 'milestone' | 'task' | 'subtask'
+  status: string
+  priority: string
+  startDate: Date | null
+  endDate: Date | null
+  estimatedHours: number | null
+  progress: number
+  parentTaskId: string | null
+  subtaskCount: number
+  depth: number
+  assignee: {
+    id: string
+    firstName: string
+    lastName: string
+  } | null
+  project: {
+    id: string
+    code: string
+    name: string
+  } | null
+  dependencies: {
+    predecessorId: string
+    successorId: string
+    dependencyType: string
+    lagDays: number
+  }[]
+}
+
+// ============================================================
+// TASK DEPENDENCY TYPES
+// ============================================================
+
+export type DependencyType = 'finish_to_start' | 'start_to_start' | 'finish_to_finish' | 'start_to_finish'
+
+export interface CreateTaskDependencyInput {
+  predecessorId: string
+  successorId: string
+  dependencyType?: DependencyType
+  lagDays?: number
+}
+
+export interface TaskDependencyResponse {
+  id: string
+  predecessorId: string
+  successorId: string
+  dependencyType: string
+  lagDays: number
+  predecessor: {
+    id: string
+    code: string
+    title: string
+  }
+  successor: {
+    id: string
+    code: string
+    title: string
+  }
+}
+
+// ============================================================
+// NOTE & ATTACHMENT TYPES
+// ============================================================
+
+export type NoteableEntityType = 'project' | 'task' | 'time_entry'
+export type AttachableEntityType = 'project' | 'task' | 'time_entry'
+
+export interface CreateNoteInput {
+  entityType: NoteableEntityType
+  entityId: string
+  content: string
+  isInternal?: boolean
+  parentId?: string
+}
+
+export interface UpdateNoteInput {
+  content?: string
+  isInternal?: boolean
+}
+
+export interface CreateAttachmentInput {
+  entityType: AttachableEntityType
+  entityId: string
+  fileName: string
+  filePath: string
+  fileSize: number
+  mimeType: string
+}
+
+export interface NoteQueryParams extends PaginationParams {
+  entityType: NoteableEntityType
+  entityId: string
+}
+
+export interface AttachmentQueryParams extends PaginationParams {
+  entityType: AttachableEntityType
+  entityId: string
+}
+
+// ============================================================
+// RECURRING TASKS TYPES
+// ============================================================
+
+export enum RecurrenceType {
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
+  YEARLY = 'yearly',
+}
+
+export interface RecurrencePattern {
+  type: RecurrenceType
+  interval: number // ogni X giorni/settimane/mesi
+  daysOfWeek?: number[] // 0=domenica, 1=lunedì, ecc. (per weekly)
+  dayOfMonth?: number // 1-31 (per monthly)
+  endAfterOccurrences?: number // termina dopo N ripetizioni
+  recurrenceEnd?: string // ISO datetime string
+}
+
+export interface CreateTaskCompletionInput {
+  taskId: string
+  completedBy: string
+  notes?: string
+}
+
+export interface TaskCompletionResponse {
+  id: string
+  taskId: string
+  completedBy: string
+  completedAt: Date
+  notes?: string
+  user: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
+
+export interface RecurringTaskResponse extends Omit<Task, 'recurrencePattern'> {
+  isRecurring: boolean
+  recurrencePattern?: RecurrencePattern
+  lastCompletion?: TaskCompletionResponse
+  nextOccurrence?: Date | null
+  completionHistory?: TaskCompletionResponse[]
+}
+
+export interface SetRecurrenceInput {
+  isRecurring: boolean
+  recurrencePattern?: RecurrencePattern
+}
+

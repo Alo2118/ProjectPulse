@@ -1,0 +1,462 @@
+/**
+ * Document Service - Business logic for document management (ISO 13485)
+ * @module services/documentService
+ */
+
+import { Prisma } from '@prisma/client'
+import { prisma } from '../models/prismaClient.js'
+import { logger } from '../utils/logger.js'
+import { auditService } from './auditService.js'
+import { EntityType, PaginatedResponse, PaginationParams, DocumentType, DocumentStatus } from '../types/index.js'
+
+// ============================================================
+// TYPES
+// ============================================================
+
+export interface CreateDocumentInput {
+  projectId: string
+  title: string
+  description?: string
+  type?: DocumentType
+}
+
+export interface UpdateDocumentInput {
+  title?: string
+  description?: string
+  type?: DocumentType
+}
+
+export interface DocumentQueryParams extends PaginationParams {
+  projectId?: string
+  type?: string
+  status?: string
+  search?: string
+}
+
+// Select fields for document queries
+const documentSelectFields = {
+  id: true,
+  code: true,
+  title: true,
+  description: true,
+  type: true,
+  filePath: true,
+  fileSize: true,
+  mimeType: true,
+  version: true,
+  status: true,
+  projectId: true,
+  createdById: true,
+  approvedById: true,
+  approvedAt: true,
+  isDeleted: true,
+  createdAt: true,
+  updatedAt: true,
+}
+
+const documentWithRelationsSelect = {
+  ...documentSelectFields,
+  project: {
+    select: { id: true, code: true, name: true },
+  },
+  createdBy: {
+    select: { id: true, firstName: true, lastName: true, email: true },
+  },
+  approvedBy: {
+    select: { id: true, firstName: true, lastName: true, email: true },
+  },
+}
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
+/**
+ * Generates unique document code: DOC-YYYY-NNN
+ */
+async function generateDocumentCode(): Promise<string> {
+  const year = new Date().getFullYear()
+  const prefix = `DOC-${year}-`
+
+  const lastDoc = await prisma.document.findFirst({
+    where: { code: { startsWith: prefix } },
+    orderBy: { code: 'desc' },
+    select: { code: true },
+  })
+
+  let nextNumber = 1
+  if (lastDoc?.code) {
+    const parts = lastDoc.code.split('-')
+    if (parts.length === 3) {
+      nextNumber = parseInt(parts[2], 10) + 1
+    }
+  }
+
+  return `${prefix}${String(nextNumber).padStart(3, '0')}`
+}
+
+// ============================================================
+// CRUD OPERATIONS
+// ============================================================
+
+/**
+ * Creates a new document with audit logging
+ */
+export async function createDocument(
+  data: CreateDocumentInput,
+  userId: string,
+  file?: { path: string; size: number; mimetype: string }
+) {
+  const project = await prisma.project.findFirst({
+    where: { id: data.projectId, isDeleted: false },
+    select: { id: true, code: true, ownerId: true },
+  })
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
+
+  const code = await generateDocumentCode()
+
+  const document = await prisma.$transaction(async (tx) => {
+    const newDoc = await tx.document.create({
+      data: {
+        code,
+        title: data.title,
+        description: data.description,
+        projectId: data.projectId,
+        type: data.type || 'design_input',
+        filePath: file?.path || null,
+        fileSize: file?.size || null,
+        mimeType: file?.mimetype || null,
+        createdById: userId,
+      },
+      select: documentWithRelationsSelect,
+    })
+
+    await auditService.logCreate(EntityType.DOCUMENT, newDoc.id, userId, { ...newDoc }, tx)
+
+    return newDoc
+  })
+
+  logger.info(`Document created: ${document.code}`, { documentId: document.id, projectId: data.projectId, userId })
+
+  return document
+}
+
+/**
+ * Retrieves documents with pagination and filters
+ */
+export async function getDocuments(
+  params: DocumentQueryParams
+): Promise<PaginatedResponse<Prisma.DocumentGetPayload<{ select: typeof documentWithRelationsSelect }>>> {
+  const { page = 1, limit = 20, projectId, type, status, search } = params
+
+  const where: Prisma.DocumentWhereInput = {
+    isDeleted: false,
+  }
+
+  if (projectId) where.projectId = projectId
+  if (type) where.type = type as DocumentType
+  if (status) where.status = status as DocumentStatus
+  if (search) {
+    where.OR = [
+      { title: { contains: search } },
+      { code: { contains: search } },
+      { description: { contains: search } },
+    ]
+  }
+
+  const skip = (page - 1) * limit
+
+  const [documents, total] = await Promise.all([
+    prisma.document.findMany({
+      where,
+      select: documentWithRelationsSelect,
+      skip,
+      take: limit,
+      orderBy: [{ createdAt: 'desc' }],
+    }),
+    prisma.document.count({ where }),
+  ])
+
+  return {
+    data: documents,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  }
+}
+
+/**
+ * Gets documents for a specific project
+ */
+export async function getProjectDocuments(projectId: string) {
+  return prisma.document.findMany({
+    where: { projectId, isDeleted: false },
+    select: documentWithRelationsSelect,
+    orderBy: [{ createdAt: 'desc' }],
+  })
+}
+
+/**
+ * Retrieves a single document by ID
+ */
+export async function getDocumentById(documentId: string) {
+  return prisma.document.findFirst({
+    where: { id: documentId, isDeleted: false },
+    select: documentWithRelationsSelect,
+  })
+}
+
+/**
+ * Updates a document with audit logging
+ */
+export async function updateDocument(documentId: string, data: UpdateDocumentInput, userId: string) {
+  const existing = await prisma.document.findFirst({
+    where: { id: documentId, isDeleted: false },
+  })
+
+  if (!existing) {
+    return null
+  }
+
+  const document = await prisma.$transaction(async (tx) => {
+    const updated = await tx.document.update({
+      where: { id: documentId },
+      data: {
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        updatedAt: new Date(),
+      },
+      select: documentWithRelationsSelect,
+    })
+
+    await auditService.logUpdate(EntityType.DOCUMENT, documentId, userId, { ...existing }, { ...updated }, tx)
+
+    return updated
+  })
+
+  logger.info(`Document updated: ${document.code}`, { documentId, userId })
+
+  return document
+}
+
+/**
+ * Updates document file (new version upload)
+ */
+export async function updateDocumentFile(
+  documentId: string,
+  userId: string,
+  file: { path: string; size: number; mimetype: string }
+) {
+  const existing = await prisma.document.findFirst({
+    where: { id: documentId, isDeleted: false },
+  })
+
+  if (!existing) {
+    return null
+  }
+
+  const document = await prisma.$transaction(async (tx) => {
+    const updated = await tx.document.update({
+      where: { id: documentId },
+      data: {
+        filePath: file.path,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        version: existing.version + 1,
+        status: 'draft',
+        approvedById: null,
+        approvedAt: null,
+        updatedAt: new Date(),
+      },
+      select: documentWithRelationsSelect,
+    })
+
+    await auditService.logUpdate(
+      EntityType.DOCUMENT,
+      documentId,
+      userId,
+      { version: existing.version, filePath: existing.filePath },
+      { version: updated.version, filePath: updated.filePath },
+      tx
+    )
+
+    return updated
+  })
+
+  logger.info(`Document file updated: ${document.code} v${document.version}`, { documentId, userId })
+
+  return document
+}
+
+/**
+ * Changes document status with workflow validation
+ * Draft -> Review -> Approved -> Obsolete
+ */
+export async function changeDocumentStatus(
+  documentId: string,
+  newStatus: DocumentStatus,
+  userId: string
+) {
+  const existing = await prisma.document.findFirst({
+    where: { id: documentId, isDeleted: false },
+  })
+
+  if (!existing) {
+    return null
+  }
+
+  // Validate status transitions
+  const validTransitions: Record<string, string[]> = {
+    draft: ['review'],
+    review: ['draft', 'approved'],
+    approved: ['obsolete', 'review'],
+    obsolete: [],
+  }
+
+  const currentStatus = existing.status
+  if (!validTransitions[currentStatus]?.includes(newStatus)) {
+    throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`)
+  }
+
+  const document = await prisma.$transaction(async (tx) => {
+    const updateData: Prisma.DocumentUpdateInput = {
+      status: newStatus,
+      updatedAt: new Date(),
+    }
+
+    // Set approval info when approving
+    if (newStatus === 'approved') {
+      updateData.approvedBy = { connect: { id: userId } }
+      updateData.approvedAt = new Date()
+    }
+
+    // Clear approval when moving back to draft/review
+    if (newStatus === 'draft' || newStatus === 'review') {
+      updateData.approvedBy = { disconnect: true }
+      updateData.approvedAt = null
+    }
+
+    const updated = await tx.document.update({
+      where: { id: documentId },
+      data: updateData,
+      select: documentWithRelationsSelect,
+    })
+
+    await auditService.logStatusChange(EntityType.DOCUMENT, documentId, userId, currentStatus, newStatus, tx)
+
+    // Notify project owner on approval
+    if (newStatus === 'approved') {
+      const project = await tx.project.findUnique({
+        where: { id: existing.projectId },
+        select: { ownerId: true },
+      })
+      if (project && project.ownerId !== userId) {
+        await tx.notification.create({
+          data: {
+            userId: project.ownerId,
+            type: 'document_approved',
+            title: 'Documento Approvato',
+            message: `Il documento "${updated.title}" è stato approvato`,
+            data: JSON.stringify({ documentId: updated.id, documentCode: updated.code }),
+          },
+        })
+      }
+    }
+
+    return updated
+  })
+
+  logger.info(`Document status changed: ${currentStatus} → ${newStatus}`, { documentId, userId })
+
+  return document
+}
+
+/**
+ * Soft deletes a document
+ */
+export async function deleteDocument(documentId: string, userId: string): Promise<boolean> {
+  const existing = await prisma.document.findFirst({
+    where: { id: documentId, isDeleted: false },
+  })
+
+  if (!existing) {
+    return false
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.document.update({
+      where: { id: documentId },
+      data: { isDeleted: true, updatedAt: new Date() },
+    })
+
+    await auditService.logDelete(EntityType.DOCUMENT, documentId, userId, { ...existing }, tx)
+  })
+
+  logger.info(`Document soft deleted: ${existing.code}`, { documentId, userId })
+
+  return true
+}
+
+/**
+ * Gets document statistics for a project
+ */
+export async function getProjectDocumentStats(projectId: string) {
+  const [byStatus, byType, total] = await Promise.all([
+    prisma.document.groupBy({
+      by: ['status'],
+      where: { projectId, isDeleted: false },
+      _count: { id: true },
+    }),
+    prisma.document.groupBy({
+      by: ['type'],
+      where: { projectId, isDeleted: false },
+      _count: { id: true },
+    }),
+    prisma.document.count({
+      where: { projectId, isDeleted: false },
+    }),
+  ])
+
+  const statusCounts = byStatus.reduce(
+    (acc, item) => {
+      acc[item.status] = item._count.id
+      return acc
+    },
+    {} as Record<string, number>
+  )
+
+  const typeCounts = byType.reduce(
+    (acc, item) => {
+      acc[item.type] = item._count.id
+      return acc
+    },
+    {} as Record<string, number>
+  )
+
+  return {
+    total,
+    byStatus: statusCounts,
+    byType: typeCounts,
+    approvedDocuments: statusCounts['approved'] || 0,
+    draftDocuments: statusCounts['draft'] || 0,
+  }
+}
+
+export const documentService = {
+  createDocument,
+  getDocuments,
+  getProjectDocuments,
+  getDocumentById,
+  updateDocument,
+  updateDocumentFile,
+  changeDocumentStatus,
+  deleteDocument,
+  getProjectDocumentStats,
+}

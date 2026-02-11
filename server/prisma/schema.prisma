@@ -1,0 +1,464 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+// ============================================================
+// MODELS
+// Note: SQL Server non supporta enum nativi in Prisma.
+// I valori enum sono gestiti come String e validati a livello applicativo.
+// Vedere server/src/types/index.ts per le definizioni dei valori.
+// ============================================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  role          String    @default("dipendente")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  avatarUrl     String?   @map("avatar_url")
+  theme         String    @default("system")
+  isActive      Boolean   @default(true) @map("is_active")
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  ownedProjects      Project[]        @relation("ProjectOwner")
+  createdProjects    Project[]        @relation("ProjectCreator")
+  assignedTasks      Task[]           @relation("TaskAssignee")
+  createdTasks       Task[]           @relation("TaskCreator")
+  timeEntries        TimeEntry[]
+  comments           Comment[]
+  ownedRisks         Risk[]           @relation("RiskOwner")
+  createdRisks       Risk[]           @relation("RiskCreator")
+  approvedDocuments  Document[]       @relation("DocumentApprover")
+  createdDocuments   Document[]       @relation("DocumentCreator")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  refreshTokens      RefreshToken[]
+  createdInputs      UserInput[]      @relation("InputCreator")
+  processedInputs    UserInput[]      @relation("InputProcessor")
+  weeklyReports      WeeklyReport[]
+  notes              Note[]
+  attachments        Attachment[]
+  taskCompletions    TaskCompletion[] @relation("TaskCompletions")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Project {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  name            String
+  description     String?   @db.NVarChar(Max)
+  status          String    @default("planning")
+  priority        String    @default("medium")
+  startDate       DateTime? @map("start_date")
+  targetEndDate   DateTime? @map("target_end_date")
+  actualEndDate   DateTime? @map("actual_end_date")
+  budget          Decimal?  @db.Decimal(15, 2)
+  ownerId         String    @map("owner_id")
+  createdById     String    @map("created_by_id")
+  templateId      String?   @map("template_id")
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  owner       User             @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy   User             @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  template    ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tasks       Task[]
+  risks       Risk[]
+  documents   Document[]
+  userInputs  UserInput[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([isDeleted])
+  @@map("projects")
+}
+
+model ProjectTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  phases      String   @default("[]") @db.NVarChar(Max)
+  structure   String   @default("{}") @db.NVarChar(Max)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  projects Project[]
+
+  @@map("project_templates")
+}
+
+model Task {
+  id                String    @id @default(uuid())
+  code              String    @unique
+  title             String
+  description       String?   @db.NVarChar(Max)
+  taskType          String    @default("task") @map("task_type")
+  status            String    @default("todo")
+  priority          String    @default("medium")
+  projectId         String?   @map("project_id")
+  assigneeId        String?   @map("assignee_id")
+  createdById       String    @map("created_by_id")
+  parentTaskId      String?   @map("parent_task_id")
+  startDate         DateTime? @map("start_date")
+  dueDate           DateTime? @map("due_date")
+  estimatedHours    Decimal?  @map("estimated_hours") @db.Decimal(8, 2)
+  actualHours       Decimal?  @map("actual_hours") @db.Decimal(8, 2)
+  tags              String?   @default("{}") @db.NVarChar(Max)
+  position          Int       @default(0)
+  blockedReason     String?   @map("blocked_reason")
+  isRecurring       Boolean   @default(false) @map("is_recurring")
+  recurrencePattern String?   @map("recurrence_pattern") @db.NVarChar(Max)
+  isDeleted         Boolean   @default(false) @map("is_deleted")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  project       Project?          @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignee      User?             @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy     User              @relation("TaskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentTask    Task?             @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subtasks      Task[]            @relation("TaskHierarchy")
+  timeEntries   TimeEntry[]
+  comments      Comment[]
+  userInputs    UserInput[]
+  predecessors  TaskDependency[]  @relation("DependencySuccessor")
+  successors    TaskDependency[]  @relation("DependencyPredecessor")
+  completions   TaskCompletion[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([taskType])
+  @@index([isDeleted])
+  @@index([parentTaskId])
+  @@index([startDate])
+  @@index([isRecurring])
+  @@map("tasks")
+}
+
+model TaskDependency {
+  id             String   @id @default(uuid())
+  predecessorId  String   @map("predecessor_id")
+  successorId    String   @map("successor_id")
+  dependencyType String   @default("finish_to_start") @map("dependency_type")
+  lagDays        Int      @default(0) @map("lag_days")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  predecessor Task @relation("DependencyPredecessor", fields: [predecessorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  successor   Task @relation("DependencySuccessor", fields: [successorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([predecessorId, successorId])
+  @@index([predecessorId])
+  @@index([successorId])
+  @@map("task_dependencies")
+}
+
+model TaskCompletion {
+  id          String   @id @default(uuid())
+  taskId      String   @map("task_id")
+  completedBy String   @map("completed_by")
+  completedAt DateTime @default(now()) @map("completed_at")
+  notes       String?
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  task Task @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user User @relation("TaskCompletions", fields: [completedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([taskId])
+  @@index([completedBy])
+  @@index([completedAt])
+  @@map("task_completions")
+}
+
+model TimeEntry {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  taskId      String    @map("task_id")
+  description String?
+  startTime   DateTime  @map("start_time")
+  endTime     DateTime? @map("end_time")
+  duration    Int?
+  isRunning   Boolean   @default(false) @map("is_running")
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  task Task @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([isRunning])
+  @@index([isDeleted])
+  @@map("time_entries")
+}
+
+model Comment {
+  id         String   @id @default(uuid())
+  content    String   @db.NVarChar(Max)
+  userId     String   @map("user_id")
+  taskId     String   @map("task_id")
+  parentId   String?  @map("parent_id")
+  isInternal Boolean  @default(false) @map("is_internal")
+  isDeleted  Boolean  @default(false) @map("is_deleted")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user    User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  task    Task      @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([taskId])
+  @@index([isDeleted])
+  @@map("comments")
+}
+
+model Risk {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  title          String
+  description    String?  @db.NVarChar(Max)
+  projectId      String   @map("project_id")
+  category       String   @default("technical")
+  probability    String   @default("medium")
+  impact         String   @default("medium")
+  status         String   @default("open")
+  mitigationPlan String?  @map("mitigation_plan")
+  ownerId        String?  @map("owner_id")
+  createdById    String   @map("created_by_id")
+  isDeleted      Boolean  @default(false) @map("is_deleted")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  project   Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  owner     User?   @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User    @relation("RiskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([isDeleted])
+  @@map("risks")
+}
+
+model Document {
+  id           String    @id @default(uuid())
+  code         String    @unique
+  title        String
+  description  String?   @db.NVarChar(Max)
+  projectId    String    @map("project_id")
+  type         String    @default("design_input")
+  filePath     String?   @map("file_path")
+  fileSize     Int?      @map("file_size")
+  mimeType     String?   @map("mime_type")
+  version      Int       @default(1)
+  status       String    @default("draft")
+  createdById  String    @map("created_by_id")
+  approvedById String?   @map("approved_by_id")
+  approvedAt   DateTime? @map("approved_at")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  project    Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy  User    @relation("DocumentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvedBy User?   @relation("DocumentApprover", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([isDeleted])
+  @@map("documents")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  message   String
+  data      String?  @db.NVarChar(Max)
+  isRead    Boolean  @default(false) @map("is_read")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([isDeleted])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  oldData    String?  @map("old_data") @db.NVarChar(Max)
+  newData    String?  @map("new_data") @db.NVarChar(Max)
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model UserInput {
+  id                 String    @id @default(uuid())
+  code               String    @unique
+  title              String
+  description        String?   @db.NVarChar(Max)
+  category           String    @default("other")
+  priority           String    @default("medium")
+  status             String    @default("pending")
+
+  // Creator info
+  createdById        String    @map("created_by_id")
+
+  // Processing info
+  processedById      String?   @map("processed_by_id")
+  processedAt        DateTime? @map("processed_at")
+
+  // Resolution info
+  resolutionType     String?   @map("resolution_type")
+  resolutionNotes    String?   @map("resolution_notes")
+  resolvedAt         DateTime? @map("resolved_at")
+
+  // Links to created entities (when converted)
+  convertedTaskId    String?   @map("converted_task_id")
+  convertedProjectId String?   @map("converted_project_id")
+
+  // Attachments (file paths as JSON string)
+  attachments        String    @default("[]") @db.NVarChar(Max)
+
+  // Metadata
+  metadata           String    @default("{}") @db.NVarChar(Max)
+  isDeleted          Boolean   @default(false) @map("is_deleted")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy          User      @relation("InputCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  processedBy        User?     @relation("InputProcessor", fields: [processedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  convertedTask      Task?     @relation(fields: [convertedTaskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  convertedProject   Project?  @relation(fields: [convertedProjectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([createdById])
+  @@index([processedById])
+  @@index([isDeleted])
+  @@map("user_inputs")
+}
+
+model WeeklyReport {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  weekNumber    Int       @map("week_number")
+  year          Int
+  weekStartDate DateTime  @map("week_start_date")
+  weekEndDate   DateTime  @map("week_end_date")
+  userId        String    @map("user_id")
+  reportData    String    @default("{}") @map("report_data") @db.NVarChar(Max)
+  status        String    @default("pending")
+  generatedAt   DateTime? @map("generated_at")
+  pdfPath       String?   @map("pdf_path")
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([weekNumber, year])
+  @@index([isDeleted])
+  @@map("weekly_reports")
+}
+
+// ============================================================
+// NOTES & ATTACHMENTS - Polymorphic models for all entities
+// ============================================================
+
+model Note {
+  id         String   @id @default(uuid())
+  content    String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  userId     String   @map("user_id")
+  parentId   String?  @map("parent_id")
+  isInternal Boolean  @default(false) @map("is_internal")
+  isDeleted  Boolean  @default(false) @map("is_deleted")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user    User   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parent  Note?  @relation("NoteReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies Note[] @relation("NoteReplies")
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([isDeleted])
+  @@map("notes")
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  entityType   String   @map("entity_type")
+  entityId     String   @map("entity_id")
+  fileName     String   @map("file_name")
+  filePath     String   @map("file_path")
+  fileSize     Int      @map("file_size")
+  mimeType     String   @map("mime_type")
+  uploadedById String   @map("uploaded_by_id")
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([entityType, entityId])
+  @@index([uploadedById])
+  @@index([isDeleted])
+  @@map("attachments")
+}
