@@ -146,17 +146,17 @@ Verification:
 ```
 Task: Setup Prisma ORM with complete ProjectPulse schema
 
-Context: As specified in DATABASE_SCHEMA.sql and PRD.md
+Context: As specified in PRD.md
 
 In server/ folder:
 
 1. Initialize Prisma:
-   npx prisma init --datasource-provider postgresql
+   npx prisma init --datasource-provider sqlserver
 
 2. Update .env with:
-   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/projectpulse"
+   DATABASE_URL="sqlserver://localhost:1433;database=projectpulse;user=sa;password=YourPassword;encrypt=true;trustServerCertificate=true"
 
-3. Create prisma/schema.prisma based on DATABASE_SCHEMA.sql:
+3. Create prisma/schema.prisma based on PRD.md data model:
    - All enums (UserRole, ProjectStatus, TaskStatus, etc.)
    - All models:
      - User

@@ -11,25 +11,26 @@ Questa guida fornisce istruzioni **step-by-step** per implementare ProjectPulse 
 Prima di iniziare, verifica di avere:
 
 - [ ] Node.js 18+ installato (`node --version`)
-- [ ] PostgreSQL 15+ installato e running
+- [ ] SQL Server Express installato e running
 - [ ] Git installato
 - [ ] Visual Studio Code installato
 - [ ] Connessione database funzionante
 
-### Verifica PostgreSQL
+### Verifica SQL Server Express
 
 ```bash
-# Check se PostgreSQL è running
-pg_isready
+# Check se SQL Server è running
+sqlcmd -S localhost -Q "SELECT 1"
 
-# Accedi a PostgreSQL
-psql -U postgres
+# Accedi a SQL Server
+sqlcmd -S localhost\SQLEXPRESS
 
 # Crea database
 CREATE DATABASE projectpulse;
+GO
 
 # Esci
-\q
+EXIT
 ```
 
 ---
@@ -109,8 +110,8 @@ Create a base index.css with Tailwind directives and custom CSS variables for da
 **Prompt per Claude Code:**
 ```
 Setup Prisma in server/ folder:
-1. Initialize Prisma with PostgreSQL
-2. Create schema.prisma based on DATABASE_SCHEMA.sql
+1. Initialize Prisma with SQL Server Express
+2. Create schema.prisma based on PRD.md data model
 3. Include all tables: users, projects, tasks, time_entries, comments, risks, documents, audit_logs, notifications, project_templates
 4. Add proper relations and indexes
 5. Create initial migration
@@ -121,7 +122,7 @@ Setup Prisma in server/ folder:
    - 2 sample projects
    - 5 sample tasks
 
-Database URL: postgresql://postgres:postgres@localhost:5432/projectpulse
+Database URL: sqlserver://localhost:1433;database=projectpulse;user=sa;password=YourPassword;encrypt=true;trustServerCertificate=true
 ```
 
 **Checklist:**

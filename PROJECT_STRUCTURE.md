@@ -331,7 +331,6 @@ project-pulse/
 │   ├── PRD.md                     # This file!
 │   ├── IMPLEMENTATION_GUIDE.md    # Development guide
 │   ├── TECH_STACK.md              # Technical specifications
-│   ├── DATABASE_SCHEMA.sql        # Database schema
 │   ├── PROJECT_STRUCTURE.md       # This file!
 │   ├── SETUP_LOCALHOST.md         # Setup instructions
 │   ├── PROMPTS_FOR_CLAUDE.md      # Claude Code prompts
@@ -526,7 +525,7 @@ export default defineConfig({
 
 #### `server/prisma/schema.prisma`
 ```prisma
-// See DATABASE_SCHEMA.sql for complete PostgreSQL schema
+// Prisma schema for SQL Server Express
 // This is the Prisma equivalent
 
 generator client {
@@ -534,8 +533,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlserver"
+  // URL configurata via adapter in prisma.config.ts
 }
 
 enum UserRole {
@@ -575,7 +574,7 @@ model User {
   @@map("users")
 }
 
-// Add other models similar to DATABASE_SCHEMA.sql
+// Add other models as defined in PRD.md
 // ... (Project, Task, TimeEntry, Comment, Risk, Document, etc.)
 ```
 

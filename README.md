@@ -23,21 +23,14 @@ Questa è la documentazione completa per **ProjectPulse**, un sistema di gestion
    - Checklist di verifica per ogni fase
    - Best practices per Claude Code
 
-3. **[DATABASE_SCHEMA.sql](./DATABASE_SCHEMA.sql)** - Schema Database
-   - Schema PostgreSQL completo
-   - Tutte le tabelle con commenti
-   - Indexes per performance
-   - Triggers e functions
-   - Views per query comuni
-
-4. **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)** - Struttura Progetto
+3. **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)** - Struttura Progetto
    - File system completo (client + server)
    - Package.json examples
    - Configurazioni (Vite, TypeScript, Tailwind, Prisma)
    - Data flow diagrams
 
 5. **[SETUP_LOCALHOST.md](./SETUP_LOCALHOST.md)** - Setup Localhost
-   - Installazione prerequisiti (Node.js, PostgreSQL, Git)
+   - Installazione prerequisiti (Node.js, SQL Server Express, Git)
    - Setup database
    - Configurazione environment variables
    - Comandi per avvio sviluppo
@@ -73,7 +66,7 @@ Questa è la documentazione completa per **ProjectPulse**, un sistema di gestion
    - Per capire organizzazione file
    - Per vedere esempi di configurazione
 
-5. **Riferisciti a DATABASE_SCHEMA.sql**
+5. **Riferisciti a `server/prisma/schema.prisma`**
    - Per comprendere data model
    - Per query e migrations
 
@@ -130,7 +123,7 @@ Questa è la documentazione completa per **ProjectPulse**, un sistema di gestion
 
 **Backend:**
 - Node.js + Express + TypeScript
-- PostgreSQL 15+
+- SQL Server Express
 - Prisma ORM
 - JWT + bcrypt
 - Socket.io
@@ -148,7 +141,7 @@ Questa è la documentazione completa per **ProjectPulse**, un sistema di gestion
 3. **PROJECT_STRUCTURE.md** - Familiarizza con struttura (20 min)
 4. **IMPLEMENTATION_GUIDE.md** - Studia roadmap sviluppo (40 min)
 5. **PROMPTS_FOR_CLAUDE.md** - Pronto per sviluppare! (uso ongoing)
-6. **DATABASE_SCHEMA.sql** - Reference durante sviluppo (uso ongoing)
+6. **server/prisma/schema.prisma** - Reference durante sviluppo (uso ongoing)
 
 ### Per Claude Code
 
@@ -157,7 +150,7 @@ Quando usi Claude Code, dagli questi file come context:
 1. **PRD.md** - sempre
 2. **PROMPTS_FOR_CLAUDE.md** - per prompt specifici
 3. **PROJECT_STRUCTURE.md** - quando crei file
-4. **DATABASE_SCHEMA.sql** - quando lavori con database
+4. **server/prisma/schema.prisma** - quando lavori con database
 5. **IMPLEMENTATION_GUIDE.md** - per capire fase corrente
 
 ---
@@ -245,7 +238,7 @@ npm run format
 
 ### Risorse Utili
 
-- PostgreSQL GUI: pgAdmin 4 o Prisma Studio
+- SQL Server GUI: SQL Server Management Studio (SSMS) o Prisma Studio
 - API Testing: Thunder Client (VS Code) o Postman
 - Git GUI: GitHub Desktop o GitKraken
 - Database Backup: vedi SETUP_LOCALHOST.md

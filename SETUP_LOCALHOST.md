@@ -15,12 +15,13 @@ This guide will walk you through setting up ProjectPulse on your local Windows m
    - Verify: `node --version` (should be v18.0.0 or higher)
    - Verify npm: `npm --version`
 
-2. **PostgreSQL 15+**
-   - Download: https://www.postgresql.org/download/windows/
+2. **SQL Server Express**
+   - Download: https://www.microsoft.com/en-us/sql-server/sql-server-downloads (Express edition)
    - During installation:
-     - Set password for postgres user (remember this!)
-     - Default port: 5432 (keep default)
-     - Install pgAdmin 4 (included)
+     - Choose "Basic" installation
+     - Note the instance name (default: SQLEXPRESS)
+     - Default port: 1433
+     - Install SQL Server Management Studio (SSMS) separately
 
 3. **Git**
    - Download: https://git-scm.com/download/win
@@ -39,44 +40,50 @@ This guide will walk you through setting up ProjectPulse on your local Windows m
 
 ## 📦 Installation Steps
 
-### Step 1: Verify PostgreSQL Installation
+### Step 1: Verify SQL Server Express Installation
 
 ```bash
 # Open Command Prompt or PowerShell
 
-# Check if PostgreSQL is running
-pg_isready
+# Check if SQL Server is running
+sqlcmd -S localhost\SQLEXPRESS -Q "SELECT @@VERSION"
 
-# Should output: "localhost:5432 - accepting connections"
+# Should output SQL Server version info
 ```
 
-If PostgreSQL is not running:
+If SQL Server is not running:
 - Open Windows Services (`services.msc`)
-- Find "postgresql-x64-15" or similar
+- Find "SQL Server (SQLEXPRESS)"
 - Right-click → Start
 
 ### Step 2: Create Database
 
 ```bash
-# Connect to PostgreSQL
-psql -U postgres
-
-# Enter your postgres password when prompted
+# Connect to SQL Server
+sqlcmd -S localhost\SQLEXPRESS
 ```
 
-In the PostgreSQL prompt:
+In the SQL Server prompt:
 ```sql
 -- Create database
 CREATE DATABASE projectpulse;
+GO
 
--- Create user (optional, for better security)
-CREATE USER projectpulse_user WITH PASSWORD 'your_secure_password';
+-- Create login (optional, for better security)
+CREATE LOGIN projectpulse_user WITH PASSWORD = 'your_secure_password';
+GO
 
--- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE projectpulse TO projectpulse_user;
+USE projectpulse;
+GO
+
+CREATE USER projectpulse_user FOR LOGIN projectpulse_user;
+GO
+
+ALTER ROLE db_owner ADD MEMBER projectpulse_user;
+GO
 
 -- Exit
-\q
+EXIT
 ```
 
 ### Step 3: Clone Project (When Repository Exists)
@@ -139,10 +146,10 @@ copy .env.example .env
 
 **server/.env** content:
 ```env
-# Database
-DATABASE_URL="postgresql://postgres:your_password@localhost:5432/projectpulse"
-# Or with custom user:
-# DATABASE_URL="postgresql://projectpulse_user:your_secure_password@localhost:5432/projectpulse"
+# Database (SQL Server Express)
+DATABASE_URL="sqlserver://localhost:1433;database=projectpulse;user=sa;password=your_password;encrypt=true;trustServerCertificate=true"
+# Or with Windows Authentication:
+# DATABASE_URL="sqlserver://localhost\SQLEXPRESS;database=projectpulse;integratedSecurity=true;trustServerCertificate=true"
 
 # JWT Secrets (generate random strings)
 JWT_SECRET="your-very-secure-random-string-min-32-chars"
@@ -216,10 +223,10 @@ Your database is now in sync with your schema.
 ✔ Generated Prisma Client
 ```
 
-**Verify in pgAdmin 4:**
-1. Open pgAdmin 4
-2. Connect to PostgreSQL server
-3. Navigate to: Servers → PostgreSQL 15 → Databases → projectpulse → Schemas → public → Tables
+**Verify in SSMS:**
+1. Open SQL Server Management Studio (SSMS)
+2. Connect to localhost\SQLEXPRESS
+3. Navigate to: Databases → projectpulse → Tables
 4. You should see: users, projects, tasks, time_entries, etc.
 
 ### Step 7: Seed Initial Data
@@ -278,14 +285,14 @@ npm run dev
 ### Issue: "Cannot connect to database"
 
 **Solution:**
-1. Check PostgreSQL is running:
+1. Check SQL Server is running:
    ```bash
-   pg_isready
+   sqlcmd -S localhost\SQLEXPRESS -Q "SELECT 1"
    ```
 2. Verify DATABASE_URL in server/.env
 3. Test connection manually:
    ```bash
-   psql -U postgres -d projectpulse
+   sqlcmd -S localhost\SQLEXPRESS -d projectpulse
    ```
 
 ### Issue: "Port 3000 already in use"
@@ -380,7 +387,7 @@ Use **Thunder Client** (VS Code extension) or **Postman**:
 ```
 
 **Database logs:**
-- Check pgAdmin 4 → Tools → Server Logs
+- Check SSMS → Management → SQL Server Logs
 
 ---
 
@@ -389,29 +396,32 @@ Use **Thunder Client** (VS Code extension) or **Postman**:
 ### View Tables
 
 ```bash
-psql -U postgres -d projectpulse
+sqlcmd -S localhost\SQLEXPRESS -d projectpulse
 
 # List tables
-\dt
+SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES;
+GO
 
 # Describe table
-\d users
+EXEC sp_columns users;
+GO
 
 # Query
 SELECT * FROM users;
+GO
 
 # Exit
-\q
+EXIT
 ```
 
 ### Backup Database
 
 ```bash
-# Backup
-pg_dump -U postgres -d projectpulse -F c -f backup_2026-01-21.dump
+# Backup (via sqlcmd)
+sqlcmd -S localhost\SQLEXPRESS -Q "BACKUP DATABASE projectpulse TO DISK='C:\Backups\projectpulse_2026-01-21.bak'"
 
 # Restore
-pg_restore -U postgres -d projectpulse backup_2026-01-21.dump
+sqlcmd -S localhost\SQLEXPRESS -Q "RESTORE DATABASE projectpulse FROM DISK='C:\Backups\projectpulse_2026-01-21.bak'"
 ```
 
 ### Reset Database
@@ -455,7 +465,7 @@ npm run start:prod
 - [ ] Changed default JWT secrets
 - [ ] Changed default database password
 - [ ] Installed all dependencies (no vulnerabilities)
-- [ ] Firewall allows PostgreSQL (port 5432) only for localhost
+- [ ] Firewall allows SQL Server (port 1433) only for localhost
 - [ ] .env files added to .gitignore
 - [ ] Strong passwords for all seed users (change in production!)
 

@@ -118,10 +118,9 @@ export default function LoginPage() {
         )}
       </button>
 
-      <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-        <p>Utenti demo:</p>
-        <p className="mt-1">admin@projectpulse.local / Admin123!</p>
-      </div>
+      <p className="text-center text-xs text-gray-400 dark:text-gray-500">
+        &copy; {new Date().getFullYear()} MIKAI SPA. Tutti i diritti riservati.
+      </p>
     </form>
   )
 }

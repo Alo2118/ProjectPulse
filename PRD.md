@@ -63,7 +63,7 @@
 ### Backend
 - **Runtime**: Node.js 18+
 - **Framework**: Express + TypeScript
-- **Database**: PostgreSQL 15+
+- **Database**: SQL Server Express
 - **ORM**: Prisma
 - **Authentication**: JWT + bcrypt
 - **Real-time**: Socket.io
@@ -328,7 +328,7 @@ Sistema per raccogliere input da tutti gli utenti dell'organizzazione.
 
 ## 🗄️ Data Model
 
-Vedi **DATABASE_SCHEMA.sql** per schema completo.
+Vedi **server/prisma/schema.prisma** per schema completo.
 
 ### Entità Principali
 1. **users** - Utenti sistema
@@ -396,7 +396,7 @@ Vedi **DATABASE_SCHEMA.sql** per schema completo.
 
 ### Scalability
 - Support 5-10 concurrent users (initial)
-- Database: PostgreSQL con indexes appropriati
+- Database: SQL Server Express con indexes appropriati
 - Pagination per liste grandi (>100 items)
 
 ### Caching
@@ -428,7 +428,7 @@ Vedi **DATABASE_SCHEMA.sql** per schema completo.
 
 ### Requirements
 - Node.js 18+
-- PostgreSQL 15+
+- SQL Server Express
 - Git
 
 ### Setup
@@ -451,7 +451,7 @@ npm run dev
 
 ### Environment
 - Development: localhost:5173 (frontend) + localhost:3000 (backend)
-- Database: localhost:5432
+- Database: localhost:1433
 
 ---
 
@@ -537,7 +537,7 @@ npm run dev
 
 - **IMPLEMENTATION_GUIDE.md** - Step-by-step development guide
 - **TECH_STACK.md** - Detailed technical specifications
-- **DATABASE_SCHEMA.sql** - Complete database schema
+- **server/prisma/schema.prisma** - Database schema
 - **PROJECT_STRUCTURE.md** - File system structure
 - **SETUP_LOCALHOST.md** - Local setup instructions
 - **PROMPTS_FOR_CLAUDE.md** - Optimized prompts for Claude Code

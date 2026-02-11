@@ -893,7 +893,7 @@ Queste regole possono evolvere. Suggerimenti per miglioramenti sono benvenuti, m
 **Soluzione**:
 1. Rimuovere `url = env("DATABASE_URL")` dal blocco `datasource` in `schema.prisma`
 2. Creare `prisma/prisma.config.ts` per la configurazione di Migrate
-3. Usare `@prisma/adapter-pg` per la connessione diretta al database
+3. Usare `@prisma/adapter-mssql` per la connessione diretta al database
 4. Passare l'adapter a `PrismaClient` nel costruttore
 
 **Configurazione Corretta**:
@@ -901,7 +901,7 @@ Queste regole possono evolvere. Suggerimenti per miglioramenti sono benvenuti, m
 ```prisma
 // schema.prisma
 datasource db {
-  provider = "postgresql"
+  provider = "sqlserver"
   // NO url property in Prisma 7
 }
 ```
@@ -916,11 +916,9 @@ export default defineConfig({
   schema: path.join(__dirname, 'schema.prisma'),
   migrate: {
     adapter: async () => {
-      const { Pool } = await import('pg')
-      const { PrismaPg } = await import('@prisma/adapter-pg')
+      const { PrismaSqlServer } = await import('@prisma/adapter-mssql')
       const connectionString = process.env.DATABASE_URL
-      const pool = new Pool({ connectionString })
-      return new PrismaPg(pool)
+      return new PrismaSqlServer({ connectionString })
     },
   },
 })
@@ -929,14 +927,12 @@ export default defineConfig({
 ```typescript
 // src/models/prismaClient.ts
 import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { Pool } from 'pg'
+import { PrismaSqlServer } from '@prisma/adapter-mssql'
 
 const connectionString = process.env.DATABASE_URL
-const pool = new Pool({ connectionString })
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaSqlServer({ connectionString })
 
 export const prisma = new PrismaClient({ adapter })
 ```
 
-**Regola Aggiunta**: Con Prisma 7+, usare sempre l'adapter pattern per la connessione al database. Installare `@prisma/adapter-pg` e `pg` per PostgreSQL.
+**Regola Aggiunta**: Con Prisma 7+, usare sempre l'adapter pattern per la connessione al database. Installare `@prisma/adapter-mssql` per SQL Server Express.
