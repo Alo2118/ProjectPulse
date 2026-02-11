@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { Repeat2, X, Loader2 } from 'lucide-react'
+import { Repeat2, X, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import api from '@services/api'
 
 type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -37,6 +37,7 @@ const DAYS_OF_WEEK = [
 
 export default function RecurrenceSettings({ taskId, isRecurring = false, recurrencePattern, onSave }: RecurrenceSettingsProps) {
   const [enabled, setEnabled] = useState(isRecurring)
+  const [showPattern, setShowPattern] = useState(!!recurrencePattern)
   const [type, setType] = useState<RecurrenceType>((recurrencePattern?.type as RecurrenceType) || 'daily')
   const [interval, setInterval] = useState(recurrencePattern?.interval || 1)
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(recurrencePattern?.daysOfWeek || [1, 2, 3, 4, 5])
@@ -49,12 +50,43 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  const handleSave = async () => {
-    if (!enabled) {
-      setIsSaving(true)
-      try {
+  const handleToggle = async (newEnabled: boolean) => {
+    setEnabled(newEnabled)
+    setError(null)
+    setIsSaving(true)
+
+    try {
+      if (newEnabled) {
+        // Enable recurring - no pattern required
+        await api.post(`/tasks/${taskId}/recurrence`, {
+          isRecurring: true,
+        })
+      } else {
+        // Disable recurring
+        setShowPattern(false)
         await api.post(`/tasks/${taskId}/recurrence`, {
           isRecurring: false,
+        })
+      }
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 2000)
+      onSave?.()
+    } catch (err) {
+      setEnabled(!newEnabled) // Rollback
+      setError(err instanceof Error ? err.message : 'Errore durante il salvataggio')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSavePattern = async () => {
+    if (!showPattern) {
+      // Remove pattern, keep recurring
+      setIsSaving(true)
+      setError(null)
+      try {
+        await api.post(`/tasks/${taskId}/recurrence`, {
+          isRecurring: true,
         })
         setSuccess(true)
         setTimeout(() => setSuccess(false), 2000)
@@ -96,30 +128,25 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
     setIsSaving(true)
 
     try {
-      // Allow saving as recurring without pattern
-      let pattern: RecurrencePattern | undefined = undefined
+      const pattern: RecurrencePattern = {
+        type,
+        interval,
+      }
 
-      if (type && interval) {
-        pattern = {
-          type,
-          interval,
-        }
+      if (type === 'weekly') {
+        pattern.daysOfWeek = daysOfWeek
+      }
 
-        if (type === 'weekly') {
-          pattern.daysOfWeek = daysOfWeek
-        }
+      if (type === 'monthly') {
+        pattern.dayOfMonth = dayOfMonth
+      }
 
-        if (type === 'monthly') {
-          pattern.dayOfMonth = dayOfMonth
-        }
+      if (endAfterOccurrences) {
+        pattern.endAfterOccurrences = parseInt(endAfterOccurrences)
+      }
 
-        if (endAfterOccurrences) {
-          pattern.endAfterOccurrences = parseInt(endAfterOccurrences)
-        }
-
-        if (recurrenceEnd) {
-          pattern.recurrenceEnd = new Date(`${recurrenceEnd}T00:00:00Z`).toISOString()
-        }
+      if (recurrenceEnd) {
+        pattern.recurrenceEnd = new Date(`${recurrenceEnd}T00:00:00Z`).toISOString()
       }
 
       await api.post(`/tasks/${taskId}/recurrence`, {
@@ -147,36 +174,45 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
     return (
       <button
         type="button"
-        onClick={() => setEnabled(true)}
-        className="p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 transition-colors flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 w-full justify-center"
+        onClick={() => handleToggle(true)}
+        disabled={isSaving}
+        className="p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 transition-colors flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 w-full justify-center disabled:opacity-50"
       >
-        <Repeat2 className="w-4 h-4" />
+        {isSaving ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Repeat2 className="w-4 h-4" />
+        )}
         Rendi ricorrente
       </button>
     )
   }
 
   return (
-    <div className="card p-4 space-y-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+    <div className="card p-4 space-y-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Repeat2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <h3 className="font-medium text-gray-900 dark:text-white">Attività Ricorrente</h3>
         </div>
-        {enabled && (
-          <button
-            type="button"
-            onClick={() => {
-              setEnabled(false)
-              handleSave()
-            }}
-            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
-            title="Disattiva ricorrenza"
-          >
+        <button
+          type="button"
+          onClick={() => handleToggle(false)}
+          disabled={isSaving}
+          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:opacity-50"
+          title="Disattiva ricorrenza"
+        >
+          {isSaving ? (
+            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+          ) : (
             <X className="w-4 h-4 text-red-600 dark:text-red-400" />
-          </button>
-        )}
+          )}
+        </button>
       </div>
+
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Questa attività non ha una scadenza definitiva e si ripete nel tempo.
+      </p>
 
       {error && (
         <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm">
@@ -186,12 +222,22 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
 
       {success && (
         <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm">
-          ✓ Salvataggio completato
+          Salvataggio completato
         </div>
       )}
 
-      {enabled && (
-        <>
+      {/* Collapsible pattern section */}
+      <button
+        type="button"
+        onClick={() => setShowPattern(!showPattern)}
+        className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+      >
+        {showPattern ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        Configura frequenza (opzionale)
+      </button>
+
+      {showPattern && (
+        <div className="space-y-4 pt-2 border-t border-blue-200 dark:border-blue-800">
           {/* Recurrence Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -285,9 +331,6 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
                 onChange={(e) => setEndAfterOccurrences(e.target.value)}
                 className="input"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Lascia vuoto per nessun limite
-              </p>
             </div>
 
             <div>
@@ -301,16 +344,13 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
                 onChange={(e) => setRecurrenceEnd(e.target.value)}
                 className="input"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Lascia vuoto per nessun limite
-              </p>
             </div>
           </div>
 
-          {/* Save Button */}
+          {/* Save Pattern Button */}
           <button
             type="button"
-            onClick={handleSave}
+            onClick={handleSavePattern}
             disabled={isSaving}
             className="w-full btn-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -320,10 +360,10 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
                 Salvataggio...
               </>
             ) : (
-              'Salva Ricorrenza'
+              'Salva Frequenza'
             )}
           </button>
-        </>
+        </div>
       )}
     </div>
   )

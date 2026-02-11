@@ -317,7 +317,7 @@ export async function setRecurrence(
       where: { id: taskId },
       data: {
         isRecurring,
-        recurrencePattern: isRecurring ? (pattern as unknown as any) : null,
+        recurrencePattern: isRecurring && pattern ? (pattern as unknown as any) : null,
       },
       select: {
         id: true,
