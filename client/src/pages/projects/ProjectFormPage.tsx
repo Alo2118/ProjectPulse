@@ -69,8 +69,9 @@ export default function ProjectFormPage() {
     },
   })
 
-  // Check permissions
-  const canManageProjects = user?.role === 'admin' || user?.role === 'direzione'
+  // Check permissions - all authenticated users can manage projects (dipendente only own)
+  const canManageProjects = !!user
+  const isDipendente = user?.role === 'dipendente'
 
   // Load users for owner select
   useEffect(() => {
@@ -159,7 +160,9 @@ export default function ProjectFormPage() {
   }
 
   // Redirect if not authorized
-  if (!canManageProjects) {
+  // Dipendente in edit mode can only edit own projects
+  const isOwnProject = !isEditMode || !currentProject || currentProject.ownerId === user?.id
+  if (!canManageProjects || (isDipendente && isEditMode && currentProject && !isOwnProject)) {
     return (
       <div className="card p-8 text-center">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -167,7 +170,7 @@ export default function ProjectFormPage() {
           Accesso non autorizzato
         </h3>
         <p className="text-gray-500 dark:text-gray-400 mb-4">
-          Non hai i permessi per creare o modificare progetti.
+          Non hai i permessi per creare o modificare questo progetto.
         </p>
         <button onClick={() => navigate('/projects')} className="btn-primary">
           Torna ai Progetti
@@ -350,7 +353,8 @@ export default function ProjectFormPage() {
             <select
               id="ownerId"
               {...register('ownerId')}
-              className={`input ${errors.ownerId ? 'border-red-500 focus:ring-red-500' : ''}`}
+              disabled={isDipendente}
+              className={`input ${errors.ownerId ? 'border-red-500 focus:ring-red-500' : ''} ${isDipendente ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <option value="">Seleziona responsabile</option>
               {users.map((u) => (
@@ -359,6 +363,11 @@ export default function ProjectFormPage() {
                 </option>
               ))}
             </select>
+            {isDipendente && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Sei automaticamente il responsabile del progetto
+              </p>
+            )}
             {errors.ownerId && (
               <p className="mt-1 text-sm text-red-500">{errors.ownerId.message}</p>
             )}

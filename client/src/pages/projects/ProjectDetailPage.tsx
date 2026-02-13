@@ -145,7 +145,7 @@ export default function ProjectDetailPage() {
     [runningTimer?.taskId, startTimer, stopTimer]
   )
 
-  const canEdit = user?.role === 'admin' || user?.role === 'direzione'
+  const canEdit = user?.role === 'admin' || user?.role === 'direzione' || currentProject?.ownerId === user?.id
   const showInternalToggle = user?.role === 'admin' || user?.role === 'direzione'
   const canTrackTime = user?.role !== 'direzione'
 

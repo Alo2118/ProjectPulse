@@ -7,6 +7,19 @@ import { create } from 'zustand'
 import api from '@services/api'
 import { Task, PaginatedResponse, TaskStats, TaskStatus } from '@/types'
 
+// Helper function to parse recurrencePattern from JSON string to object
+function parseTaskRecurrence(task: any): Task {
+  if (task.recurrencePattern && typeof task.recurrencePattern === 'string') {
+    try {
+      task.recurrencePattern = JSON.parse(task.recurrencePattern)
+    } catch (e) {
+      console.error('Failed to parse recurrencePattern for task', task.code, e)
+      task.recurrencePattern = null
+    }
+  }
+  return task
+}
+
 interface TaskFilters {
   page?: number
   limit?: number
@@ -91,8 +104,10 @@ export const useTaskStore = create<TaskState>((set) => ({
       )
 
       if (response.data.success !== false) {
+        // Parse recurrencePattern from JSON strings to objects
+        const tasks = response.data.data.map(parseTaskRecurrence)
         set({
-          tasks: response.data.data,
+          tasks,
           pagination: response.data.pagination,
           isLoading: false,
         })
@@ -119,8 +134,22 @@ export const useTaskStore = create<TaskState>((set) => ({
       )
 
       if (response.data.success !== false) {
+        console.log('[TaskStore] Raw API response - first task:', response.data.data[0])
+        // Parse recurrencePattern from JSON strings to objects
+        const myTasks = response.data.data.map(parseTaskRecurrence)
+        console.log('[TaskStore] After parsing - first task:', myTasks[0])
+        const recurringCount = myTasks.filter(t => t.isRecurring).length
+        console.log('[TaskStore] Tasks with isRecurring=true:', recurringCount)
+        if (recurringCount > 0) {
+          console.log('[TaskStore] Recurring tasks:', myTasks.filter(t => t.isRecurring).map(t => ({
+            code: t.code,
+            title: t.title, 
+            isRecurring: t.isRecurring,
+            status: t.status
+          })))
+        }
         set({
-          myTasks: response.data.data,
+          myTasks,
           isLoading: false,
         })
       }
@@ -136,7 +165,8 @@ export const useTaskStore = create<TaskState>((set) => ({
       const response = await api.get<{ success: boolean; data: Task }>(`/tasks/${id}`)
 
       if (response.data.success) {
-        set({ currentTask: response.data.data, isLoading: false })
+        const task = parseTaskRecurrence(response.data.data)
+        set({ currentTask: task, isLoading: false })
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch task'
@@ -152,7 +182,15 @@ export const useTaskStore = create<TaskState>((set) => ({
       )
 
       if (response.data.success) {
-        set({ kanbanTasks: response.data.data, isLoading: false })
+        // Parse recurrencePattern for all tasks in each status
+        const kanbanTasks: KanbanTasks = {
+          todo: response.data.data.todo.map(parseTaskRecurrence),
+          in_progress: response.data.data.in_progress.map(parseTaskRecurrence),
+          review: response.data.data.review.map(parseTaskRecurrence),
+          blocked: response.data.data.blocked.map(parseTaskRecurrence),
+          done: response.data.data.done.map(parseTaskRecurrence),
+        }
+        set({ kanbanTasks, isLoading: false })
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch kanban tasks'
@@ -178,11 +216,12 @@ export const useTaskStore = create<TaskState>((set) => ({
       const response = await api.post<{ success: boolean; data: Task }>('/tasks', data)
 
       if (response.data.success && response.data.data) {
+        const task = parseTaskRecurrence(response.data.data)
         set((state) => ({
-          tasks: [response.data.data, ...state.tasks],
+          tasks: [task, ...state.tasks],
           isLoading: false,
         }))
-        return response.data.data
+        return task
       }
       throw new Error('Failed to create task')
     } catch (error) {
@@ -198,7 +237,7 @@ export const useTaskStore = create<TaskState>((set) => ({
       const response = await api.put<{ success: boolean; data: Task }>(`/tasks/${id}`, data)
 
       if (response.data.success && response.data.data) {
-        const updatedTask = response.data.data
+        const updatedTask = parseTaskRecurrence(response.data.data)
         set((state) => ({
           tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
           myTasks: state.myTasks.map((t) => (t.id === id ? updatedTask : t)),
@@ -222,7 +261,7 @@ export const useTaskStore = create<TaskState>((set) => ({
       })
 
       if (response.data.success && response.data.data) {
-        const updatedTask = response.data.data
+        const updatedTask = parseTaskRecurrence(response.data.data)
         set((state) => ({
           tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
           myTasks: state.myTasks.map((t) => (t.id === id ? updatedTask : t)),

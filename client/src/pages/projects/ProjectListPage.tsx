@@ -48,7 +48,7 @@ export default function ProjectListPage() {
     })
   }, [projects, searchTerm, statusFilter, priorityFilter])
 
-  const canCreateProject = user?.role === 'admin' || user?.role === 'direzione'
+  const canCreateProject = !!user
 
   if (isLoading && projects.length === 0) {
     return (

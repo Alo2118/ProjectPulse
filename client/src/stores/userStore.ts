@@ -51,6 +51,7 @@ interface UserState {
     password: string
   }>) => Promise<User>
   deleteUser: (id: string) => Promise<void>
+  hardDeleteUser: (id: string) => Promise<void>
   clearError: () => void
   clearCurrentUser: () => void
 }
@@ -166,6 +167,22 @@ export const useUserStore = create<UserState>((set) => ({
       }))
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nell\'eliminazione utente'
+      set({ error: message, isLoading: false })
+      throw error
+    }
+  },
+
+  hardDeleteUser: async (id) => {
+    set({ isLoading: true, error: null })
+    try {
+      await api.delete(`/users/${id}/hard`)
+      set((state) => ({
+        users: state.users.filter((u) => u.id !== id),
+        currentUser: state.currentUser?.id === id ? null : state.currentUser,
+        isLoading: false,
+      }))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Errore nell\'eliminazione permanente'
       set({ error: message, isLoading: false })
       throw error
     }

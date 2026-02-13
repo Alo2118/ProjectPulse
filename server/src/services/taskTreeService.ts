@@ -23,6 +23,7 @@ interface SubtaskNode {
   taskType: string
   status: string
   priority: string
+  isRecurring: boolean
   assignee: {
     id: string
     firstName: string
@@ -43,6 +44,7 @@ interface TaskNode {
   taskType: string
   status: string
   priority: string
+  isRecurring: boolean
   assignee: {
     id: string
     firstName: string
@@ -114,6 +116,7 @@ interface ParsedTask {
   taskType: string
   status: string
   priority: string
+  isRecurring: boolean
   projectId: string | null
   parentTaskId: string | null
   dueDate: Date | null
@@ -172,6 +175,7 @@ function buildSubtaskTree(
       taskType: task.taskType,
       status: task.status,
       priority: task.priority,
+      isRecurring: task.isRecurring,
       assignee: task.assignee,
       dueDate: task.dueDate?.toISOString() ?? null,
       estimatedHours: task.estimatedHours,
@@ -186,6 +190,7 @@ interface TaskTreeOptions {
   projectId?: string
   parentTaskId?: string
   myTasksOnly?: boolean
+  filterUserId?: string
   excludeCompleted?: boolean
 }
 
@@ -216,6 +221,7 @@ async function getSubtaskTree(
       parentTaskId: true,
       dueDate: true,
       estimatedHours: true,
+      isRecurring: true,
       assignee: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true },
       },
@@ -237,6 +243,7 @@ async function getSubtaskTree(
       taskType: task.taskType,
       status: task.status,
       priority: task.priority,
+      isRecurring: task.isRecurring,
       projectId: task.projectId,
       parentTaskId: task.parentTaskId,
       dueDate: task.dueDate,
@@ -288,7 +295,7 @@ async function getTaskTree(
   userRole: string,
   options: TaskTreeOptions = {}
 ): Promise<TaskTreeResponse> {
-  const { projectId, parentTaskId, myTasksOnly = false, excludeCompleted = false } = options
+  const { projectId, parentTaskId, myTasksOnly = false, filterUserId, excludeCompleted = false } = options
 
   // If parentTaskId is specified, return subtask tree only
   if (parentTaskId) {
@@ -354,8 +361,11 @@ async function getTaskTree(
     isDeleted: false,
   }
 
-  // Filter only user's tasks if requested
-  if (myTasksOnly) {
+  // Filter by specific user if requested
+  if (filterUserId) {
+    taskWhere.assigneeId = filterUserId
+  } else if (myTasksOnly) {
+    // Otherwise filter only user's tasks if requested
     taskWhere.assigneeId = userId
   }
 
@@ -378,6 +388,7 @@ async function getTaskTree(
       parentTaskId: true,
       dueDate: true,
       estimatedHours: true,
+      isRecurring: true,
       assignee: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true },
       },
@@ -417,6 +428,7 @@ async function getTaskTree(
       taskType: task.taskType,
       status: task.status,
       priority: task.priority,
+      isRecurring: task.isRecurring,
       projectId: task.projectId,
       parentTaskId: task.parentTaskId,
       dueDate: task.dueDate,
@@ -471,6 +483,7 @@ async function getTaskTree(
       taskType: task.taskType,
       status: task.status,
       priority: task.priority,
+      isRecurring: task.isRecurring,
       assignee: task.assignee,
       dueDate: task.dueDate?.toISOString() ?? null,
       estimatedHours: task.estimatedHours,

@@ -121,7 +121,6 @@ export interface Task {
   dueDate: string | null
   estimatedHours: string | null
   actualHours: string | null
-  tags: Record<string, unknown>
   blockedReason: string | null // Required when status is 'blocked'
   isDeleted: boolean
   createdAt: string
@@ -584,13 +583,31 @@ export interface TimeTrackingByDay {
   totalMinutes: number
 }
 
+export interface DetailedTimeEntry {
+  id: string
+  description: string | null
+  startTime: string
+  duration: number | null
+  userId: string
+  userName: string
+  taskId: string
+  taskCode: string
+  taskTitle: string
+  isRecurring: boolean
+  projectId: string
+  projectCode: string
+  projectName: string
+}
+
 export interface TaskSummary {
   id: string
   code: string
   title: string
   status: string
   projectName: string | null
+  assigneeId?: string | null
   assigneeName?: string | null
+  isRecurring: boolean
 }
 
 export interface StatusChange {
@@ -607,6 +624,7 @@ export interface BlockedTask {
   code: string
   title: string
   projectName: string | null
+  assigneeId?: string | null
   assigneeName?: string | null
   blockedSince: string | null
   lastComment: string | null
@@ -645,6 +663,7 @@ export interface WeeklyReportData {
       userName: string
       totalMinutes: number
     }>
+    entries: DetailedTimeEntry[]
   }
 
   tasks: {
@@ -868,6 +887,28 @@ export interface CreateAttachmentInput {
   entityType: AttachableEntityType
   entityId: string
   file: File
+}
+
+// ============================================================
+// TAG TYPES
+// ============================================================
+
+export type TaggableEntityType = 'task' | 'document'
+
+export interface Tag {
+  id: string
+  name: string
+  color: string
+  createdAt: string
+}
+
+export interface TagAssignment {
+  id: string
+  tagId: string
+  entityType: TaggableEntityType
+  entityId: string
+  createdAt: string
+  tag: Tag
 }
 
 // ============================================================

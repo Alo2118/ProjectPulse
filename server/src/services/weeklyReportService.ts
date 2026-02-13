@@ -39,13 +39,31 @@ interface TimeTrackingByUser {
   totalMinutes: number
 }
 
+interface DetailedTimeEntry {
+  id: string
+  description: string | null
+  startTime: string
+  duration: number | null
+  userId: string
+  userName: string
+  taskId: string
+  taskCode: string
+  taskTitle: string
+  isRecurring: boolean
+  projectId: string
+  projectCode: string
+  projectName: string
+}
+
 interface TaskSummary {
   id: string
   code: string
   title: string
   status: string
   projectName: string | null
+  assigneeId?: string | null
   assigneeName?: string | null
+  isRecurring?: boolean
 }
 
 interface StatusChange {
@@ -61,8 +79,7 @@ interface BlockedTask {
   id: string
   code: string
   title: string
-  projectName: string | null
-  assigneeName?: string | null
+  projectName: string | null  assigneeId?: string | null  assigneeName?: string | null
   blockedSince: string | null
   lastComment: string | null
 }
@@ -96,6 +113,7 @@ export interface WeeklyReportData {
     byTask: TimeTrackingByTask[]
     byDay: TimeTrackingByDay[]
     byUser?: TimeTrackingByUser[]
+    entries: DetailedTimeEntry[]
   }
 
   tasks: {
@@ -194,6 +212,7 @@ async function getWeeklyTimeData(
       id: true,
       duration: true,
       startTime: true,
+      description: true,
       userId: true,
       user: {
         select: { id: true, firstName: true, lastName: true },
@@ -203,12 +222,18 @@ async function getWeeklyTimeData(
           id: true,
           code: true,
           title: true,
+          isRecurring: true,
           project: {
             select: { id: true, code: true, name: true },
           },
         },
       },
     },
+    orderBy: [
+      { task: { project: { code: 'asc' } } },
+      { task: { code: 'asc' } },
+      { startTime: 'desc' },
+    ],
   })
 
   // Group by project
@@ -275,6 +300,25 @@ async function getWeeklyTimeData(
 
   const totalMinutes = entries.reduce((sum, e) => sum + (e.duration || 0), 0)
 
+  // Build detailed entries array for hierarchical view
+  const detailedEntries: DetailedTimeEntry[] = entries.map((entry) => ({
+    id: entry.id,
+    description: entry.description,
+    startTime: entry.startTime.toISOString(),
+    duration: entry.duration,
+    userId: entry.userId,
+    userName: `${entry.user.firstName} ${entry.user.lastName}`,
+    taskId: entry.task.id,
+    taskCode: entry.task.code,
+    taskTitle: entry.task.title,
+    isRecurring: entry.task.isRecurring,
+    projectId: entry.task.project?.id || '',
+    projectCode: entry.task.project?.code || '',
+    projectName: entry.task.project?.name || '',
+  }))
+
+  logger.info(`WeeklyReport: Returning ${detailedEntries.length} detailed time entries`)
+
   return {
     totalMinutes,
     totalHours: Math.round((totalMinutes / 60) * 100) / 100,
@@ -284,6 +328,7 @@ async function getWeeklyTimeData(
       .map(([date, totalMinutes]) => ({ date, totalMinutes }))
       .sort((a, b) => a.date.localeCompare(b.date)),
     byUser,
+    entries: detailedEntries,
   }
 }
 
@@ -309,6 +354,8 @@ async function getWeeklyTaskActivity(
       code: true,
       title: true,
       status: true,
+      assigneeId: true,
+      isRecurring: true,
       project: { select: { name: true } },
       assignee: { select: { firstName: true, lastName: true } },
     },
@@ -329,6 +376,8 @@ async function getWeeklyTaskActivity(
       code: true,
       title: true,
       status: true,
+      assigneeId: true,
+      isRecurring: true,
       project: { select: { name: true } },
       assignee: { select: { firstName: true, lastName: true } },
     },
@@ -348,6 +397,8 @@ async function getWeeklyTaskActivity(
       code: true,
       title: true,
       status: true,
+      assigneeId: true,
+      isRecurring: true,
       project: { select: { name: true } },
       assignee: { select: { firstName: true, lastName: true } },
     },
@@ -406,7 +457,9 @@ async function getWeeklyTaskActivity(
       title: t.title,
       status: t.status,
       projectName: t.project?.name ?? null,
+      assigneeId: t.assigneeId,
       assigneeName: formatAssignee(t.assignee),
+      isRecurring: t.isRecurring,
     })),
     completed: completedTasks.map((t) => ({
       id: t.id,
@@ -414,7 +467,9 @@ async function getWeeklyTaskActivity(
       title: t.title,
       status: t.status,
       projectName: t.project?.name ?? null,
+      assigneeId: t.assigneeId,
       assigneeName: formatAssignee(t.assignee),
+      isRecurring: t.isRecurring,
     })),
     inProgress: inProgressTasks.map((t) => ({
       id: t.id,
@@ -422,7 +477,9 @@ async function getWeeklyTaskActivity(
       title: t.title,
       status: t.status,
       projectName: t.project?.name ?? null,
+      assigneeId: t.assigneeId,
       assigneeName: formatAssignee(t.assignee),
+      isRecurring: t.isRecurring,
     })),
     statusChanges: mappedStatusChanges,
   }
@@ -445,6 +502,7 @@ async function getBlockedTasks(userId: string | null): Promise<BlockedTask[]> {
       code: true,
       title: true,
       updatedAt: true,
+      assigneeId: true,
       project: { select: { name: true } },
       assignee: { select: { firstName: true, lastName: true } },
       comments: {
@@ -461,6 +519,7 @@ async function getBlockedTasks(userId: string | null): Promise<BlockedTask[]> {
     code: t.code,
     title: t.title,
     projectName: t.project?.name ?? null,
+    assigneeId: t.assigneeId,
     assigneeName: t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : null,
     blockedSince: t.updatedAt.toISOString(),
     lastComment: t.comments[0]?.content ?? null,

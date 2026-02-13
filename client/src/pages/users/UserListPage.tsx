@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserStore } from '@stores/userStore'
+import { useAuthStore } from '@stores/authStore'
 import {
   Plus,
   Search,
@@ -17,6 +18,8 @@ import {
   Shield,
   CircleDot,
   Edit2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 import { USER_ROLE_LABELS, USER_ROLE_COLORS, USER_ROLE_OPTIONS } from '@/constants'
 import { UserRole } from '@/types'
@@ -24,11 +27,14 @@ import { UserRole } from '@/types'
 export default function UserListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { users, pagination, isLoading, fetchUsers } = useUserStore()
+  const { users, pagination, isLoading, fetchUsers, hardDeleteUser } = useUserStore()
+  const currentUser = useAuthStore((s) => s.user)
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
   const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || '')
   const [activeFilter, setActiveFilter] = useState(searchParams.get('isActive') || '')
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; email: string } | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     const filters: Record<string, string> = {}
@@ -46,6 +52,18 @@ export default function UserListPage() {
       limit: pagination.limit,
     })
   }, [searchTerm, roleFilter, activeFilter])
+
+  const handleHardDelete = async () => {
+    if (!deleteConfirm) return
+    try {
+      setDeleteError(null)
+      await hardDeleteUser(deleteConfirm.id)
+      setDeleteConfirm(null)
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } }
+      setDeleteError(error.response?.data?.error || 'Errore durante l\'eliminazione')
+    }
+  }
 
   const handlePageChange = (newPage: number) => {
     fetchUsers({
@@ -183,14 +201,25 @@ export default function UserListPage() {
                   </span>
                 </div>
 
-                {/* Edit Button */}
-                <button
-                  onClick={() => navigate(`/users/${u.id}/edit`)}
-                  className="ml-4 p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title="Modifica utente"
-                >
-                  <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                </button>
+                {/* Actions */}
+                <div className="flex items-center gap-2 ml-4">
+                  <button
+                    onClick={() => navigate(`/users/${u.id}/edit`)}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title="Modifica utente"
+                  >
+                    <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </button>
+                  {u.id !== currentUser?.id && (
+                    <button
+                      onClick={() => setDeleteConfirm({ id: u.id, email: u.email })}
+                      className="p-2 rounded-lg border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                      title="Elimina permanentemente"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500 dark:text-red-400" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -225,6 +254,50 @@ export default function UserListPage() {
             </div>
           )}
         </>
+      )}
+      {/* Hard Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Eliminazione permanente
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
+              Stai per eliminare permanentemente l'utente:
+            </p>
+            <p className="font-medium text-gray-900 dark:text-white mb-4">
+              {deleteConfirm.email}
+            </p>
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+              Questa azione non può essere annullata. Tutti i dati associati (time entry, commenti, note, allegati, report) verranno eliminati.
+            </p>
+            {deleteError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setDeleteConfirm(null); setDeleteError(null) }}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleHardDelete}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {isLoading ? 'Eliminazione...' : 'Elimina permanentemente'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

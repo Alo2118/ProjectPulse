@@ -214,6 +214,34 @@ async function main() {
 
   console.log('✅ Created 1 risk')
 
+  // Create tags
+  const tagData = [
+    { name: 'Urgente', color: '#EF4444' },
+    { name: 'Bug', color: '#F97316' },
+    { name: 'Feature', color: '#3B82F6' },
+    { name: 'Documentazione', color: '#8B5CF6' },
+    { name: 'Design', color: '#EC4899' },
+    { name: 'Backend', color: '#22C55E' },
+    { name: 'Frontend', color: '#14B8A6' },
+    { name: 'Revisione', color: '#EAB308' },
+    { name: 'Test', color: '#6B7280' },
+    { name: 'Infrastruttura', color: '#78716C' },
+  ]
+
+  for (const tag of tagData) {
+    await prisma.tag.upsert({
+      where: { name: tag.name },
+      update: {},
+      create: {
+        name: tag.name,
+        color: tag.color,
+        createdById: admin.id,
+      },
+    })
+  }
+
+  console.log(`✅ Created ${tagData.length} tags`)
+
   console.log('🎉 Seed complete!')
 }
 

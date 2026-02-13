@@ -7,6 +7,7 @@ import {
   updateProfile,
   updateTheme,
   deleteUser,
+  hardDeleteUser,
 } from '../controllers/userController.js'
 import { authMiddleware, requireRole } from '../middleware/authMiddleware.js'
 
@@ -26,5 +27,6 @@ router.patch('/me/theme', updateTheme)
 router.post('/', requireRole('admin'), createUser)
 router.put('/:id', requireRole('admin'), updateUser)
 router.delete('/:id', requireRole('admin'), deleteUser)
+router.delete('/:id/hard', requireRole('admin'), hardDeleteUser)
 
 export default router

@@ -35,8 +35,9 @@ const taskSelectFields = {
   dueDate: true,
   estimatedHours: true,
   actualHours: true,
-  tags: true,
   blockedReason: true, // Required when status is 'blocked'
+  isRecurring: true,
+  recurrencePattern: true,
   isDeleted: true,
   createdAt: true,
   updatedAt: true,
@@ -232,7 +233,6 @@ export async function createTask(data: CreateTaskInput, userId: string) {
         startDate: data.startDate,
         dueDate: data.dueDate,
         estimatedHours: data.estimatedHours,
-        tags: data.tags != null ? (typeof data.tags === 'string' ? data.tags : JSON.stringify(data.tags)) : undefined,
         createdById: userId,
       },
       select: taskWithRelationsSelect,
@@ -488,7 +488,6 @@ export async function updateTask(taskId: string, data: UpdateTaskInput, userId: 
         dueDate: data.dueDate,
         estimatedHours: data.estimatedHours,
         actualHours: data.actualHours,
-        tags: data.tags != null ? (typeof data.tags === 'string' ? data.tags : JSON.stringify(data.tags)) : undefined,
         updatedAt: new Date(),
       },
       select: taskWithRelationsSelect,
@@ -943,6 +942,13 @@ export async function getTasksForGantt(params: GanttQueryParams): Promise<GanttT
  * @param userId - User creating the dependency
  * @returns Created dependency
  */
+export async function getTaskDependencyById(dependencyId: string) {
+  return prisma.taskDependency.findUnique({
+    where: { id: dependencyId },
+    select: { id: true, predecessorId: true, successorId: true },
+  })
+}
+
 export async function createTaskDependency(
   data: CreateTaskDependencyInput,
   userId: string
@@ -1301,6 +1307,7 @@ export const taskService = {
   // Gantt
   getTasksForGantt,
   // Dependencies
+  getTaskDependencyById,
   createTaskDependency,
   getTaskDependencies,
   deleteTaskDependency,

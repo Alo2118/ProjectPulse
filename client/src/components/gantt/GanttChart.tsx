@@ -5,6 +5,7 @@
 import { useRef, useMemo, useCallback } from 'react'
 import { GanttTask, GanttZoomLevel } from '@/types'
 import {
+  addDays,
   differenceInDays,
   eachDayOfInterval,
   eachWeekOfInterval,
@@ -15,7 +16,6 @@ import {
   startOfDay,
   endOfDay,
   endOfWeek,
-  endOfMonth,
 } from 'date-fns'
 import { it } from 'date-fns/locale'
 import GanttBar from './GanttBar'
@@ -83,7 +83,7 @@ export default function GanttChart({
   const dayWidth = DAY_WIDTH[zoomLevel]
   const timelineWidth = totalDays * dayWidth
 
-  // Calculate bar position and width
+  // Calculate bar position and width, clamped to visible view range
   const getBarStyle = (task: GanttTask) => {
     const taskStart = task.startDate ? new Date(task.startDate) : null
     const taskEnd = task.endDate ? new Date(task.endDate) : null
@@ -96,15 +96,19 @@ export default function GanttChart({
     const effectiveEnd = taskEnd || taskStart!
 
     const startOffset = differenceInDays(startOfDay(effectiveStart), startOfDay(viewStart))
-    const duration = differenceInDays(endOfDay(effectiveEnd), startOfDay(effectiveStart)) + 1
+    const endOffset = differenceInDays(endOfDay(effectiveEnd), startOfDay(viewStart)) + 1
 
-    // Only show if within view
-    if (startOffset + duration < 0 || startOffset > totalDays) {
+    // Completely outside view
+    if (endOffset < 0 || startOffset > totalDays) {
       return null
     }
 
-    const left = Math.max(0, startOffset * dayWidth)
-    const width = Math.max(40, duration * dayWidth)
+    // Clamp to visible range
+    const clampedStart = Math.max(0, startOffset)
+    const clampedEnd = Math.min(totalDays, endOffset)
+
+    const left = clampedStart * dayWidth
+    const width = Math.max(dayWidth, (clampedEnd - clampedStart) * dayWidth)
 
     return { left, width }
   }
@@ -139,16 +143,18 @@ export default function GanttChart({
     }
   }
 
-  // Get header width based on zoom
-  const getUnitWidth = () => {
-    switch (zoomLevel) {
-      case 'day':
-        return dayWidth
-      case 'week':
-        return dayWidth * 7
-      case 'month':
-        return dayWidth * 30
-    }
+  // Calculate actual width for each timeline unit based on real days covered
+  // This ensures columns always sum to exactly timelineWidth
+  const getUnitWidthAt = (index: number) => {
+    if (zoomLevel === 'day') return dayWidth
+
+    const unitStart = timelineUnits[index] < viewStart ? viewStart : timelineUnits[index]
+    const nextBoundary = index + 1 < timelineUnits.length
+      ? timelineUnits[index + 1]
+      : addDays(viewEnd, 1)
+    const unitEnd = nextBoundary > addDays(viewEnd, 1) ? addDays(viewEnd, 1) : nextBoundary
+
+    return Math.max(0, differenceInDays(unitEnd, unitStart)) * dayWidth
   }
 
   // Today position
@@ -243,7 +249,7 @@ export default function GanttChart({
                     className={`flex flex-shrink-0 items-center border-r border-gray-200 text-xs font-medium text-gray-600 dark:border-white/10 dark:text-gray-400 ${
                       zoomLevel === 'day' && label ? 'justify-start pl-1' : 'justify-center'
                     }`}
-                    style={{ width: getUnitWidth() }}
+                    style={{ width: getUnitWidthAt(index) }}
                   >
                     {label}
                   </div>
@@ -254,19 +260,19 @@ export default function GanttChart({
             {/* Secondary header (sub-labels) */}
             <div className="flex h-1/2">
               {timelineUnits.map((unit, index) => {
-                const today = isToday(unit)
+                const unitIsToday = isToday(unit)
                 const weekend = zoomLevel === 'day' && isWeekend(unit)
                 return (
                   <div
                     key={index}
                     className={`flex flex-shrink-0 items-center justify-center border-r border-gray-200 text-[10px] dark:border-white/10 ${
-                      today
+                      unitIsToday
                         ? 'bg-blue-500/20 font-medium text-blue-600 dark:text-blue-400'
                         : weekend
                           ? 'bg-gray-200/50 text-gray-400 dark:bg-surface-800/50 dark:text-gray-500'
                           : 'text-gray-500'
                     }`}
-                    style={{ width: zoomLevel === 'day' ? dayWidth : getUnitWidth() }}
+                    style={{ width: getUnitWidthAt(index) }}
                     title={zoomLevel === 'day' ? format(unit, 'EEEE d MMMM yyyy', { locale: it }) : undefined}
                   >
                     {zoomLevel === 'day' ? (
@@ -294,19 +300,19 @@ export default function GanttChart({
             {/* Grid background - absolute positioned */}
             <div className="pointer-events-none absolute inset-0 flex">
               {timelineUnits.map((unit, index) => {
-                const today = isToday(unit)
+                const unitIsToday = isToday(unit)
                 const weekend = zoomLevel === 'day' && isWeekend(unit)
                 return (
                   <div
                     key={index}
                     className={`h-full flex-shrink-0 border-r border-gray-100 dark:border-surface-800 ${
-                      today
+                      unitIsToday
                         ? 'bg-blue-500/10 dark:bg-blue-500/5'
                         : weekend
                           ? 'bg-gray-100/60 dark:bg-surface-800/40'
                           : ''
                     }`}
-                    style={{ width: zoomLevel === 'day' ? dayWidth : getUnitWidth() }}
+                    style={{ width: getUnitWidthAt(index) }}
                   />
                 )
               })}

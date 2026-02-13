@@ -14,7 +14,7 @@ const httpServer = createServer(app)
 // Initialize Socket.io
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map(s => s.trim()),
     methods: ['GET', 'POST'],
   },
 })

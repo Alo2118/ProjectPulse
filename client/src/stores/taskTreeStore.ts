@@ -11,6 +11,7 @@ interface FetchOptions {
   projectId?: string
   parentTaskId?: string
   myTasksOnly?: boolean
+  filterUserId?: string
   excludeCompleted?: boolean
 }
 
@@ -21,6 +22,7 @@ interface TaskTreeState {
   // Filters
   selectedProjectId: string | null
   myTasksOnly: boolean
+  filterUserId: string | null
   excludeCompleted: boolean
 
   // UI State
@@ -36,6 +38,7 @@ interface TaskTreeState {
   fetchTaskTree: (options?: FetchOptions) => Promise<void>
   setSelectedProject: (projectId: string | null) => void
   setMyTasksOnly: (value: boolean) => void
+  setFilterUserId: (userId: string | null) => void
   setExcludeCompleted: (value: boolean) => void
   toggleProject: (projectId: string) => void
   toggleMilestone: (milestoneId: string) => void
@@ -49,6 +52,7 @@ export const useTaskTreeStore = create<TaskTreeState>((set, get) => ({
   treeData: null,
   selectedProjectId: null,
   myTasksOnly: false,
+  filterUserId: null,
   excludeCompleted: false,
   expandedProjects: new Set(),
   expandedMilestones: new Set(),
@@ -64,11 +68,13 @@ export const useTaskTreeStore = create<TaskTreeState>((set, get) => ({
       const projectId = options?.projectId ?? get().selectedProjectId
       const parentTaskId = options?.parentTaskId
       const myTasksOnly = options?.myTasksOnly ?? get().myTasksOnly
+      const filterUserId = options?.filterUserId ?? get().filterUserId
       const excludeCompleted = options?.excludeCompleted ?? get().excludeCompleted
 
       if (projectId) params.set('projectId', projectId)
       if (parentTaskId) params.set('parentTaskId', parentTaskId)
       if (myTasksOnly) params.set('myTasksOnly', 'true')
+      if (filterUserId) params.set('filterUserId', filterUserId)
       if (excludeCompleted) params.set('excludeCompleted', 'true')
 
       const url = `/task-tree${params.toString() ? `?${params.toString()}` : ''}`
@@ -79,6 +85,7 @@ export const useTaskTreeStore = create<TaskTreeState>((set, get) => ({
           treeData: res.data.data,
           selectedProjectId: projectId || null,
           myTasksOnly,
+          filterUserId: filterUserId || null,
           excludeCompleted,
         })
       }
@@ -99,6 +106,11 @@ export const useTaskTreeStore = create<TaskTreeState>((set, get) => ({
   setMyTasksOnly: (value: boolean) => {
     set({ myTasksOnly: value })
     get().fetchTaskTree({ myTasksOnly: value })
+  },
+
+  setFilterUserId: (userId: string | null) => {
+    set({ filterUserId: userId })
+    get().fetchTaskTree({ filterUserId: userId || undefined })
   },
 
   setExcludeCompleted: (value: boolean) => {

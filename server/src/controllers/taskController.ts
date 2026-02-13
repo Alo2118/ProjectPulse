@@ -7,6 +7,7 @@ import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { taskService } from '../services/taskService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { assertTaskOwnership } from '../utils/taskOwnership.js'
 import { TaskStatus, TaskPriority } from '../types/index.js'
 import { datePreprocess, numberPreprocess } from '../utils/validation.js'
 import { logger } from '../utils/logger.js'
@@ -32,7 +33,6 @@ const createTaskSchema = z.object({
   startDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
   dueDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
   estimatedHours: z.preprocess(numberPreprocess, z.number().positive('Estimated hours must be positive').optional()),
-  tags: z.record(z.unknown()).optional(),
 })
 
 const updateTaskSchema = z.object({
@@ -49,7 +49,6 @@ const updateTaskSchema = z.object({
   dueDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
   estimatedHours: z.preprocess(numberPreprocess, z.number().positive().nullable().optional()),
   actualHours: z.preprocess(numberPreprocess, z.number().positive().nullable().optional()),
-  tags: z.record(z.unknown()).optional(),
 })
 
 const querySchema = z.object({
@@ -207,7 +206,6 @@ export async function createTask(req: Request, res: Response, next: NextFunction
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
         estimatedHours: data.estimatedHours ?? undefined,
-        tags: data.tags,
       },
       userId
     )
@@ -237,16 +235,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
       throw new AppError('User not authenticated', 401)
     }
 
-    // Dipendenti can only update tasks they own (created or assigned)
-    if (userRole === 'dipendente') {
-      const existing = await taskService.getTaskById(id)
-      if (!existing) {
-        throw new AppError('Task not found', 404)
-      }
-      if (existing.createdById !== userId && existing.assigneeId !== userId) {
-        throw new AppError('Non hai i permessi per modificare questo task', 403)
-      }
-    }
+    await assertTaskOwnership(id, userId, userRole)
 
     const task = await taskService.updateTask(
       id,
@@ -263,7 +252,6 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
         estimatedHours: data.estimatedHours ?? undefined,
         actualHours: data.actualHours ?? undefined,
-        tags: data.tags,
       },
       userId
     )
@@ -302,6 +290,8 @@ export async function changeStatus(req: Request, res: Response, next: NextFuncti
       throw new AppError('User not authenticated', 401)
     }
 
+    await assertTaskOwnership(id, userId, req.user?.role)
+
     const task = await taskService.changeTaskStatus(id, status as TaskStatus, userId, blockedReason)
 
     if (!task) {
@@ -332,16 +322,7 @@ export async function deleteTask(req: Request, res: Response, next: NextFunction
       throw new AppError('User not authenticated', 401)
     }
 
-    // Dipendenti can only delete tasks they own (created or assigned)
-    if (userRole === 'dipendente') {
-      const existing = await taskService.getTaskById(id)
-      if (!existing) {
-        throw new AppError('Task not found', 404)
-      }
-      if (existing.createdById !== userId && existing.assigneeId !== userId) {
-        throw new AppError('Non hai i permessi per eliminare questo task', 403)
-      }
-    }
+    await assertTaskOwnership(id, userId, userRole)
 
     const deleted = await taskService.deleteTask(id, userId)
 
@@ -523,6 +504,22 @@ export async function createDependency(req: Request, res: Response, next: NextFu
       throw new AppError('User not authenticated', 401)
     }
 
+    // Dipendente must own at least one of the two linked tasks
+    if (req.user?.role === 'dipendente') {
+      const [pred, succ] = await Promise.all([
+        taskService.getTaskById(data.predecessorId),
+        taskService.getTaskById(data.successorId),
+      ])
+      if (!pred) throw new AppError('Predecessor task not found', 404)
+      if (!succ) throw new AppError('Successor task not found', 404)
+
+      const ownsPred = pred.createdById === userId || pred.assigneeId === userId
+      const ownsSucc = succ.createdById === userId || succ.assigneeId === userId
+      if (!ownsPred && !ownsSucc) {
+        throw new AppError('Non hai i permessi per creare questa dipendenza', 403)
+      }
+    }
+
     const dependency = await taskService.createTaskDependency(data, userId)
 
     res.status(201).json({ success: true, data: dependency })
@@ -564,6 +561,23 @@ export async function deleteDependency(req: Request, res: Response, next: NextFu
 
     if (!userId) {
       throw new AppError('User not authenticated', 401)
+    }
+
+    // Dipendente must own at least one of the two linked tasks
+    if (req.user?.role === 'dipendente') {
+      const dep = await taskService.getTaskDependencyById(dependencyId)
+      if (!dep) throw new AppError('Dependency not found', 404)
+
+      const [pred, succ] = await Promise.all([
+        taskService.getTaskById(dep.predecessorId),
+        taskService.getTaskById(dep.successorId),
+      ])
+
+      const ownsPred = pred && (pred.createdById === userId || pred.assigneeId === userId)
+      const ownsSucc = succ && (succ.createdById === userId || succ.assigneeId === userId)
+      if (!ownsPred && !ownsSucc) {
+        throw new AppError('Non hai i permessi per eliminare questa dipendenza', 403)
+      }
     }
 
     const deleted = await taskService.deleteTaskDependency(dependencyId, userId)

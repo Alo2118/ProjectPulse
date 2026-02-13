@@ -18,9 +18,11 @@ export function GanttTooltip({ content, children }: GanttTooltipProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const updatePosition = useCallback(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect()
-      // Position above the element, centered horizontally
+    // Use firstElementChild because the container has display:contents
+    // which makes getBoundingClientRect() return a zero-sized rect
+    const el = containerRef.current?.firstElementChild as HTMLElement | null
+    if (el) {
+      const rect = el.getBoundingClientRect()
       setPosition({
         x: rect.left + rect.width / 2,
         y: rect.top - 8,

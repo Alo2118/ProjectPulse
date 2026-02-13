@@ -7,6 +7,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useDashboardStore } from '@stores/dashboardStore'
 import { useProjectStore } from '@stores/projectStore'
+import { useUserStore } from '@stores/userStore'
+import { useAuthStore } from '@stores/authStore'
 import api from '@services/api'
 import {
   Clock,
@@ -69,6 +71,10 @@ function formatDateShort(dateString: string): string {
 export default function TimeTrackingPage() {
   const { runningTimer, fetchRunningTimer, startTimer, stopTimer } = useDashboardStore()
   const { projects, fetchProjects } = useProjectStore()
+  const { users, fetchUsers } = useUserStore()
+  const { user: currentUser } = useAuthStore()
+
+  const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'direzione'
 
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 })
@@ -77,6 +83,7 @@ export default function TimeTrackingPage() {
 
   // Filters - default to last 10 days
   const [projectFilter, setProjectFilter] = useState('')
+  const [userFilter, setUserFilter] = useState('')
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date()
     d.setDate(d.getDate() - 10)
@@ -103,6 +110,7 @@ export default function TimeTrackingPage() {
       params.append('page', String(pagination.page))
       params.append('limit', String(pagination.limit))
       if (projectFilter) params.append('projectId', projectFilter)
+      if (userFilter) params.append('userId', userFilter)
       if (dateFrom) params.append('fromDate', dateFrom)
       if (dateTo) params.append('toDate', dateTo)
 
@@ -119,12 +127,13 @@ export default function TimeTrackingPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [pagination.page, pagination.limit, projectFilter, dateFrom, dateTo])
+  }, [pagination.page, pagination.limit, projectFilter, userFilter, dateFrom, dateTo])
 
   useEffect(() => {
     fetchRunningTimer()
     fetchProjects()
-  }, [fetchRunningTimer, fetchProjects])
+    if (isPrivileged) fetchUsers()
+  }, [fetchRunningTimer, fetchProjects, isPrivileged, fetchUsers])
 
   useEffect(() => {
     fetchTimeEntries()
@@ -226,7 +235,7 @@ export default function TimeTrackingPage() {
       )}
 
       {/* Timer + Filters (unified card) */}
-      <div className="card p-4 space-y-4 overflow-visible">
+      <div className="card p-4 space-y-4 overflow-visible relative z-10">
         {/* Start timer row */}
         {!runningTimer && (
           <div className="flex gap-3 items-center">
@@ -269,6 +278,23 @@ export default function TimeTrackingPage() {
               </option>
             ))}
           </select>
+          {isPrivileged && (
+            <select
+              value={userFilter}
+              onChange={(e) => {
+                setUserFilter(e.target.value)
+                setPagination((prev) => ({ ...prev, page: 1 }))
+              }}
+              className="input w-auto"
+            >
+              <option value="">Tutti gli utenti</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.firstName} {u.lastName}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-500 dark:text-gray-400">Da:</label>
             <input
@@ -293,10 +319,11 @@ export default function TimeTrackingPage() {
               className="input w-auto"
             />
           </div>
-          {projectFilter && (
+          {(projectFilter || userFilter) && (
             <button
               onClick={() => {
                 setProjectFilter('')
+                setUserFilter('')
                 setDateFrom(() => {
                   const d = new Date(); d.setDate(d.getDate() - 10)
                   return d.toISOString().split('T')[0]
@@ -388,65 +415,65 @@ export default function TimeTrackingPage() {
                 {entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                    className="px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
                     onClick={() => setViewingEntry(entry)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <span
-                          className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400"
-                        >
-                          {entry.task?.title}
+                    <div className="flex items-center gap-2">
+                      {/* Project name - primary */}
+                      <Link
+                        to={`/projects/${entry.task?.project?.id}`}
+                        className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {entry.task?.project?.name}
+                      </Link>
+                      {/* Task title - secondary */}
+                      <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                        {entry.task?.title}
+                      </span>
+                      {/* Notes - tertiary */}
+                      {entry.description && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate hidden sm:inline" title={entry.description}>
+                          — {entry.description}
                         </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          <Link
-                            to={`/projects/${entry.task?.project?.id}`}
-                            className="hover:text-primary-600"
-                            onClick={(e) => e.stopPropagation()}
+                      )}
+                      {/* User name (admin/direzione only) - least prominent */}
+                      {isPrivileged && entry.user && (
+                        <span className="text-[11px] text-gray-400/80 dark:text-gray-500/80 shrink-0">
+                          [{entry.user.firstName} {entry.user.lastName}]
+                        </span>
+                      )}
+                      {/* Spacer */}
+                      <div className="flex-1" />
+                      {/* Time info */}
+                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">
+                        {formatTime(entry.startTime)}
+                        {entry.endTime && ` - ${formatTime(entry.endTime)}`}
+                      </span>
+                      {/* Duration */}
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0 w-16 text-right">
+                        {formatDuration(entry.duration)}
+                      </span>
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!entry.isRunning && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600"
+                            title="Modifica"
                           >
-                            {entry.task?.project?.name}
-                          </Link>
-                          {' • '}
-                          {entry.task?.code}
-                        </p>
-                        {entry.description && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">
-                            {entry.description}
-                          </p>
+                            <Pencil className="w-4 h-4" />
+                          </button>
                         )}
-                      </div>
-                      <div className="flex items-center gap-3 ml-4">
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {formatDuration(entry.duration)}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatTime(entry.startTime)}
-                            {entry.endTime && ` - ${formatTime(entry.endTime)}`}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {/* Allow edit only for stopped entries */}
-                          {!entry.isRunning && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600"
-                              title="Modifica"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                          )}
-                          {/* Allow delete for stopped entries OR orphan timers (isRunning but not the active timer) */}
-                          {(!entry.isRunning || (entry.isRunning && entry.id !== runningTimer?.id)) && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeletingEntryId(entry.id); }}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-600"
-                              title={entry.isRunning ? "Elimina timer orfano" : "Elimina"}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                        {(!entry.isRunning || (entry.isRunning && entry.id !== runningTimer?.id)) && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDeletingEntryId(entry.id); }}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-600"
+                            title={entry.isRunning ? "Elimina timer orfano" : "Elimina"}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

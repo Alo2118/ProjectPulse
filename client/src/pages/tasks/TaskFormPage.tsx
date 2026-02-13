@@ -21,11 +21,13 @@ import {
   Target,
   ListTodo,
 } from 'lucide-react'
-import { User, Project } from '@/types'
+import { User, Project, Tag } from '@/types'
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS, TASK_TYPE_OPTIONS } from '@/constants'
 import TaskSearchSelect from '@components/TaskSearchSelect'
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal'
 import RecurrenceSettings from '@components/tasks/RecurrenceSettings'
+import TagInput from '@components/tags/TagInput'
+import { useTagStore } from '@stores/tagStore'
 
 // Zod validation schema
 const taskSchema = z.object({
@@ -59,6 +61,8 @@ export default function TaskFormPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [taskTags, setTaskTags] = useState<Tag[]>([])
+  const { fetchEntityTags, assignTag: storeAssignTag } = useTagStore()
 
   const isEditMode = Boolean(id)
   const preselectedProjectId = searchParams.get('projectId') || ''
@@ -172,6 +176,13 @@ export default function TaskFormPage() {
     return () => clearCurrentTask()
   }, [id, isEditMode, fetchTask, clearCurrentTask])
 
+  // Load tags when editing
+  useEffect(() => {
+    if (isEditMode && id) {
+      fetchEntityTags('task', id).then(setTaskTags)
+    }
+  }, [isEditMode, id, fetchEntityTags])
+
   // Populate form when task is loaded
   useEffect(() => {
     if (isEditMode && currentTask) {
@@ -234,6 +245,14 @@ export default function TaskFormPage() {
         navigate(`/tasks/${id}`)
       } else {
         const newTask = await createTask(submitData)
+        // Assign selected tags to newly created task
+        for (const tag of taskTags) {
+          try {
+            await storeAssignTag(tag.id, 'task', newTask.id)
+          } catch {
+            // ignore duplicate assignments
+          }
+        }
         navigate(`/tasks/${newTask.id}`)
       }
     } catch (error) {
@@ -611,6 +630,19 @@ export default function TaskFormPage() {
               </label>
             </div>
           )}
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Tag
+          </label>
+          <TagInput
+            entityType="task"
+            entityId={isEditMode ? id ?? null : null}
+            value={taskTags}
+            onChange={setTaskTags}
+          />
         </div>
 
         {/* Actions */}

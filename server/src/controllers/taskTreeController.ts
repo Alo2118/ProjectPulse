@@ -24,12 +24,14 @@ async function getTaskTree(req: Request, res: Response, next: NextFunction): Pro
     const projectId = req.query.projectId as string | undefined
     const parentTaskId = req.query.parentTaskId as string | undefined
     const myTasksOnly = req.query.myTasksOnly === 'true'
+    const filterUserId = req.query.filterUserId as string | undefined
     const excludeCompleted = req.query.excludeCompleted === 'true'
 
     const data = await taskTreeService.getTaskTree(userId, userRole, {
       projectId,
       parentTaskId,
       myTasksOnly,
+      filterUserId,
       excludeCompleted,
     })
 

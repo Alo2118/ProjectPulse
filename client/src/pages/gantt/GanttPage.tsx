@@ -44,7 +44,7 @@ export default function GanttPage() {
     fetchGanttTasks()
     fetchProjects({})
     fetchUsers()
-  }, [])
+  }, [fetchGanttTasks, fetchProjects, fetchUsers])
 
   // Handle filter changes
   const handleApplyFilters = () => {

@@ -9,6 +9,7 @@ import { projectService } from '../services/projectService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { ProjectStatus, ProjectPriority } from '../types/index.js'
 import { datePreprocess, numberPreprocess } from '../utils/validation.js'
+import { assertProjectOwnership } from '../utils/projectOwnership.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -114,11 +115,14 @@ export async function createProject(req: Request, res: Response, next: NextFunct
       throw new AppError('User not authenticated', 401)
     }
 
+    // Dipendente can only create projects owned by themselves
+    const effectiveOwnerId = req.user?.role === 'dipendente' ? userId : (data.ownerId ?? undefined)
+
     const project = await projectService.createProject(
       {
         name: data.name,
         description: data.description ?? undefined,
-        ownerId: data.ownerId ?? undefined,
+        ownerId: effectiveOwnerId,
         templateId: data.templateId ?? undefined,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         targetEndDate: data.targetEndDate ? new Date(data.targetEndDate) : undefined,
@@ -148,12 +152,17 @@ export async function updateProject(req: Request, res: Response, next: NextFunct
       throw new AppError('User not authenticated', 401)
     }
 
+    await assertProjectOwnership(id, userId, req.user?.role)
+
+    // Dipendente cannot change the project owner
+    const effectiveOwnerId = req.user?.role === 'dipendente' ? undefined : data.ownerId
+
     const project = await projectService.updateProject(
       id,
       {
         name: data.name,
         description: data.description ?? undefined,
-        ownerId: data.ownerId,
+        ownerId: effectiveOwnerId,
         status: data.status as ProjectStatus,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         targetEndDate: data.targetEndDate ? new Date(data.targetEndDate) : undefined,
@@ -187,6 +196,8 @@ export async function deleteProject(req: Request, res: Response, next: NextFunct
       throw new AppError('User not authenticated', 401)
     }
 
+    await assertProjectOwnership(id, userId, req.user?.role)
+
     const deleted = await projectService.deleteProject(id, userId)
 
     if (!deleted) {
@@ -212,6 +223,8 @@ export async function changeStatus(req: Request, res: Response, next: NextFuncti
     if (!userId) {
       throw new AppError('User not authenticated', 401)
     }
+
+    await assertProjectOwnership(id, userId, req.user?.role)
 
     const project = await projectService.changeProjectStatus(id, status as ProjectStatus, userId)
 

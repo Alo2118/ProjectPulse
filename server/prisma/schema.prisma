@@ -48,6 +48,7 @@ model User {
   notes              Note[]
   attachments        Attachment[]
   taskCompletions    TaskCompletion[] @relation("TaskCompletions")
+  createdTags        Tag[]
 
   @@map("users")
 }
@@ -128,7 +129,6 @@ model Task {
   dueDate           DateTime? @map("due_date")
   estimatedHours    Decimal?  @map("estimated_hours") @db.Decimal(8, 2)
   actualHours       Decimal?  @map("actual_hours") @db.Decimal(8, 2)
-  tags              String?   @default("{}") @db.NVarChar(Max)
   position          Int       @default(0)
   blockedReason     String?   @map("blocked_reason")
   isRecurring       Boolean   @default(false) @map("is_recurring")
@@ -412,6 +412,42 @@ model WeeklyReport {
   @@index([weekNumber, year])
   @@index([isDeleted])
   @@map("weekly_reports")
+}
+
+// ============================================================
+// TAGS - Polymorphic tag system for tasks, documents, etc.
+// ============================================================
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  color       String   @default("#6B7280")
+  createdById String   @map("created_by_id")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy   User            @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignments TagAssignment[]
+
+  @@index([name])
+  @@index([isDeleted])
+  @@map("tags")
+}
+
+model TagAssignment {
+  id         String   @id @default(uuid())
+  tagId      String   @map("tag_id")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tagId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@index([tagId])
+  @@map("tag_assignments")
 }
 
 // ============================================================

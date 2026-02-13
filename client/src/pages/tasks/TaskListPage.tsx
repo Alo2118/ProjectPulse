@@ -351,12 +351,16 @@ export default function TaskListPage() {
             )
           }
 
-          const inProgressTasks = taskList.filter((t) => t.status === 'in_progress')
-          const todoTasks = taskList.filter((t) => t.status === 'todo')
-          const blockedTasks = taskList.filter((t) => t.status === 'blocked')
-          const reviewTasks = taskList.filter((t) => t.status === 'review')
+          console.log('[TaskListPage] taskList length:', taskList.length)
+          console.log('[TaskListPage] First task:', taskList[0])
+          console.log('[TaskListPage] Checking isRecurring values:', taskList.map(t => ({ code: t.code, isRecurring: t.isRecurring, type: typeof t.isRecurring })))
+          const recurringTasks = taskList.filter((t) => t.isRecurring && t.status !== 'done')
+          console.log('[TaskListPage] Recurring tasks count:', recurringTasks.length)
+          const inProgressTasks = taskList.filter((t) => t.status === 'in_progress' && !t.isRecurring)
+          const todoTasks = taskList.filter((t) => t.status === 'todo' && !t.isRecurring)
+          const blockedTasks = taskList.filter((t) => t.status === 'blocked' && !t.isRecurring)
+          const reviewTasks = taskList.filter((t) => t.status === 'review' && !t.isRecurring)
           const completedTasks = taskList.filter((t) => t.status === 'done')
-          const recurringTasks = taskList.filter((t) => t.isRecurring)
 
           const renderTaskItem = (task: Task) => {
             const isRunning = runningTimer?.taskId === task.id

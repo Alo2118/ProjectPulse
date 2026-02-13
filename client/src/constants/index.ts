@@ -409,3 +409,20 @@ export const USER_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'direzione', label: 'Direzione' },
   { value: 'dipendente', label: 'Dipendente' },
 ]
+
+// ============================================================
+// TAG COLORS
+// ============================================================
+
+export const TAG_COLORS: { value: string; label: string }[] = [
+  { value: '#EF4444', label: 'Rosso' },
+  { value: '#F97316', label: 'Arancione' },
+  { value: '#EAB308', label: 'Giallo' },
+  { value: '#22C55E', label: 'Verde' },
+  { value: '#14B8A6', label: 'Teal' },
+  { value: '#3B82F6', label: 'Blu' },
+  { value: '#8B5CF6', label: 'Viola' },
+  { value: '#EC4899', label: 'Rosa' },
+  { value: '#6B7280', label: 'Grigio' },
+  { value: '#78716C', label: 'Marrone' },
+]

@@ -120,10 +120,10 @@ if (-not $ruleClient) {
 # --- 6. Avvio servizi con PM2 ---
 Write-Host "[6/6] Avvio servizi con PM2..." -ForegroundColor Yellow
 
-# Backend
+# Backend (avvia direttamente il JS compilato)
 Push-Location "$AppDir\server"
 $env:PORT = "$ApiPort"
-pm2 start npm --name projectpulse-api -- run start --update-env *> $null
+cmd /c "pm2 start dist/index.js --name projectpulse-api --update-env" *> $null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  ERRORE: avvio PM2 backend fallito" -ForegroundColor Red
     exit 1
@@ -131,9 +131,9 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "  Backend PM2 avviato su porta $ApiPort" -ForegroundColor Green
 Pop-Location
 
-# Frontend (Vite preview)
+# Frontend (Vite preview - vite è nel node_modules root del workspace)
 Push-Location "$AppDir\client"
-pm2 start npm --name projectpulse-client -- run preview -- --host 0.0.0.0 --port $ClientPort --strictPort *> $null
+cmd /c "pm2 start ..\node_modules\vite\bin\vite.js --name projectpulse-client --cwd . -- preview --host 0.0.0.0 --port $ClientPort --strictPort" *> $null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  ERRORE: avvio PM2 frontend fallito" -ForegroundColor Red
     exit 1

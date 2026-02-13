@@ -34,6 +34,8 @@ interface TaskTreeViewProps {
   mode?: 'compact' | 'full'
   /** Show only user's assigned tasks */
   myTasksOnly?: boolean
+  /** Filter by specific user ID */
+  filterUserId?: string
   /** Hide completed tasks */
   excludeCompleted?: boolean
   /** Show summary cards at top */
@@ -722,6 +724,7 @@ function SummaryCards({
 export function TaskTreeView({
   mode = 'full',
   myTasksOnly: propMyTasksOnly,
+  filterUserId: propFilterUserId,
   excludeCompleted: propExcludeCompleted,
   showSummary = true,
   showControls = true,
@@ -743,6 +746,7 @@ export function TaskTreeView({
     isLoading,
     error,
     myTasksOnly,
+    filterUserId,
     excludeCompleted,
     fetchTaskTree,
     toggleProject,
@@ -762,9 +766,10 @@ export function TaskTreeView({
       projectId,
       parentTaskId,
       myTasksOnly: propMyTasksOnly ?? myTasksOnly,
+      filterUserId: propFilterUserId ?? filterUserId,
       excludeCompleted: propExcludeCompleted ?? excludeCompleted,
     })
-  }, [fetchTaskTree, projectId, parentTaskId, propMyTasksOnly, propExcludeCompleted])
+  }, [fetchTaskTree, projectId, parentTaskId, propMyTasksOnly, propFilterUserId, propExcludeCompleted])
 
   if (isLoading && !treeData) {
     return (

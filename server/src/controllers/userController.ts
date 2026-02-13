@@ -316,3 +316,82 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
     next(error)
   }
 }
+
+export const hardDeleteUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+    const requestingUserId = (req as Request & { user?: { id: string } }).user?.id
+
+    const existing = await prisma.user.findUnique({ where: { id } })
+    if (!existing) {
+      throw new AppError('User not found', 404)
+    }
+
+    // Prevent self-delete
+    if (id === requestingUserId) {
+      throw new AppError('Cannot delete your own account', 400)
+    }
+
+    // Don't allow deleting the last admin
+    if (existing.role === 'admin') {
+      const adminCount = await prisma.user.count({ where: { role: 'admin', isDeleted: false } })
+      if (adminCount <= 1) {
+        throw new AppError('Cannot delete the last admin user', 400)
+      }
+    }
+
+    // Check for non-nullable FK dependencies that would block deletion
+    const [ownedProjects, createdProjects, createdTasks, createdRisks, createdDocuments, createdInputs, createdTags] = await Promise.all([
+      prisma.project.count({ where: { ownerId: id, isDeleted: false } }),
+      prisma.project.count({ where: { createdById: id, isDeleted: false } }),
+      prisma.task.count({ where: { createdById: id, isDeleted: false } }),
+      prisma.risk.count({ where: { createdById: id, isDeleted: false } }),
+      prisma.document.count({ where: { createdById: id, isDeleted: false } }),
+      prisma.userInput.count({ where: { createdById: id, isDeleted: false } }),
+      prisma.tag.count({ where: { createdById: id } }),
+    ])
+
+    const blockers: string[] = []
+    if (ownedProjects > 0) blockers.push(`${ownedProjects} owned project(s)`)
+    if (createdProjects > 0) blockers.push(`${createdProjects} created project(s)`)
+    if (createdTasks > 0) blockers.push(`${createdTasks} created task(s)`)
+    if (createdRisks > 0) blockers.push(`${createdRisks} created risk(s)`)
+    if (createdDocuments > 0) blockers.push(`${createdDocuments} created document(s)`)
+    if (createdInputs > 0) blockers.push(`${createdInputs} created user input(s)`)
+    if (createdTags > 0) blockers.push(`${createdTags} created tag(s)`)
+
+    if (blockers.length > 0) {
+      throw new AppError(
+        `Cannot hard delete: user has ${blockers.join(', ')}. Reassign or delete them first.`,
+        409
+      )
+    }
+
+    // Hard delete in transaction
+    await prisma.$transaction(async (tx) => {
+      // Nullify nullable FK references
+      await tx.task.updateMany({ where: { assigneeId: id }, data: { assigneeId: null } })
+      await tx.risk.updateMany({ where: { ownerId: id }, data: { ownerId: null } })
+      await tx.document.updateMany({ where: { approvedById: id }, data: { approvedById: null } })
+      await tx.userInput.updateMany({ where: { processedById: id }, data: { processedById: null } })
+
+      // Delete records that belong to the user
+      await tx.refreshToken.deleteMany({ where: { userId: id } })
+      await tx.notification.deleteMany({ where: { userId: id } })
+      await tx.timeEntry.deleteMany({ where: { userId: id } })
+      await tx.comment.deleteMany({ where: { userId: id } })
+      await tx.taskCompletion.deleteMany({ where: { completedBy: id } })
+      await tx.weeklyReport.deleteMany({ where: { userId: id } })
+      await tx.note.deleteMany({ where: { userId: id } })
+      await tx.attachment.deleteMany({ where: { uploadedById: id } })
+      await tx.auditLog.deleteMany({ where: { userId: id } })
+
+      // Delete the user
+      await tx.user.delete({ where: { id } })
+    })
+
+    res.json({ success: true, message: `User ${existing.email} permanently deleted` })
+  } catch (error) {
+    next(error)
+  }
+}

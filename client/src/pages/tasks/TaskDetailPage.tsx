@@ -32,7 +32,7 @@ import {
   ListTodo,
   Repeat2,
 } from 'lucide-react'
-import { Comment, TaskStatus, Note, Attachment } from '@/types'
+import { Comment, TaskStatus, Note, Attachment, Tag } from '@/types'
 import { StatusIcon } from '@/components/ui/StatusIcon'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { CommentSection } from '@/components/tasks/CommentSection'
@@ -50,6 +50,8 @@ import {
   TASK_TYPE_LABELS,
   TASK_TYPE_COLORS,
 } from '@/constants'
+import { useTagStore } from '@stores/tagStore'
+import TagList from '@components/tags/TagList'
 
 function formatDateRelative(dateString: string | null | undefined): string {
   if (!dateString) return '-'
@@ -85,6 +87,8 @@ export default function TaskDetailPage() {
   const [notesLoading, setNotesLoading] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
+  const [taskTags, setTaskTags] = useState<Tag[]>([])
+  const { fetchEntityTags } = useTagStore()
   const [showBlockedModal, setShowBlockedModal] = useState(false)
   const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null)
   const [isChangingStatus, setIsChangingStatus] = useState(false)
@@ -95,9 +99,10 @@ export default function TaskDetailPage() {
       loadComments(id)
       loadNotes(id)
       loadAttachments(id)
+      fetchEntityTags('task', id).then(setTaskTags)
     }
     return () => clearCurrentTask()
-  }, [id, fetchTask, clearCurrentTask])
+  }, [id, fetchTask, clearCurrentTask, fetchEntityTags])
 
   const loadComments = async (taskId: string) => {
     setCommentsLoading(true)
@@ -377,6 +382,7 @@ export default function TaskDetailPage() {
                 </span>
               )}
               <StatusIcon type="taskPriority" value={currentTask.priority} size="sm" showLabel />
+              {taskTags.length > 0 && <TagList tags={taskTags} size="sm" />}
               {currentTask.dueDate && (
                 <span className={`flex items-center gap-1 text-sm ${isOverdue ? 'text-red-500 font-medium' : isDueSoon ? 'text-amber-500' : 'text-gray-500 dark:text-gray-400'}`}>
                   <Calendar className="w-3.5 h-3.5" />

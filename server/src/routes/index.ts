@@ -19,6 +19,7 @@ import weeklyReportRoutes from './weeklyReportRoutes.js'
 import taskTreeRoutes from './taskTreeRoutes.js'
 import noteRoutes from './noteRoutes.js'
 import attachmentRoutes from './attachmentRoutes.js'
+import tagRoutes from './tagRoutes.js'
 
 const router = Router()
 
@@ -38,5 +39,6 @@ router.use('/reports/weekly', weeklyReportRoutes)
 router.use('/task-tree', taskTreeRoutes)
 router.use('/notes', noteRoutes)
 router.use('/attachments', attachmentRoutes)
+router.use('/tags', tagRoutes)
 
 export default router

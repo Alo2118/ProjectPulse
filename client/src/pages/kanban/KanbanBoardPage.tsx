@@ -313,6 +313,12 @@ export default function KanbanBoardPage() {
     }
 
     if (newStatus && newStatus !== task.status) {
+      // Dipendente can only change status of own tasks
+      if (user?.role === 'dipendente') {
+        const isOwner = task.createdById === user.id || task.assigneeId === user.id
+        if (!isOwner) return
+      }
+
       try {
         await changeTaskStatus(taskId, newStatus)
       } catch (error) {

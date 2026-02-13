@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useWeeklyReportStore } from '@stores/weeklyReportStore'
 import { useAuthStore } from '@stores/authStore'
 import { useToastStore } from '@stores/toastStore'
@@ -17,10 +18,12 @@ import {
   Download,
   RefreshCw,
   Users,
+  User,
   Calendar,
   TrendingUp,
   ArrowRight,
   FolderTree,
+  Repeat2,
 } from 'lucide-react'
 import type { WeeklyReportData, WeeklyReport } from '@/types'
 import { TaskTreeView } from '@components/reports/TaskTreeView'
@@ -59,7 +62,38 @@ function formatDate(dateStr: string): string {
 }
 
 // Preview Section Component
-function ReportPreview({ data }: { data: WeeklyReportData }) {
+function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selectedUserId?: string | null }) {
+  // Filter tasks based on selected user and separate recurring tasks
+  const allCompleted = selectedUserId 
+    ? data.tasks.completed.filter(t => t.assigneeId === selectedUserId)
+    : data.tasks.completed
+  
+  const allInProgress = selectedUserId 
+    ? data.tasks.inProgress.filter(t => t.assigneeId === selectedUserId)
+    : data.tasks.inProgress
+  
+  const allCreated = selectedUserId 
+    ? data.tasks.created.filter(t => t.assigneeId === selectedUserId)
+    : data.tasks.created
+
+  // Separate recurring tasks (non-completed ones)
+  const recurringTasks = allInProgress.filter(t => t.isRecurring)
+  const recurringCreated = allCreated.filter(t => t.isRecurring && t.status !== 'done')
+  const allRecurringTasks = [...recurringTasks, ...recurringCreated.filter(t => !recurringTasks.find(rt => rt.id === t.id))]
+
+  const filteredData = {
+    ...data,
+    tasks: {
+      completed: allCompleted, // Include all completed, even recurring
+      inProgress: allInProgress.filter(t => !t.isRecurring), // Exclude recurring
+      created: allCreated.filter(t => !t.isRecurring), // Exclude recurring
+      recurring: allRecurringTasks,
+    },
+    blockedTasks: selectedUserId 
+      ? data.blockedTasks.filter(t => t.assigneeId === selectedUserId)
+      : data.blockedTasks,
+  }
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -201,27 +235,64 @@ function ReportPreview({ data }: { data: WeeklyReportData }) {
             Attività Task
           </h3>
           <div className="space-y-4">
-            {/* Completed */}
-            <div>
-              <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">
-                Completati ({data.tasks.completed.length})
-              </h4>
-              {data.tasks.completed.length > 0 ? (
+            {/* Recurring Tasks */}
+            {filteredData.tasks.recurring && filteredData.tasks.recurring.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-cyan-600 dark:text-cyan-400 mb-3 flex items-center gap-2">
+                  <Repeat2 className="w-4 h-4" />
+                  Ricorrenti ({filteredData.tasks.recurring.length})
+                </h4>
                 <ul className="space-y-1">
-                  {data.tasks.completed.slice(0, 5).map((task) => (
-                    <li key={task.id} className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <span className="truncate">
-                        {task.code} - {task.title}
-                        {task.assigneeName && (
-                          <span className="text-xs text-primary-500 dark:text-primary-400 ml-1">— {task.assigneeName}</span>
+                  {filteredData.tasks.recurring.map((task) => (
+                    <li key={task.id} className="flex items-center gap-2 group py-1.5">
+                      <Repeat2 className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                      <Link
+                        to={`/tasks/${task.id}`}
+                        className="flex-1 text-sm text-gray-700 dark:text-gray-300 hover:text-primary-500 flex items-center gap-2"
+                      >
+                        <span className="truncate">{task.title}</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-xs font-medium whitespace-nowrap flex-shrink-0">
+                          <Repeat2 className="w-3 h-3" />
+                          Ricorrente
+                        </span>
+                        {task.projectName && (
+                          <span className="text-xs text-gray-400 ml-auto flex-shrink-0">({task.projectName})</span>
                         )}
-                      </span>
+                      </Link>
+                      {task.assigneeName && (
+                        <span className="text-xs text-primary-500 dark:text-primary-400 flex-shrink-0">{task.assigneeName}</span>
+                      )}
                     </li>
                   ))}
-                  {data.tasks.completed.length > 5 && (
-                    <li className="text-sm text-gray-400">...e altri {data.tasks.completed.length - 5}</li>
-                  )}
+                </ul>
+              </div>
+            )}
+
+            {/* Completed */}
+            <div>
+              <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-3 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Completati ({filteredData.tasks.completed.length})
+              </h4>
+              {filteredData.tasks.completed.length > 0 ? (
+                <ul className="space-y-1">
+                  {filteredData.tasks.completed.map((task) => (
+                    <li key={task.id} className="flex items-center gap-2 group py-1.5">
+                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <Link
+                        to={`/tasks/${task.id}`}
+                        className="flex-1 text-sm text-gray-700 dark:text-gray-300 hover:text-primary-500 flex items-center gap-2"
+                      >
+                        <span className="truncate">{task.title}</span>
+                        {task.projectName && (
+                          <span className="text-xs text-gray-400 ml-auto flex-shrink-0">({task.projectName})</span>
+                        )}
+                      </Link>
+                      {task.assigneeName && (
+                        <span className="text-xs text-primary-500 dark:text-primary-400 flex-shrink-0">{task.assigneeName}</span>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               ) : (
                 <p className="text-sm text-gray-400">Nessun task completato questa settimana</p>
@@ -230,20 +301,27 @@ function ReportPreview({ data }: { data: WeeklyReportData }) {
 
             {/* In Progress */}
             <div>
-              <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
-                In Corso ({data.tasks.inProgress.length})
+              <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
+                <ArrowRight className="w-4 h-4" />
+                In Corso ({filteredData.tasks.inProgress.length})
               </h4>
-              {data.tasks.inProgress.length > 0 ? (
+              {filteredData.tasks.inProgress.length > 0 ? (
                 <ul className="space-y-1">
-                  {data.tasks.inProgress.slice(0, 5).map((task) => (
-                    <li key={task.id} className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                  {filteredData.tasks.inProgress.map((task) => (
+                    <li key={task.id} className="flex items-center gap-2 group py-1.5">
                       <ArrowRight className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <span className="truncate">
-                        {task.code} - {task.title}
-                        {task.assigneeName && (
-                          <span className="text-xs text-primary-500 dark:text-primary-400 ml-1">— {task.assigneeName}</span>
+                      <Link
+                        to={`/tasks/${task.id}`}
+                        className="flex-1 text-sm text-gray-700 dark:text-gray-300 hover:text-primary-500 flex items-center gap-2"
+                      >
+                        <span className="truncate">{task.title}</span>
+                        {task.projectName && (
+                          <span className="text-xs text-gray-400 ml-auto flex-shrink-0">({task.projectName})</span>
                         )}
-                      </span>
+                      </Link>
+                      {task.assigneeName && (
+                        <span className="text-xs text-primary-500 dark:text-primary-400 flex-shrink-0">{task.assigneeName}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -254,20 +332,27 @@ function ReportPreview({ data }: { data: WeeklyReportData }) {
 
             {/* Created */}
             <div>
-              <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Creati ({data.tasks.created.length})
+              <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Creati ({filteredData.tasks.created.length})
               </h4>
-              {data.tasks.created.length > 0 ? (
+              {filteredData.tasks.created.length > 0 ? (
                 <ul className="space-y-1">
-                  {data.tasks.created.slice(0, 3).map((task) => (
-                    <li key={task.id} className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                  {filteredData.tasks.created.map((task) => (
+                    <li key={task.id} className="flex items-center gap-2 group py-1.5">
                       <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span className="truncate">
-                        {task.code} - {task.title}
-                        {task.assigneeName && (
-                          <span className="text-xs text-primary-500 dark:text-primary-400 ml-1">— {task.assigneeName}</span>
+                      <Link
+                        to={`/tasks/${task.id}`}
+                        className="flex-1 text-sm text-gray-700 dark:text-gray-300 hover:text-primary-500 flex items-center gap-2"
+                      >
+                        <span className="truncate">{task.title}</span>
+                        {task.projectName && (
+                          <span className="text-xs text-gray-400 ml-auto flex-shrink-0">({task.projectName})</span>
                         )}
-                      </span>
+                      </Link>
+                      {task.assigneeName && (
+                        <span className="text-xs text-primary-500 dark:text-primary-400 flex-shrink-0">{task.assigneeName}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -284,9 +369,9 @@ function ReportPreview({ data }: { data: WeeklyReportData }) {
             <AlertTriangle className="w-5 h-5 text-red-400" />
             Task Bloccati
           </h3>
-          {data.blockedTasks.length > 0 ? (
+          {filteredData.blockedTasks.length > 0 ? (
             <div className="space-y-3">
-              {data.blockedTasks.map((task) => (
+              {filteredData.blockedTasks.map((task) => (
                 <div key={task.id} className="p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
                   <p className="font-medium text-gray-900 dark:text-white text-sm">
                     {task.code} - {task.title}
@@ -335,10 +420,10 @@ function ReportPreview({ data }: { data: WeeklyReportData }) {
                   {project.projectCode} - {project.projectName} ({project.commentCount} commenti)
                 </h4>
                 <ul className="space-y-2 ml-4">
-                  {project.comments.slice(0, 3).map((comment) => (
+                  {project.comments.map((comment) => (
                     <li key={comment.id} className="text-sm text-gray-600 dark:text-gray-400">
                       <span className="text-xs text-gray-400">[{comment.taskCode}]</span>{' '}
-                      {comment.content.substring(0, 80)}{comment.content.length > 80 ? '...' : ''}
+                      {comment.content}
                     </li>
                   ))}
                 </ul>
@@ -456,6 +541,7 @@ export default function WeeklyReportPage() {
   const { addToast } = useToastStore()
   const isDirezione = user?.role === 'direzione'
   const [activeTab, setActiveTab] = useState<'preview' | 'projectTree' | 'myReports' | 'teamReports'>('preview')
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCurrentWeekInfo()
@@ -561,10 +647,10 @@ export default function WeeklyReportPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('preview')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'preview'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -574,7 +660,7 @@ export default function WeeklyReportPage() {
         </button>
         <button
           onClick={() => setActiveTab('projectTree')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
             activeTab === 'projectTree'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -585,7 +671,7 @@ export default function WeeklyReportPage() {
         </button>
         <button
           onClick={() => setActiveTab('myReports')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'myReports'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -595,7 +681,7 @@ export default function WeeklyReportPage() {
         </button>
         <button
           onClick={() => setActiveTab('teamReports')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
             activeTab === 'teamReports'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -613,7 +699,46 @@ export default function WeeklyReportPage() {
             <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
           </div>
         ) : currentWeekPreview ? (
-          <ReportPreview data={currentWeekPreview} />
+          <div className="space-y-4">
+            {/* User Filter (Team Mode Only) */}
+            {isDirezione && currentWeekPreview.timeTracking.byUser && currentWeekPreview.timeTracking.byUser.length > 0 && (
+              <div className="card p-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Filtra per Utente
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedUserId(null)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      selectedUserId === null
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    Tutti gli utenti
+                  </button>
+                  {currentWeekPreview.timeTracking.byUser.map((u) => (
+                    <button
+                      key={u.userId}
+                      onClick={() => setSelectedUserId(u.userId)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        selectedUserId === u.userId
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5" />
+                        <span>{u.userName}</span>
+                        <span className="text-xs opacity-75">({(u.totalMinutes / 60).toFixed(1)}h)</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <ReportPreview data={currentWeekPreview} selectedUserId={selectedUserId} />
+          </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
             <p>Nessun dato disponibile per questa settimana</p>
@@ -621,7 +746,48 @@ export default function WeeklyReportPage() {
         )
       )}
 
-      {activeTab === 'projectTree' && <TaskTreeView myTasksOnly={!isDirezione} />}
+      {activeTab === 'projectTree' && (
+        <div className="space-y-4">
+          {/* User Filter (Team Mode Only) */}
+          {isDirezione && currentWeekPreview?.timeTracking.byUser && currentWeekPreview.timeTracking.byUser.length > 0 && (
+            <div className="card p-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Filtra per Utente
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedUserId(null)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    selectedUserId === null
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  Tutti gli utenti
+                </button>
+                {currentWeekPreview.timeTracking.byUser.map((u) => (
+                  <button
+                    key={u.userId}
+                    onClick={() => setSelectedUserId(u.userId)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      selectedUserId === u.userId
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <User className="w-3.5 h-3.5" />
+                      <span>{u.userName}</span>
+                      <span className="text-xs opacity-75">({(u.totalMinutes / 60).toFixed(1)}h)</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <TaskTreeView myTasksOnly={!isDirezione} filterUserId={selectedUserId || undefined} />
+        </div>
+      )}
 
       {activeTab === 'myReports' && (
         isLoading && reports.length === 0 ? (

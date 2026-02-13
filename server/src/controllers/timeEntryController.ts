@@ -209,9 +209,14 @@ export async function getTimeEntries(req: Request, res: Response, next: NextFunc
         : new Date(toDateStr)
       : undefined
 
+    // Dipendente can only see their own time entries
+    const effectiveUserId = req.user?.role === 'dipendente'
+      ? req.user?.userId
+      : params.userId
+
     const result = await timeEntryService.getTimeEntries({
       taskId: params.taskId,
-      userId: params.userId,
+      userId: effectiveUserId,
       projectId: params.projectId,
       startDate,
       endDate,

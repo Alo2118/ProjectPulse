@@ -7,6 +7,7 @@ import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { logger } from '../utils/logger.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { assertTaskOwnership } from '../utils/taskOwnership.js'
 import * as recurrenceService from '../services/recurrenceService.js'
 import { RecurrenceType } from '../types/index.js'
 
@@ -53,6 +54,8 @@ export async function completeOccurrence(
     if (!userId) {
       throw new AppError('User not authenticated', 401)
     }
+
+    await assertTaskOwnership(taskId, userId, req.user?.role)
 
     logger.info('Marking task occurrence as complete', {
       taskId,
@@ -159,6 +162,8 @@ export async function setRecurrence(
       throw new AppError('User not authenticated', 401)
     }
 
+    await assertTaskOwnership(taskId, userId, req.user?.role)
+
     logger.info('Setting task recurrence', {
       taskId,
       isRecurring: data.isRecurring,
@@ -199,6 +204,8 @@ export async function purgeOldCompletions(
     if (!userId) {
       throw new AppError('User not authenticated', 401)
     }
+
+    await assertTaskOwnership(taskId, userId, req.user?.role)
 
     logger.info('Purging old task completions', {
       taskId,

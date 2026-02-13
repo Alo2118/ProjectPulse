@@ -205,7 +205,6 @@ export async function getRecurringTaskWithCompletions(
       dueDate: true,
       estimatedHours: true,
       actualHours: true,
-      tags: true,
       position: true,
       blockedReason: true,
       isRecurring: true,

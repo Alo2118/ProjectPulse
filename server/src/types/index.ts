@@ -22,6 +22,8 @@ export type {
   TaskDependency,
   Note,
   Attachment,
+  Tag,
+  TagAssignment,
 } from '@prisma/client'
 
 // ============================================================
@@ -69,6 +71,7 @@ export enum EntityType {
   USER_INPUT = 'user_input',
   NOTE = 'note',
   ATTACHMENT = 'attachment',
+  TAG = 'tag',
 }
 
 // ============================================================
@@ -109,7 +112,6 @@ export interface CreateTaskInput {
   startDate?: Date
   dueDate?: Date
   estimatedHours?: number
-  tags?: Record<string, unknown>
 }
 
 export interface UpdateTaskInput {
@@ -125,7 +127,6 @@ export interface UpdateTaskInput {
   dueDate?: Date
   estimatedHours?: number
   actualHours?: number
-  tags?: Record<string, unknown>
   blockedReason?: string
 }
 
@@ -356,6 +357,33 @@ export interface TaskDependencyResponse {
 
 export type NoteableEntityType = 'project' | 'task' | 'time_entry'
 export type AttachableEntityType = 'project' | 'task' | 'time_entry'
+export type TaggableEntityType = 'task' | 'document'
+
+// ============================================================
+// TAG TYPES
+// ============================================================
+
+export interface CreateTagInput {
+  name: string
+  color?: string
+}
+
+export interface UpdateTagInput {
+  name?: string
+  color?: string
+}
+
+export interface AssignTagInput {
+  tagId: string
+  entityType: TaggableEntityType
+  entityId: string
+}
+
+export interface TagQueryParams {
+  search?: string
+  page?: number
+  limit?: number
+}
 
 export interface CreateNoteInput {
   entityType: NoteableEntityType

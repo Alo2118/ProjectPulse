@@ -89,7 +89,7 @@ export const useGanttStore = create<GanttState>((set, get) => ({
 
     switch (level) {
       case 'day':
-        newEnd = addDays(viewStartDate, 14) // 2 weeks view
+        newEnd = endOfMonth(viewStartDate) // Full month view
         break
       case 'week':
         newEnd = addDays(viewStartDate, 28) // 4 weeks view

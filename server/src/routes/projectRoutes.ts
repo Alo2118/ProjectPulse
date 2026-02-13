@@ -29,16 +29,16 @@ router.get('/:id', getProject)
 // GET /api/projects/:id/stats - Get project statistics
 router.get('/:id/stats', getProjectStats)
 
-// POST /api/projects - Create project (direzione/admin only)
-router.post('/', requireRole('admin', 'direzione'), createProject)
+// POST /api/projects - Create project (all roles, dipendente can only own their projects)
+router.post('/', requireRole('admin', 'direzione', 'dipendente'), createProject)
 
-// PUT /api/projects/:id - Update project (direzione/admin only)
-router.put('/:id', requireRole('admin', 'direzione'), updateProject)
+// PUT /api/projects/:id - Update project (dipendente only own projects)
+router.put('/:id', requireRole('admin', 'direzione', 'dipendente'), updateProject)
 
-// PATCH /api/projects/:id/status - Change project status (direzione/admin only)
-router.patch('/:id/status', requireRole('admin', 'direzione'), changeStatus)
+// PATCH /api/projects/:id/status - Change project status (dipendente only own projects)
+router.patch('/:id/status', requireRole('admin', 'direzione', 'dipendente'), changeStatus)
 
-// DELETE /api/projects/:id - Soft delete project (admin only)
-router.delete('/:id', requireRole('admin'), deleteProject)
+// DELETE /api/projects/:id - Soft delete project (dipendente only own projects)
+router.delete('/:id', requireRole('admin', 'direzione', 'dipendente'), deleteProject)
 
 export default router
