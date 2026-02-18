@@ -75,14 +75,12 @@ export function useAuthInit() {
       const timeUntilExpiry = getTimeUntilExpiry(currentToken)
       if (timeUntilExpiry > REFRESH_BEFORE_EXPIRY_MS) {
         // Token was already refreshed, just reschedule
-        console.log('[AuthInit] Token already refreshed, rescheduling')
         scheduleTokenRefresh()
         return
       }
     }
 
     isHookRefreshing = true
-    console.log('[AuthInit] Performing proactive token refresh')
 
     try {
       const response = await axios.post(
@@ -92,10 +90,8 @@ export function useAuthInit() {
 
       const { token: newToken, refreshToken: newRefreshToken } = response.data
       login(currentUser, newToken, newRefreshToken)
-      console.log('[AuthInit] Token refreshed successfully')
       // Don't schedule here - the useEffect will do it when token changes
-    } catch (error) {
-      console.warn('[AuthInit] Proactive refresh failed:', error)
+    } catch {
       // Don't logout - let the interceptor handle it on next API call
     } finally {
       isHookRefreshing = false
@@ -118,7 +114,6 @@ export function useAuthInit() {
       return
     }
 
-    console.log(`[AuthInit] Scheduling refresh in ${Math.round(refreshTime / 1000 / 60)} minutes`)
     refreshTimerRef.current = setTimeout(performTokenRefresh, refreshTime)
   }
 
@@ -151,7 +146,6 @@ export function useAuthInit() {
             // useEffect below will schedule refresh when token changes
           } catch {
             // Refresh failed, logout user
-            console.warn('[AuthInit] Initial refresh failed, logging out')
             logout()
           }
         } else {

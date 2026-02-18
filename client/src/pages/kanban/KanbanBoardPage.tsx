@@ -3,8 +3,8 @@
  * @module pages/kanban/KanbanBoardPage
  */
 
-import { useEffect, useState, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useState, useCallback, useMemo, useRef, KeyboardEvent } from 'react'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -24,10 +24,9 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useTaskStore } from '@stores/taskStore'
 import { useProjectStore } from '@stores/projectStore'
-import { useDashboardStore } from '@stores/dashboardStore'
 import { useAuthStore } from '@stores/authStore'
+import { useTimerToggle } from '@hooks/useTimerToggle'
 import {
-  Loader2,
   Play,
   Square,
   User,
@@ -36,7 +35,7 @@ import {
   LayoutGrid,
 } from 'lucide-react'
 import { Task, TaskStatus } from '@/types'
-import { TASK_STATUS_LABELS, TASK_PRIORITY_BORDER_COLORS } from '@/constants'
+import { TASK_STATUS_LABELS, TASK_PRIORITY_BORDER_COLORS, TASK_PRIORITY_OPTIONS } from '@/constants'
 import { StatusIcon } from '@/components/ui/StatusIcon'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 
@@ -75,21 +74,30 @@ interface TaskCardProps {
   onTimerToggle: (taskId: string) => void
   runningTimerTaskId: string | null
   canTrackTime: boolean
+  onKeyboardActivate?: () => void
 }
 
-function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrackTime }: TaskCardProps) {
+function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrackTime, onKeyboardActivate }: TaskCardProps) {
   const isTimerRunning = runningTimerTaskId === task.id
 
   const isHighPriority = task.priority === 'critical' || task.priority === 'high'
+
+  const handleCardKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onKeyboardActivate?.()
+    }
+  }
 
   return (
     <div
       className={`card p-3 border-l-4 ${TASK_PRIORITY_BORDER_COLORS[task.priority]} ${
         isDragging ? 'shadow-lg ring-2 ring-primary-500' : ''
       } ${isHighPriority ? 'shadow-glow-red' : ''}`}
+      onKeyDown={handleCardKeyDown}
     >
       <div className="flex items-start gap-2">
-        <GripVertical className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0 cursor-grab" />
+        <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0 cursor-grab" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <StatusIcon type="taskPriority" value={task.priority} size="sm" />
@@ -130,9 +138,9 @@ function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrac
                 title={isTimerRunning ? 'Stop timer' : 'Avvia timer'}
               >
                 {isTimerRunning ? (
-                  <Square className="w-4 h-4 text-red-500" />
+                  <Square className="w-4 h-4 text-red-500 dark:text-red-400" />
                 ) : (
-                  <Play className="w-4 h-4 text-gray-400 hover:text-primary-500" />
+                  <Play className="w-4 h-4 text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400" />
                 )}
               </button>
             )}
@@ -148,9 +156,11 @@ interface SortableTaskCardProps {
   onTimerToggle: (taskId: string) => void
   runningTimerTaskId: string | null
   canTrackTime: boolean
+  onNavigate?: () => void
 }
 
-function SortableTaskCard({ task, onTimerToggle, runningTimerTaskId, canTrackTime }: SortableTaskCardProps) {
+function SortableTaskCard({ task, onTimerToggle, runningTimerTaskId, canTrackTime, onNavigate }: SortableTaskCardProps) {
+  const navigate = useNavigate()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
@@ -163,13 +173,22 @@ function SortableTaskCard({ task, onTimerToggle, runningTimerTaskId, canTrackTim
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      tabIndex={0}
+      role="button"
+      aria-label={`Task: ${task.title}. Priorità: ${task.priority}. Stato: ${task.status}`}
+    >
       <TaskCard
         task={task}
         isDragging={isDragging}
         onTimerToggle={onTimerToggle}
         runningTimerTaskId={runningTimerTaskId}
         canTrackTime={canTrackTime}
+        onKeyboardActivate={() => { onNavigate?.(); navigate(`/tasks/${task.id}`) }}
       />
     </div>
   )
@@ -183,6 +202,9 @@ interface KanbanColumnProps {
   onTimerToggle: (taskId: string) => void
   runningTimerTaskId: string | null
   canTrackTime: boolean
+  columnIndex: number
+  totalColumns: number
+  onColumnFocus?: (index: number) => void
 }
 
 function KanbanColumn({
@@ -192,17 +214,46 @@ function KanbanColumn({
   onTimerToggle,
   runningTimerTaskId,
   canTrackTime,
+  columnIndex,
+  totalColumns,
+  onColumnFocus,
 }: KanbanColumnProps) {
+  const columnRef = useRef<HTMLDivElement>(null)
+
+  const handleColumnKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowLeft' && columnIndex > 0) {
+      e.preventDefault()
+      onColumnFocus?.(columnIndex - 1)
+    } else if (e.key === 'ArrowRight' && columnIndex < totalColumns - 1) {
+      e.preventDefault()
+      onColumnFocus?.(columnIndex + 1)
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      // Focus first task card in column
+      const firstCard = columnRef.current?.querySelector<HTMLElement>('[tabindex="0"]')
+      firstCard?.focus()
+    }
+  }
+
   return (
-    <div className="flex-1 min-w-72 max-w-80">
-      <div className="flex items-center gap-2 mb-3">
+    <div
+      ref={columnRef}
+      className="flex-1 min-w-64 sm:min-w-72 max-w-80"
+      onKeyDown={handleColumnKeyDown}
+    >
+      <div
+        className="flex items-center gap-2 mb-3 cursor-default"
+        tabIndex={0}
+        role="columnheader"
+        aria-label={`Colonna ${label}, ${tasks.length} task. Usa ← → per navigare tra colonne, ↓ per entrare nei task`}
+      >
         <StatusIcon type="taskStatus" value={status} size="md" />
         <h3 className="font-semibold text-gray-900 dark:text-white">{label}</h3>
-        <span className="text-sm font-medium px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+        <span className="text-sm font-medium px-2 py-0.5 rounded-full bg-gray-200 dark:bg-surface-700 text-gray-600 dark:text-gray-300">
           <AnimatedCounter value={tasks.length} />
         </span>
       </div>
-      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 min-h-96">
+      <div className="bg-gray-100 dark:bg-surface-800/60 rounded-lg p-2 min-h-96">
         <SortableContext
           items={tasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
@@ -234,13 +285,16 @@ export default function KanbanBoardPage() {
   const [searchParams] = useSearchParams()
   const { tasks, isLoading, fetchTasks, changeTaskStatus } = useTaskStore()
   const { projects, fetchProjects } = useProjectStore()
-  const { runningTimer, startTimer, stopTimer } = useDashboardStore()
+  const { canTrackTime, handleTimerToggle, runningTimerTaskId } = useTimerToggle()
   const { user } = useAuthStore()
 
-  const canTrackTime = user?.role !== 'direzione' // Direzione non può tracciare tempo
-
   const [projectFilter, setProjectFilter] = useState(searchParams.get('projectId') || '')
+  const [priorityFilter, setPriorityFilter] = useState('')
+  const [assigneeFilter, setAssigneeFilter] = useState('')
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+
+  // Refs for keyboard navigation between columns
+  const columnHeaderRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -265,21 +319,6 @@ export default function KanbanBoardPage() {
     }
     fetchTasks(filters)
   }, [fetchTasks, projectFilter])
-
-  const handleTimerToggle = useCallback(
-    async (taskId: string) => {
-      try {
-        if (runningTimer?.taskId === taskId) {
-          await stopTimer()
-        } else {
-          await startTimer(taskId)
-        }
-      } catch (error) {
-        console.error('Timer error:', error)
-      }
-    },
-    [runningTimer, startTimer, stopTimer]
-  )
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task
@@ -321,40 +360,66 @@ export default function KanbanBoardPage() {
 
       try {
         await changeTaskStatus(taskId, newStatus)
-      } catch (error) {
-        console.error('Failed to change task status:', error)
+      } catch {
+        // silently ignore
       }
     }
   }
 
-  // Group tasks by status
+  // Collect unique assignees from loaded tasks for the assignee filter dropdown
+  const uniqueAssignees = useMemo(() => {
+    const seen = new Set<string>()
+    const result: { id: string; firstName: string; lastName: string }[] = []
+    for (const task of tasks) {
+      if (task.assignee && !seen.has(task.assignee.id)) {
+        seen.add(task.assignee.id)
+        result.push({
+          id: task.assignee.id,
+          firstName: task.assignee.firstName,
+          lastName: task.assignee.lastName,
+        })
+      }
+    }
+    return result.sort((a, b) =>
+      `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`)
+    )
+  }, [tasks])
+
+  // Apply priority and assignee filters client-side
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      if (priorityFilter && task.priority !== priorityFilter) return false
+      if (assigneeFilter && task.assignee?.id !== assigneeFilter) return false
+      return true
+    })
+  }, [tasks, priorityFilter, assigneeFilter])
+
+  // Group filtered tasks by status
   const tasksByStatus: Record<TaskStatus, Task[]> = {
-    todo: tasks.filter((t) => t.status === 'todo'),
-    in_progress: tasks.filter((t) => t.status === 'in_progress'),
-    review: tasks.filter((t) => t.status === 'review'),
-    blocked: tasks.filter((t) => t.status === 'blocked'),
-    done: tasks.filter((t) => t.status === 'done'),
+    todo: filteredTasks.filter((t) => t.status === 'todo'),
+    in_progress: filteredTasks.filter((t) => t.status === 'in_progress'),
+    review: filteredTasks.filter((t) => t.status === 'review'),
+    blocked: filteredTasks.filter((t) => t.status === 'blocked'),
+    done: filteredTasks.filter((t) => t.status === 'done'),
     cancelled: [],
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-            <LayoutGrid className="w-6 h-6 mr-2 text-primary-500" />
-            Kanban Board
-          </h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            Trascina i task per cambiare lo stato
-          </p>
-        </div>
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+          <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary-500" />
+          Kanban Board
+        </h1>
+        <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+          Trascina i task per cambiare lo stato
+        </p>
       </div>
 
       {/* Filters */}
       <div className="card p-4">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Progetto:</label>
           <select
             value={projectFilter}
@@ -368,12 +433,47 @@ export default function KanbanBoardPage() {
               </option>
             ))}
           </select>
-          {projectFilter && (
+
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priorità:</label>
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="input w-auto"
+            aria-label="Filtra per priorità"
+          >
+            <option value="">Tutte le priorità</option>
+            {TASK_PRIORITY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assegnatario:</label>
+          <select
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+            className="input w-auto"
+            aria-label="Filtra per assegnatario"
+          >
+            <option value="">Tutti gli assegnatari</option>
+            {uniqueAssignees.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.lastName} {a.firstName}
+              </option>
+            ))}
+          </select>
+
+          {(projectFilter || priorityFilter || assigneeFilter) && (
             <button
-              onClick={() => setProjectFilter('')}
-              className="text-sm text-primary-600 hover:text-primary-700"
+              onClick={() => {
+                setProjectFilter('')
+                setPriorityFilter('')
+                setAssigneeFilter('')
+              }}
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
             >
-              Mostra tutti
+              Reimposta filtri
             </button>
           )}
         </div>
@@ -381,8 +481,30 @@ export default function KanbanBoardPage() {
 
       {/* Kanban Board */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <div className="flex gap-4 overflow-x-auto pb-4 animate-fade-in">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex-1 min-w-64 sm:min-w-72 max-w-80">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="skeleton w-6 h-6 rounded" />
+                <div className="skeleton h-5 w-24" />
+                <div className="skeleton h-5 w-8 rounded-full" />
+              </div>
+              <div className="bg-gray-100 dark:bg-surface-800/60 rounded-lg p-2 min-h-96">
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <div key={j} className="card p-3 space-y-2">
+                      <div className="skeleton h-4 w-3/4" />
+                      <div className="skeleton h-3 w-1/2" />
+                      <div className="flex justify-between">
+                        <div className="skeleton h-3 w-16" />
+                        <div className="skeleton h-4 w-4 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <DndContext
@@ -391,8 +513,12 @@ export default function KanbanBoardPage() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {statusColumns.map((column) => (
+          <div
+            className="flex gap-4 overflow-x-auto pb-4"
+            role="region"
+            aria-label="Kanban Board. Usa ← → per navigare tra colonne, ↓ per accedere ai task, Invio per aprire un task"
+          >
+            {statusColumns.map((column, idx) => (
               <KanbanColumn
                 key={column.id}
                 status={column.id}
@@ -400,8 +526,18 @@ export default function KanbanBoardPage() {
                 color={column.color}
                 tasks={tasksByStatus[column.id]}
                 onTimerToggle={handleTimerToggle}
-                runningTimerTaskId={runningTimer?.taskId || null}
+                runningTimerTaskId={runningTimerTaskId}
                 canTrackTime={canTrackTime}
+                columnIndex={idx}
+                totalColumns={statusColumns.length}
+                onColumnFocus={(targetIdx) => {
+                  // Focus the header of the target column
+                  const target = columnHeaderRefs.current[targetIdx]
+                  if (target) {
+                    const header = target.querySelector<HTMLElement>('[role="columnheader"]')
+                    header?.focus()
+                  }
+                }}
               />
             ))}
           </div>
@@ -412,7 +548,7 @@ export default function KanbanBoardPage() {
                 task={activeTask}
                 isDragging
                 onTimerToggle={handleTimerToggle}
-                runningTimerTaskId={runningTimer?.taskId || null}
+                runningTimerTaskId={runningTimerTaskId}
                 canTrackTime={canTrackTime}
               />
             )}

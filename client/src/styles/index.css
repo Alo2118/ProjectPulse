@@ -60,6 +60,23 @@
            transition-all duration-200;
   }
 
+  .btn-tertiary {
+    @apply text-gray-700 dark:text-gray-300
+           px-4 py-2 rounded-lg font-medium
+           hover:bg-gray-100 dark:hover:bg-surface-800
+           focus:outline-none focus:ring-2 focus:ring-gray-500/30
+           disabled:opacity-50 disabled:cursor-not-allowed
+           active:scale-[0.98]
+           transition-all duration-200;
+  }
+
+  .btn-icon {
+    @apply p-2 rounded-lg transition-all duration-150
+           text-gray-500 dark:text-gray-400
+           hover:bg-gray-100/60 dark:hover:bg-white/5
+           active:scale-95;
+  }
+
   /* Input with glass effect */
   .input {
     @apply w-full px-3 py-2 rounded-lg
@@ -70,6 +87,11 @@
            placeholder:text-gray-400 dark:placeholder:text-gray-500
            disabled:opacity-50 disabled:cursor-not-allowed
            transition-all duration-200;
+  }
+
+  .input-error {
+    @apply border-red-500 dark:border-red-500
+           focus:ring-red-500/40 focus:border-red-500;
   }
 
   /* Skeleton loader shimmer */
@@ -113,5 +135,21 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Custom animations for charts and graphs */
+  @keyframes draw-line {
+    from {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+    }
+    to {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .animate-draw-line {
+    animation: draw-line 1.5s ease-out forwards;
   }
 }

@@ -32,7 +32,7 @@ export type {
 
 export type UserRole = 'admin' | 'direzione' | 'dipendente'
 export type ProjectStatus = 'planning' | 'design' | 'verification' | 'validation' | 'transfer' | 'maintenance' | 'completed' | 'on_hold' | 'cancelled'
-export type ProjectPriority = 'low' | 'medium' | 'high'
+export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'blocked' | 'done' | 'cancelled'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskType = 'milestone' | 'task' | 'subtask'
@@ -112,6 +112,10 @@ export interface CreateTaskInput {
   startDate?: Date
   dueDate?: Date
   estimatedHours?: number
+  isRecurring?: boolean
+  blockedReason?: string
+  recurrencePattern?: string
+  position?: number
 }
 
 export interface UpdateTaskInput {
@@ -127,7 +131,10 @@ export interface UpdateTaskInput {
   dueDate?: Date
   estimatedHours?: number
   actualHours?: number
+  isRecurring?: boolean
   blockedReason?: string
+  recurrencePattern?: string
+  position?: number
 }
 
 export interface CreateTimeEntryInput {

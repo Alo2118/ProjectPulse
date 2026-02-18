@@ -12,12 +12,14 @@ import {
   Plus,
   Search,
   AlertTriangle,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
   ShieldAlert,
   User,
+  Grid3X3,
+  ChevronDown,
 } from 'lucide-react'
+import { Pagination } from '@components/common/Pagination'
+import { useDebounce } from '@hooks/useDebounce'
+import { RiskMatrixView } from '@components/risks/RiskMatrixView'
 import {
   RISK_STATUS_LABELS,
   RISK_STATUS_COLORS,
@@ -46,13 +48,16 @@ export default function RiskListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuthStore()
-  const { risks, pagination, isLoading, fetchRisks } = useRiskStore()
+  const { risks, pagination, isLoading, fetchRisks, riskMatrix, fetchRiskMatrix } = useRiskStore()
   const { projects, fetchProjects } = useProjectStore()
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '')
   const [projectFilter, setProjectFilter] = useState(searchParams.get('projectId') || '')
+  const [showMatrix, setShowMatrix] = useState(false)
+
+  const debouncedSearch = useDebounce(searchTerm, 300)
 
   useEffect(() => {
     fetchProjects()
@@ -60,7 +65,7 @@ export default function RiskListPage() {
 
   useEffect(() => {
     const filters: Record<string, string> = {}
-    if (searchTerm) filters.search = searchTerm
+    if (debouncedSearch) filters.search = debouncedSearch
     if (statusFilter) filters.status = statusFilter
     if (categoryFilter) filters.category = categoryFilter
     if (projectFilter) filters.projectId = projectFilter
@@ -69,18 +74,18 @@ export default function RiskListPage() {
     setSearchParams(params)
 
     fetchRisks({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       status: statusFilter || undefined,
       category: categoryFilter || undefined,
       projectId: projectFilter || undefined,
       page: pagination.page,
       limit: pagination.limit,
     })
-  }, [searchTerm, statusFilter, categoryFilter, projectFilter])
+  }, [debouncedSearch, statusFilter, categoryFilter, projectFilter])
 
   const handlePageChange = (newPage: number) => {
     fetchRisks({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       status: statusFilter || undefined,
       category: categoryFilter || undefined,
       projectId: projectFilter || undefined,
@@ -89,12 +94,58 @@ export default function RiskListPage() {
     })
   }
 
+  useEffect(() => {
+    if (projectFilter) {
+      fetchRiskMatrix(projectFilter)
+    }
+  }, [projectFilter, fetchRiskMatrix])
+
   const canManageRisks = user?.role === 'admin' || user?.role === 'direzione'
 
   if (isLoading && risks.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="skeleton h-8 w-28" />
+            <div className="skeleton h-4 w-48 mt-2" />
+          </div>
+          <div className="skeleton h-10 w-36" />
+        </div>
+
+        {/* Filters skeleton */}
+        <div className="card p-4">
+          <div className="flex flex-wrap gap-4">
+            <div className="skeleton h-10 flex-1 min-w-64" />
+            <div className="skeleton h-10 w-48" />
+            <div className="skeleton h-10 w-32" />
+            <div className="skeleton h-10 w-40" />
+          </div>
+        </div>
+
+        {/* Risk list skeleton */}
+        <div className="card divide-y divide-gray-200 dark:divide-gray-700">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center p-4 gap-4">
+              <div className="skeleton w-10 h-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-5 w-3/4" />
+                <div className="flex gap-4">
+                  <div className="skeleton h-4 w-20" />
+                  <div className="skeleton h-4 w-32" />
+                  <div className="skeleton h-4 w-24 rounded-full" />
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center gap-4">
+                <div className="skeleton h-4 w-24" />
+                <div className="skeleton h-4 w-16" />
+                <div className="skeleton h-6 w-16 rounded-full" />
+                <div className="skeleton h-6 w-20 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -104,7 +155,7 @@ export default function RiskListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Rischi</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Rischi</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gestisci i rischi di progetto
           </p>
@@ -112,15 +163,16 @@ export default function RiskListPage() {
         {canManageRisks && (
           <button onClick={() => navigate('/risks/new')} className="btn-primary flex items-center">
             <Plus className="w-4 h-4 mr-2" />
-            Nuovo Rischio
+            <span className="hidden sm:inline">Nuovo Rischio</span>
+            <span className="sm:hidden">Nuovo</span>
           </button>
         )}
       </div>
 
       {/* Filters */}
       <div className="card p-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-64">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-0 basis-full sm:basis-auto sm:min-w-64">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -128,46 +180,79 @@ export default function RiskListPage() {
                 placeholder="Cerca rischi..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-10"
+                className="input pl-10 w-full"
               />
             </div>
           </div>
-          <select
-            value={projectFilter}
-            onChange={(e) => setProjectFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutti i progetti</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.code} - {project.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutti gli stati</option>
-            <option value="open">Aperto</option>
-            <option value="mitigated">Mitigato</option>
-            <option value="accepted">Accettato</option>
-            <option value="closed">Chiuso</option>
-          </select>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutte le categorie</option>
-            <option value="technical">Tecnico</option>
-            <option value="regulatory">Normativo</option>
-            <option value="resource">Risorse</option>
-            <option value="schedule">Tempistiche</option>
-          </select>
+          <div className="flex gap-3 flex-wrap sm:flex-nowrap">
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className="input w-auto min-w-0"
+            >
+              <option value="">Tutti i progetti</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.code} - {project.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="input w-auto"
+            >
+              <option value="">Tutti gli stati</option>
+              <option value="open">Aperto</option>
+              <option value="mitigated">Mitigato</option>
+              <option value="accepted">Accettato</option>
+              <option value="closed">Chiuso</option>
+            </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="input w-auto"
+            >
+              <option value="">Tutte le categorie</option>
+              <option value="technical">Tecnico</option>
+              <option value="regulatory">Normativo</option>
+              <option value="resource">Risorse</option>
+              <option value="schedule">Tempistiche</option>
+            </select>
+          </div>
         </div>
       </div>
+
+      {/* Risk Matrix */}
+      {projectFilter && riskMatrix && (
+        <div className="card">
+          <button
+            type="button"
+            onClick={() => setShowMatrix(!showMatrix)}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+          >
+            <div className="flex items-center gap-2">
+              <Grid3X3 className="w-5 h-5 text-primary-500" />
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                Matrice di Rischio
+              </h3>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                showMatrix ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          {showMatrix && (
+            <div className="px-4 pb-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Impatto (verticale) × Probabilità (orizzontale)
+              </p>
+              <RiskMatrixView matrix={riskMatrix} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Risks List */}
       {risks.length === 0 ? (
@@ -198,12 +283,12 @@ export default function RiskListPage() {
               return (
                 <div
                   key={risk.id}
-                  className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+                  className="flex items-start sm:items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
                 >
                   {/* Risk Level Indicator */}
-                  <div className="mr-4">
+                  <div className="mr-3 sm:mr-4 mt-0.5 sm:mt-0 shrink-0">
                     <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${
                         riskLevel.label === 'high'
                           ? 'bg-red-100 dark:bg-red-900/30'
                           : riskLevel.label === 'medium'
@@ -212,7 +297,7 @@ export default function RiskListPage() {
                       }`}
                     >
                       <AlertTriangle
-                        className={`w-5 h-5 ${
+                        className={`w-4 h-4 sm:w-5 sm:h-5 ${
                           riskLevel.label === 'high'
                             ? 'text-red-600 dark:text-red-400'
                             : riskLevel.label === 'medium'
@@ -225,35 +310,51 @@ export default function RiskListPage() {
 
                   {/* Risk Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Link
                         to={`/risks/${risk.id}`}
-                        className="text-base font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 truncate"
+                        className="text-sm sm:text-base font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 truncate"
                       >
                         {risk.title}
                       </Link>
+                      {/* Status badge - always visible on mobile, duplicated from details on mobile */}
+                      <span className={`sm:hidden text-xs px-2 py-0.5 rounded-full shrink-0 ${RISK_STATUS_COLORS[risk.status]}`}>
+                        {RISK_STATUS_LABELS[risk.status]}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">{risk.code}</span>
+
+                    <div className="flex items-center gap-2 sm:gap-4 mt-1 flex-wrap">
+                      <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{risk.code}</span>
                       {risk.project && (
                         <Link
                           to={`/projects/${risk.project.id}`}
-                          className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                          className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:underline truncate"
                         >
                           {risk.project.name}
                         </Link>
                       )}
+                      {/* Category badge - hidden on mobile to save space */}
+                      <span className={`hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[risk.category]}`}>
+                        {RISK_CATEGORY_LABELS[risk.category]}
+                      </span>
+                    </div>
+
+                    {/* Mobile-only secondary info row */}
+                    <div className="flex items-center gap-2 mt-1.5 sm:hidden flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[risk.category]}`}>
                         {RISK_CATEGORY_LABELS[risk.category]}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
+                        Livello {riskLevel.level}
                       </span>
                     </div>
                   </div>
 
-                  {/* Risk Details */}
-                  <div className="flex items-center gap-4 ml-4">
+                  {/* Risk Details - desktop only */}
+                  <div className="hidden sm:flex items-center gap-4 ml-4 shrink-0">
                     {risk.owner && (
                       <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        <User className="w-4 h-4 mr-1" />
+                        <User className="w-4 h-4 mr-1 shrink-0" />
                         <span className="max-w-24 truncate">
                           {risk.owner.firstName} {risk.owner.lastName?.charAt(0)}.
                         </span>
@@ -281,34 +382,13 @@ export default function RiskListPage() {
           </div>
 
           {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                {pagination.total} risks
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Page {pagination.page} of {pagination.pages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={pagination.page}
+            pages={pagination.pages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </div>

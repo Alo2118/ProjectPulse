@@ -61,8 +61,8 @@ export default function ConvertToTaskModal({
       if (response.data.success) {
         setUsers(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to fetch users:', error)
+    } catch {
+      // silently ignore
     }
   }
 

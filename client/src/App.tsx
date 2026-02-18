@@ -1,69 +1,126 @@
-import { useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, lazy, Suspense, Component } from 'react'
+import type { ReactNode, ErrorInfo } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuthStore } from '@stores/authStore'
 import { useAuthInit } from '@hooks/useAuthInit'
+import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
 
-// Layouts
+// Layouts (not lazy - needed immediately)
 import AuthLayout from '@components/layout/AuthLayout'
 import DashboardLayout from '@components/layout/DashboardLayout'
 
-// Auth Pages
-import LoginPage from '@pages/auth/LoginPage'
+// Lazy-loaded pages
+const LoginPage = lazy(() => import('@pages/auth/LoginPage'))
+const DashboardPage = lazy(() => import('@pages/dipendente/DashboardPage'))
+const ProjectListPage = lazy(() => import('@pages/projects/ProjectListPage'))
+const ProjectDetailPage = lazy(() => import('@pages/projects/ProjectDetailPage'))
+const ProjectFormPage = lazy(() => import('@pages/projects/ProjectFormPage'))
+const TaskListPage = lazy(() => import('@pages/tasks/TaskListPage'))
+const TaskDetailPage = lazy(() => import('@pages/tasks/TaskDetailPage'))
+const TaskFormPage = lazy(() => import('@pages/tasks/TaskFormPage'))
+const TimeTrackingPage = lazy(() => import('@pages/time-tracking/TimeTrackingPage'))
+const TeamTimePage = lazy(() => import('@pages/time-tracking/TeamTimePage'))
+const KanbanBoardPage = lazy(() => import('@pages/kanban/KanbanBoardPage'))
+const RiskListPage = lazy(() => import('@pages/risks/RiskListPage'))
+const RiskDetailPage = lazy(() => import('@pages/risks/RiskDetailPage'))
+const RiskFormPage = lazy(() => import('@pages/risks/RiskFormPage'))
+const UserInputListPage = lazy(() => import('@pages/inputs/UserInputListPage'))
+const UserInputDetailPage = lazy(() => import('@pages/inputs/UserInputDetailPage'))
+const DocumentListPage = lazy(() => import('@pages/documents/DocumentListPage'))
+const DocumentDetailPage = lazy(() => import('@pages/documents/DocumentDetailPage'))
+const DocumentFormPage = lazy(() => import('@pages/documents/DocumentFormPage'))
+const UserListPage = lazy(() => import('@pages/users/UserListPage'))
+const UserFormPage = lazy(() => import('@pages/users/UserFormPage'))
+const ProfilePage = lazy(() => import('@pages/profile/ProfilePage'))
+const AnalyticsPage = lazy(() => import('@pages/analytics/AnalyticsPage'))
+const WeeklyReportPage = lazy(() => import('@pages/reports/WeeklyReportPage'))
+const GanttPage = lazy(() => import('@pages/gantt/GanttPage'))
+const NotFoundPage = lazy(() => import('@pages/NotFoundPage'))
+const AuditTrailPage = lazy(() => import('@pages/audit/AuditTrailPage'))
+const TemplateListPage = lazy(() => import('@pages/admin/TemplateListPage'))
+const TemplateFormPage = lazy(() => import('@pages/admin/TemplateFormPage'))
+const TimeApprovalPage = lazy(() => import('@pages/time-tracking/TimeApprovalPage'))
 
-// Dashboard Pages
-import DashboardPage from '@pages/dipendente/DashboardPage'
+/** Suspense fallback for lazy-loaded pages */
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+    </div>
+  )
+}
 
-// Projects Pages
-import ProjectListPage from '@pages/projects/ProjectListPage'
-import ProjectDetailPage from '@pages/projects/ProjectDetailPage'
-import ProjectFormPage from '@pages/projects/ProjectFormPage'
+/** Error Boundary - catches render errors in child components */
+interface ErrorBoundaryProps {
+  children: ReactNode
+}
 
-// Tasks Pages
-import TaskListPage from '@pages/tasks/TaskListPage'
-import TaskDetailPage from '@pages/tasks/TaskDetailPage'
-import TaskFormPage from '@pages/tasks/TaskFormPage'
+interface ErrorBoundaryState {
+  hasError: boolean
+  error: Error | null
+}
 
-// Time Tracking Pages
-import TimeTrackingPage from '@pages/time-tracking/TimeTrackingPage'
-import TeamTimePage from '@pages/time-tracking/TeamTimePage'
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
 
-// Kanban Pages
-import KanbanBoardPage from '@pages/kanban/KanbanBoardPage'
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error }
+  }
 
-// Risks Pages
-import RiskListPage from '@pages/risks/RiskListPage'
-import RiskDetailPage from '@pages/risks/RiskDetailPage'
-import RiskFormPage from '@pages/risks/RiskFormPage'
+  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
+    // Error already captured in state via getDerivedStateFromError
+  }
 
-// User Inputs Pages
-import UserInputListPage from '@pages/inputs/UserInputListPage'
-import UserInputDetailPage from '@pages/inputs/UserInputDetailPage'
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+          <div className="text-center max-w-md">
+            <div className="mx-auto w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Qualcosa è andato storto
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
+              Si è verificato un errore imprevisto nell'applicazione.
+            </p>
+            {this.state.error && (
+              <p className="text-sm text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg p-3 mb-4 font-mono break-all">
+                {this.state.error.message}
+              </p>
+            )}
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null })
+                  window.location.reload()
+                }}
+                className="btn-primary flex items-center"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Ricarica Pagina
+              </button>
+              <Link to="/dashboard" className="btn-secondary flex items-center"
+                onClick={() => this.setState({ hasError: false, error: null })}
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
+      )
+    }
 
-// Documents Pages
-import DocumentListPage from '@pages/documents/DocumentListPage'
-import DocumentDetailPage from '@pages/documents/DocumentDetailPage'
-import DocumentFormPage from '@pages/documents/DocumentFormPage'
+    return this.props.children
+  }
+}
 
-// Users Pages
-import UserListPage from '@pages/users/UserListPage'
-import UserFormPage from '@pages/users/UserFormPage'
-
-// Profile Page
-import ProfilePage from '@pages/profile/ProfilePage'
-
-// Analytics Pages
-import AnalyticsPage from '@pages/analytics/AnalyticsPage'
-
-// Reports Pages
-import WeeklyReportPage from '@pages/reports/WeeklyReportPage'
-
-// Gantt Pages
-import GanttPage from '@pages/gantt/GanttPage'
-
-// Not Found
-import NotFoundPage from '@pages/NotFoundPage'
-
-function PrivateRoute({ children }: { children: React.ReactNode }) {
+function PrivateRoute({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const navigate = useNavigate()
   const location = useLocation()
@@ -71,7 +128,6 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   // Listen for logout events and redirect immediately
   useEffect(() => {
     if (!isAuthenticated && location.pathname !== '/login') {
-      console.log('[Auth] User logged out, redirecting to login')
       navigate('/login', { replace: true })
     }
   }, [isAuthenticated, navigate, location.pathname])
@@ -79,7 +135,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
 }
 
-function AuthInitializer({ children }: { children: React.ReactNode }) {
+function AuthInitializer({ children }: { children: ReactNode }) {
   const { isInitialized, isValidating } = useAuthInit()
 
   if (!isInitialized || isValidating) {
@@ -100,57 +156,66 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <AuthInitializer>
-      <Routes>
-      {/* Auth Routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
+    <ErrorBoundary>
+      <AuthInitializer>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Auth Routes */}
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<LoginPage />} />
+            </Route>
 
-      {/* Dashboard Routes */}
-      <Route
-        element={
-          <PrivateRoute>
-            <DashboardLayout />
-          </PrivateRoute>
-        }
-      >
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/projects" element={<ProjectListPage />} />
-        <Route path="/projects/new" element={<ProjectFormPage />} />
-        <Route path="/projects/:id" element={<ProjectDetailPage />} />
-        <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
-        <Route path="/tasks" element={<TaskListPage />} />
-        <Route path="/tasks/new" element={<TaskFormPage />} />
-        <Route path="/tasks/:id" element={<TaskDetailPage />} />
-        <Route path="/tasks/:id/edit" element={<TaskFormPage />} />
-        <Route path="/time-tracking" element={<TimeTrackingPage />} />
-        <Route path="/team-time" element={<TeamTimePage />} />
-        <Route path="/kanban" element={<KanbanBoardPage />} />
-        <Route path="/gantt" element={<GanttPage />} />
-        <Route path="/risks" element={<RiskListPage />} />
-        <Route path="/risks/new" element={<RiskFormPage />} />
-        <Route path="/risks/:id" element={<RiskDetailPage />} />
-        <Route path="/risks/:id/edit" element={<RiskFormPage />} />
-        <Route path="/inputs" element={<UserInputListPage />} />
-        <Route path="/inputs/:id" element={<UserInputDetailPage />} />
-        <Route path="/documents" element={<DocumentListPage />} />
-        <Route path="/documents/new" element={<DocumentFormPage />} />
-        <Route path="/documents/:id" element={<DocumentDetailPage />} />
-        <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/reports/weekly" element={<WeeklyReportPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/users" element={<UserListPage />} />
-        <Route path="/users/new" element={<UserFormPage />} />
-        <Route path="/users/:id/edit" element={<UserFormPage />} />
-      </Route>
+            {/* Dashboard Routes */}
+            <Route
+              element={
+                <PrivateRoute>
+                  <DashboardLayout />
+                </PrivateRoute>
+              }
+            >
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/projects" element={<ProjectListPage />} />
+              <Route path="/projects/new" element={<ProjectFormPage />} />
+              <Route path="/projects/:id" element={<ProjectDetailPage />} />
+              <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
+              <Route path="/tasks" element={<TaskListPage />} />
+              <Route path="/tasks/new" element={<TaskFormPage />} />
+              <Route path="/tasks/:id" element={<TaskDetailPage />} />
+              <Route path="/tasks/:id/edit" element={<TaskFormPage />} />
+              <Route path="/time-tracking" element={<TimeTrackingPage />} />
+              <Route path="/team-time" element={<TeamTimePage />} />
+              <Route path="/time-approval" element={<TimeApprovalPage />} />
+              <Route path="/kanban" element={<KanbanBoardPage />} />
+              <Route path="/gantt" element={<GanttPage />} />
+              <Route path="/risks" element={<RiskListPage />} />
+              <Route path="/risks/new" element={<RiskFormPage />} />
+              <Route path="/risks/:id" element={<RiskDetailPage />} />
+              <Route path="/risks/:id/edit" element={<RiskFormPage />} />
+              <Route path="/inputs" element={<UserInputListPage />} />
+              <Route path="/inputs/:id" element={<UserInputDetailPage />} />
+              <Route path="/documents" element={<DocumentListPage />} />
+              <Route path="/documents/new" element={<DocumentFormPage />} />
+              <Route path="/documents/:id" element={<DocumentDetailPage />} />
+              <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/reports/weekly" element={<WeeklyReportPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/users" element={<UserListPage />} />
+              <Route path="/users/new" element={<UserFormPage />} />
+              <Route path="/users/:id/edit" element={<UserFormPage />} />
+              <Route path="/audit" element={<AuditTrailPage />} />
+              <Route path="/admin/templates" element={<TemplateListPage />} />
+              <Route path="/admin/templates/new" element={<TemplateFormPage />} />
+              <Route path="/admin/templates/:id/edit" element={<TemplateFormPage />} />
+            </Route>
 
-      {/* 404 */}
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-    </AuthInitializer>
+            {/* 404 */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </AuthInitializer>
+    </ErrorBoundary>
   )
 }
 

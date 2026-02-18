@@ -20,7 +20,7 @@ export type ProjectStatus =
   | 'on_hold'
   | 'cancelled'
 
-export type ProjectPriority = 'low' | 'medium' | 'high'
+export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical'
 
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'blocked' | 'done' | 'cancelled'
 
@@ -63,6 +63,18 @@ export interface User {
   isActive?: boolean
   createdAt?: string
   lastLoginAt?: string | null
+}
+
+export interface ProjectTemplate {
+  id: string
+  name: string
+  description: string | null
+  isActive: boolean
+  phases: string[]
+  structure: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+  projectCount: number
 }
 
 export interface Project {
@@ -193,6 +205,10 @@ export interface TimeEntry {
   isRunning: boolean
   taskId: string
   userId: string
+  approvalStatus: 'pending' | 'approved' | 'rejected'
+  approvedById: string | null
+  approvedAt: string | null
+  rejectionNote: string | null
   createdAt: string
   updatedAt: string
   task?: {
@@ -210,6 +226,11 @@ export interface TimeEntry {
     firstName: string
     lastName: string
   }
+  approvedBy?: {
+    id: string
+    firstName: string
+    lastName: string
+  } | null
 }
 
 export interface UserTimeSummary {
@@ -608,6 +629,7 @@ export interface TaskSummary {
   assigneeId?: string | null
   assigneeName?: string | null
   isRecurring: boolean
+  dueDate?: string | null
 }
 
 export interface StatusChange {
@@ -628,6 +650,63 @@ export interface BlockedTask {
   assigneeName?: string | null
   blockedSince: string | null
   lastComment: string | null
+}
+
+export type BlockerCategory = 'dependency' | 'resource' | 'bug' | 'approval' | 'other'
+
+export interface EnrichedBlockedTask extends BlockedTask {
+  daysBlocked: number
+  category: BlockerCategory
+  blockedReason: string | null
+}
+
+export interface BlockerAnalysis {
+  activeCount: number
+  resolvedThisWeek: number
+  overdueCount: number
+  byCategory: Record<BlockerCategory, number>
+  riskScore: 'low' | 'medium' | 'high'
+  trend: 'up' | 'stable' | 'down'
+  items: EnrichedBlockedTask[]
+}
+
+export type ProjectHealthStatus = 'on-track' | 'at-risk' | 'off-track'
+
+export interface ProjectHealthData {
+  projectId: string
+  projectCode: string
+  projectName: string
+  status: ProjectHealthStatus
+  actualHours: number
+  derivedWeeklyTargetHours: number
+  hoursVariancePercent: number
+  tasksCompleted: number
+  tasksInProgress: number
+  tasksBlocked: number
+  tasksTotal: number
+  completionPercent: number
+  nearestMilestone: {
+    id: string
+    title: string
+    dueDate: string | null
+    daysLeft: number | null
+    completionPercent: number
+  } | null
+}
+
+export interface ProductivityMetrics {
+  tasksPerDay: number
+  daysWorked: number
+  avgHoursPerDay: number
+  onTimeDeliveryRate: number
+}
+
+export interface PreviousWeekMetrics {
+  totalHours: number
+  completedTasksCount: number
+  blockedTasksCount: number
+  weekNumber: number
+  year: number
 }
 
 export interface CommentsByProject {
@@ -663,7 +742,7 @@ export interface WeeklyReportData {
       userName: string
       totalMinutes: number
     }>
-    entries: DetailedTimeEntry[]
+    entries?: DetailedTimeEntry[]
   }
 
   tasks: {
@@ -679,6 +758,12 @@ export interface WeeklyReportData {
     total: number
     byProject: CommentsByProject[]
   }
+
+  // Enhanced data (optional for backward compatibility)
+  projectHealth?: ProjectHealthData[]
+  blockerAnalysis?: BlockerAnalysis
+  productivity?: ProductivityMetrics
+  previousWeek?: PreviousWeekMetrics
 }
 
 export interface WeeklyReport {

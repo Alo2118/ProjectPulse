@@ -5,6 +5,7 @@
 
 import { create } from 'zustand'
 import api from '@services/api'
+import { toast } from '@stores/toastStore'
 import { Risk, PaginatedResponse, RiskStats, RiskMatrix, RiskStatus } from '@/types'
 
 interface RiskFilters {
@@ -133,8 +134,8 @@ export const useRiskStore = create<RiskState>((set) => ({
       if (response.data.success) {
         set({ riskStats: response.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch risk stats:', error)
+    } catch {
+      // Stats fetch failed silently
     }
   },
 
@@ -147,8 +148,8 @@ export const useRiskStore = create<RiskState>((set) => ({
       if (response.data.success) {
         set({ riskMatrix: response.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch risk matrix:', error)
+    } catch {
+      // Matrix fetch failed silently
     }
   },
 
@@ -165,12 +166,14 @@ export const useRiskStore = create<RiskState>((set) => ({
             : state.projectRisks,
           isLoading: false,
         }))
+        toast.success('Rischio creato', response.data.data.title)
         return response.data.data
       }
       throw new Error('Failed to create risk')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create risk'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile creare il rischio')
       throw error
     }
   },
@@ -188,10 +191,12 @@ export const useRiskStore = create<RiskState>((set) => ({
           currentRisk: state.currentRisk?.id === id ? updatedRisk : state.currentRisk,
           isLoading: false,
         }))
+        toast.success('Rischio aggiornato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to update risk'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile aggiornare il rischio')
       throw error
     }
   },
@@ -211,10 +216,12 @@ export const useRiskStore = create<RiskState>((set) => ({
           currentRisk: state.currentRisk?.id === id ? updatedRisk : state.currentRisk,
           isLoading: false,
         }))
+        toast.success('Stato rischio aggiornato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to change risk status'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile cambiare lo stato')
       throw error
     }
   },
@@ -229,9 +236,11 @@ export const useRiskStore = create<RiskState>((set) => ({
         currentRisk: state.currentRisk?.id === id ? null : state.currentRisk,
         isLoading: false,
       }))
+      toast.success('Rischio eliminato')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete risk'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile eliminare il rischio')
       throw error
     }
   },

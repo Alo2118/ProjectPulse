@@ -74,8 +74,8 @@ export const useWeeklyReportStore = create<WeeklyReportState>((set, get) => ({
       if (res.data.success) {
         set({ currentWeekInfo: res.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch current week info:', error)
+    } catch {
+      // silently ignore
     }
   },
 
@@ -90,7 +90,6 @@ export const useWeeklyReportStore = create<WeeklyReportState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nel caricamento preview'
       set({ error: message })
-      console.error('Failed to fetch weekly preview:', error)
     } finally {
       set({ isLoadingPreview: false })
     }
@@ -111,7 +110,6 @@ export const useWeeklyReportStore = create<WeeklyReportState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nel caricamento report'
       set({ error: message })
-      console.error('Failed to fetch my reports:', error)
     } finally {
       set({ isLoading: false })
     }
@@ -132,7 +130,6 @@ export const useWeeklyReportStore = create<WeeklyReportState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nel caricamento report team'
       set({ error: message })
-      console.error('Failed to fetch team reports:', error)
     } finally {
       set({ isLoading: false })
     }
@@ -148,7 +145,6 @@ export const useWeeklyReportStore = create<WeeklyReportState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Report non trovato'
       set({ error: message })
-      console.error('Failed to fetch report by id:', error)
     } finally {
       set({ isLoading: false })
     }

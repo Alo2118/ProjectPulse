@@ -11,14 +11,13 @@ import { useAuthStore } from '@stores/authStore'
 import {
   Plus,
   Search,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Download,
   CheckCircle,
   Clock,
 } from 'lucide-react'
+import { Pagination } from '@components/common/Pagination'
+import { useDebounce } from '@hooks/useDebounce'
 import {
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUS_COLORS,
@@ -54,13 +53,15 @@ export default function DocumentListPage() {
   const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || '')
   const [projectFilter, setProjectFilter] = useState(searchParams.get('projectId') || '')
 
+  const debouncedSearch = useDebounce(searchTerm, 300)
+
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
 
   useEffect(() => {
     const filters: Record<string, string> = {}
-    if (searchTerm) filters.search = searchTerm
+    if (debouncedSearch) filters.search = debouncedSearch
     if (statusFilter) filters.status = statusFilter
     if (typeFilter) filters.type = typeFilter
     if (projectFilter) filters.projectId = projectFilter
@@ -69,18 +70,18 @@ export default function DocumentListPage() {
     setSearchParams(params)
 
     fetchDocuments({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       status: statusFilter || undefined,
       type: typeFilter || undefined,
       projectId: projectFilter || undefined,
       page: pagination.page,
       limit: pagination.limit,
     })
-  }, [searchTerm, statusFilter, typeFilter, projectFilter])
+  }, [debouncedSearch, statusFilter, typeFilter, projectFilter])
 
   const handlePageChange = (newPage: number) => {
     fetchDocuments({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       status: statusFilter || undefined,
       type: typeFilter || undefined,
       projectId: projectFilter || undefined,
@@ -93,8 +94,42 @@ export default function DocumentListPage() {
 
   if (isLoading && documents.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="skeleton h-8 w-32" />
+            <div className="skeleton h-4 w-56 mt-2" />
+          </div>
+          <div className="skeleton h-10 w-40" />
+        </div>
+        <div className="card p-4">
+          <div className="flex flex-wrap gap-4">
+            <div className="skeleton h-10 flex-1 min-w-64" />
+            <div className="skeleton h-10 w-40" />
+            <div className="skeleton h-10 w-36" />
+            <div className="skeleton h-10 w-36" />
+          </div>
+        </div>
+        <div className="card divide-y divide-gray-200 dark:divide-gray-700">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center p-4 gap-4">
+              <div className="skeleton w-10 h-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-5 w-3/4" />
+                <div className="flex gap-4">
+                  <div className="skeleton h-4 w-20" />
+                  <div className="skeleton h-4 w-32" />
+                  <div className="skeleton h-4 w-24 rounded-full" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="skeleton h-4 w-12" />
+                <div className="skeleton h-4 w-20" />
+                <div className="skeleton h-6 w-16 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -104,7 +139,7 @@ export default function DocumentListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Documenti</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Documenti</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gestione documentale ISO 13485
           </p>
@@ -215,25 +250,39 @@ export default function DocumentListPage() {
                     >
                       {doc.title}
                     </Link>
+                    {/* Status badge visible on mobile inline with title */}
+                    <span className={`sm:hidden text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${DOCUMENT_STATUS_COLORS[doc.status]}`}>
+                      {DOCUMENT_STATUS_LABELS[doc.status]}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-4 mt-1">
+                  <div className="flex items-center gap-3 mt-1">
                     <span className="text-sm text-gray-500 dark:text-gray-400">{doc.code}</span>
                     {doc.project && (
                       <Link
                         to={`/projects/${doc.project.id}`}
-                        className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                        className="text-sm text-primary-600 dark:text-primary-400 hover:underline truncate"
                       >
                         {doc.project.name}
                       </Link>
                     )}
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${DOCUMENT_TYPE_COLORS[doc.type]}`}>
+                    <span className={`hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full ${DOCUMENT_TYPE_COLORS[doc.type]}`}>
                       {DOCUMENT_TYPE_LABELS[doc.type]}
                     </span>
                   </div>
+                  {/* Mobile secondary row */}
+                  <div className="flex items-center gap-3 mt-1 sm:hidden">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${DOCUMENT_TYPE_COLORS[doc.type]}`}>
+                      {DOCUMENT_TYPE_LABELS[doc.type]}
+                    </span>
+                    <span className="text-xs text-gray-400">{formatDate(doc.createdAt)}</span>
+                    {doc.filePath && (
+                      <span className="text-xs text-gray-400">v{doc.version}</span>
+                    )}
+                  </div>
                 </div>
 
-                {/* Document Details */}
-                <div className="flex items-center gap-4 ml-4">
+                {/* Document Details - hidden on mobile */}
+                <div className="hidden sm:flex items-center gap-4 ml-4">
                   <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                     <Clock className="w-4 h-4 mr-1" />
                     v{doc.version}
@@ -267,39 +316,29 @@ export default function DocumentListPage() {
                     </a>
                   )}
                 </div>
+
+                {/* Download button - always visible on mobile */}
+                {doc.filePath && (
+                  <a
+                    href={`${import.meta.env.VITE_API_URL || '/api'}/documents/${doc.id}/download`}
+                    className="sm:hidden p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 flex-shrink-0"
+                    title="Scarica"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
+                )}
               </div>
             ))}
           </div>
 
           {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {(pagination.page - 1) * pagination.limit + 1} -{' '}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} di{' '}
-                {pagination.total} documenti
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Pagina {pagination.page} di {pagination.pages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={pagination.page}
+            pages={pagination.pages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </div>

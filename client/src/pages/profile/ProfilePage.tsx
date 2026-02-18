@@ -78,7 +78,7 @@ export default function ProfilePage() {
     : ''
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center ring-2 ring-primary-500/20">
@@ -87,7 +87,7 @@ export default function ProfilePage() {
           </span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             Il mio profilo
           </h1>
           <div className="flex items-center gap-2 mt-0.5">

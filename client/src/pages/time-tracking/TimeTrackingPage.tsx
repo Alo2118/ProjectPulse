@@ -10,18 +10,22 @@ import { useProjectStore } from '@stores/projectStore'
 import { useUserStore } from '@stores/userStore'
 import { useAuthStore } from '@stores/authStore'
 import api from '@services/api'
+import { toast } from '@stores/toastStore'
 import {
   Clock,
   Play,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   FolderKanban,
   CheckSquare,
   Plus,
   Pencil,
   Trash2,
+  Download,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react'
+import { Pagination } from '@components/common/Pagination'
 import { TimeEntry, PaginatedResponse } from '@/types'
 import TimeEntryFormModal from './TimeEntryFormModal'
 import { TimeEntryDetailModal } from './TimeEntryDetailModal'
@@ -72,7 +76,7 @@ export default function TimeTrackingPage() {
   const { runningTimer, fetchRunningTimer, startTimer, stopTimer } = useDashboardStore()
   const { projects, fetchProjects } = useProjectStore()
   const { users, fetchUsers } = useUserStore()
-  const { user: currentUser } = useAuthStore()
+  const { user: currentUser, token } = useAuthStore()
 
   const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'direzione'
 
@@ -103,6 +107,9 @@ export default function TimeTrackingPage() {
   // Task selection for starting timer
   const [selectedTaskId, setSelectedTaskId] = useState('')
 
+  // CSV export
+  const [isExporting, setIsExporting] = useState(false)
+
   const fetchTimeEntries = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -122,8 +129,8 @@ export default function TimeTrackingPage() {
         setTimeEntries(response.data.data)
         setPagination(response.data.pagination)
       }
-    } catch (error) {
-      console.error('Failed to fetch time entries:', error)
+    } catch {
+      // silently ignore
     } finally {
       setIsLoading(false)
     }
@@ -143,8 +150,8 @@ export default function TimeTrackingPage() {
     try {
       await stopTimer()
       fetchTimeEntries()
-    } catch (error) {
-      console.error('Failed to stop timer:', error)
+    } catch {
+      // silently ignore
     }
   }
 
@@ -154,8 +161,8 @@ export default function TimeTrackingPage() {
     try {
       await startTimer(selectedTaskId)
       setSelectedTaskId('')
-    } catch (error) {
-      console.error('Failed to start timer:', error)
+    } catch {
+      // silently ignore
     } finally {
       setIsStartingTimer(false)
     }
@@ -167,6 +174,43 @@ export default function TimeTrackingPage() {
 
   const handleFormSuccess = () => {
     fetchTimeEntries()
+  }
+
+  const handleExportCSV = async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const params = new URLSearchParams()
+      if (projectFilter) params.append('projectId', projectFilter)
+      if (userFilter) params.append('userId', userFilter)
+      if (dateFrom) params.append('startDate', dateFrom)
+      if (dateTo) params.append('endDate', dateTo)
+
+      const response = await fetch(`/api/time-entries/export?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token ?? ''}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Export failed')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const today = new Date().toISOString().split('T')[0]
+      a.download = `time-entries-${today}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Errore', 'Impossibile esportare le ore')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const handleEdit = (entry: TimeEntry) => {
@@ -181,8 +225,7 @@ export default function TimeTrackingPage() {
       await api.delete(`/time-entries/${deletingEntryId}`)
       setDeletingEntryId(null)
       fetchTimeEntries()
-    } catch (error) {
-      console.error('Failed to delete time entry:', error)
+    } catch {
       setDeletingEntryId(null) // Close modal on error too
     } finally {
       setIsDeleting(false)
@@ -210,23 +253,42 @@ export default function TimeTrackingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Time Tracking</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Registro Ore</h1>
+          <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-400">
             Registra e monitora il tempo dedicato ai task
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingEntry(null)
-            setIsFormModalOpen(true)
-          }}
-          className="btn-primary flex items-center"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Registra manualmente
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          {isPrivileged && (
+            <button
+              onClick={handleExportCSV}
+              disabled={isExporting}
+              className="btn-secondary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Esporta CSV"
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              <span className="hidden sm:inline">Esporta CSV</span>
+              <span className="sm:hidden">CSV</span>
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setEditingEntry(null)
+              setIsFormModalOpen(true)
+            }}
+            className="btn-primary flex items-center"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Registra manualmente</span>
+            <span className="sm:hidden">Registra</span>
+          </button>
+        </div>
       </div>
 
       {/* Running Timer Banner */}
@@ -418,60 +480,77 @@ export default function TimeTrackingPage() {
                     className="px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
                     onClick={() => setViewingEntry(entry)}
                   >
-                    <div className="flex items-center gap-2">
-                      {/* Project name - primary */}
-                      <Link
-                        to={`/projects/${entry.task?.project?.id}`}
-                        className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {entry.task?.project?.name}
-                      </Link>
-                      {/* Task title - secondary */}
-                      <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                        {entry.task?.title}
-                      </span>
-                      {/* Notes - tertiary */}
-                      {entry.description && (
-                        <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate hidden sm:inline" title={entry.description}>
-                          — {entry.description}
+                    <div className="flex items-center gap-2 min-w-0">
+                      {/* Project + Task info - wrap on mobile */}
+                      <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <Link
+                          to={`/projects/${entry.task?.project?.id}`}
+                          className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {entry.task?.project?.name}
+                        </Link>
+                        <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                          {entry.task?.title}
                         </span>
-                      )}
-                      {/* User name (admin/direzione only) - least prominent */}
-                      {isPrivileged && entry.user && (
-                        <span className="text-[11px] text-gray-400/80 dark:text-gray-500/80 shrink-0">
-                          [{entry.user.firstName} {entry.user.lastName}]
-                        </span>
-                      )}
-                      {/* Spacer */}
-                      <div className="flex-1" />
+                        {entry.description && (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate hidden sm:inline" title={entry.description}>
+                            — {entry.description}
+                          </span>
+                        )}
+                        {isPrivileged && entry.user && (
+                          <span className="text-[11px] text-gray-400/80 dark:text-gray-500/80 shrink-0 hidden sm:inline">
+                            [{entry.user.firstName} {entry.user.lastName}]
+                          </span>
+                        )}
+                        {/* Approval status badge */}
+                        {!entry.isRunning && (
+                          <span
+                            className={`hidden sm:inline-flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${
+                              entry.approvalStatus === 'approved'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : entry.approvalStatus === 'rejected'
+                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                            }`}
+                          >
+                            {entry.approvalStatus === 'approved' ? (
+                              <><CheckCircle className="w-2.5 h-2.5" /> Approvata</>
+                            ) : entry.approvalStatus === 'rejected' ? (
+                              <><XCircle className="w-2.5 h-2.5" /> Rifiutata</>
+                            ) : (
+                              <><AlertCircle className="w-2.5 h-2.5" /> In attesa</>
+                            )}
+                          </span>
+                        )}
+                      </div>
                       {/* Time info */}
-                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0 hidden sm:inline">
                         {formatTime(entry.startTime)}
                         {entry.endTime && ` - ${formatTime(entry.endTime)}`}
                       </span>
                       {/* Duration */}
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0 w-16 text-right">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0 w-14 sm:w-16 text-right">
                         {formatDuration(entry.duration)}
                       </span>
                       {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                         {!entry.isRunning && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600"
+                            className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600"
                             title="Modifica"
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         )}
                         {(!entry.isRunning || (entry.isRunning && entry.id !== runningTimer?.id)) && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeletingEntryId(entry.id); }}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-600"
+                            className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-600"
                             title={entry.isRunning ? "Elimina timer orfano" : "Elimina"}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         )}
                       </div>
@@ -484,29 +563,14 @@ export default function TimeTrackingPage() {
         )}
 
         {/* Pagination */}
-        {pagination.pages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Pagina {pagination.page} di {pagination.pages} ({pagination.total} registrazioni)
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page === 1}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page === pagination.pages}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          page={pagination.page}
+          pages={pagination.pages}
+          total={pagination.total}
+          limit={pagination.limit}
+          onPageChange={handlePageChange}
+          className="px-4 py-3 border-t border-gray-200 dark:border-gray-700"
+        />
       </div>
 
       {/* Form Modal */}

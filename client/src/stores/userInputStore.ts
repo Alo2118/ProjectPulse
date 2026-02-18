@@ -13,6 +13,7 @@ import {
   Task,
   Project,
 } from '@/types'
+import { toast } from '@stores/toastStore'
 
 interface UserInputFilters {
   page?: number
@@ -163,8 +164,8 @@ export const useUserInputStore = create<UserInputState>((set) => ({
       if (response.data.success) {
         set({ stats: response.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch input stats:', error)
+    } catch {
+      // silently ignore
     }
   },
 
@@ -179,12 +180,14 @@ export const useUserInputStore = create<UserInputState>((set) => ({
           myInputs: [response.data.data, ...state.myInputs],
           isLoading: false,
         }))
+        toast.success('Segnalazione creata')
         return response.data.data
       }
-      throw new Error('Failed to create input')
+      throw new Error('Impossibile creare la segnalazione')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create input'
+      const message = error instanceof Error ? error.message : 'Impossibile creare la segnalazione'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -203,9 +206,11 @@ export const useUserInputStore = create<UserInputState>((set) => ({
           isLoading: false,
         }))
       }
+      toast.success('Segnalazione aggiornata')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update input'
+      const message = error instanceof Error ? error.message : 'Impossibile aggiornare la segnalazione'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -220,9 +225,11 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         currentInput: state.currentInput?.id === id ? null : state.currentInput,
         isLoading: false,
       }))
+      toast.success('Segnalazione eliminata')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete input'
+      const message = error instanceof Error ? error.message : 'Impossibile eliminare la segnalazione'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -240,10 +247,12 @@ export const useUserInputStore = create<UserInputState>((set) => ({
           currentInput: state.currentInput?.id === id ? updatedInput : state.currentInput,
           isLoading: false,
         }))
+        toast.success('Lavorazione avviata')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to start processing'
+      const message = error instanceof Error ? error.message : 'Impossibile avviare la lavorazione'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -264,12 +273,14 @@ export const useUserInputStore = create<UserInputState>((set) => ({
           currentInput: state.currentInput?.id === id ? updatedInput : state.currentInput,
           isLoading: false,
         }))
+        toast.success('Convertito in task')
         return { userInput: updatedInput, task }
       }
-      throw new Error('Failed to convert to task')
+      throw new Error('Impossibile convertire in task')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to convert to task'
+      const message = error instanceof Error ? error.message : 'Impossibile convertire in task'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -290,12 +301,14 @@ export const useUserInputStore = create<UserInputState>((set) => ({
           currentInput: state.currentInput?.id === id ? updatedInput : state.currentInput,
           isLoading: false,
         }))
+        toast.success('Convertito in progetto')
         return { userInput: updatedInput, project }
       }
-      throw new Error('Failed to convert to project')
+      throw new Error('Impossibile convertire in progetto')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to convert to project'
+      const message = error instanceof Error ? error.message : 'Impossibile convertire in progetto'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -315,10 +328,12 @@ export const useUserInputStore = create<UserInputState>((set) => ({
           currentInput: state.currentInput?.id === id ? updatedInput : state.currentInput,
           isLoading: false,
         }))
+        toast.success('Segnalazione presa in carico')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to acknowledge input'
+      const message = error instanceof Error ? error.message : 'Impossibile prendere in carico la segnalazione'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -338,10 +353,12 @@ export const useUserInputStore = create<UserInputState>((set) => ({
           currentInput: state.currentInput?.id === id ? updatedInput : state.currentInput,
           isLoading: false,
         }))
+        toast.success('Segnalazione rifiutata')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to reject input'
+      const message = error instanceof Error ? error.message : 'Impossibile rifiutare la segnalazione'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },

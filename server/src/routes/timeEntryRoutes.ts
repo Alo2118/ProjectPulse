@@ -16,6 +16,10 @@ import {
   getMyTimeReport,
   getMyDailySummary,
   getTeamTimeReport,
+  exportTimeEntries,
+  getPendingTimeEntries,
+  approveTimeEntries,
+  rejectTimeEntries,
 } from '../controllers/timeEntryController.js'
 import { authMiddleware, requireRole } from '../middleware/authMiddleware.js'
 
@@ -41,6 +45,18 @@ router.get('/my/daily', getMyDailySummary)
 
 // GET /api/time-entries/team - Get team time report (admin/direzione only)
 router.get('/team', requireRole('admin', 'direzione'), getTeamTimeReport)
+
+// GET /api/time-entries/export - Export time entries as CSV (admin/direzione only)
+router.get('/export', requireRole('admin', 'direzione'), exportTimeEntries)
+
+// GET /api/time-entries/pending - Get pending entries awaiting approval (admin/direzione only)
+router.get('/pending', requireRole('admin', 'direzione'), getPendingTimeEntries)
+
+// PATCH /api/time-entries/approve - Bulk approve time entries (admin/direzione only)
+router.patch('/approve', requireRole('admin', 'direzione'), approveTimeEntries)
+
+// PATCH /api/time-entries/reject - Bulk reject time entries (admin/direzione only)
+router.patch('/reject', requireRole('admin', 'direzione'), rejectTimeEntries)
 
 // GET /api/time-entries - List time entries
 router.get('/', getTimeEntries)

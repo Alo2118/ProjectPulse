@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import api from '@/services/api'
 import type { Notification, PaginatedResponse } from '@/types'
 
@@ -8,6 +9,10 @@ interface NotificationState {
   isLoading: boolean
   pagination: { page: number; limit: number; total: number; pages: number } | null
 
+  // Desktop notification preference
+  desktopEnabled: boolean
+  setDesktopEnabled: (enabled: boolean) => void
+
   fetchNotifications: (page?: number) => Promise<void>
   fetchUnreadCount: () => Promise<void>
   markAsRead: (id: string) => Promise<void>
@@ -16,11 +21,17 @@ interface NotificationState {
   addRealtimeNotification: (notification: Notification) => void
 }
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
+export const useNotificationStore = create<NotificationState>()(
+  persist(
+    (set, get) => ({
   notifications: [],
   unreadCount: 0,
   isLoading: false,
   pagination: null,
+
+  // Desktop notifications — default on
+  desktopEnabled: true,
+  setDesktopEnabled: (enabled) => set({ desktopEnabled: enabled }),
 
   fetchNotifications: async (page = 1) => {
     try {
@@ -95,4 +106,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       unreadCount: state.unreadCount + 1,
     }))
   },
-}))
+    }),
+    {
+      name: 'notification-prefs',
+      // Only persist user preferences, not fetched data
+      partialize: (state) => ({ desktopEnabled: state.desktopEnabled }),
+    }
+  )
+)

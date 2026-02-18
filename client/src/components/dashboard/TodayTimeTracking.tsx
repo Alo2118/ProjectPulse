@@ -70,8 +70,8 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
         )
         setTodayEntries(entries)
       }
-    } catch (error) {
-      console.error('Failed to fetch today entries:', error)
+    } catch {
+      // silently ignore
     } finally {
       setIsLoading(false)
     }
@@ -207,7 +207,7 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
           to="/time-tracking"
           className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 flex items-center justify-center gap-1 group"
         >
-          Vedi tutto il time tracking
+          Vedi tutto il registro ore
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>

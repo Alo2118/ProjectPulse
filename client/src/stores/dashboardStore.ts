@@ -5,6 +5,7 @@
 
 import { create } from 'zustand'
 import api from '@services/api'
+import { toast } from '@stores/toastStore'
 import { Task, Project, TimeEntry, Risk, TaskStats } from '@/types'
 
 interface DashboardState {
@@ -16,6 +17,10 @@ interface DashboardState {
   openRisks: Risk[]
   taskStats: TaskStats | null
   runningTimer: TimeEntry | null
+
+  // UI
+  mobileSidebarOpen: boolean
+  setMobileSidebarOpen: (open: boolean) => void
 
   // Loading states
   isLoading: boolean
@@ -48,6 +53,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   openRisks: [],
   taskStats: null,
   runningTimer: null,
+  mobileSidebarOpen: false,
+  setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
   isLoading: false,
   isLoadingTasks: false,
   isLoadingProjects: false,
@@ -83,8 +90,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       if (response.data.success !== false) {
         set({ myTasks: response.data.data || [], isLoadingTasks: false })
       }
-    } catch (error) {
-      console.error('Failed to fetch my tasks:', error)
+    } catch {
       set({ isLoadingTasks: false })
     }
   },
@@ -99,8 +105,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       if (response.data.success !== false) {
         set({ allTasks: response.data.data || [], isLoadingTasks: false })
       }
-    } catch (error) {
-      console.error('Failed to fetch all tasks:', error)
+    } catch {
       set({ isLoadingTasks: false })
     }
   },
@@ -113,8 +118,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       if (response.data.success !== false) {
         set({ recentProjects: response.data.data || [], isLoadingProjects: false })
       }
-    } catch (error) {
-      console.error('Failed to fetch recent projects:', error)
+    } catch {
       set({ isLoadingProjects: false })
     }
   },
@@ -139,8 +143,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         })
         set({ recentTimeEntries: filtered, isLoadingTimeEntries: false })
       }
-    } catch (error) {
-      console.error('Failed to fetch recent time entries:', error)
+    } catch {
       set({ isLoadingTimeEntries: false })
     }
   },
@@ -153,8 +156,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       if (response.data.success !== false) {
         set({ openRisks: response.data.data || [], isLoadingRisks: false })
       }
-    } catch (error) {
-      console.error('Failed to fetch open risks:', error)
+    } catch {
       set({ isLoadingRisks: false })
     }
   },
@@ -166,8 +168,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       if (response.data.success) {
         set({ taskStats: response.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch task stats:', error)
+    } catch {
+      // silently ignore
     }
   },
 
@@ -181,7 +183,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         set({ runningTimer: response.data.data })
       }
     } catch (error) {
-      console.error('Failed to fetch running timer:', error)
+      // Running timer fetch failed silently
     }
   },
 
@@ -194,10 +196,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
       if (response.data.success) {
         set({ runningTimer: response.data.data })
+        toast.success('Timer avviato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to start timer'
       set({ error: message })
+      toast.error('Errore', 'Impossibile avviare il timer')
       throw error
     }
   },
@@ -213,10 +217,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
           runningTimer: null,
           recentTimeEntries: [response.data.data, ...state.recentTimeEntries.slice(0, 4)],
         }))
+        toast.success('Timer fermato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop timer'
       set({ error: message })
+      toast.error('Errore', 'Impossibile fermare il timer')
       throw error
     }
   },

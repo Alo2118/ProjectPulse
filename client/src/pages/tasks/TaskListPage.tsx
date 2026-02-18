@@ -12,7 +12,6 @@ import { useDashboardStore } from '@stores/dashboardStore'
 import {
   Plus,
   Search,
-  Loader2,
   Clock,
   List,
   FolderTree,
@@ -23,8 +22,11 @@ import {
   Play,
   Square,
   Repeat2,
+  X,
+  ChevronDown,
 } from 'lucide-react'
 import { TaskTreeView } from '@/components/reports/TaskTreeView'
+import { useDebounce } from '@hooks/useDebounce'
 import type { Task } from '@/types'
 
 function formatDate(dateString: string | null | undefined): string {
@@ -45,7 +47,7 @@ export default function TaskListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuthStore()
-  const { tasks, myTasks, isLoading, fetchTasks, fetchMyTasks } = useTaskStore()
+  const { tasks, myTasks, isLoading, fetchTasks, fetchMyTasks, changeTaskStatus, updateTask } = useTaskStore()
   const { projects, fetchProjects } = useProjectStore()
   const { runningTimer, startTimer, stopTimer } = useDashboardStore()
 
@@ -55,6 +57,11 @@ export default function TaskListPage() {
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || '')
   const [projectFilter, setProjectFilter] = useState(searchParams.get('projectId') || '')
+  // Bulk selection state
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
+  const [isBulkApplying, setIsBulkApplying] = useState(false)
+  const [bulkStatusValue, setBulkStatusValue] = useState('')
+  const [bulkPriorityValue, setBulkPriorityValue] = useState('')
   // Admin e direzione possono vedere tutti i task, gli altri vedono solo i propri
   const canSeeAllTasks = user?.role === 'admin' || user?.role === 'direzione'
   const [showAllTasks, setShowAllTasks] = useState(
@@ -64,13 +71,15 @@ export default function TaskListPage() {
     (searchParams.get('view') as 'list' | 'tree') || 'list'
   )
 
+  const debouncedSearch = useDebounce(searchTerm, 300)
+
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
 
   useEffect(() => {
     const filters: Record<string, string> = {}
-    if (searchTerm) filters.search = searchTerm
+    if (debouncedSearch) filters.search = debouncedSearch
     if (statusFilter) filters.status = statusFilter
     if (priorityFilter) filters.priority = priorityFilter
     if (projectFilter) filters.projectId = projectFilter
@@ -89,7 +98,7 @@ export default function TaskListPage() {
     // Fetch all tasks when "Mostra tutti" is checked (for admin/direzione)
     if (showAllTasks && canSeeAllTasks) {
       fetchTasks({
-        search: searchTerm || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         projectId: projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined,
@@ -98,7 +107,7 @@ export default function TaskListPage() {
         limit: 200, // Higher limit to fetch all tasks
       })
     }
-  }, [searchTerm, statusFilter, priorityFilter, projectFilter, showAllTasks, canSeeAllTasks, user?.id])
+  }, [debouncedSearch, statusFilter, priorityFilter, projectFilter, showAllTasks, canSeeAllTasks, user?.id])
 
   const handleTimerToggle = useCallback(
     async (taskId: string) => {
@@ -108,8 +117,8 @@ export default function TaskListPage() {
         } else {
           await startTimer(taskId)
         }
-      } catch (error) {
-        console.error('Timer error:', error)
+      } catch {
+        // silently ignore
       }
     },
     [runningTimer?.taskId, startTimer, stopTimer]
@@ -117,10 +126,113 @@ export default function TaskListPage() {
 
   const canCreateTask = !!user // Tutti gli utenti autenticati possono creare task
 
+  const handleToggleTaskSelection = useCallback((taskId: string) => {
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) {
+        next.delete(taskId)
+      } else {
+        next.add(taskId)
+      }
+      return next
+    })
+  }, [])
+
+  const handleSelectAll = useCallback(
+    (taskList: Task[]) => {
+      if (selectedTaskIds.size === taskList.length) {
+        setSelectedTaskIds(new Set())
+      } else {
+        setSelectedTaskIds(new Set(taskList.map((t) => t.id)))
+      }
+    },
+    [selectedTaskIds.size]
+  )
+
+  const handleBulkApply = useCallback(async () => {
+    if (selectedTaskIds.size === 0 || (!bulkStatusValue && !bulkPriorityValue)) return
+    setIsBulkApplying(true)
+    try {
+      const ids = Array.from(selectedTaskIds)
+      await Promise.all(
+        ids.map((id) => {
+          if (bulkStatusValue) {
+            return changeTaskStatus(id, bulkStatusValue as Task['status'])
+          }
+          if (bulkPriorityValue) {
+            return updateTask(id, { priority: bulkPriorityValue as Task['priority'] })
+          }
+          return Promise.resolve()
+        })
+      )
+      setSelectedTaskIds(new Set())
+      setBulkStatusValue('')
+      setBulkPriorityValue('')
+    } catch {
+      // silently ignore
+    } finally {
+      setIsBulkApplying(false)
+    }
+  }, [selectedTaskIds, bulkStatusValue, bulkPriorityValue, changeTaskStatus, updateTask])
+
   if (isLoading && tasks.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="skeleton h-8 w-24" />
+            <div className="skeleton h-4 w-48 mt-2" />
+          </div>
+          <div className="skeleton h-10 w-32" />
+        </div>
+
+        {/* Filters skeleton */}
+        <div className="card p-3 sm:p-4">
+          <div className="space-y-3">
+            <div className="skeleton h-10 w-full" />
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              <div className="skeleton h-10 w-full sm:w-48" />
+              <div className="skeleton h-10 flex-1 sm:flex-none sm:w-32" />
+              <div className="skeleton h-10 flex-1 sm:flex-none sm:w-32" />
+            </div>
+          </div>
+        </div>
+
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="card-hover p-4">
+              <div className="flex items-center gap-3">
+                <div className="skeleton w-10 h-10 rounded-xl" />
+                <div className="space-y-2">
+                  <div className="skeleton h-3 w-16" />
+                  <div className="skeleton h-6 w-8" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Task list skeleton */}
+        <div className="card p-6">
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i}>
+                <div className="skeleton h-5 w-32 mb-3" />
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, j) => (
+                    <div key={j} className="flex items-center gap-2 py-1.5">
+                      <div className="skeleton w-4 h-4 rounded" />
+                      <div className="skeleton h-4 flex-1" />
+                      <div className="skeleton h-4 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -128,15 +240,15 @@ export default function TaskListPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Task</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Task</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gestisci e traccia i tuoi task
           </p>
         </div>
         {canCreateTask && (
-          <button onClick={() => navigate('/tasks/new')} className="btn-primary flex items-center">
+          <button onClick={() => navigate('/tasks/new')} className="btn-primary flex items-center self-start">
             <Plus className="w-4 h-4 mr-2" />
             Nuovo Task
           </button>
@@ -144,9 +256,10 @@ export default function TaskListPage() {
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-64">
+      <div className="card p-3 sm:p-4">
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-3">
+          {/* Search - full width on mobile */}
+          <div className="w-full sm:flex-1 sm:min-w-64">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -158,80 +271,88 @@ export default function TaskListPage() {
               />
             </div>
           </div>
-          <select
-            value={projectFilter}
-            onChange={(e) => setProjectFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutti i progetti</option>
-            <option value="standalone">Standalone</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.code} - {project.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutti gli stati</option>
-            <option value="todo">Da fare</option>
-            <option value="in_progress">In corso</option>
-            <option value="review">In revisione</option>
-            <option value="blocked">Bloccato</option>
-            <option value="done">Completato</option>
-          </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutte le priorità</option>
-            <option value="critical">Critica</option>
-            <option value="high">Alta</option>
-            <option value="medium">Media</option>
-            <option value="low">Bassa</option>
-          </select>
-          {canSeeAllTasks && (
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showAllTasks}
-                onChange={(e) => setShowAllTasks(e.target.checked)}
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              Mostra tutti
-            </label>
-          )}
 
-          {/* View Mode Toggle */}
-          <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              title="Vista Lista"
+          {/* Filters row - stack on mobile */}
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className="input w-full sm:w-auto"
             >
-              <List className="w-4 h-4" />
-              <span className="hidden sm:inline">Lista</span>
-            </button>
-            <button
-              onClick={() => setViewMode('tree')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
-                viewMode === 'tree'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              title="Vista Albero"
+              <option value="">Tutti i progetti</option>
+              <option value="standalone">Standalone</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.code} - {project.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="input flex-1 sm:flex-none sm:w-auto"
             >
-              <FolderTree className="w-4 h-4" />
-              <span className="hidden sm:inline">Albero</span>
-            </button>
+              <option value="">Tutti gli stati</option>
+              <option value="todo">Da fare</option>
+              <option value="in_progress">In corso</option>
+              <option value="review">In revisione</option>
+              <option value="blocked">Bloccato</option>
+              <option value="done">Completato</option>
+            </select>
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="input flex-1 sm:flex-none sm:w-auto"
+            >
+              <option value="">Tutte le priorità</option>
+              <option value="critical">Critica</option>
+              <option value="high">Alta</option>
+              <option value="medium">Media</option>
+              <option value="low">Bassa</option>
+            </select>
+          </div>
+
+          {/* Bottom row - checkbox + view toggle */}
+          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+            {canSeeAllTasks && (
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showAllTasks}
+                  onChange={(e) => setShowAllTasks(e.target.checked)}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                Mostra tutti
+              </label>
+            )}
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title="Vista Lista"
+              >
+                <List className="w-4 h-4" />
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+              <button
+                onClick={() => setViewMode('tree')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
+                  viewMode === 'tree'
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title="Vista Albero"
+              >
+                <FolderTree className="w-4 h-4" />
+                <span className="hidden sm:inline">Albero</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -246,7 +367,7 @@ export default function TaskListPage() {
           const todoCount = taskList.filter((t) => t.status === 'todo').length
 
           return (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
               <div className="card-hover p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
@@ -351,11 +472,7 @@ export default function TaskListPage() {
             )
           }
 
-          console.log('[TaskListPage] taskList length:', taskList.length)
-          console.log('[TaskListPage] First task:', taskList[0])
-          console.log('[TaskListPage] Checking isRecurring values:', taskList.map(t => ({ code: t.code, isRecurring: t.isRecurring, type: typeof t.isRecurring })))
           const recurringTasks = taskList.filter((t) => t.isRecurring && t.status !== 'done')
-          console.log('[TaskListPage] Recurring tasks count:', recurringTasks.length)
           const inProgressTasks = taskList.filter((t) => t.status === 'in_progress' && !t.isRecurring)
           const todoTasks = taskList.filter((t) => t.status === 'todo' && !t.isRecurring)
           const blockedTasks = taskList.filter((t) => t.status === 'blocked' && !t.isRecurring)
@@ -366,9 +483,18 @@ export default function TaskListPage() {
             const isRunning = runningTimer?.taskId === task.id
             const isCompleted = task.status === 'done'
             const isBlocked = task.status === 'blocked'
+            const isSelected = selectedTaskIds.has(task.id)
 
             return (
-              <li key={task.id} className="flex items-center gap-2 group py-1.5">
+              <li key={task.id} className={`flex items-center gap-2 group py-1.5 rounded px-1 transition-colors ${isSelected ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}>
+                {/* Checkbox for bulk selection */}
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => handleToggleTaskSelection(task.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 flex-shrink-0 cursor-pointer"
+                />
                 {isCompleted ? (
                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
                 ) : isBlocked ? (
@@ -426,6 +552,60 @@ export default function TaskListPage() {
 
           return (
             <div className="card p-6">
+              {/* Bulk Action Bar */}
+              <div className={`mb-4 transition-all duration-200 overflow-hidden ${selectedTaskIds.size > 0 ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="flex flex-wrap items-center gap-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/50 rounded-lg">
+                  <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+                    {selectedTaskIds.size} selezionat{selectedTaskIds.size === 1 ? 'o' : 'i'}
+                  </span>
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
+                    <div className="relative">
+                      <select
+                        value={bulkStatusValue}
+                        onChange={(e) => { setBulkStatusValue(e.target.value); setBulkPriorityValue('') }}
+                        className="input py-1.5 pr-8 text-sm"
+                      >
+                        <option value="">Cambia stato...</option>
+                        <option value="todo">Da fare</option>
+                        <option value="in_progress">In corso</option>
+                        <option value="review">In revisione</option>
+                        <option value="blocked">Bloccato</option>
+                        <option value="done">Completato</option>
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-gray-400" />
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={bulkPriorityValue}
+                        onChange={(e) => { setBulkPriorityValue(e.target.value); setBulkStatusValue('') }}
+                        className="input py-1.5 pr-8 text-sm"
+                      >
+                        <option value="">Cambia priorità...</option>
+                        <option value="critical">Critica</option>
+                        <option value="high">Alta</option>
+                        <option value="medium">Media</option>
+                        <option value="low">Bassa</option>
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-gray-400" />
+                    </div>
+                    <button
+                      onClick={handleBulkApply}
+                      disabled={isBulkApplying || (!bulkStatusValue && !bulkPriorityValue)}
+                      className="btn-primary py-1.5 px-4 text-sm disabled:opacity-50"
+                    >
+                      {isBulkApplying ? 'Applicando...' : 'Applica'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setSelectedTaskIds(new Set())}
+                    className="p-1.5 rounded hover:bg-primary-100 dark:hover:bg-primary-800/50 text-primary-600 dark:text-primary-400"
+                    title="Deseleziona tutto"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-6">
                 {/* Recurring Tasks */}
                 {recurringTasks.length > 0 && (
@@ -504,12 +684,7 @@ export default function TaskListPage() {
                   </h4>
                   {completedTasks.length > 0 ? (
                     <ul className="space-y-1">
-                      {completedTasks.slice(0, 10).map(renderTaskItem)}
-                      {completedTasks.length > 10 && (
-                        <li className="text-sm text-gray-400 py-1">
-                          ...e altri {completedTasks.length - 10} completati
-                        </li>
-                      )}
+                      {completedTasks.map(renderTaskItem)}
                     </ul>
                   ) : (
                     <p className="text-sm text-gray-400">Nessun task completato</p>

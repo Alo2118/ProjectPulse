@@ -53,24 +53,28 @@ export const PROJECT_PRIORITY_LABELS: Record<ProjectPriority, string> = {
   low: 'Bassa',
   medium: 'Media',
   high: 'Alta',
+  critical: 'Critica',
 }
 
 export const PROJECT_PRIORITY_COLORS: Record<ProjectPriority, string> = {
   low: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
   medium: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
   high: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+  critical: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 }
 
 export const PROJECT_PRIORITY_BORDER_COLORS: Record<ProjectPriority, string> = {
   low: 'border-l-gray-400',
   medium: 'border-l-blue-500',
   high: 'border-l-orange-500',
+  critical: 'border-l-red-500',
 }
 
 export const PROJECT_PRIORITY_OPTIONS: { value: ProjectPriority; label: string }[] = [
   { value: 'low', label: 'Bassa' },
   { value: 'medium', label: 'Media' },
   { value: 'high', label: 'Alta' },
+  { value: 'critical', label: 'Critica' },
 ]
 
 // ============================================================

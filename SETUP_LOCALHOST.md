@@ -170,12 +170,13 @@ CORS_ORIGIN="http://localhost:5173"
 UPLOAD_DIR="./uploads"
 MAX_FILE_SIZE=10485760
 
-# Email (optional - for password reset)
-SMTP_HOST=""
-SMTP_PORT=""
-SMTP_USER=""
-SMTP_PASSWORD=""
-SMTP_FROM=""
+# Email (optional - notifiche automatiche: scadenze, rischi critici, task bloccati)
+SMTP_HOST=""          # es. smtp.gmail.com | smtp.office365.com
+SMTP_PORT=""          # 587 (STARTTLS) | 465 (SSL)
+SMTP_SECURE=""        # true se porta 465, altrimenti false/vuoto
+SMTP_USER=""          # username SMTP
+SMTP_PASS=""          # password SMTP (ex SMTP_PASSWORD)
+SMTP_FROM=""          # es. "ProjectPulse <noreply@azienda.it>"
 ```
 
 **Generate secure JWT secrets:**

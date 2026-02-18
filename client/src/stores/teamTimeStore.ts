@@ -73,8 +73,7 @@ export const useTeamTimeStore = create<TeamTimeState>((set, get) => ({
           summary: data.summary,
         })
       }
-    } catch (error) {
-      console.error('Error fetching team time:', error)
+    } catch {
       set({ error: 'Errore nel caricamento dei dati team' })
     } finally {
       set({ isLoading: false })

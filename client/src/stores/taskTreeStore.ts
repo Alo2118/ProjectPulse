@@ -92,7 +92,6 @@ export const useTaskTreeStore = create<TaskTreeState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nel caricamento dati'
       set({ error: message })
-      console.error('Failed to fetch task tree:', error)
     } finally {
       set({ isLoading: false })
     }

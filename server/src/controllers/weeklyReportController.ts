@@ -18,10 +18,10 @@ const generateReportSchema = z.object({
 })
 
 const querySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('10'),
-  year: z.string().regex(/^\d{4}$/).transform(Number).optional(),
-  weekNumber: z.string().regex(/^\d{1,2}$/).transform(Number).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().default(10),
+  year: z.coerce.number().int().optional(),
+  weekNumber: z.coerce.number().int().optional(),
 })
 
 // ============================================================
@@ -52,6 +52,17 @@ export async function getWeeklyPreview(req: Request, res: Response, next: NextFu
       preview = await weeklyReportService.generateReportPreview(userId)
     }
 
+    console.log('=========================================')
+    console.log('Controller - Preview to send:')
+    console.log('  hasTimeTracking:', !!preview.timeTracking)
+    console.log('  hasEntries:', !!preview.timeTracking.entries)
+    console.log('  entriesLength:', preview.timeTracking.entries?.length || 0)
+    console.log('  byProjectLength:', preview.timeTracking.byProject.length)
+    if (preview.timeTracking.entries && preview.timeTracking.entries.length > 0) {
+      console.log('  First entry ID:', preview.timeTracking.entries[0].id)
+    }
+    console.log('=========================================')
+
     res.json({ success: true, data: preview })
   } catch (error) {
     next(error)
@@ -75,7 +86,11 @@ export async function generateReport(req: Request, res: Response, next: NextFunc
     const weekStart = data.weekStartDate ? new Date(data.weekStartDate) : undefined
     const weekEnd = data.weekEndDate ? new Date(data.weekEndDate) : undefined
 
-    const report = await weeklyReportService.generateAndSaveReport(userId, weekStart, weekEnd)
+    const report = await weeklyReportService.generateAndSaveReport(
+      userId,
+      weekStart,
+      weekEnd
+    )
 
     res.status(201).json({ success: true, data: report })
   } catch (error) {

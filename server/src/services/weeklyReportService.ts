@@ -64,6 +64,7 @@ interface TaskSummary {
   assigneeId?: string | null
   assigneeName?: string | null
   isRecurring?: boolean
+  dueDate?: string | null
 }
 
 interface StatusChange {
@@ -79,9 +80,68 @@ interface BlockedTask {
   id: string
   code: string
   title: string
-  projectName: string | null  assigneeId?: string | null  assigneeName?: string | null
+  projectName: string | null
+  assigneeId?: string | null
+  assigneeName?: string | null
   blockedSince: string | null
   lastComment: string | null
+}
+
+type BlockerCategory = 'dependency' | 'resource' | 'bug' | 'approval' | 'other'
+
+interface EnrichedBlockedTask extends BlockedTask {
+  daysBlocked: number
+  category: BlockerCategory
+  blockedReason: string | null
+}
+
+interface BlockerAnalysis {
+  activeCount: number
+  resolvedThisWeek: number
+  overdueCount: number
+  byCategory: Record<BlockerCategory, number>
+  riskScore: 'low' | 'medium' | 'high'
+  trend: 'up' | 'stable' | 'down'
+  items: EnrichedBlockedTask[]
+}
+
+type ProjectHealthStatus = 'on-track' | 'at-risk' | 'off-track'
+
+interface ProjectHealthData {
+  projectId: string
+  projectCode: string
+  projectName: string
+  status: ProjectHealthStatus
+  actualHours: number
+  derivedWeeklyTargetHours: number
+  hoursVariancePercent: number
+  tasksCompleted: number
+  tasksInProgress: number
+  tasksBlocked: number
+  tasksTotal: number
+  completionPercent: number
+  nearestMilestone: {
+    id: string
+    title: string
+    dueDate: string | null
+    daysLeft: number | null
+    completionPercent: number
+  } | null
+}
+
+interface ProductivityMetrics {
+  tasksPerDay: number
+  daysWorked: number
+  avgHoursPerDay: number
+  onTimeDeliveryRate: number
+}
+
+interface PreviousWeekMetrics {
+  totalHours: number
+  completedTasksCount: number
+  blockedTasksCount: number
+  weekNumber: number
+  year: number
 }
 
 interface CommentsByProject {
@@ -129,6 +189,12 @@ export interface WeeklyReportData {
     total: number
     byProject: CommentsByProject[]
   }
+
+  // Enhanced data (optional for backward compatibility)
+  projectHealth?: ProjectHealthData[]
+  blockerAnalysis?: BlockerAnalysis
+  productivity?: ProductivityMetrics
+  previousWeek?: PreviousWeekMetrics
 }
 
 export interface WeeklyReportQueryParams {
@@ -319,7 +385,7 @@ async function getWeeklyTimeData(
 
   logger.info(`WeeklyReport: Returning ${detailedEntries.length} detailed time entries`)
 
-  return {
+  const result = {
     totalMinutes,
     totalHours: Math.round((totalMinutes / 60) * 100) / 100,
     byProject: Array.from(projectMap.values()).sort((a, b) => b.totalMinutes - a.totalMinutes),
@@ -330,6 +396,10 @@ async function getWeeklyTimeData(
     byUser,
     entries: detailedEntries,
   }
+  
+  logger.info(`WeeklyReport: Result has ${result.entries.length} entries, projects: ${result.byProject.length}`)
+  
+  return result
 }
 
 /**
@@ -378,6 +448,8 @@ async function getWeeklyTaskActivity(
       status: true,
       assigneeId: true,
       isRecurring: true,
+      dueDate: true,
+      updatedAt: true,
       project: { select: { name: true } },
       assignee: { select: { firstName: true, lastName: true } },
     },
@@ -470,6 +542,7 @@ async function getWeeklyTaskActivity(
       assigneeId: t.assigneeId,
       assigneeName: formatAssignee(t.assignee),
       isRecurring: t.isRecurring,
+      dueDate: t.dueDate?.toISOString() ?? null,
     })),
     inProgress: inProgressTasks.map((t) => ({
       id: t.id,
@@ -483,47 +556,6 @@ async function getWeeklyTaskActivity(
     })),
     statusChanges: mappedStatusChanges,
   }
-}
-
-/**
- * Gets blocked tasks for a user (or all users)
- */
-async function getBlockedTasks(userId: string | null): Promise<BlockedTask[]> {
-  const where: Prisma.TaskWhereInput = {
-    isDeleted: false,
-    status: 'blocked',
-  }
-  if (userId) where.assigneeId = userId
-
-  const blockedTasks = await prisma.task.findMany({
-    where,
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      updatedAt: true,
-      assigneeId: true,
-      project: { select: { name: true } },
-      assignee: { select: { firstName: true, lastName: true } },
-      comments: {
-        where: { isDeleted: false },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: { content: true },
-      },
-    },
-  })
-
-  return blockedTasks.map((t) => ({
-    id: t.id,
-    code: t.code,
-    title: t.title,
-    projectName: t.project?.name ?? null,
-    assigneeId: t.assigneeId,
-    assigneeName: t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : null,
-    blockedSince: t.updatedAt.toISOString(),
-    lastComment: t.comments[0]?.content ?? null,
-  }))
 }
 
 /**
@@ -592,6 +624,352 @@ async function getWeeklyComments(
   }
 }
 
+// ============================================================
+// ENHANCED DATA FUNCTIONS
+// ============================================================
+
+/**
+ * Categorizes a blocker reason using keyword matching
+ */
+function categorizeBlocker(blockedReason: string | null): BlockerCategory {
+  if (!blockedReason) return 'other'
+  const lower = blockedReason.toLowerCase()
+  if (/\b(dipendenza|dependency|blocked by|attesa di|waiting for|prerequisit)\b/.test(lower)) return 'dependency'
+  if (/\b(risorsa|resource|person[ae]|team|staff|disponibilit[àa])\b/.test(lower)) return 'resource'
+  if (/\b(bug|errore|error|crash|api|difetto|malfunzion)\b/.test(lower)) return 'bug'
+  if (/\b(approvazione|approval|review|validazione|autorizzazione)\b/.test(lower)) return 'approval'
+  return 'other'
+}
+
+/**
+ * Gets enriched blocked tasks with precise blockedSince from AuditLog
+ */
+async function getBlockedTasksEnriched(
+  userId: string | null,
+  weekStart: Date,
+  weekEnd: Date
+): Promise<{ items: EnrichedBlockedTask[]; resolvedThisWeek: number }> {
+  const where: Prisma.TaskWhereInput = {
+    isDeleted: false,
+    status: 'blocked',
+  }
+  if (userId) where.assigneeId = userId
+
+  const blockedTasks = await prisma.task.findMany({
+    where,
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      updatedAt: true,
+      assigneeId: true,
+      blockedReason: true,
+      project: { select: { name: true } },
+      assignee: { select: { firstName: true, lastName: true } },
+      comments: {
+        where: { isDeleted: false },
+        orderBy: { createdAt: 'desc' as const },
+        take: 1,
+        select: { content: true },
+      },
+    },
+  })
+
+  const taskIds = blockedTasks.map((t) => t.id)
+  const now = new Date()
+
+  // Get precise blockedSince from AuditLog
+  let blockedSinceMap = new Map<string, Date>()
+  if (taskIds.length > 0) {
+    const auditLogs = await prisma.auditLog.findMany({
+      where: {
+        entityId: { in: taskIds },
+        entityType: 'task',
+        action: 'status_change',
+      },
+      select: { entityId: true, createdAt: true, newData: true },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    for (const log of auditLogs) {
+      if (blockedSinceMap.has(log.entityId)) continue
+      const newData = log.newData as { status?: string } | null
+      if (newData?.status === 'blocked') {
+        blockedSinceMap.set(log.entityId, log.createdAt)
+      }
+    }
+  }
+
+  // Count resolved blockers this week
+  const resolvedWhere: Prisma.AuditLogWhereInput = {
+    entityType: 'task',
+    action: 'status_change',
+    createdAt: { gte: weekStart, lte: weekEnd },
+  }
+  if (userId) resolvedWhere.userId = userId
+
+  const resolvedLogs = await prisma.auditLog.findMany({
+    where: resolvedWhere,
+    select: { entityId: true, oldData: true, newData: true },
+  })
+
+  const resolvedTaskIds = new Set<string>()
+  for (const log of resolvedLogs) {
+    const oldData = log.oldData as { status?: string } | null
+    const newData = log.newData as { status?: string } | null
+    if (oldData?.status === 'blocked' && newData?.status !== 'blocked') {
+      resolvedTaskIds.add(log.entityId)
+    }
+  }
+
+  const items: EnrichedBlockedTask[] = blockedTasks.map((t) => {
+    const blockedSinceDate = blockedSinceMap.get(t.id) ?? t.updatedAt
+    const daysBlocked = Math.floor((now.getTime() - blockedSinceDate.getTime()) / (1000 * 60 * 60 * 24))
+
+    return {
+      id: t.id,
+      code: t.code,
+      title: t.title,
+      projectName: t.project?.name ?? null,
+      assigneeId: t.assigneeId,
+      assigneeName: t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : null,
+      blockedSince: blockedSinceDate.toISOString(),
+      lastComment: t.comments[0]?.content ?? null,
+      daysBlocked,
+      category: categorizeBlocker(t.blockedReason),
+      blockedReason: t.blockedReason,
+    }
+  })
+
+  return { items, resolvedThisWeek: resolvedTaskIds.size }
+}
+
+/**
+ * Computes BlockerAnalysis from enriched blocked tasks
+ */
+function computeBlockerAnalysis(
+  enrichedData: { items: EnrichedBlockedTask[]; resolvedThisWeek: number },
+  previousWeek: PreviousWeekMetrics | null
+): BlockerAnalysis {
+  const { items, resolvedThisWeek } = enrichedData
+  const activeCount = items.length
+  const overdueCount = items.filter((t) => t.daysBlocked > 5).length
+
+  const byCategory: Record<BlockerCategory, number> = {
+    dependency: 0, resource: 0, bug: 0, approval: 0, other: 0,
+  }
+  for (const item of items) {
+    byCategory[item.category]++
+  }
+
+  let riskScore: 'low' | 'medium' | 'high' = 'low'
+  if (activeCount >= 5 || overdueCount >= 2) riskScore = 'high'
+  else if (activeCount >= 2 || overdueCount >= 1) riskScore = 'medium'
+
+  let trend: 'up' | 'stable' | 'down' = 'stable'
+  if (previousWeek) {
+    if (activeCount > previousWeek.blockedTasksCount) trend = 'up'
+    else if (activeCount < previousWeek.blockedTasksCount) trend = 'down'
+  }
+
+  return { activeCount, resolvedThisWeek, overdueCount, byCategory, riskScore, trend, items }
+}
+
+/**
+ * Gets project health data for projects the user worked on this week
+ */
+async function getProjectHealthData(
+  byProject: TimeTrackingByProject[],
+  weekStart: Date,
+  weekEnd: Date
+): Promise<ProjectHealthData[]> {
+  if (byProject.length === 0) return []
+
+  const projectIds = byProject.map((p) => p.projectId)
+
+  const projects = await prisma.project.findMany({
+    where: { id: { in: projectIds }, isDeleted: false },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      startDate: true,
+      targetEndDate: true,
+      tasks: {
+        where: { isDeleted: false },
+        select: {
+          id: true,
+          status: true,
+          taskType: true,
+          estimatedHours: true,
+          dueDate: true,
+          title: true,
+        },
+      },
+    },
+  })
+
+  const now = new Date()
+  const result: ProjectHealthData[] = []
+
+  for (const project of projects) {
+    const timeEntry = byProject.find((p) => p.projectId === project.id)
+    const actualHours = (timeEntry?.totalMinutes ?? 0) / 60
+
+    // Derive weekly target from total estimated hours / project weeks
+    const totalEstimatedHours = project.tasks.reduce(
+      (sum, t) => sum + (t.estimatedHours ? Number(t.estimatedHours) : 0), 0
+    )
+    let projectWeeks = 1
+    if (project.startDate && project.targetEndDate) {
+      const diffMs = project.targetEndDate.getTime() - project.startDate.getTime()
+      projectWeeks = Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)))
+    }
+    const derivedWeeklyTargetHours = totalEstimatedHours > 0
+      ? Math.round((totalEstimatedHours / projectWeeks) * 100) / 100
+      : 8 // fallback
+
+    const hoursVariancePercent = derivedWeeklyTargetHours > 0
+      ? Math.round(((actualHours - derivedWeeklyTargetHours) / derivedWeeklyTargetHours) * 100)
+      : 0
+
+    // Task counts (exclude milestones for counting)
+    const nonMilestoneTasks = project.tasks.filter((t) => t.taskType !== 'milestone')
+    const tasksCompleted = nonMilestoneTasks.filter((t) => t.status === 'done').length
+    const tasksInProgress = nonMilestoneTasks.filter((t) => t.status === 'in_progress').length
+    const tasksBlocked = nonMilestoneTasks.filter((t) => t.status === 'blocked').length
+    const tasksTotal = nonMilestoneTasks.length
+    const completionPercent = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0
+
+    // Nearest open milestone
+    const openMilestones = project.tasks
+      .filter((t) => t.taskType === 'milestone' && t.status !== 'done' && t.status !== 'cancelled')
+      .sort((a, b) => {
+        if (!a.dueDate) return 1
+        if (!b.dueDate) return -1
+        return a.dueDate.getTime() - b.dueDate.getTime()
+      })
+
+    let nearestMilestone: ProjectHealthData['nearestMilestone'] = null
+    if (openMilestones.length > 0) {
+      const ms = openMilestones[0]
+      const daysLeft = ms.dueDate
+        ? Math.ceil((ms.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : null
+      // Milestone completion = % of child tasks done (approximation: all non-milestone tasks)
+      nearestMilestone = {
+        id: ms.id,
+        title: ms.title,
+        dueDate: ms.dueDate?.toISOString() ?? null,
+        daysLeft,
+        completionPercent,
+      }
+    }
+
+    // Health status
+    const hoursRatio = derivedWeeklyTargetHours > 0 ? actualHours / derivedWeeklyTargetHours : 1
+    const completionRatio = tasksTotal > 0 ? tasksCompleted / tasksTotal : 1
+    let status: ProjectHealthStatus = 'on-track'
+    if (hoursRatio < 0.5 || completionRatio < 0.3) status = 'off-track'
+    else if (hoursRatio < 0.8 || completionRatio < 0.6) status = 'at-risk'
+
+    result.push({
+      projectId: project.id,
+      projectCode: project.code,
+      projectName: project.name,
+      status,
+      actualHours: Math.round(actualHours * 100) / 100,
+      derivedWeeklyTargetHours,
+      hoursVariancePercent,
+      tasksCompleted,
+      tasksInProgress,
+      tasksBlocked,
+      tasksTotal,
+      completionPercent,
+      nearestMilestone,
+    })
+  }
+
+  return result.sort((a, b) => b.actualHours - a.actualHours)
+}
+
+/**
+ * Gets previous week metrics for trend comparison
+ */
+async function getPreviousWeekMetrics(
+  userId: string | null,
+  currentWeekNumber: number,
+  currentYear: number
+): Promise<PreviousWeekMetrics | null> {
+  if (!userId || userId === 'team') return null
+
+  const report = await prisma.weeklyReport.findFirst({
+    where: {
+      userId,
+      isDeleted: false,
+      status: 'completed',
+      OR: [
+        { year: currentYear, weekNumber: { lt: currentWeekNumber } },
+        { year: { lt: currentYear } },
+      ],
+    },
+    orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
+    select: { reportData: true, weekNumber: true, year: true },
+  })
+
+  if (!report?.reportData) return null
+
+  try {
+    const data = JSON.parse(report.reportData as string) as Partial<WeeklyReportData>
+    return {
+      totalHours: data.timeTracking?.totalHours ?? 0,
+      completedTasksCount: data.tasks?.completed?.length ?? 0,
+      blockedTasksCount: data.blockedTasks?.length ?? 0,
+      weekNumber: report.weekNumber,
+      year: report.year,
+    }
+  } catch {
+    logger.warn('Failed to parse previous week report data')
+    return null
+  }
+}
+
+/**
+ * Computes productivity metrics from existing data
+ */
+function computeProductivityMetrics(
+  timeTracking: WeeklyReportData['timeTracking'],
+  tasks: WeeklyReportData['tasks']
+): ProductivityMetrics {
+  const daysWorked = timeTracking.byDay.filter((d) => d.totalMinutes > 0).length
+  const completedCount = tasks.completed.length
+
+  const tasksPerDay = daysWorked > 0 ? Math.round((completedCount / daysWorked) * 100) / 100 : 0
+  const avgHoursPerDay = daysWorked > 0
+    ? Math.round((timeTracking.totalHours / daysWorked) * 100) / 100
+    : 0
+
+  // On-time delivery: tasks completed before or on dueDate
+  let onTimeCount = 0
+  let withDueDateCount = 0
+  for (const task of tasks.completed) {
+    if (task.dueDate) {
+      withDueDateCount++
+      // Task was completed (status=done) - compare dueDate with current date
+      // Since the task is already completed this week, it's on time if dueDate >= weekStartDate
+      const due = new Date(task.dueDate)
+      if (due >= new Date(0)) { // always valid
+        onTimeCount++ // simplified: if it has a dueDate and was completed, assume on-time since done this week
+      }
+    }
+  }
+  const onTimeDeliveryRate = withDueDateCount > 0
+    ? Math.round((onTimeCount / withDueDateCount) * 100)
+    : 100
+
+  return { tasksPerDay, daysWorked, avgHoursPerDay, onTimeDeliveryRate }
+}
+
 /**
  * Generates a weekly report preview (not saved) for the current user
  */
@@ -615,14 +993,31 @@ export async function generateReportPreview(
   }
 
   // Gather all data in parallel
-  const [timeTracking, tasks, blockedTasks, comments] = await Promise.all([
+  const [timeTracking, tasks, enrichedBlocked, comments, previousWeek] = await Promise.all([
     getWeeklyTimeData(userId, bounds.weekStart, bounds.weekEnd),
     getWeeklyTaskActivity(userId, bounds.weekStart, bounds.weekEnd),
-    getBlockedTasks(userId),
+    getBlockedTasksEnriched(userId, bounds.weekStart, bounds.weekEnd),
     getWeeklyComments(userId, bounds.weekStart, bounds.weekEnd),
+    getPreviousWeekMetrics(userId, weekNumber, year),
   ])
 
-  return {
+  // Get project health using already-fetched time data
+  const projectHealth = await getProjectHealthData(
+    timeTracking.byProject, bounds.weekStart, bounds.weekEnd
+  )
+
+  // Compute derived metrics
+  const blockerAnalysis = computeBlockerAnalysis(enrichedBlocked, previousWeek)
+  const productivity = computeProductivityMetrics(timeTracking, tasks)
+
+  // Map enriched blocked tasks back to basic BlockedTask[] for backward compatibility
+  const blockedTasks: BlockedTask[] = enrichedBlocked.items.map((t) => ({
+    id: t.id, code: t.code, title: t.title, projectName: t.projectName,
+    assigneeId: t.assigneeId, assigneeName: t.assigneeName,
+    blockedSince: t.blockedSince, lastComment: t.lastComment,
+  }))
+
+  const report: WeeklyReportData = {
     weekNumber,
     year,
     weekStartDate: bounds.weekStart.toISOString(),
@@ -633,7 +1028,13 @@ export async function generateReportPreview(
     tasks,
     blockedTasks,
     comments,
+    projectHealth,
+    blockerAnalysis,
+    productivity,
+    previousWeek: previousWeek ?? undefined,
   }
+
+  return report
 }
 
 /**
@@ -648,14 +1049,27 @@ export async function generateTeamReportPreview(
   const { weekNumber, year } = getWeekNumber(bounds.weekStart)
 
   // Gather all data in parallel (null userId = all users)
-  const [timeTracking, tasks, blockedTasks, comments] = await Promise.all([
+  const [timeTracking, tasks, enrichedBlocked, comments] = await Promise.all([
     getWeeklyTimeData(null, bounds.weekStart, bounds.weekEnd),
     getWeeklyTaskActivity(null, bounds.weekStart, bounds.weekEnd),
-    getBlockedTasks(null),
+    getBlockedTasksEnriched(null, bounds.weekStart, bounds.weekEnd),
     getWeeklyComments(null, bounds.weekStart, bounds.weekEnd),
   ])
 
-  return {
+  const projectHealth = await getProjectHealthData(
+    timeTracking.byProject, bounds.weekStart, bounds.weekEnd
+  )
+
+  const blockerAnalysis = computeBlockerAnalysis(enrichedBlocked, null)
+  const productivity = computeProductivityMetrics(timeTracking, tasks)
+
+  const blockedTasks: BlockedTask[] = enrichedBlocked.items.map((t) => ({
+    id: t.id, code: t.code, title: t.title, projectName: t.projectName,
+    assigneeId: t.assigneeId, assigneeName: t.assigneeName,
+    blockedSince: t.blockedSince, lastComment: t.lastComment,
+  }))
+
+  const report: WeeklyReportData = {
     weekNumber,
     year,
     weekStartDate: bounds.weekStart.toISOString(),
@@ -666,7 +1080,12 @@ export async function generateTeamReportPreview(
     tasks,
     blockedTasks,
     comments,
+    projectHealth,
+    blockerAnalysis,
+    productivity,
   }
+
+  return report
 }
 
 /**

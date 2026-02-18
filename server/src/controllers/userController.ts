@@ -10,6 +10,7 @@ const createUserSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   role: z.enum(['admin', 'direzione', 'dipendente']).default('dipendente'),
+  avatarUrl: z.string().url().nullable().optional(),
 })
 
 const updateUserSchema = z.object({
@@ -20,6 +21,7 @@ const updateUserSchema = z.object({
   role: z.enum(['admin', 'direzione', 'dipendente']).optional(),
   isActive: z.boolean().optional(),
   theme: z.enum(['light', 'dark', 'system']).optional(),
+  avatarUrl: z.string().url().nullable().optional(),
 })
 
 const updateProfileSchema = z.object({
@@ -153,6 +155,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         lastName: true,
         role: true,
         isActive: true,
+        avatarUrl: true,
         createdAt: true,
       },
     })
@@ -200,6 +203,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         role: true,
         isActive: true,
         theme: true,
+        avatarUrl: true,
         updatedAt: true,
       },
     })

@@ -3,13 +3,14 @@
  * @module pages/documents/DocumentFormPage
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDocumentStore } from '@stores/documentStore'
 import { useProjectStore } from '@stores/projectStore'
-import { ArrowLeft, Loader2, Save, Upload } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Upload, X, FileText, FileImage, FileSpreadsheet, File } from 'lucide-react'
 import { DOCUMENT_TYPE_OPTIONS } from '@/constants'
 import { DocumentType } from '@/types'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
 
 export default function DocumentFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -29,6 +30,45 @@ export default function DocumentFormPage() {
   const [file, setFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith('image/')) return <FileImage className="w-8 h-8 text-green-500" />
+    if (mimeType.includes('pdf')) return <FileText className="w-8 h-8 text-red-500" />
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return <FileSpreadsheet className="w-8 h-8 text-emerald-500" />
+    if (mimeType.includes('word') || mimeType.includes('document')) return <FileText className="w-8 h-8 text-blue-500" />
+    return <File className="w-8 h-8 text-gray-500" />
+  }
+
+  const handleFileChange = useCallback((selectedFile: File | null) => {
+    if (!selectedFile) return
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setErrors((prev) => ({ ...prev, file: 'Il file supera il limite di 10MB' }))
+      return
+    }
+    setErrors((prev) => { const next = { ...prev }; delete next.file; return next })
+    setFile(selectedFile)
+  }, [])
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const dropped = e.dataTransfer.files[0]
+    if (dropped) handleFileChange(dropped)
+  }
 
   useEffect(() => {
     fetchProjects()
@@ -87,8 +127,8 @@ export default function DocumentFormPage() {
         const newDoc = await createDocument(data)
         navigate(`/documents/${newDoc.id}`)
       }
-    } catch (error) {
-      console.error('Failed to save document:', error)
+    } catch {
+      // silently ignore
     } finally {
       setIsSaving(false)
     }
@@ -103,7 +143,15 @@ export default function DocumentFormPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Documenti', href: '/documents' },
+          { label: isEditing ? 'Modifica Documento' : 'Nuovo Documento' },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -112,7 +160,7 @@ export default function DocumentFormPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           {isEditing ? 'Modifica Documento' : 'Nuovo Documento'}
         </h1>
       </div>
@@ -196,31 +244,69 @@ export default function DocumentFormPage() {
         {!isEditing && (
           <div className="card p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">File</h2>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6">
-              <div className="text-center">
-                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  {file ? file.name : 'Seleziona un file da caricare'}
-                </p>
-                {file && (
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">
-                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+
+            {/* Drop Zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => !file && fileInputRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-lg transition-colors ${
+                isDragging
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : file
+                  ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/10'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 cursor-pointer'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
+                onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+              />
+
+              {file ? (
+                /* File selected — preview */
+                <div className="flex items-center gap-4 p-4">
+                  <div className="flex-shrink-0">{getFileIcon(file.type)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setFile(null)
+                      if (fileInputRef.current) fileInputRef.current.value = ''
+                    }}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                    aria-label="Rimuovi file"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                /* Empty state — invite to upload */
+                <div className="p-8 text-center">
+                  <Upload className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {isDragging ? 'Rilascia il file qui' : 'Trascina un file o clicca per sfogliare'}
                   </p>
-                )}
-                <label className="btn-secondary cursor-pointer inline-block">
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  />
-                  Scegli File
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                  PDF, DOCX, XLSX, PNG, JPEG, TXT - Max 10MB
-                </p>
-              </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    PDF, DOCX, XLSX, PNG, JPEG, TXT — Max 10MB
+                  </p>
+                </div>
+              )}
             </div>
+
+            {errors.file && (
+              <p className="mt-2 text-sm text-red-500">{errors.file}</p>
+            )}
           </div>
         )}
 

@@ -5,6 +5,7 @@
 
 import { create } from 'zustand'
 import api from '@services/api'
+import { toast } from '@stores/toastStore'
 import { Task, PaginatedResponse, TaskStats, TaskStatus } from '@/types'
 
 // Helper function to parse recurrencePattern from JSON string to object
@@ -12,8 +13,7 @@ function parseTaskRecurrence(task: any): Task {
   if (task.recurrencePattern && typeof task.recurrencePattern === 'string') {
     try {
       task.recurrencePattern = JSON.parse(task.recurrencePattern)
-    } catch (e) {
-      console.error('Failed to parse recurrencePattern for task', task.code, e)
+    } catch {
       task.recurrencePattern = null
     }
   }
@@ -134,20 +134,8 @@ export const useTaskStore = create<TaskState>((set) => ({
       )
 
       if (response.data.success !== false) {
-        console.log('[TaskStore] Raw API response - first task:', response.data.data[0])
         // Parse recurrencePattern from JSON strings to objects
         const myTasks = response.data.data.map(parseTaskRecurrence)
-        console.log('[TaskStore] After parsing - first task:', myTasks[0])
-        const recurringCount = myTasks.filter(t => t.isRecurring).length
-        console.log('[TaskStore] Tasks with isRecurring=true:', recurringCount)
-        if (recurringCount > 0) {
-          console.log('[TaskStore] Recurring tasks:', myTasks.filter(t => t.isRecurring).map(t => ({
-            code: t.code,
-            title: t.title, 
-            isRecurring: t.isRecurring,
-            status: t.status
-          })))
-        }
         set({
           myTasks,
           isLoading: false,
@@ -205,8 +193,8 @@ export const useTaskStore = create<TaskState>((set) => ({
       if (response.data.success) {
         set({ taskStats: response.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch task stats:', error)
+    } catch {
+      // silently ignore
     }
   },
 
@@ -221,12 +209,14 @@ export const useTaskStore = create<TaskState>((set) => ({
           tasks: [task, ...state.tasks],
           isLoading: false,
         }))
+        toast.success('Task creato', task.title)
         return task
       }
       throw new Error('Failed to create task')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create task'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile creare il task')
       throw error
     }
   },
@@ -244,10 +234,12 @@ export const useTaskStore = create<TaskState>((set) => ({
           currentTask: state.currentTask?.id === id ? updatedTask : state.currentTask,
           isLoading: false,
         }))
+        toast.success('Task aggiornato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to update task'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile aggiornare il task')
       throw error
     }
   },
@@ -268,10 +260,12 @@ export const useTaskStore = create<TaskState>((set) => ({
           currentTask: state.currentTask?.id === id ? updatedTask : state.currentTask,
           isLoading: false,
         }))
+        toast.success('Stato aggiornato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to change task status'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile cambiare lo stato')
       throw error
     }
   },
@@ -286,9 +280,11 @@ export const useTaskStore = create<TaskState>((set) => ({
         currentTask: state.currentTask?.id === id ? null : state.currentTask,
         isLoading: false,
       }))
+      toast.success('Task eliminato')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete task'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile eliminare il task')
       throw error
     }
   },

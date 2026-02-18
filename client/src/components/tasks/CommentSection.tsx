@@ -1,10 +1,10 @@
 /**
- * Comment Section - Displays and manages task comments
+ * Comment Section - Displays and manages task comments with @mention support
  * @module components/tasks/CommentSection
  */
 
-import { useState } from 'react'
-import { Loader2, Send, Trash2, MessageSquare } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Loader2, Send, Trash2, MessageSquare, AtSign } from 'lucide-react'
 import { Comment, User } from '@/types'
 import api from '@services/api'
 
@@ -27,6 +27,24 @@ function formatDateTime(dateString: string): string {
   })
 }
 
+/** Render comment text with @mentions highlighted */
+function CommentText({ content }: { content: string }) {
+  const parts = content.split(/(@\S+)/g)
+  return (
+    <p className="mt-1 text-gray-600 dark:text-gray-400 whitespace-pre-wrap text-sm">
+      {parts.map((part, i) =>
+        part.startsWith('@') ? (
+          <span key={i} className="font-semibold text-primary-600 dark:text-primary-400">
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      )}
+    </p>
+  )
+}
+
 export function CommentSection({
   taskId,
   comments,
@@ -37,6 +55,104 @@ export function CommentSection({
 }: CommentSectionProps) {
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Mention state
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionUsers, setMentionUsers] = useState<User[]>([])
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Fetch users once for mention autocomplete
+  useEffect(() => {
+    api
+      .get<{ success: boolean; data: User[] }>('/users?limit=100&isActive=true')
+      .then((res) => {
+        if (res.data.success) setAllUsers(res.data.data)
+      })
+      .catch(() => {
+        // silently ignore
+      })
+  }, [])
+
+  const handleCommentChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const val = e.target.value
+      setNewComment(val)
+
+      // Detect @mention trigger: find last @ before cursor
+      const cursor = e.target.selectionStart ?? val.length
+      const textBeforeCursor = val.slice(0, cursor)
+      const match = textBeforeCursor.match(/@(\w*)$/)
+
+      if (match) {
+        const query = match[1].toLowerCase()
+        setMentionQuery(query)
+        setMentionIndex(0)
+        setMentionUsers(
+          allUsers
+            .filter(
+              (u) =>
+                u.firstName.toLowerCase().includes(query) ||
+                u.lastName.toLowerCase().includes(query)
+            )
+            .slice(0, 6)
+        )
+      } else {
+        setMentionQuery(null)
+        setMentionUsers([])
+      }
+    },
+    [allUsers]
+  )
+
+  const insertMention = useCallback(
+    (user: User) => {
+      if (!textareaRef.current) return
+      const cursor = textareaRef.current.selectionStart ?? newComment.length
+      const textBeforeCursor = newComment.slice(0, cursor)
+      const textAfterCursor = newComment.slice(cursor)
+      // Replace the @query with @FirstName_LastName
+      const withoutQuery = textBeforeCursor.replace(/@(\w*)$/, '')
+      const mention = `@${user.firstName}${user.lastName} `
+      const newVal = withoutQuery + mention + textAfterCursor
+      setNewComment(newVal)
+      setMentionQuery(null)
+      setMentionUsers([])
+      // Restore focus and move cursor
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const pos = (withoutQuery + mention).length
+          textareaRef.current.focus()
+          textareaRef.current.setSelectionRange(pos, pos)
+        }
+      }, 0)
+    },
+    [newComment]
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (mentionUsers.length === 0) return
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setMentionIndex((i) => Math.min(i + 1, mentionUsers.length - 1))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setMentionIndex((i) => Math.max(i - 1, 0))
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        if (mentionQuery !== null && mentionUsers.length > 0) {
+          e.preventDefault()
+          insertMention(mentionUsers[mentionIndex])
+        }
+      } else if (e.key === 'Escape') {
+        setMentionQuery(null)
+        setMentionUsers([])
+      }
+    },
+    [mentionUsers, mentionQuery, mentionIndex, insertMention]
+  )
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,8 +168,8 @@ export function CommentSection({
         onCommentAdded(response.data.data)
         setNewComment('')
       }
-    } catch (error) {
-      console.error('Failed to post comment:', error)
+    } catch {
+      // silently ignore
     } finally {
       setIsSubmitting(false)
     }
@@ -63,8 +179,8 @@ export function CommentSection({
     try {
       await api.delete(`/comments/${commentId}`)
       onCommentDeleted(commentId)
-    } catch (error) {
-      console.error('Failed to delete comment:', error)
+    } catch {
+      // silently ignore
     }
   }
 
@@ -82,14 +198,55 @@ export function CommentSection({
             {currentUser?.firstName?.charAt(0)}
             {currentUser?.lastName?.charAt(0)}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <textarea
+              ref={textareaRef}
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Scrivi un commento..."
+              onChange={handleCommentChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Scrivi un commento... (usa @ per menzionare un utente)"
               rows={3}
               className="input w-full resize-none"
             />
+
+            {/* @mention dropdown */}
+            {mentionQuery !== null && mentionUsers.length > 0 && (
+              <div
+                ref={dropdownRef}
+                className="absolute left-0 top-full mt-1 z-50 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden"
+              >
+                <div className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                  <AtSign className="w-3 h-3" />
+                  Menziona utente
+                </div>
+                {mentionUsers.map((user, idx) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      insertMention(user)
+                    }}
+                    className={`w-full px-3 py-2 flex items-center gap-2 text-sm text-left transition-colors ${
+                      idx === mentionIndex
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-400 text-xs font-bold flex-shrink-0">
+                      {user.firstName.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">
+                        {user.firstName} {user.lastName}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="mt-2 flex justify-end">
               <button
                 type="submit"
@@ -127,7 +284,7 @@ export function CommentSection({
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="font-medium text-gray-900 dark:text-white text-sm">
                     {comment.user?.firstName} {comment.user?.lastName}
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -139,9 +296,7 @@ export function CommentSection({
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                  {comment.content}
-                </p>
+                <CommentText content={comment.content} />
                 {comment.user?.id === currentUser?.id && (
                   <button
                     onClick={() => handleDeleteComment(comment.id)}
@@ -159,3 +314,4 @@ export function CommentSection({
     </div>
   )
 }
+

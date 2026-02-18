@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '@stores/authStore'
 import { useDashboardStore } from '@stores/dashboardStore'
 import { useAnalyticsStore } from '@stores/analyticsStore'
+import { useTimerToggle } from '@hooks/useTimerToggle'
+import { useDashboardLayoutStore } from '@stores/dashboardLayoutStore'
 import {
   FolderKanban,
   CheckSquare,
@@ -27,7 +29,9 @@ import { ExecutiveKPISection } from '@/components/dashboard/ExecutiveKPISection'
 import { ProjectHealthSection } from '@/components/dashboard/ProjectHealthSection'
 import { TeamPerformanceSection } from '@/components/dashboard/TeamPerformanceSection'
 import { CompanyAlertsSection } from '@/components/dashboard/CompanyAlertsSection'
+import { AdvancedKPISection } from '@/components/dashboard/AdvancedKPISection'
 import { TodayTimeTracking } from '@/components/dashboard/TodayTimeTracking'
+import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
 import { TaskTreeView } from '@/components/reports/TaskTreeView'
 
 function formatDuration(minutes: number | null): string {
@@ -53,14 +57,13 @@ export default function DashboardPage() {
     recentProjects,
     recentTimeEntries,
     taskStats,
-    runningTimer,
     isLoading,
     isLoadingTasks,
     fetchDashboardData,
     fetchAllTasks,
-    startTimer,
-    stopTimer,
   } = useDashboardStore()
+
+  const { canTrackTime, handleTimerToggle, runningTimerTaskId } = useTimerToggle()
 
   const {
     overview,
@@ -71,9 +74,12 @@ export default function DashboardPage() {
     fetchAll: fetchAnalytics,
   } = useAnalyticsStore()
 
-  const canTrackTime = user?.role !== 'direzione' // Direzione non può tracciare tempo
   const isDirezione = user?.role === 'direzione'
   const [taskViewMode, setTaskViewMode] = useState<'list' | 'tree'>('list')
+
+  const { getVisibleWidgets } = useDashboardLayoutStore()
+  const visibleWidgets = getVisibleWidgets((user?.role as 'admin' | 'direzione' | 'dipendente') ?? 'dipendente')
+  const isVisible = (id: string) => visibleWidgets.some((w) => w.id === id && w.visible)
 
   useEffect(() => {
     fetchDashboardData()
@@ -89,18 +95,6 @@ export default function DashboardPage() {
     taskStats?.byStatus?.in_progress || 0,
     taskStats?.byStatus?.done || 0,
   ]
-
-  const handleTimerToggle = async (taskId: string) => {
-    try {
-      if (runningTimer?.taskId === taskId) {
-        await stopTimer()
-      } else {
-        await startTimer(taskId)
-      }
-    } catch (error) {
-      console.error('Timer error:', error)
-    }
-  }
 
   if (isLoading) {
     return (
@@ -133,46 +127,70 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Welcome */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Benvenuto, <span className="text-gradient">{user?.firstName}!</span>
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">
-          {isDirezione
-            ? 'Ecco una panoramica esecutiva dell\'azienda'
-            : 'Ecco una panoramica della tua attivita'}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            Benvenuto, <span className="text-gradient">{user?.firstName}!</span>
+          </h1>
+          <p className="mt-1 text-gray-500 dark:text-gray-400">
+            {isDirezione
+              ? 'Ecco una panoramica esecutiva dell\'azienda'
+              : 'Ecco una panoramica della tua attivita'}
+          </p>
+        </div>
+        <div className="flex-shrink-0">
+          <DashboardCustomizer role={(user?.role as 'admin' | 'direzione' | 'dipendente') ?? 'dipendente'} />
+        </div>
       </div>
 
       {/* Executive Dashboard for Direzione */}
       {isDirezione && (
         <>
           {/* KPI Executive */}
-          <ExecutiveKPISection overview={overview} isLoading={isLoadingAnalytics} />
+          {isVisible('executive_kpi') && (
+            <ExecutiveKPISection overview={overview} isLoading={isLoadingAnalytics} />
+          )}
 
           {/* Project Health Overview */}
-          <ProjectHealthSection projects={projectHealth} isLoading={isLoadingAnalytics} />
+          {isVisible('project_health') && (
+            <ProjectHealthSection projects={projectHealth} isLoading={isLoadingAnalytics} />
+          )}
 
           {/* Team Performance */}
-          <TeamPerformanceSection
-            topContributors={topContributors}
-            completionTrend={completionTrend}
-            isLoading={isLoadingAnalytics}
-          />
+          {isVisible('team_performance') && (
+            <TeamPerformanceSection
+              topContributors={topContributors}
+              completionTrend={completionTrend}
+              isLoading={isLoadingAnalytics}
+            />
+          )}
 
           {/* Company Alerts */}
-          <CompanyAlertsSection
-            projects={projectHealth}
-            blockedTasksCount={overview?.blockedTasks || 0}
-            openRisksCount={overview?.openRisks || 0}
-            isLoading={isLoadingAnalytics}
-          />
+          {isVisible('company_alerts') && (
+            <CompanyAlertsSection
+              projects={projectHealth}
+              blockedTasksCount={overview?.blockedTasks || 0}
+              openRisksCount={overview?.openRisks || 0}
+              isLoading={isLoadingAnalytics}
+            />
+          )}
+
+          {/* Advanced KPIs: Burndown, Velocity, Lead Time, Risk Exposure */}
+          {isVisible('advanced_kpi') && (
+            <AdvancedKPISection
+              completionTrend={completionTrend}
+              topContributors={topContributors}
+              projectHealth={projectHealth}
+              overview={overview}
+              isLoading={isLoadingAnalytics}
+            />
+          )}
         </>
       )}
 
       {/* Stats Grid - Personal stats for all roles */}
       {!isDirezione && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {STAT_CONFIG.map((stat, index) => (
             <div key={stat.name} className="card-hover p-4">
               <div className="flex items-center gap-3">
@@ -248,7 +266,7 @@ export default function DashboardPage() {
       )}
 
       {/* Attenzione Richiesta - for non-direzione users */}
-      {!isDirezione &&
+      {!isDirezione && isVisible('alerts') &&
         (() => {
         const now = new Date()
         const twoDays = 2 * 24 * 60 * 60 * 1000
@@ -318,19 +336,19 @@ export default function DashboardPage() {
       })()}
 
       {/* Today's Time Tracking - for non-direzione */}
-      {canTrackTime && (
+      {canTrackTime && isVisible('today_tracking') && (
         <TodayTimeTracking onTimerToggle={handleTimerToggle} />
       )}
 
       {/* Recent Activity - shown for all roles */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Recent Tasks - tasks with time entries in the last 3 days */}
-        <div className="card">
-          <div className="p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        {isVisible('recent_tasks') && (<div className="card">
+          <div className="p-3 sm:p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
               {isDirezione ? 'Task Recenti del Team' : 'Task Recenti'}
             </h2>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* View mode toggle */}
               <div className="flex items-center bg-gray-100 dark:bg-white/10 rounded-lg p-0.5">
                 <button
@@ -393,7 +411,7 @@ export default function DashboardPage() {
                     showFilters={false}
                     maxDepth={2}
                     canTrackTime={canTrackTime}
-                    runningTimerId={runningTimer?.taskId}
+                    runningTimerId={runningTimerTaskId}
                     onTimerToggle={handleTimerToggle}
                   />
                 )
@@ -430,7 +448,7 @@ export default function DashboardPage() {
               const otherTasks = recentTasks.filter((t) => t.status !== 'done' && t.status !== 'in_progress')
 
               const renderTaskItem = (task: typeof recentTasks[0], showTimer: boolean) => {
-                const isRunning = runningTimer?.taskId === task.id
+                const isRunning = runningTimerTaskId === task.id
                 const isCompleted = task.status === 'done'
                 const latestEntry = latestTimeEntryPerTask.get(task.id)
 
@@ -525,10 +543,7 @@ export default function DashboardPage() {
                         Completati ({completedTasks.length})
                       </h4>
                       <ul className="space-y-1.5">
-                        {completedTasks.slice(0, 3).map((task) => renderTaskItem(task, false))}
-                        {completedTasks.length > 3 && (
-                          <li className="text-xs text-gray-400">...e altri {completedTasks.length - 3}</li>
-                        )}
+                        {completedTasks.map((task) => renderTaskItem(task, false))}
                       </ul>
                     </div>
                   )}
@@ -537,9 +552,10 @@ export default function DashboardPage() {
             })()}
           </div>
         </div>
+        )} {/* end recent_tasks */}
 
         {/* Recent Projects */}
-        <div className="card">
+        {isVisible('recent_projects') && (<div className="card">
           <div className="p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Progetti Recenti</h2>
             <Link
@@ -582,6 +598,7 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+        )} {/* end recent_projects */}
       </div>
     </div>
   )

@@ -1,12 +1,11 @@
 /**
- * Analytics Page - Dashboard with charts and KPIs
+ * Analytics Page - Dashboard with interactive Recharts charts
  * @module pages/analytics/AnalyticsPage
  */
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useAnalyticsStore } from '@stores/analyticsStore'
 import {
-  Loader2,
   FolderKanban,
   CheckCircle,
   Clock,
@@ -17,6 +16,21 @@ import {
 } from 'lucide-react'
 import { TASK_STATUS_LABELS } from '@/constants'
 import { TaskStatus } from '@/types'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
 
 function StatCard({
   label,
@@ -44,45 +58,16 @@ function StatCard({
   )
 }
 
-function BarChartSimple({
-  data,
-  maxValue,
-  labelKey,
-  valueKey,
-  colorFn,
-}: {
-  data: Record<string, unknown>[]
-  maxValue: number
-  labelKey: string
-  valueKey: string
-  colorFn?: (item: Record<string, unknown>) => string
-}) {
-  return (
-    <div className="space-y-3">
-      {data.map((item, i) => {
-        const val = Number(item[valueKey]) || 0
-        const pct = maxValue > 0 ? (val / maxValue) * 100 : 0
-        const color = colorFn ? colorFn(item) : 'bg-primary-500'
-        return (
-          <div key={i}>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-700 dark:text-gray-300 truncate mr-2">
-                {String(item[labelKey])}
-              </span>
-              <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">{val}</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-              <div
-                className={`h-2.5 rounded-full transition-all ${color}`}
-                style={{ width: `${Math.max(pct, 2)}%` }}
-              />
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+const STATUS_COLORS: Record<string, string> = {
+  todo: '#9CA3AF',
+  in_progress: '#3B82F6',
+  review: '#EAB308',
+  blocked: '#EF4444',
+  done: '#22C55E',
+  cancelled: '#D1D5DB',
 }
+
+const PIE_COLORS = ['#3B82F6', '#22C55E', '#F97316', '#8B5CF6', '#EC4899', '#14B8A6', '#EAB308', '#EF4444']
 
 export default function AnalyticsPage() {
   const {
@@ -99,10 +84,63 @@ export default function AnalyticsPage() {
     fetchAll()
   }, [fetchAll])
 
+  const statusChartData = useMemo(
+    () =>
+      tasksByStatus.map((t) => ({
+        name: TASK_STATUS_LABELS[t.status as TaskStatus] || t.status,
+        value: t.count,
+        fill: STATUS_COLORS[t.status] || '#6B7280',
+      })),
+    [tasksByStatus]
+  )
+
+  const hoursChartData = useMemo(
+    () =>
+      hoursByProject.map((h) => ({
+        name: h.projectCode,
+        fullName: `${h.projectCode} - ${h.projectName}`,
+        ore: Number((h.totalMinutes / 60).toFixed(1)),
+      })),
+    [hoursByProject]
+  )
+
+  const trendData = useMemo(() => {
+    const recent = completionTrend.slice(-14)
+    return recent.map((d) => ({
+      date: new Date(d.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }),
+      Completati: d.completed,
+      Creati: d.created,
+    }))
+  }, [completionTrend])
+
   if (isLoading && !overview) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <div className="skeleton h-8 w-32" />
+          <div className="skeleton h-4 w-64 mt-2" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="card p-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="skeleton h-4 w-24" />
+                  <div className="skeleton h-7 w-12" />
+                </div>
+                <div className="skeleton w-12 h-12 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card p-6">
+              <div className="skeleton h-6 w-40 mb-4" />
+              <div className="skeleton h-48 w-full rounded-lg" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -112,27 +150,11 @@ export default function AnalyticsPage() {
       ? Math.round((overview.completedTasks / overview.totalTasks) * 100)
       : 0
 
-  const taskStatusMax = Math.max(...tasksByStatus.map((t) => t.count), 1)
-  const hoursMax = Math.max(...hoursByProject.map((h) => h.totalMinutes / 60), 1)
-
-  // Last 14 days for the mini trend
-  const recentTrend = completionTrend.slice(-14)
-  const trendMax = Math.max(...recentTrend.map((d) => Math.max(d.completed, d.created)), 1)
-
-  const statusBarColors: Record<string, string> = {
-    todo: 'bg-gray-400',
-    in_progress: 'bg-blue-500',
-    review: 'bg-yellow-500',
-    blocked: 'bg-red-500',
-    done: 'bg-green-500',
-    cancelled: 'bg-gray-300',
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
         <p className="mt-1 text-gray-600 dark:text-gray-400">
           Panoramica delle metriche di progetto
         </p>
@@ -140,7 +162,7 @@ export default function AnalyticsPage() {
 
       {/* KPI Cards */}
       {overview && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <StatCard
             label="Progetti Attivi"
             value={overview.activeProjects}
@@ -175,96 +197,135 @@ export default function AnalyticsPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tasks by Status */}
+        {/* Tasks by Status - Horizontal Bar Chart */}
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-gray-400" />
             Task per Stato
           </h2>
-          {tasksByStatus.length > 0 ? (
-            <BarChartSimple
-              data={tasksByStatus.map((t) => ({
-                label: TASK_STATUS_LABELS[t.status as TaskStatus] || t.status,
-                count: t.count,
-                status: t.status,
-              }))}
-              maxValue={taskStatusMax}
-              labelKey="label"
-              valueKey="count"
-              colorFn={(item) => statusBarColors[String(item.status)] || 'bg-primary-500'}
-            />
+          {statusChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={statusChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
+                <XAxis type="number" tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  tick={{ fontSize: 12, fill: '#6B7280' }}
+                  width={100}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#F9FAFB',
+                    fontSize: '13px',
+                  }}
+                  formatter={(value: number) => [`${value} task`, 'Conteggio']}
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  {statusChartData.map((entry, index) => (
+                    <Cell key={index} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           ) : (
             <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun dato disponibile</p>
           )}
         </div>
 
-        {/* Hours by Project */}
+        {/* Hours by Project - Pie Chart */}
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-gray-400" />
             Ore per Progetto
           </h2>
-          {hoursByProject.length > 0 ? (
-            <BarChartSimple
-              data={hoursByProject.map((h) => ({
-                label: `${h.projectCode} - ${h.projectName}`,
-                hours: (h.totalMinutes / 60).toFixed(1),
-              }))}
-              maxValue={hoursMax}
-              labelKey="label"
-              valueKey="hours"
-              colorFn={() => 'bg-orange-500'}
-            />
+          {hoursChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie
+                  data={hoursChartData}
+                  dataKey="ore"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  label={({ name, ore }: { name: string; ore: number }) => `${name}: ${ore}h`}
+                  labelLine={{ stroke: '#9CA3AF' }}
+                >
+                  {hoursChartData.map((_, index) => (
+                    <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#F9FAFB',
+                    fontSize: '13px',
+                  }}
+                  formatter={(value: number, _name: string, entry: { payload?: { fullName?: string } }) => [
+                    `${value}h`,
+                    entry.payload?.fullName || _name,
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           ) : (
             <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun dato disponibile</p>
           )}
         </div>
 
-        {/* Task Completion Trend (last 14 days) */}
+        {/* Task Completion Trend - Line Chart */}
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-gray-400" />
             Trend Ultimi 14 Giorni
           </h2>
-          {recentTrend.length > 0 ? (
-            <div className="flex items-end gap-1 h-40">
-              {recentTrend.map((day) => {
-                const completedH = (day.completed / trendMax) * 100
-                const createdH = (day.created / trendMax) * 100
-                const dateLabel = new Date(day.date).toLocaleDateString('it-IT', {
-                  day: '2-digit',
-                  month: '2-digit',
-                })
-                return (
-                  <div key={day.date} className="flex-1 flex flex-col items-center gap-0.5" title={`${dateLabel}: ${day.completed} completati, ${day.created} creati`}>
-                    <div className="w-full flex flex-col justify-end" style={{ height: '120px' }}>
-                      <div
-                        className="w-full bg-green-500 rounded-t"
-                        style={{ height: `${Math.max(completedH, 2)}%` }}
-                      />
-                      <div
-                        className="w-full bg-blue-400 rounded-b"
-                        style={{ height: `${Math.max(createdH, 2)}%` }}
-                      />
-                    </div>
-                    <span className="text-[9px] text-gray-400 rotate-[-45deg] origin-top-left mt-1 w-6 truncate">
-                      {dateLabel}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
+          {trendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={trendData} margin={{ left: -10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis tick={{ fontSize: 12, fill: '#9CA3AF' }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#F9FAFB',
+                    fontSize: '13px',
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Line
+                  type="monotone"
+                  dataKey="Completati"
+                  stroke="#22C55E"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#22C55E' }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="Creati"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#3B82F6' }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
             <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun dato disponibile</p>
           )}
-          <div className="flex items-center gap-4 mt-4 text-xs text-gray-500 dark:text-gray-400">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-green-500 inline-block" /> Completati
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-blue-400 inline-block" /> Creati
-            </span>
-          </div>
         </div>
 
         {/* Top Contributors */}
@@ -301,11 +362,11 @@ export default function AnalyticsPage() {
       {overview && (
         <div className="card p-4 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400">
           <span>{overview.totalProjects} progetti totali</span>
-          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
           <span>{overview.totalTasks} task totali</span>
-          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
           <span>{overview.blockedTasks} bloccati</span>
-          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
           <span>{overview.activeUsers} utenti attivi</span>
         </div>
       )}

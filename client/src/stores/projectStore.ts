@@ -5,7 +5,10 @@
 
 import { create } from 'zustand'
 import api from '@services/api'
+import { toast } from '@stores/toastStore'
 import { Project, PaginatedResponse, ProjectStats } from '@/types'
+
+const CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutes
 
 interface ProjectFilters {
   page?: number
@@ -27,6 +30,7 @@ interface ProjectState {
   }
   isLoading: boolean
   error: string | null
+  _lastFetchedAt: number | null
 
   // Actions
   fetchProjects: (filters?: ProjectFilters) => Promise<void>
@@ -35,11 +39,16 @@ interface ProjectState {
   createProject: (data: Partial<Project>) => Promise<Project>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
+  invalidateCache: () => void
   clearError: () => void
   clearCurrentProject: () => void
 }
 
-export const useProjectStore = create<ProjectState>((set) => ({
+function hasFilters(filters: ProjectFilters): boolean {
+  return !!(filters.page || filters.limit || filters.status || filters.priority || filters.search)
+}
+
+export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
   currentProject: null,
   projectStats: null,
@@ -51,8 +60,17 @@ export const useProjectStore = create<ProjectState>((set) => ({
   },
   isLoading: false,
   error: null,
+  _lastFetchedAt: null,
 
   fetchProjects: async (filters = {}) => {
+    // Use cache for unfiltered requests if data is fresh
+    if (!hasFilters(filters)) {
+      const { _lastFetchedAt, projects } = get()
+      if (_lastFetchedAt && projects.length > 0 && Date.now() - _lastFetchedAt < CACHE_TTL_MS) {
+        return
+      }
+    }
+
     set({ isLoading: true, error: null })
     try {
       const params = new URLSearchParams()
@@ -71,6 +89,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
           projects: response.data.data,
           pagination: response.data.pagination,
           isLoading: false,
+          _lastFetchedAt: Date.now(),
         })
       }
     } catch (error) {
@@ -102,8 +121,8 @@ export const useProjectStore = create<ProjectState>((set) => ({
       if (response.data.success) {
         set({ projectStats: response.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch project stats:', error)
+    } catch {
+      // Stats fetch failed silently
     }
   },
 
@@ -116,13 +135,16 @@ export const useProjectStore = create<ProjectState>((set) => ({
         set((state) => ({
           projects: [response.data.data, ...state.projects],
           isLoading: false,
+          _lastFetchedAt: null, // invalidate cache
         }))
+        toast.success('Progetto creato', response.data.data.name)
         return response.data.data
       }
       throw new Error('Failed to create project')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create project'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile creare il progetto')
       throw error
     }
   },
@@ -138,11 +160,14 @@ export const useProjectStore = create<ProjectState>((set) => ({
           currentProject:
             state.currentProject?.id === id ? response.data.data : state.currentProject,
           isLoading: false,
+          _lastFetchedAt: null, // invalidate cache
         }))
+        toast.success('Progetto aggiornato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to update project'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile aggiornare il progetto')
       throw error
     }
   },
@@ -155,13 +180,18 @@ export const useProjectStore = create<ProjectState>((set) => ({
         projects: state.projects.filter((p) => p.id !== id),
         currentProject: state.currentProject?.id === id ? null : state.currentProject,
         isLoading: false,
+        _lastFetchedAt: null, // invalidate cache
       }))
+      toast.success('Progetto eliminato')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete project'
       set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile eliminare il progetto')
       throw error
     }
   },
+
+  invalidateCache: () => set({ _lastFetchedAt: null }),
 
   clearError: () => set({ error: null }),
 

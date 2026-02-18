@@ -23,7 +23,7 @@ const createProjectSchema = z.object({
   startDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
   targetEndDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
   budget: z.preprocess(numberPreprocess, z.number().positive('Budget must be positive').nullish()),
-  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
 })
 
 const updateProjectSchema = z.object({
@@ -35,7 +35,7 @@ const updateProjectSchema = z.object({
   targetEndDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
   actualEndDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
   budget: z.preprocess(numberPreprocess, z.number().positive().nullish()),
-  priority: z.enum(['low', 'medium', 'high']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).optional()
 })
 
 const querySchema = z.object({

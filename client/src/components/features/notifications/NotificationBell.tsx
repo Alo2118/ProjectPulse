@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, BellOff, CheckCheck, Monitor } from 'lucide-react'
 import { useNotificationStore } from '@stores/notificationStore'
 import NotificationItem from './NotificationItem'
 import { useNavigate } from 'react-router-dom'
+import { useDesktopNotifications } from '@hooks/useDesktopNotifications'
 import type { Notification } from '@/types'
 
 export default function NotificationBell() {
@@ -19,7 +20,24 @@ export default function NotificationBell() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    desktopEnabled,
+    setDesktopEnabled,
   } = useNotificationStore()
+
+  const { permission, isSupported, requestPermission } = useDesktopNotifications()
+
+  const handleDesktopToggle = async () => {
+    if (!desktopEnabled) {
+      // Turning ON: request permission if not yet granted
+      if (permission !== 'granted') {
+        const result = await requestPermission()
+        if (result !== 'granted') return // user denied — bail out
+      }
+      setDesktopEnabled(true)
+    } else {
+      setDesktopEnabled(false)
+    }
+  }
 
   useEffect(() => {
     fetchUnreadCount()
@@ -74,15 +92,36 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-surface-700">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifiche</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => markAllAsRead()}
-                className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                Segna tutte lette
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Desktop notification toggle */}
+              {isSupported && permission !== 'denied' && (
+                <button
+                  onClick={handleDesktopToggle}
+                  className={`flex items-center gap-1 text-xs rounded-md px-2 py-1 transition-colors ${
+                    desktopEnabled && permission === 'granted'
+                      ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                  }`}
+                  title={desktopEnabled && permission === 'granted' ? 'Disattiva notifiche PC' : 'Attiva notifiche PC'}
+                >
+                  {desktopEnabled && permission === 'granted' ? (
+                    <Monitor className="w-3.5 h-3.5" />
+                  ) : (
+                    <BellOff className="w-3.5 h-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{desktopEnabled && permission === 'granted' ? 'PC: on' : 'PC: off'}</span>
+                </button>
+              )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={() => markAllAsRead()}
+                  className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Segna tutte lette
+                </button>
+              )}
+            </div>
           </div>
 
           {/* List */}

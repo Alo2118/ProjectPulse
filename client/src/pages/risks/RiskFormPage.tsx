@@ -17,6 +17,7 @@ import {
   RISK_LEVEL_COLORS,
 } from '@/constants'
 import { RiskCategory, RiskProbability, RiskImpact, RiskStatus, User } from '@/types'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
 
 function calculateRiskLevel(probability: RiskProbability, impact: RiskImpact): { level: number; label: 'low' | 'medium' | 'high' } {
   const probValue = { low: 1, medium: 2, high: 3 }
@@ -64,8 +65,8 @@ export default function RiskFormPage() {
         if (response.data.success) {
           setUsers(response.data.data)
         }
-      } catch (error) {
-        console.error('Failed to load users:', error)
+      } catch {
+        // silently ignore
       }
     }
     loadUsers()
@@ -136,8 +137,8 @@ export default function RiskFormPage() {
         })
         navigate(`/risks/${newRisk.id}`)
       }
-    } catch (error) {
-      console.error('Failed to save risk:', error)
+    } catch {
+      // silently ignore
     } finally {
       setIsSaving(false)
     }
@@ -154,7 +155,15 @@ export default function RiskFormPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Rischi', href: '/risks' },
+          { label: isEditing ? 'Modifica Rischio' : 'Nuovo Rischio' },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -163,7 +172,7 @@ export default function RiskFormPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           {isEditing ? 'Modifica Rischio' : 'Nuovo Rischio'}
         </h1>
       </div>

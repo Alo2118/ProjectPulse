@@ -78,8 +78,8 @@ export default function RiskDetailPage() {
     if (!id) return
     try {
       await changeRiskStatus(id, newStatus)
-    } catch (error) {
-      console.error('Failed to change status:', error)
+    } catch {
+      // silently ignore
     }
   }
 
@@ -89,8 +89,7 @@ export default function RiskDetailPage() {
     try {
       await deleteRisk(id)
       navigate('/risks')
-    } catch (error) {
-      console.error('Failed to delete risk:', error)
+    } catch {
       setIsDeleting(false)
     }
   }

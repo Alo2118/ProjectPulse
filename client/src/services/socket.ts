@@ -3,7 +3,8 @@ import { useAuthStore } from '@stores/authStore'
 
 let socket: Socket | null = null
 let reconnectAttempts = 0
-const MAX_RECONNECT_ATTEMPTS = 5
+const MAX_RECONNECT_ATTEMPTS = 10
+let socketInitialized = false
 
 export function getSocket(): Socket | null {
   return socket
@@ -17,40 +18,64 @@ export function connectSocket(): Socket | null {
 
   // Don't attempt connection without a token
   if (!token) {
-    console.warn('Socket connection skipped: no authentication token')
     return null
   }
 
   const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000'
 
-  socket = io(socketUrl, {
-    auth: { token },
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-    transports: ['websocket', 'polling'],
-  })
+  // Initialize socket with delay on first connection
+  const initializeSocket = () => {
+    if (socket) return
 
-  socket.on('connect', () => {
-    console.log('Socket connected successfully')
-    reconnectAttempts = 0
-  })
+    socket = io(socketUrl, {
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1500,
+      reconnectionDelayMax: 8000,
+      reconnectionAttempts: 10,
+      transports: ['websocket', 'polling'],
+      timeout: 10000,
+      upgrade: true,
+    })
 
-  socket.on('connect_error', (error: Error) => {
-    reconnectAttempts++
-    console.error(`Socket connection error (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}):`, error.message)
-    
-    // If max reconnect attempts reached, clear token and redirect to login
-    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      console.error('Max socket reconnection attempts reached')
-      disconnectSocket()
-    }
-  })
+    socket.on('connect', () => {
+      reconnectAttempts = 0
+    })
 
-  socket.on('disconnect', (reason) => {
-    console.log('Socket disconnected:', reason)
-  })
+    socket.on('connect_error', (_error: Error) => {
+      reconnectAttempts++
+
+      // If max reconnect attempts reached, disconnect
+      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        disconnectSocket()
+      }
+    })
+
+    socket.on('disconnect', () => {
+      // no-op
+    })
+
+    socket.on('error', () => {
+      // no-op
+    })
+
+    socket.on('connect_timeout', () => {
+      // no-op
+    })
+
+    socket.on('reconnect_attempt', () => {
+      // no-op
+    })
+
+    socketInitialized = true
+  }
+
+  // Add small delay on first connection to ensure server is ready
+  if (!socketInitialized) {
+    setTimeout(initializeSocket, 500)
+  } else {
+    initializeSocket()
+  }
 
   return socket
 }

@@ -28,6 +28,7 @@ import {
   Target,
 } from 'lucide-react'
 import type { ProjectNode, TaskNode, SubtaskNode, MilestoneNode, TaskTreeStats } from '@/types'
+import { EmptyState } from '@/components/common/EmptyState'
 
 interface TaskTreeViewProps {
   /** Display mode */
@@ -127,7 +128,14 @@ function ProgressBar({ progress, size = 'md' }: { progress: number; size?: 'sm' 
   const color = progress === 100 ? 'bg-green-500' : progress > 50 ? 'bg-blue-500' : 'bg-amber-500'
 
   return (
-    <div className={`w-full bg-gray-200 dark:bg-gray-700 rounded-full ${height}`}>
+    <div
+      className={`w-full bg-gray-200 dark:bg-gray-700 rounded-full ${height}`}
+      role="progressbar"
+      aria-valuenow={Math.round(Math.min(progress, 100))}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`Progresso: ${Math.round(Math.min(progress, 100))}%`}
+    >
       <div
         className={`${height} rounded-full ${color} transition-all duration-300`}
         style={{ width: `${Math.min(progress, 100)}%` }}
@@ -495,7 +503,7 @@ function MilestoneNodeItem({
         </div>
 
         {/* Progress for milestone */}
-        <div className="flex items-center gap-2 min-w-[120px]">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-[100px] sm:min-w-[120px]">
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {milestone.stats.completed}/{milestone.stats.total}
           </span>
@@ -659,10 +667,7 @@ function ProjectNodeItem({
       )}
 
       {!hasContent && isExpanded && (
-        <div className={`text-center text-gray-400 ${compact ? 'py-4' : 'py-6'}`}>
-          <CheckSquare className={`mx-auto mb-2 opacity-50 ${compact ? 'w-6 h-6' : 'w-8 h-8'}`} />
-          <p className="text-sm">Nessun task in questo progetto</p>
-        </div>
+        <EmptyState icon={CheckSquare} title="Nessun task in questo progetto" compact />
       )}
     </div>
   )
@@ -684,7 +689,7 @@ function SummaryCards({
   }
 }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
       <div className="card p-4">
         <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Progetti</p>
         <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.totalProjects}</p>
@@ -766,7 +771,7 @@ export function TaskTreeView({
       projectId,
       parentTaskId,
       myTasksOnly: propMyTasksOnly ?? myTasksOnly,
-      filterUserId: propFilterUserId ?? filterUserId,
+      filterUserId: propFilterUserId ?? filterUserId ?? undefined,
       excludeCompleted: propExcludeCompleted ?? excludeCompleted,
     })
   }, [fetchTaskTree, projectId, parentTaskId, propMyTasksOnly, propFilterUserId, propExcludeCompleted])
@@ -794,12 +799,7 @@ export function TaskTreeView({
   if (parentTaskId) {
     const subtasks = treeData?.subtasks
     if (!subtasks || subtasks.length === 0) {
-      return (
-        <div className={`text-center text-gray-500 ${compact ? 'py-6' : 'py-12'}`}>
-          <CheckSquare className={`mx-auto mb-2 opacity-30 ${compact ? 'w-8 h-8' : 'w-12 h-12'}`} />
-          <p className="text-sm">Nessun subtask</p>
-        </div>
-      )
+      return <EmptyState icon={CheckSquare} title="Nessun subtask" compact={compact} />
     }
 
     return (
@@ -825,11 +825,12 @@ export function TaskTreeView({
 
   if (!treeData || treeData.projects.length === 0) {
     return (
-      <div className={`text-center text-gray-500 ${compact ? 'py-6' : 'py-12'}`}>
-        <FolderKanban className={`mx-auto mb-4 opacity-30 ${compact ? 'w-10 h-10' : 'w-16 h-16'}`} />
-        <p className={compact ? 'text-sm' : 'text-lg'}>Nessun task disponibile</p>
-        {!compact && <p className="text-sm mt-1">I task a cui hai accesso appariranno qui</p>}
-      </div>
+      <EmptyState
+        icon={FolderKanban}
+        title="Nessun task disponibile"
+        description={!compact ? "I task a cui hai accesso appariranno qui" : undefined}
+        compact={compact}
+      />
     )
   }
 
@@ -841,10 +842,7 @@ export function TaskTreeView({
 
     if (!hasMilestones && !hasTasks) {
       return (
-        <div className={`text-center text-gray-500 ${compact ? 'py-6' : 'py-8'}`}>
-          <CheckSquare className={`mx-auto mb-2 opacity-30 ${compact ? 'w-8 h-8' : 'w-10 h-10'}`} />
-          <p className="text-sm">Nessun task in questo progetto</p>
-        </div>
+        <EmptyState icon={CheckSquare} title="Nessun task in questo progetto" compact />
       )
     }
 

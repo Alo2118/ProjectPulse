@@ -52,7 +52,7 @@ export default function LoginPage() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Accedi</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Accedi</h2>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           Inserisci le tue credenziali per accedere
         </p>

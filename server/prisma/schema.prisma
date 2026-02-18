@@ -34,6 +34,7 @@ model User {
   assignedTasks      Task[]           @relation("TaskAssignee")
   createdTasks       Task[]           @relation("TaskCreator")
   timeEntries        TimeEntry[]
+  approvedTimeEntries TimeEntry[]      @relation("TimeEntryApprover")
   comments           Comment[]
   ownedRisks         Risk[]           @relation("RiskOwner")
   createdRisks       Risk[]           @relation("RiskCreator")
@@ -198,26 +199,33 @@ model TaskCompletion {
 }
 
 model TimeEntry {
-  id          String    @id @default(uuid())
-  userId      String    @map("user_id")
-  taskId      String    @map("task_id")
-  description String?
-  startTime   DateTime  @map("start_time")
-  endTime     DateTime? @map("end_time")
-  duration    Int?
-  isRunning   Boolean   @default(false) @map("is_running")
-  isDeleted   Boolean   @default(false) @map("is_deleted")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  taskId         String    @map("task_id")
+  description    String?
+  startTime      DateTime  @map("start_time")
+  endTime        DateTime? @map("end_time")
+  duration       Int?
+  isRunning      Boolean   @default(false) @map("is_running")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  // Approval workflow
+  approvalStatus String    @default("pending") @map("approval_status") // pending | approved | rejected
+  approvedById   String?   @map("approved_by_id")
+  approvedAt     DateTime? @map("approved_at")
+  rejectionNote  String?   @map("rejection_note")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  task Task @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user       User  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  task       Task  @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvedBy User? @relation("TimeEntryApprover", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([userId])
   @@index([taskId])
   @@index([isRunning])
   @@index([isDeleted])
+  @@index([approvalStatus])
   @@map("time_entries")
 }
 

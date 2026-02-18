@@ -20,6 +20,8 @@ import taskTreeRoutes from './taskTreeRoutes.js'
 import noteRoutes from './noteRoutes.js'
 import attachmentRoutes from './attachmentRoutes.js'
 import tagRoutes from './tagRoutes.js'
+import auditRoutes from './auditRoutes.js'
+import templateRoutes from './templateRoutes.js'
 
 const router = Router()
 
@@ -40,5 +42,7 @@ router.use('/task-tree', taskTreeRoutes)
 router.use('/notes', noteRoutes)
 router.use('/attachments', attachmentRoutes)
 router.use('/tags', tagRoutes)
+router.use('/audit', auditRoutes)
+router.use('/templates', templateRoutes)
 
 export default router

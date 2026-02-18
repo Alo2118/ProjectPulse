@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useProjectStore } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
+import { useTemplateStore } from '@stores/templateStore'
 import api from '@services/api'
 import {
   ArrowLeft,
@@ -18,16 +19,20 @@ import {
   AlertCircle,
   FolderPlus,
   Trash2,
+  LayoutTemplate,
 } from 'lucide-react'
 import { User } from '@/types'
 import { PROJECT_STATUS_OPTIONS, PROJECT_PRIORITY_OPTIONS } from '@/constants'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
 
-// Zod validation schema
+// Zod validation schema (templateId optional, only used at creation)
 const projectSchema = z.object({
+  templateId: z.string().uuid().optional().or(z.literal('')),
+
   name: z.string().min(3, 'Il nome deve avere almeno 3 caratteri').max(100, 'Il nome non può superare i 100 caratteri'),
   description: z.string().max(2000, 'La descrizione non può superare i 2000 caratteri').optional().or(z.literal('')),
   status: z.enum(['planning', 'design', 'verification', 'validation', 'transfer', 'maintenance', 'completed', 'on_hold', 'cancelled']),
-  priority: z.enum(['low', 'medium', 'high']),
+  priority: z.enum(['low', 'medium', 'high', 'critical']),
   startDate: z.string().optional().or(z.literal('')),
   targetEndDate: z.string().optional().or(z.literal('')),
   budget: z.string().optional().or(z.literal('')),
@@ -41,6 +46,7 @@ export default function ProjectFormPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentProject, isLoading: storeLoading, fetchProject, createProject, updateProject, deleteProject, clearCurrentProject } = useProjectStore()
+  const { templates, fetchTemplates } = useTemplateStore()
 
   const [users, setUsers] = useState<User[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -58,6 +64,7 @@ export default function ProjectFormPage() {
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
+      templateId: '',
       name: '',
       description: '',
       status: 'planning',
@@ -73,6 +80,13 @@ export default function ProjectFormPage() {
   const canManageProjects = !!user
   const isDipendente = user?.role === 'dipendente'
 
+  // Load templates on create mode
+  useEffect(() => {
+    if (!isEditMode) {
+      fetchTemplates(false)
+    }
+  }, [isEditMode, fetchTemplates])
+
   // Load users for owner select
   useEffect(() => {
     const loadUsers = async () => {
@@ -81,8 +95,8 @@ export default function ProjectFormPage() {
         if (response.data.success !== false) {
           setUsers(response.data.data)
         }
-      } catch (error) {
-        console.error('Failed to load users:', error)
+      } catch {
+        // silently ignore
       }
     }
     loadUsers()
@@ -127,6 +141,7 @@ export default function ProjectFormPage() {
         targetEndDate: data.targetEndDate || null,
         budget: data.budget || null,
         ownerId: data.ownerId,
+        ...(!isEditMode && data.templateId ? { templateId: data.templateId } : {}),
       }
 
       if (isEditMode && id) {
@@ -207,7 +222,15 @@ export default function ProjectFormPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Progetti', href: '/projects' },
+          { label: isEditMode ? 'Modifica Progetto' : 'Nuovo Progetto' },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center mb-6">
         <button
@@ -218,7 +241,7 @@ export default function ProjectFormPage() {
         </button>
         <div className="flex items-center">
           <FolderPlus className="w-6 h-6 text-primary-500 mr-3" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {isEditMode ? 'Modifica Progetto' : 'Nuovo Progetto'}
           </h1>
         </div>
@@ -231,6 +254,35 @@ export default function ProjectFormPage() {
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
             <p className="text-red-700 dark:text-red-400">{submitError}</p>
+          </div>
+        )}
+
+        {/* Template selector (create mode only) */}
+        {!isEditMode && templates.length > 0 && (
+          <div className="p-4 bg-primary-50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-800/30 rounded-lg">
+            <label
+              htmlFor="templateId"
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              <LayoutTemplate className="w-4 h-4 text-primary-500" />
+              Usa template (opzionale)
+            </label>
+            <select
+              id="templateId"
+              {...register('templateId')}
+              className="input"
+            >
+              <option value="">— Nessun template —</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                  {t.phases.length > 0 ? ` (${t.phases.length} fasi)` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              Il template precompila la struttura del progetto con fasi e configurazioni predefinite
+            </p>
           </div>
         )}
 

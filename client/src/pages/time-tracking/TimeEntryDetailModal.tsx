@@ -63,8 +63,8 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
       if (response.data.success) {
         setNotes(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to load notes:', error)
+    } catch {
+      // silently ignore
     } finally {
       setNotesLoading(false)
     }
@@ -79,8 +79,8 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
       if (response.data.success) {
         setAttachments(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to load attachments:', error)
+    } catch {
+      // silently ignore
     } finally {
       setAttachmentsLoading(false)
     }

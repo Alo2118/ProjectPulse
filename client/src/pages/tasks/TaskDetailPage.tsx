@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTaskStore } from '@stores/taskStore'
 import { useAuthStore } from '@stores/authStore'
-import { useDashboardStore } from '@stores/dashboardStore'
+import { useTimerToggle } from '@hooks/useTimerToggle'
 import { useTaskTreeStore } from '@stores/taskTreeStore'
 import api from '@services/api'
 import {
@@ -44,6 +44,7 @@ import { DetailPageHeader } from '@/components/common/DetailPageHeader'
 import { InfoCard } from '@/components/common/InfoCard'
 import { TabSection } from '@/components/common/TabSection'
 import { QuickLinksGrid } from '@/components/common/QuickLinksGrid'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
 import {
   TASK_STATUS_LABELS,
   TASK_STATUS_TRANSITIONS,
@@ -78,7 +79,7 @@ export default function TaskDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentTask, isLoading, fetchTask, changeTaskStatus, clearCurrentTask } = useTaskStore()
-  const { runningTimer, startTimer, stopTimer } = useDashboardStore()
+  const { canTrackTime, handleTimerToggle: timerToggleById, runningTimerTaskId } = useTimerToggle()
   const { treeData } = useTaskTreeStore()
 
   const [comments, setComments] = useState<Comment[]>([])
@@ -113,8 +114,8 @@ export default function TaskDetailPage() {
       if (response.data.success) {
         setComments(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to load comments:', error)
+    } catch {
+      // silently ignore
     } finally {
       setCommentsLoading(false)
     }
@@ -129,8 +130,8 @@ export default function TaskDetailPage() {
       if (response.data.success) {
         setNotes(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to load notes:', error)
+    } catch {
+      // silently ignore
     } finally {
       setNotesLoading(false)
     }
@@ -145,8 +146,8 @@ export default function TaskDetailPage() {
       if (response.data.success) {
         setAttachments(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to load attachments:', error)
+    } catch {
+      // silently ignore
     } finally {
       setAttachmentsLoading(false)
     }
@@ -164,8 +165,8 @@ export default function TaskDetailPage() {
 
       try {
         await changeTaskStatus(id, newStatus)
-      } catch (error) {
-        console.error('Failed to change status:', error)
+      } catch {
+        // silently ignore
       }
     },
     [id, changeTaskStatus]
@@ -180,8 +181,8 @@ export default function TaskDetailPage() {
         await changeTaskStatus(id, pendingStatus, reason)
         setShowBlockedModal(false)
         setPendingStatus(null)
-      } catch (error) {
-        console.error('Failed to change status to blocked:', error)
+      } catch {
+        // silently ignore
       } finally {
         setIsChangingStatus(false)
       }
@@ -196,30 +197,14 @@ export default function TaskDetailPage() {
 
   const handleTimerToggle = useCallback(async () => {
     if (!id) return
-    try {
-      if (runningTimer?.taskId === id) {
-        await stopTimer()
-      } else {
-        await startTimer(id)
-      }
-    } catch (error) {
-      console.error('Timer error:', error)
-    }
-  }, [id, runningTimer?.taskId, startTimer, stopTimer])
+    await timerToggleById(id)
+  }, [id, timerToggleById])
 
   const handleSubtaskTimerToggle = useCallback(
     async (taskId: string) => {
-      try {
-        if (runningTimer?.taskId === taskId) {
-          await stopTimer()
-        } else {
-          await startTimer(taskId)
-        }
-      } catch (error) {
-        console.error('Timer error:', error)
-      }
+      await timerToggleById(taskId)
     },
-    [runningTimer?.taskId, startTimer, stopTimer]
+    [timerToggleById]
   )
 
   const handleCommentAdded = useCallback((comment: Comment) => {
@@ -250,8 +235,7 @@ export default function TaskDetailPage() {
   const isAssignee = currentTask?.assignee?.id === user?.id
   const isTaskOwner = isCreator || isAssignee
   const canEdit = user?.role === 'admin' || user?.role === 'direzione' || isTaskOwner
-  const canTrackTime = user?.role !== 'direzione'
-  const isTimerRunning = runningTimer?.taskId === id
+  const isTimerRunning = runningTimerTaskId === id
 
   const estimatedHours = currentTask?.estimatedHours ? Number(currentTask.estimatedHours) : 0
   const actualHours = currentTask?.actualHours ? Number(currentTask.actualHours) : 0
@@ -299,6 +283,14 @@ export default function TaskDetailPage() {
 
   return (
     <div className="space-y-4">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Task', href: '/tasks' },
+          { label: currentTask.title },
+        ]}
+      />
+
       {/* Page Header */}
       <DetailPageHeader title="Dettagli Task" subtitle={currentTask.code}>
         {canTrackTime && currentTask.taskType !== 'milestone' && (
@@ -536,7 +528,7 @@ export default function TaskDetailPage() {
                   showFilters={false}
                   canTrackTime={canTrackTime}
                   onTimerToggle={handleSubtaskTimerToggle}
-                  runningTimerId={runningTimer?.taskId ?? null}
+                  runningTimerId={runningTimerTaskId}
                 />
               </div>
             ),

@@ -49,7 +49,6 @@ export function NoteSection({
   const handleSubmitNote = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!entityId || !newNote.trim()) {
-      console.warn('Note submission blocked: entityId=', entityId, 'note empty=', !newNote.trim())
       return
     }
 
@@ -66,11 +65,9 @@ export function NoteSection({
         setNewNote('')
         setIsInternal(false)
       } else {
-        console.error('Note creation failed:', response.data)
         alert('Errore durante la creazione della nota')
       }
-    } catch (error) {
-      console.error('Failed to post note:', error)
+    } catch {
       alert('Errore durante la creazione della nota. Riprova.')
     } finally {
       setIsSubmitting(false)
@@ -81,8 +78,8 @@ export function NoteSection({
     try {
       await api.delete(`/notes/${noteId}`)
       onNoteDeleted(noteId)
-    } catch (error) {
-      console.error('Failed to delete note:', error)
+    } catch {
+      // silently ignore
     }
   }
 

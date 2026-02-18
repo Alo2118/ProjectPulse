@@ -9,6 +9,7 @@ import { useUserStore } from '@stores/userStore'
 import { ArrowLeft, Loader2, Save, Eye, EyeOff } from 'lucide-react'
 import { USER_ROLE_OPTIONS } from '@/constants'
 import { UserRole } from '@/types'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
 
 export default function UserFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -114,7 +115,15 @@ export default function UserFormPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Utenti', href: '/users' },
+          { label: isEditing ? 'Modifica Utente' : 'Nuovo Utente' },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -123,7 +132,7 @@ export default function UserFormPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           {isEditing ? 'Modifica Utente' : 'Nuovo Utente'}
         </h1>
       </div>

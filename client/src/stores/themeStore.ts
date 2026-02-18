@@ -36,8 +36,8 @@ export const useThemeStore = create<ThemeState>()(
 
         // Save to backend if requested (default: true)
         if (saveToBackend) {
-          api.patch('/users/me/theme', { theme }).catch((error) => {
-            console.error('Failed to save theme preference:', error)
+          api.patch('/users/me/theme', { theme }).catch(() => {
+            // silently ignore
           })
         }
       },

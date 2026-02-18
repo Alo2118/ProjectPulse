@@ -45,7 +45,7 @@ function formatHours(minutes: number): string {
 export function ExecutiveKPISection({ overview, isLoading }: ExecutiveKPISectionProps) {
   if (isLoading || !overview) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="card p-4">
             <div className="skeleton h-16 w-16 rounded-full mx-auto mb-3" />
@@ -110,7 +110,7 @@ export function ExecutiveKPISection({ overview, isLoading }: ExecutiveKPISection
           KPI Aziendali
         </h2>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}

@@ -38,6 +38,7 @@ const taskSelectFields = {
   blockedReason: true, // Required when status is 'blocked'
   isRecurring: true,
   recurrencePattern: true,
+  position: true,
   isDeleted: true,
   createdAt: true,
   updatedAt: true,
@@ -233,6 +234,10 @@ export async function createTask(data: CreateTaskInput, userId: string) {
         startDate: data.startDate,
         dueDate: data.dueDate,
         estimatedHours: data.estimatedHours,
+        isRecurring: data.isRecurring ?? false,
+        blockedReason: data.blockedReason,
+        recurrencePattern: data.recurrencePattern,
+        position: data.position ?? 0,
         createdById: userId,
       },
       select: taskWithRelationsSelect,
@@ -488,6 +493,10 @@ export async function updateTask(taskId: string, data: UpdateTaskInput, userId: 
         dueDate: data.dueDate,
         estimatedHours: data.estimatedHours,
         actualHours: data.actualHours,
+        isRecurring: data.isRecurring,
+        blockedReason: data.blockedReason,
+        recurrencePattern: data.recurrencePattern,
+        position: data.position,
         updatedAt: new Date(),
       },
       select: taskWithRelationsSelect,
@@ -1290,6 +1299,85 @@ export async function getMilestoneWithStats(milestoneId: string) {
   }
 }
 
+/**
+ * Bulk updates multiple tasks (status, priority, or assignee)
+ * @param ids - Array of task IDs to update
+ * @param update - Fields to update (at least one required)
+ * @param userId - ID of user performing the update
+ * @returns Number of tasks updated
+ */
+export async function bulkUpdateTasks(
+  ids: string[],
+  update: { status?: string; priority?: string; assigneeId?: string },
+  userId: string
+): Promise<number> {
+  let totalUpdated = 0
+
+  await prisma.$transaction(async (tx) => {
+    for (const taskId of ids) {
+      const existing = await tx.task.findFirst({
+        where: { id: taskId, isDeleted: false },
+        select: taskSelectFields,
+      })
+
+      if (!existing) continue
+
+      const updated = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          ...(update.status !== undefined && { status: update.status as TaskStatus }),
+          ...(update.priority !== undefined && { priority: update.priority as TaskPriority }),
+          ...(update.assigneeId !== undefined && { assigneeId: update.assigneeId }),
+          updatedAt: new Date(),
+        },
+        select: taskSelectFields,
+      })
+
+      await auditService.logUpdate(EntityType.TASK, taskId, userId, { ...existing }, { ...updated }, tx)
+
+      totalUpdated++
+    }
+  })
+
+  logger.info(`Bulk updated ${totalUpdated} tasks`, { ids, update, userId })
+
+  return totalUpdated
+}
+
+/**
+ * Bulk soft-deletes multiple tasks
+ * @param ids - Array of task IDs to delete
+ * @param userId - ID of user performing the deletion
+ * @returns Number of tasks deleted
+ */
+export async function bulkDeleteTasks(ids: string[], userId: string): Promise<number> {
+  let totalDeleted = 0
+
+  await prisma.$transaction(async (tx) => {
+    for (const taskId of ids) {
+      const existing = await tx.task.findFirst({
+        where: { id: taskId, isDeleted: false },
+        select: taskSelectFields,
+      })
+
+      if (!existing) continue
+
+      await tx.task.update({
+        where: { id: taskId },
+        data: { isDeleted: true, updatedAt: new Date() },
+      })
+
+      await auditService.logDelete(EntityType.TASK, taskId, userId, { ...existing }, tx)
+
+      totalDeleted++
+    }
+  })
+
+  logger.info(`Bulk deleted ${totalDeleted} tasks`, { ids, userId })
+
+  return totalDeleted
+}
+
 export const taskService = {
   createTask,
   getTasks,
@@ -1304,6 +1392,8 @@ export const taskService = {
   getStandaloneTasks,
   assignSubtasksRecursively,
   reorderTasks,
+  bulkUpdateTasks,
+  bulkDeleteTasks,
   // Gantt
   getTasksForGantt,
   // Dependencies

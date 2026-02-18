@@ -56,6 +56,22 @@ const teamReportQuerySchema = z.object({
   userId: z.string().uuid().optional(),
 })
 
+const approvalQuerySchema = z.object({
+  userId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
+  limit: z.string().regex(/^\d+$/).transform(Number).default('50'),
+})
+
+const bulkApproveSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, 'At least one ID required'),
+})
+
+const bulkRejectSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, 'At least one ID required'),
+  rejectionNote: z.string().max(500).optional(),
+})
+
 // ============================================================
 // CONTROLLER FUNCTIONS
 // ============================================================
@@ -345,6 +361,105 @@ export async function getMyDailySummary(req: Request, res: Response, next: NextF
 }
 
 /**
+ * Exports time entries as a CSV file (admin/direzione only)
+ * @route GET /api/time-entries/export
+ */
+export async function exportTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const exportQuerySchema = z.object({
+      taskId: z.string().uuid().optional(),
+      userId: z.string().uuid().optional(),
+      projectId: z.string().uuid().optional(),
+      startDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be YYYY-MM-DD')
+        .optional(),
+      endDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be YYYY-MM-DD')
+        .optional(),
+    })
+
+    const params = exportQuerySchema.parse(req.query)
+
+    const startDate = params.startDate ? new Date(params.startDate + 'T00:00:00.000Z') : undefined
+    const endDate = params.endDate ? new Date(params.endDate + 'T23:59:59.999Z') : undefined
+
+    const entries = await timeEntryService.getTimeEntriesForExport({
+      taskId: params.taskId,
+      userId: params.userId,
+      projectId: params.projectId,
+      startDate,
+      endDate,
+    })
+
+    // Helper functions for formatting
+    const padZero = (n: number): string => String(n).padStart(2, '0')
+
+    const formatDate = (date: Date): string => {
+      const d = padZero(date.getDate())
+      const m = padZero(date.getMonth() + 1)
+      const y = date.getFullYear()
+      return `${d}/${m}/${y}`
+    }
+
+    const formatTime = (date: Date): string => {
+      return `${padZero(date.getHours())}:${padZero(date.getMinutes())}`
+    }
+
+    const escapeCSV = (value: string | null | undefined): string => {
+      if (value === null || value === undefined) return ''
+      const str = String(value)
+      // Wrap in quotes if the value contains comma, quote, or newline
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    // Build CSV rows
+    const headers = ['Data', 'Ora Inizio', 'Ora Fine', 'Durata (ore)', 'Utente', 'Progetto', 'Codice Task', 'Task', 'Descrizione']
+
+    const rows = entries.map((entry) => {
+      const startTime = new Date(entry.startTime)
+      const endTime = entry.endTime ? new Date(entry.endTime) : null
+      const durationHours = entry.duration != null ? (entry.duration / 60).toFixed(2) : '0.00'
+      const userName = `${entry.user.firstName} ${entry.user.lastName}`
+      const projectName = entry.task?.project?.name ?? ''
+      const taskCode = entry.task?.code ?? ''
+      const taskTitle = entry.task?.title ?? ''
+
+      return [
+        formatDate(startTime),
+        formatTime(startTime),
+        endTime ? formatTime(endTime) : '',
+        durationHours,
+        escapeCSV(userName),
+        escapeCSV(projectName),
+        escapeCSV(taskCode),
+        escapeCSV(taskTitle),
+        escapeCSV(entry.description),
+      ].join(',')
+    })
+
+    const csvContent =
+      '\ufeff' + // BOM for Excel UTF-8 compatibility
+      headers.join(',') +
+      '\n' +
+      rows.join('\n')
+
+    const today = new Date()
+    const fileDate = `${today.getFullYear()}-${padZero(today.getMonth() + 1)}-${padZero(today.getDate())}`
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename=time-entries-${fileDate}.csv`)
+    res.status(200).send(csvContent)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
  * Gets team-wide time report (admin/direzione only)
  * @route GET /api/time-entries/team
  */
@@ -362,5 +477,76 @@ export async function getTeamTimeReport(req: Request, res: Response, next: NextF
     res.json({ success: true, data: report })
   } catch (error) {
     next(error)
+  }
+}
+
+/**
+ * Gets pending time entries for approval (admin/direzione only)
+ * @route GET /api/time-entries/pending
+ */
+export async function getPendingTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const params = approvalQuerySchema.parse(req.query)
+
+    const result = await timeEntryService.getPendingTimeEntries({
+      userId: params.userId,
+      projectId: params.projectId,
+      page: params.page,
+      limit: params.limit,
+    })
+
+    res.json({ success: true, data: result.data, pagination: result.pagination })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Bulk approve time entries (admin/direzione only)
+ * @route PATCH /api/time-entries/approve
+ */
+export async function approveTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const data = bulkApproveSchema.parse(req.body)
+    const approverId = req.user?.userId
+
+    if (!approverId) {
+      throw new AppError('User not authenticated', 401)
+    }
+
+    const result = await timeEntryService.approveTimeEntries(data.ids, approverId)
+
+    res.json({ success: true, data: result })
+  } catch (error) {
+    if (error instanceof Error && error.message === 'No eligible entries found') {
+      next(new AppError('No eligible entries found', 404))
+    } else {
+      next(error)
+    }
+  }
+}
+
+/**
+ * Bulk reject time entries (admin/direzione only)
+ * @route PATCH /api/time-entries/reject
+ */
+export async function rejectTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const data = bulkRejectSchema.parse(req.body)
+    const approverId = req.user?.userId
+
+    if (!approverId) {
+      throw new AppError('User not authenticated', 401)
+    }
+
+    const result = await timeEntryService.rejectTimeEntries(data.ids, approverId, data.rejectionNote)
+
+    res.json({ success: true, data: result })
+  } catch (error) {
+    if (error instanceof Error && error.message === 'No eligible entries found') {
+      next(new AppError('No eligible entries found', 404))
+    } else {
+      next(error)
+    }
   }
 }

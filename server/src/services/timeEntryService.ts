@@ -23,6 +23,10 @@ const timeEntrySelectFields = {
   duration: true,
   isRunning: true,
   isDeleted: true,
+  approvalStatus: true,
+  approvedById: true,
+  approvedAt: true,
+  rejectionNote: true,
   createdAt: true,
   updatedAt: true,
   taskId: true,
@@ -42,6 +46,9 @@ const timeEntryWithRelationsSelect = {
     },
   },
   user: {
+    select: { id: true, firstName: true, lastName: true },
+  },
+  approvedBy: {
     select: { id: true, firstName: true, lastName: true },
   },
 }
@@ -608,6 +615,201 @@ export async function getTeamTimeReport(params: {
   }
 }
 
+/**
+ * Gets time entries for CSV export (no pagination, max 10000)
+ * @param params - Filter parameters (taskId, userId, projectId, startDate, endDate)
+ * @returns All matching completed time entries with relations
+ */
+export async function getTimeEntriesForExport(params: {
+  taskId?: string
+  userId?: string
+  projectId?: string
+  startDate?: Date
+  endDate?: Date
+}) {
+  const { taskId, userId, projectId, startDate, endDate } = params
+
+  const where: Prisma.TimeEntryWhereInput = {
+    isDeleted: false,
+    isRunning: false,
+  }
+
+  if (taskId) where.taskId = taskId
+  if (userId) where.userId = userId
+  if (projectId) where.task = { projectId }
+  if (startDate || endDate) {
+    where.startTime = {}
+    if (startDate) where.startTime.gte = startDate
+    if (endDate) where.startTime.lte = endDate
+  }
+
+  const entries = await prisma.timeEntry.findMany({
+    where,
+    select: timeEntryWithRelationsSelect,
+    orderBy: { startTime: 'desc' },
+    take: 10000,
+  })
+
+  logger.info(`Export query returned ${entries.length} time entries`)
+
+  return entries
+}
+
+/**
+ * Gets pending time entries for admin/direzione approval
+ * @param params - Filter params
+ * @returns Paginated pending entries
+ */
+export async function getPendingTimeEntries(params: {
+  userId?: string
+  projectId?: string
+  page?: number
+  limit?: number
+}) {
+  const { userId, projectId, page = 1, limit = 50 } = params
+
+  const where: Prisma.TimeEntryWhereInput = {
+    isDeleted: false,
+    isRunning: false,
+    approvalStatus: 'pending',
+  }
+
+  if (userId) where.userId = userId
+  if (projectId) where.task = { projectId, isDeleted: false }
+
+  const skip = (page - 1) * limit
+
+  const [entries, total] = await Promise.all([
+    prisma.timeEntry.findMany({
+      where,
+      select: timeEntryWithRelationsSelect,
+      skip,
+      take: limit,
+      orderBy: { startTime: 'desc' },
+    }),
+    prisma.timeEntry.count({ where }),
+  ])
+
+  return {
+    data: entries,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  }
+}
+
+/**
+ * Bulk approve time entries (admin/direzione only)
+ * @param ids - Array of time entry IDs to approve
+ * @param approverId - User performing approval
+ * @returns Count of approved entries
+ */
+export async function approveTimeEntries(ids: string[], approverId: string): Promise<{ count: number }> {
+  // Verify entries exist, are not deleted and not already approved
+  const entries = await prisma.timeEntry.findMany({
+    where: {
+      id: { in: ids },
+      isDeleted: false,
+      approvalStatus: { in: ['pending', 'rejected'] },
+    },
+    select: { id: true, approvalStatus: true },
+  })
+
+  if (entries.length === 0) {
+    throw new Error('No eligible entries found')
+  }
+
+  const validIds = entries.map((e) => e.id)
+
+  await prisma.$transaction(async (tx) => {
+    await tx.timeEntry.updateMany({
+      where: { id: { in: validIds } },
+      data: {
+        approvalStatus: 'approved',
+        approvedById: approverId,
+        approvedAt: new Date(),
+        rejectionNote: null,
+        updatedAt: new Date(),
+      },
+    })
+
+    // Audit log for each entry (bulk)
+    for (const entry of entries) {
+      await auditService.logUpdate(
+        EntityType.TIME_ENTRY,
+        entry.id,
+        approverId,
+        { approvalStatus: entry.approvalStatus },
+        { approvalStatus: 'approved' },
+        tx
+      )
+    }
+  })
+
+  logger.info(`Bulk approved ${validIds.length} time entries`, { approverId })
+
+  return { count: validIds.length }
+}
+
+/**
+ * Bulk reject time entries (admin/direzione only)
+ * @param ids - Array of time entry IDs to reject
+ * @param approverId - User performing rejection
+ * @param rejectionNote - Optional reason for rejection
+ * @returns Count of rejected entries
+ */
+export async function rejectTimeEntries(
+  ids: string[],
+  approverId: string,
+  rejectionNote?: string
+): Promise<{ count: number }> {
+  const entries = await prisma.timeEntry.findMany({
+    where: {
+      id: { in: ids },
+      isDeleted: false,
+      approvalStatus: { in: ['pending', 'approved'] },
+    },
+    select: { id: true, approvalStatus: true },
+  })
+
+  if (entries.length === 0) {
+    throw new Error('No eligible entries found')
+  }
+
+  const validIds = entries.map((e) => e.id)
+
+  await prisma.$transaction(async (tx) => {
+    await tx.timeEntry.updateMany({
+      where: { id: { in: validIds } },
+      data: {
+        approvalStatus: 'rejected',
+        approvedById: approverId,
+        approvedAt: new Date(),
+        rejectionNote: rejectionNote || null,
+        updatedAt: new Date(),
+      },
+    })
+
+    for (const entry of entries) {
+      await auditService.logUpdate(
+        EntityType.TIME_ENTRY,
+        entry.id,
+        approverId,
+        { approvalStatus: entry.approvalStatus },
+        { approvalStatus: 'rejected', rejectionNote },
+        tx
+      )
+    }
+  })
+
+  logger.info(`Bulk rejected ${validIds.length} time entries`, { approverId })
+
+  return { count: validIds.length }
+}
+
 export const timeEntryService = {
   startTimer,
   stopTimer,
@@ -617,7 +819,11 @@ export const timeEntryService = {
   updateTimeEntry,
   deleteTimeEntry,
   getTimeEntries,
+  getTimeEntriesForExport,
   getUserTimeReport,
   getDailySummary,
   getTeamTimeReport,
+  approveTimeEntries,
+  rejectTimeEntries,
+  getPendingTimeEntries,
 }

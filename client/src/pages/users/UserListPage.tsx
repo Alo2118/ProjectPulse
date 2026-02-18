@@ -10,9 +10,6 @@ import { useAuthStore } from '@stores/authStore'
 import {
   Plus,
   Search,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
   Users,
   Mail,
   Shield,
@@ -21,6 +18,8 @@ import {
   Trash2,
   AlertTriangle,
 } from 'lucide-react'
+import { Pagination } from '@components/common/Pagination'
+import { useDebounce } from '@hooks/useDebounce'
 import { USER_ROLE_LABELS, USER_ROLE_COLORS, USER_ROLE_OPTIONS } from '@/constants'
 import { UserRole } from '@/types'
 
@@ -36,22 +35,24 @@ export default function UserListPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; email: string } | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  const debouncedSearch = useDebounce(searchTerm, 300)
+
   useEffect(() => {
     const filters: Record<string, string> = {}
-    if (searchTerm) filters.search = searchTerm
+    if (debouncedSearch) filters.search = debouncedSearch
     if (roleFilter) filters.role = roleFilter
     if (activeFilter) filters.isActive = activeFilter
 
     setSearchParams(filters)
 
     fetchUsers({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       role: roleFilter || undefined,
       isActive: activeFilter || undefined,
       page: 1,
       limit: pagination.limit,
     })
-  }, [searchTerm, roleFilter, activeFilter])
+  }, [debouncedSearch, roleFilter, activeFilter])
 
   const handleHardDelete = async () => {
     if (!deleteConfirm) return
@@ -67,7 +68,7 @@ export default function UserListPage() {
 
   const handlePageChange = (newPage: number) => {
     fetchUsers({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       role: roleFilter || undefined,
       isActive: activeFilter || undefined,
       page: newPage,
@@ -77,8 +78,45 @@ export default function UserListPage() {
 
   if (isLoading && users.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="skeleton h-8 w-28" />
+            <div className="skeleton h-4 w-56 mt-2" />
+          </div>
+          <div className="skeleton h-10 w-36" />
+        </div>
+
+        {/* Filters skeleton */}
+        <div className="card p-4">
+          <div className="flex flex-wrap gap-4">
+            <div className="skeleton h-10 flex-1 min-w-64" />
+            <div className="skeleton h-10 w-32" />
+            <div className="skeleton h-10 w-24" />
+          </div>
+        </div>
+
+        {/* User list skeleton */}
+        <div className="card divide-y divide-gray-200 dark:divide-gray-700">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex items-center p-4 gap-4">
+              <div className="skeleton w-10 h-10 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-5 w-40" />
+                <div className="skeleton h-4 w-56" />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="skeleton h-6 w-20 rounded-full" />
+                <div className="skeleton h-4 w-16" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="skeleton w-9 h-9 rounded-lg" />
+                <div className="skeleton w-9 h-9 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -88,7 +126,7 @@ export default function UserListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Utenti</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Utenti</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gestisci gli utenti della piattaforma
           </p>
@@ -225,34 +263,13 @@ export default function UserListPage() {
           </div>
 
           {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {(pagination.page - 1) * pagination.limit + 1} -{' '}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} di{' '}
-                {pagination.total} utenti
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Pagina {pagination.page} di {pagination.pages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={pagination.page}
+            pages={pagination.pages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
       {/* Hard Delete Confirmation Modal */}

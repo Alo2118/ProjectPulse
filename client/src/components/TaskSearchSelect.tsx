@@ -58,7 +58,7 @@ export default function TaskSearchSelect({
           setTasks(response.data.data)
         }
       } catch {
-        console.error('Failed to fetch tasks')
+        // silently ignore
       } finally {
         setIsLoading(false)
       }

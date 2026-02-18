@@ -80,8 +80,8 @@ export default function DocumentDetailPage() {
     if (!id) return
     try {
       await changeDocumentStatus(id, newStatus)
-    } catch (error) {
-      console.error('Failed to change status:', error)
+    } catch {
+      // silently ignore
     }
   }
 
@@ -90,8 +90,8 @@ export default function DocumentDetailPage() {
     setIsUploading(true)
     try {
       await uploadFile(id, e.target.files[0])
-    } catch (error) {
-      console.error('Failed to upload file:', error)
+    } catch {
+      // silently ignore
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -104,8 +104,7 @@ export default function DocumentDetailPage() {
     try {
       await deleteDocument(id)
       navigate('/documents')
-    } catch (error) {
-      console.error('Failed to delete document:', error)
+    } catch {
       setIsDeleting(false)
     }
   }

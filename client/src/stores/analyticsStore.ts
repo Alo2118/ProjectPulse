@@ -95,8 +95,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const res = await api.get<{ success: boolean; data: OverviewStats }>('/analytics/overview')
       if (res.data.success) set({ overview: res.data.data })
-    } catch (error) {
-      console.error('Failed to fetch overview:', error)
+    } catch {
+      // Fetch failed silently overview:', error)
     }
   },
 
@@ -104,8 +104,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const res = await api.get<{ success: boolean; data: TasksByStatus[] }>('/analytics/tasks-by-status')
       if (res.data.success) set({ tasksByStatus: res.data.data })
-    } catch (error) {
-      console.error('Failed to fetch tasks by status:', error)
+    } catch {
+      // Fetch failed silently tasks by status:', error)
     }
   },
 
@@ -113,8 +113,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const res = await api.get<{ success: boolean; data: HoursByProject[] }>('/analytics/hours-by-project')
       if (res.data.success) set({ hoursByProject: res.data.data })
-    } catch (error) {
-      console.error('Failed to fetch hours by project:', error)
+    } catch {
+      // Fetch failed silently hours by project:', error)
     }
   },
 
@@ -122,8 +122,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const res = await api.get<{ success: boolean; data: TaskCompletionTrend[] }>('/analytics/task-completion-trend')
       if (res.data.success) set({ completionTrend: res.data.data })
-    } catch (error) {
-      console.error('Failed to fetch completion trend:', error)
+    } catch {
+      // Fetch failed silently completion trend:', error)
     }
   },
 
@@ -131,8 +131,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const res = await api.get<{ success: boolean; data: TopContributor[] }>('/analytics/top-contributors')
       if (res.data.success) set({ topContributors: res.data.data })
-    } catch (error) {
-      console.error('Failed to fetch top contributors:', error)
+    } catch {
+      // Fetch failed silently top contributors:', error)
     }
   },
 
@@ -140,8 +140,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const res = await api.get<{ success: boolean; data: ProjectHealth[] }>('/analytics/project-health')
       if (res.data.success) set({ projectHealth: res.data.data })
-    } catch (error) {
-      console.error('Failed to fetch project health:', error)
+    } catch {
+      // Fetch failed silently project health:', error)
     }
   },
 

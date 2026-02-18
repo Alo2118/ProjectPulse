@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProjectStore } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
-import { Plus, Search, Loader2, Calendar, Users } from 'lucide-react'
+import { Plus, Search, Calendar, Users } from 'lucide-react'
 import { PROJECT_PRIORITY_BORDER_COLORS } from '@/constants'
 import { StatusIcon } from '@/components/ui/StatusIcon'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
@@ -52,8 +52,44 @@ export default function ProjectListPage() {
 
   if (isLoading && projects.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="skeleton h-8 w-32" />
+            <div className="skeleton h-4 w-64 mt-2" />
+          </div>
+          <div className="skeleton h-10 w-40" />
+        </div>
+
+        {/* Filters skeleton */}
+        <div className="card p-4">
+          <div className="flex flex-wrap gap-4">
+            <div className="skeleton h-10 flex-1 min-w-64" />
+            <div className="skeleton h-10 w-40" />
+            <div className="skeleton h-10 w-40" />
+          </div>
+        </div>
+
+        {/* Project grid skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="card p-6 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="skeleton h-6 w-20" />
+                <div className="skeleton h-3 w-3 rounded-full" />
+              </div>
+              <div className="skeleton h-6 w-3/4" />
+              <div className="skeleton h-4 w-1/2" />
+              <div className="skeleton h-16 w-full" />
+              <div className="skeleton h-2 w-full" />
+              <div className="flex justify-between">
+                <div className="skeleton h-4 w-24" />
+                <div className="skeleton h-4 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -63,7 +99,7 @@ export default function ProjectListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Progetti</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Progetti</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gestisci i tuoi progetti e monitora l'avanzamento
           </p>

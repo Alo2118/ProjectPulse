@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useProjectStore } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
-import { useDashboardStore } from '@stores/dashboardStore'
+import { useTimerToggle } from '@hooks/useTimerToggle'
 import { useTaskTreeStore } from '@stores/taskTreeStore'
 import api from '@services/api'
 import {
@@ -35,6 +35,7 @@ import { MetaRow } from '@/components/common/MetaRow'
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
 import { TabSection } from '@/components/common/TabSection'
 import { QuickLinksGrid } from '@/components/common/QuickLinksGrid'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
 import { TaskTreeView } from '@/components/reports/TaskTreeView'
 import { StatusIcon } from '@/components/ui/StatusIcon'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -65,7 +66,7 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentProject, isLoading, fetchProject, clearCurrentProject } = useProjectStore()
-  const { runningTimer, startTimer, stopTimer } = useDashboardStore()
+  const { canTrackTime, handleTimerToggle, runningTimerTaskId } = useTimerToggle()
   const { treeData } = useTaskTreeStore()
 
   const [notes, setNotes] = useState<Note[]>([])
@@ -91,8 +92,8 @@ export default function ProjectDetailPage() {
       if (response.data.success) {
         setNotes(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to load notes:', error)
+    } catch {
+      // silently ignore
     } finally {
       setNotesLoading(false)
     }
@@ -107,8 +108,8 @@ export default function ProjectDetailPage() {
       if (response.data.success) {
         setAttachments(response.data.data)
       }
-    } catch (error) {
-      console.error('Failed to load attachments:', error)
+    } catch {
+      // silently ignore
     } finally {
       setAttachmentsLoading(false)
     }
@@ -130,24 +131,9 @@ export default function ProjectDetailPage() {
     setAttachments((prev) => prev.filter((a) => a.id !== attachmentId))
   }, [])
 
-  const handleTimerToggle = useCallback(
-    async (taskId: string) => {
-      try {
-        if (runningTimer?.taskId === taskId) {
-          await stopTimer()
-        } else {
-          await startTimer(taskId)
-        }
-      } catch (error) {
-        console.error('Timer error:', error)
-      }
-    },
-    [runningTimer?.taskId, startTimer, stopTimer]
-  )
 
   const canEdit = user?.role === 'admin' || user?.role === 'direzione' || currentProject?.ownerId === user?.id
   const showInternalToggle = user?.role === 'admin' || user?.role === 'direzione'
-  const canTrackTime = user?.role !== 'direzione'
 
   // Stats from tree store (populated by TaskTreeView)
   const projectStats = treeData?.projects?.[0]?.stats
@@ -194,6 +180,14 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="space-y-4">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Progetti', href: '/projects' },
+          { label: currentProject.name },
+        ]}
+      />
+
       {/* Page Header */}
       <DetailPageHeader title="Dettagli Progetto" subtitle={currentProject.code}>
         {canEdit && (
@@ -317,7 +311,7 @@ export default function ProjectDetailPage() {
                   showFilters={false}
                   canTrackTime={canTrackTime}
                   onTimerToggle={handleTimerToggle}
-                  runningTimerId={runningTimer?.taskId ?? null}
+                  runningTimerId={runningTimerTaskId}
                 />
               </div>
             ),
@@ -386,7 +380,7 @@ export default function ProjectDetailPage() {
             iconBgClass: 'bg-green-100 dark:bg-green-900/30',
             iconColorClass: 'text-green-600 dark:text-green-400',
             title: 'Tempo',
-            subtitle: 'Time tracking',
+            subtitle: 'Registrazione ore',
           },
           {
             to: `/users?projectId=${id}`,

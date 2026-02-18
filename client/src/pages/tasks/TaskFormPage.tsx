@@ -28,6 +28,7 @@ import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal'
 import RecurrenceSettings from '@components/tasks/RecurrenceSettings'
 import TagInput from '@components/tags/TagInput'
 import { useTagStore } from '@stores/tagStore'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
 
 // Zod validation schema
 const taskSchema = z.object({
@@ -44,6 +45,10 @@ const taskSchema = z.object({
   parentTaskId: z.string().optional().or(z.literal('')),
   assigneeId: z.string().optional().or(z.literal('')),
   assignToSubtasks: z.boolean().default(false),
+  isRecurring: z.boolean().optional(),
+  blockedReason: z.string().optional().or(z.literal('')),
+  recurrencePattern: z.string().optional().or(z.literal('')),
+  position: z.string().optional().or(z.literal('')),
 })
 
 type TaskFormData = z.infer<typeof taskSchema>
@@ -114,8 +119,8 @@ export default function TaskFormPage() {
         if (response.data.success !== false) {
           setUsers(response.data.data)
         }
-      } catch (error) {
-        console.error('Failed to load users:', error)
+      } catch {
+        // silently ignore
       }
     }
     loadUsers()
@@ -129,8 +134,8 @@ export default function TaskFormPage() {
         if (response.data.success !== false) {
           setProjects(response.data.data)
         }
-      } catch (error) {
-        console.error('Failed to load projects:', error)
+      } catch {
+        // silently ignore
       }
     }
     loadProjects()
@@ -230,16 +235,6 @@ export default function TaskFormPage() {
         submitData.parentTaskId = data.parentTaskId
       }
 
-      // Debug logging
-      console.log('Submitting task:', {
-        isStandalone: data.isStandalone,
-        taskType: data.taskType,
-        projectId: data.projectId,
-        parentTaskId: data.parentTaskId,
-        title: data.title,
-        submitData,
-      })
-
       if (isEditMode && id) {
         await updateTask(id, submitData)
         navigate(`/tasks/${id}`)
@@ -257,7 +252,6 @@ export default function TaskFormPage() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore durante il salvataggio'
-      console.error('Task save error:', message, error)
       setSubmitError(message)
     } finally {
       setIsSubmitting(false)
@@ -325,7 +319,15 @@ export default function TaskFormPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Task', href: '/tasks' },
+          { label: isEditMode ? 'Modifica Task' : 'Nuovo Task' },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center mb-6">
         <button
@@ -342,7 +344,7 @@ export default function TaskFormPage() {
           ) : (
             <CheckSquare className="w-6 h-6 text-primary-500 mr-3" />
           )}
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {isEditMode
               ? `Modifica ${selectedTaskType === 'milestone' ? 'Milestone' : selectedTaskType === 'subtask' ? 'Subtask' : 'Task'}`
               : `${selectedTaskType === 'milestone' ? 'Nuova Milestone' : selectedTaskType === 'subtask' ? 'Nuovo Subtask' : 'Nuovo Task'}`

@@ -125,8 +125,8 @@ export const useDocumentStore = create<DocumentState>((set) => ({
       if (response.data.success) {
         set({ documentStats: response.data.data })
       }
-    } catch (error) {
-      console.error('Failed to fetch document stats:', error)
+    } catch {
+      // silently ignore
     }
   },
 

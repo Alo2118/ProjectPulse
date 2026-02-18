@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import { useTeamTimeStore } from '@stores/teamTimeStore'
 import { useProjectStore } from '@stores/projectStore'
 import { useUserStore } from '@stores/userStore'
+import { useAuthStore } from '@stores/authStore'
+import { toast } from '@stores/toastStore'
 import {
   Clock,
   Loader2,
@@ -15,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
+  Download,
 } from 'lucide-react'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -52,8 +55,10 @@ export default function TeamTimePage() {
 
   const { projects, fetchProjects } = useProjectStore()
   const { users, fetchUsers } = useUserStore()
+  const { token } = useAuthStore()
 
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
     fetchProjects()
@@ -76,6 +81,43 @@ export default function TeamTimePage() {
     return entries.filter((e) => e.userId === userId)
   }
 
+  const handleExportCSV = async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const params = new URLSearchParams()
+      if (filters.startDate) params.append('startDate', filters.startDate.split('T')[0])
+      if (filters.endDate) params.append('endDate', filters.endDate.split('T')[0])
+      if (filters.projectId) params.append('projectId', filters.projectId)
+      if (filters.userId) params.append('userId', filters.userId)
+
+      const response = await fetch(`/api/time-entries/export?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token ?? ''}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Export failed')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const today = new Date().toISOString().split('T')[0]
+      a.download = `time-entries-${today}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Errore', 'Impossibile esportare le ore')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const maxUserMinutes = Math.max(...byUser.map((u) => u.totalMinutes), 1)
 
   if (isLoading && byUser.length === 0) {
@@ -89,11 +131,27 @@ export default function TeamTimePage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tempo Team</h1>
-        <p className="mt-1 text-gray-600 dark:text-gray-400">
-          Panoramica delle ore registrate dal team
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Tempo Team</h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
+            Panoramica delle ore registrate dal team
+          </p>
+        </div>
+        <button
+          onClick={handleExportCSV}
+          disabled={isExporting}
+          className="btn-secondary flex items-center self-start disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Esporta CSV"
+        >
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4 mr-2" />
+          )}
+          <span className="hidden sm:inline">Esporta CSV</span>
+          <span className="sm:hidden">CSV</span>
+        </button>
       </div>
 
       {/* Filters */}

@@ -11,12 +11,12 @@ import {
   Plus,
   Search,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   MessageSquarePlus,
   User,
   Calendar,
 } from 'lucide-react'
+import { Pagination } from '@components/common/Pagination'
+import { useDebounce } from '@hooks/useDebounce'
 import {
   INPUT_STATUS_LABELS,
   INPUT_STATUS_COLORS,
@@ -39,9 +39,11 @@ export default function UserInputListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showMyInputs, setShowMyInputs] = useState(false)
 
+  const debouncedSearch = useDebounce(searchTerm, 300)
+
   useEffect(() => {
     const filters: Record<string, string> = {}
-    if (searchTerm) filters.search = searchTerm
+    if (debouncedSearch) filters.search = debouncedSearch
     if (statusFilter) filters.status = statusFilter
     if (categoryFilter) filters.category = categoryFilter
     if (priorityFilter) filters.priority = priorityFilter
@@ -51,19 +53,19 @@ export default function UserInputListPage() {
 
     const fetchFn = showMyInputs ? fetchMyInputs : fetchInputs
     fetchFn({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       status: statusFilter || undefined,
       category: categoryFilter || undefined,
       priority: priorityFilter || undefined,
       page: pagination.page,
       limit: pagination.limit,
     })
-  }, [searchTerm, statusFilter, categoryFilter, priorityFilter, showMyInputs])
+  }, [debouncedSearch, statusFilter, categoryFilter, priorityFilter, showMyInputs])
 
   const handlePageChange = (newPage: number) => {
     const fetchFn = showMyInputs ? fetchMyInputs : fetchInputs
     fetchFn({
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined,
       status: statusFilter || undefined,
       category: categoryFilter || undefined,
       priority: priorityFilter || undefined,
@@ -93,7 +95,7 @@ export default function UserInputListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Segnalazioni</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Segnalazioni</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gestisci segnalazioni e suggerimenti
           </p>
@@ -269,34 +271,13 @@ export default function UserInputListPage() {
           </div>
 
           {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                {pagination.total} segnalazioni
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Pagina {pagination.page} di {pagination.pages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={pagination.page}
+            pages={pagination.pages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
 

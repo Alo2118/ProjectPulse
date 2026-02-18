@@ -32,7 +32,11 @@ const createTaskSchema = z.object({
   taskType: z.enum(['milestone', 'task', 'subtask']).default('task'),
   startDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
   dueDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
-  estimatedHours: z.preprocess(numberPreprocess, z.number().positive('Estimated hours must be positive').optional()),
+  estimatedHours: z.preprocess(numberPreprocess, z.number().positive('Estimated hours must be positive').nullable().optional()),
+  isRecurring: z.boolean().optional(),
+  blockedReason: z.string().max(1000).nullable().optional(),
+  recurrencePattern: z.string().nullable().optional(),
+  position: z.preprocess(numberPreprocess, z.number().int().nonnegative().nullable().optional()),
 })
 
 const updateTaskSchema = z.object({
@@ -49,6 +53,10 @@ const updateTaskSchema = z.object({
   dueDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
   estimatedHours: z.preprocess(numberPreprocess, z.number().positive().nullable().optional()),
   actualHours: z.preprocess(numberPreprocess, z.number().positive().nullable().optional()),
+  isRecurring: z.boolean().optional(),
+  blockedReason: z.string().max(1000).nullable().optional(),
+  recurrencePattern: z.string().nullable().optional(),
+  position: z.number().int().nonnegative().optional(),
 })
 
 const querySchema = z.object({
@@ -206,6 +214,10 @@ export async function createTask(req: Request, res: Response, next: NextFunction
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
         estimatedHours: data.estimatedHours ?? undefined,
+        isRecurring: data.isRecurring,
+        blockedReason: data.blockedReason ?? undefined,
+        recurrencePattern: data.recurrencePattern ?? undefined,
+        position: data.position ?? undefined,
       },
       userId
     )
@@ -252,6 +264,10 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
         estimatedHours: data.estimatedHours ?? undefined,
         actualHours: data.actualHours ?? undefined,
+        isRecurring: data.isRecurring,
+        blockedReason: data.blockedReason ?? undefined,
+        recurrencePattern: data.recurrencePattern ?? undefined,
+        position: data.position,
       },
       userId
     )
@@ -385,6 +401,71 @@ export async function getMyTaskStats(req: Request, res: Response, next: NextFunc
     const stats = await taskService.getUserTaskStats(userId)
 
     res.json({ success: true, data: stats })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// ============================================================
+// BULK OPERATION SCHEMAS
+// ============================================================
+
+const bulkUpdateSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, 'At least one task ID required').max(100, 'Maximum 100 tasks per bulk operation'),
+  update: z
+    .object({
+      status: z.enum(['todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled']).optional(),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      assigneeId: z.string().uuid().optional(),
+    })
+    .refine((obj) => Object.keys(obj).length > 0, {
+      message: 'At least one field to update is required',
+    }),
+})
+
+const bulkDeleteSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, 'At least one task ID required').max(100, 'Maximum 100 tasks per bulk operation'),
+})
+
+/**
+ * Bulk updates multiple tasks (status, priority, or assignee)
+ * @route PATCH /api/tasks/bulk
+ */
+export async function bulkUpdate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user?.userId
+
+    if (!userId) {
+      throw new AppError('User not authenticated', 401)
+    }
+
+    const { ids, update } = bulkUpdateSchema.parse(req.body)
+
+    const count = await taskService.bulkUpdateTasks(ids, update, userId)
+
+    res.json({ success: true, data: { updated: count } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Bulk soft-deletes multiple tasks
+ * @route DELETE /api/tasks/bulk
+ */
+export async function bulkDelete(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user?.userId
+
+    if (!userId) {
+      throw new AppError('User not authenticated', 401)
+    }
+
+    const { ids } = bulkDeleteSchema.parse(req.body)
+
+    const count = await taskService.bulkDeleteTasks(ids, userId)
+
+    res.json({ success: true, data: { deleted: count } })
   } catch (error) {
     next(error)
   }

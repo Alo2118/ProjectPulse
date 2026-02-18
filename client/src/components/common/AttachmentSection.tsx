@@ -126,11 +126,9 @@ export function AttachmentSection({
       if (response.data.success) {
         onAttachmentAdded(response.data.data)
       } else {
-        console.error('Attachment upload failed:', response.data)
         alert('Errore durante il caricamento del file')
       }
     } catch (error) {
-      console.error('Failed to upload file:', error)
       const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto'
       alert(`Errore durante il caricamento del file: ${errorMessage}`)
     } finally {
@@ -147,8 +145,8 @@ export function AttachmentSection({
     try {
       await api.delete(`/attachments/${attachmentId}`)
       onAttachmentDeleted(attachmentId)
-    } catch (error) {
-      console.error('Failed to delete attachment:', error)
+    } catch {
+      // silently ignore
     }
   }
 
@@ -204,8 +202,7 @@ export function AttachmentSection({
         alert(`Documento creato: ${response.data.data.code}`)
         closeConvertModal()
       }
-    } catch (error) {
-      console.error('Failed to convert to document:', error)
+    } catch {
       alert('Errore durante la conversione in documento')
     } finally {
       setIsConverting(false)

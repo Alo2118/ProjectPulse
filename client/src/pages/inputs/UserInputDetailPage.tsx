@@ -35,6 +35,8 @@ import {
 import UserInputFormModal from './UserInputFormModal'
 import ConvertToTaskModal from './ConvertToTaskModal'
 import ConvertToProjectModal from './ConvertToProjectModal'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
+import { ConfirmDialog } from '@components/common/ConfirmDialog'
 
 export default function UserInputDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -55,6 +57,8 @@ export default function UserInputDetailPage() {
   const [isConvertToTaskOpen, setIsConvertToTaskOpen] = useState(false)
   const [isConvertToProjectOpen, setIsConvertToProjectOpen] = useState(false)
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
   useEffect(() => {
@@ -73,13 +77,13 @@ export default function UserInputDetailPage() {
   const canDelete = (isOwner && isPending) || user?.role === 'admin'
 
   const handleDelete = async () => {
-    if (!currentInput || !window.confirm('Sei sicuro di voler eliminare questa segnalazione?')) return
+    if (!currentInput) return
+    setIsDeleting(true)
     try {
       await deleteInput(currentInput.id)
-      // deleted
       navigate('/inputs')
     } catch {
-      // error
+      setIsDeleting(false)
     }
   }
 
@@ -136,6 +140,14 @@ export default function UserInputDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Segnalazioni', href: '/inputs' },
+          { label: currentInput.title },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -147,7 +159,7 @@ export default function UserInputDetailPage() {
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 {currentInput.title}
               </h1>
               <span className={`text-xs px-2 py-1 rounded-full ${INPUT_STATUS_COLORS[currentInput.status]}`}>
@@ -169,7 +181,7 @@ export default function UserInputDetailPage() {
             </button>
           )}
           {canDelete && (
-            <button onClick={handleDelete} className="btn-danger flex items-center">
+            <button onClick={() => setIsDeleteConfirmOpen(true)} className="btn-danger flex items-center">
               <Trash2 className="w-4 h-4 mr-2" />
               Elimina
             </button>
@@ -439,6 +451,17 @@ export default function UserInputDetailPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        onConfirm={handleDelete}
+        title="Elimina segnalazione"
+        message={`Sei sicuro di voler eliminare "${currentInput.title}"? L'operazione non può essere annullata.`}
+        confirmLabel="Elimina"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

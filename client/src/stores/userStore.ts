@@ -6,6 +6,7 @@
 import { create } from 'zustand'
 import api from '@services/api'
 import { User, UserRole, PaginatedResponse } from '@/types'
+import { toast } from '@stores/toastStore'
 
 interface UserFilters {
   page?: number
@@ -112,12 +113,14 @@ export const useUserStore = create<UserState>((set) => ({
           users: [response.data.data, ...state.users],
           isLoading: false,
         }))
+        toast.success('Utente creato', `${data.firstName} ${data.lastName}`)
         return response.data.data
       }
       throw new Error('Errore nella creazione utente')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nella creazione utente'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -132,10 +135,12 @@ export const useUserStore = create<UserState>((set) => ({
           currentUser: state.currentUser?.id === id ? response.data.data : state.currentUser,
           isLoading: false,
         }))
+        toast.success('Utente aggiornato')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nell\'aggiornamento utente'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -146,12 +151,14 @@ export const useUserStore = create<UserState>((set) => ({
       const response = await api.put<{ success: boolean; data: User }>('/users/me', data)
       if (response.data.success && response.data.data) {
         set({ isLoading: false })
+        toast.success('Profilo aggiornato')
         return response.data.data
       }
       throw new Error('Errore nell\'aggiornamento profilo')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nell\'aggiornamento profilo'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -165,9 +172,11 @@ export const useUserStore = create<UserState>((set) => ({
         currentUser: state.currentUser?.id === id ? null : state.currentUser,
         isLoading: false,
       }))
+      toast.success('Utente disattivato')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nell\'eliminazione utente'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },
@@ -181,9 +190,11 @@ export const useUserStore = create<UserState>((set) => ({
         currentUser: state.currentUser?.id === id ? null : state.currentUser,
         isLoading: false,
       }))
+      toast.success('Utente eliminato definitivamente')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nell\'eliminazione permanente'
       set({ error: message, isLoading: false })
+      toast.error('Errore', message)
       throw error
     }
   },

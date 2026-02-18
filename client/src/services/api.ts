@@ -21,10 +21,9 @@ const onTokenRefreshed = (token: string) => {
   refreshSubscribers = []
 }
 
-const onRefreshFailed = (error: unknown) => {
+const onRefreshFailed = (_error: unknown) => {
   // Clear waiting subscribers - they will timeout or be handled by the caller
   refreshSubscribers = []
-  console.error('[Auth] Token refresh failed:', error)
 }
 
 // Request interceptor - add auth token and handle FormData
@@ -62,8 +61,6 @@ api.interceptors.response.use(
     if (error.response.status !== 401) {
       return Promise.reject(error)
     }
-
-    console.warn('[Auth] 401 received for:', originalRequest?.url)
 
     // Already retried - don't retry again
     if (originalRequest?._retry) {
@@ -121,7 +118,6 @@ api.interceptors.response.use(
       if (axios.isAxiosError(refreshError) && refreshError.response) {
         const status = refreshError.response.status
         if (status === 401 || status === 403) {
-          console.warn('[Auth] Refresh token rejected by server, logging out')
           useAuthStore.getState().logout()
         }
         // For other server errors (500, etc.), don't logout - might be temporary
