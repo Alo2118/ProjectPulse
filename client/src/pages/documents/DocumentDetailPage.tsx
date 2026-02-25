@@ -19,6 +19,9 @@ import {
   CheckCircle,
   ChevronDown,
   User,
+  CalendarClock,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import {
   DOCUMENT_STATUS_LABELS,
@@ -154,7 +157,7 @@ export default function DocumentDetailPage() {
                     className="flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline"
                   >
                     <FolderOpen className="w-4 h-4" />
-                    {currentDocument.project.code}
+                    {currentDocument.project.name}
                   </Link>
                 )}
                 {currentDocument.createdBy && (
@@ -211,6 +214,48 @@ export default function DocumentDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Review Info */}
+      {(currentDocument.reviewDueDate || currentDocument.reviewFrequencyDays) && (
+        <div className="card p-4">
+          <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <CalendarClock className="w-4 h-4 text-primary-500" />
+            Revisione Periodica
+          </h2>
+          <div className="flex flex-wrap items-center gap-4">
+            {currentDocument.reviewDueDate && (() => {
+              const dueDate = new Date(currentDocument.reviewDueDate)
+              const isOverdue = dueDate < new Date()
+              return (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Prossima revisione:</span>
+                  <span className={`text-sm font-medium ${
+                    isOverdue
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-900 dark:text-white'
+                  }`}>
+                    {formatDate(currentDocument.reviewDueDate)}
+                  </span>
+                  {isOverdue && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full">
+                      <AlertCircle className="w-3 h-3" />
+                      Scaduta
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
+            {currentDocument.reviewFrequencyDays && (
+              <div className="flex items-center gap-2">
+                <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Frequenza: ogni <span className="font-medium text-gray-900 dark:text-white">{currentDocument.reviewFrequencyDays}</span> giorni
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Description - Collapsible */}
       {currentDocument.description && (
@@ -315,12 +360,12 @@ export default function DocumentDetailPage() {
               <button
                 key={status}
                 onClick={() => handleStatusChange(status)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                   status === 'approved'
                     ? 'bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400'
                     : status === 'obsolete'
                       ? 'bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400'
-                      : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      : 'bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 {status === 'approved' && <CheckCircle className="w-4 h-4 mr-1 inline" />}

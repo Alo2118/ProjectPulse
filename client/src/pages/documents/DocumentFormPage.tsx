@@ -9,7 +9,7 @@ import { useDocumentStore } from '@stores/documentStore'
 import { useProjectStore } from '@stores/projectStore'
 import { ArrowLeft, Loader2, Save, Upload, X, FileText, FileImage, FileSpreadsheet, File } from 'lucide-react'
 import { DOCUMENT_TYPE_OPTIONS } from '@/constants'
-import { DocumentType } from '@/types'
+import { Document, DocumentType } from '@/types'
 import { Breadcrumb } from '@/components/common/Breadcrumb'
 
 export default function DocumentFormPage() {
@@ -26,6 +26,8 @@ export default function DocumentFormPage() {
     title: '',
     description: '',
     type: 'design_input' as DocumentType,
+    reviewDueDate: '',
+    reviewFrequencyDays: '',
   })
   const [file, setFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -85,6 +87,12 @@ export default function DocumentFormPage() {
         title: currentDocument.title,
         description: currentDocument.description || '',
         type: currentDocument.type,
+        reviewDueDate: currentDocument.reviewDueDate
+          ? new Date(currentDocument.reviewDueDate).toISOString().split('T')[0]
+          : '',
+        reviewFrequencyDays: currentDocument.reviewFrequencyDays
+          ? String(currentDocument.reviewFrequencyDays)
+          : '',
       })
     }
   }, [isEditing, currentDocument])
@@ -114,7 +122,9 @@ export default function DocumentFormPage() {
           title: formData.title,
           description: formData.description || undefined,
           type: formData.type,
-        })
+          reviewDueDate: formData.reviewDueDate || null,
+          reviewFrequencyDays: formData.reviewFrequencyDays ? parseInt(formData.reviewFrequencyDays, 10) : null,
+        } as Partial<Document>)
         navigate(`/documents/${id}`)
       } else {
         const data = new FormData()
@@ -122,6 +132,8 @@ export default function DocumentFormPage() {
         data.append('title', formData.title)
         if (formData.description) data.append('description', formData.description)
         data.append('type', formData.type)
+        if (formData.reviewDueDate) data.append('reviewDueDate', formData.reviewDueDate)
+        if (formData.reviewFrequencyDays) data.append('reviewFrequencyDays', formData.reviewFrequencyDays)
         if (file) data.append('file', file)
 
         const newDoc = await createDocument(data)
@@ -182,7 +194,7 @@ export default function DocumentFormPage() {
               <option value="">Seleziona...</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.code} - {project.name}
+                  {project.name}
                 </option>
               ))}
             </select>
@@ -237,6 +249,42 @@ export default function DocumentFormPage() {
                 ))}
               </select>
             </div>
+
+            {/* Review fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Data prossima revisione
+                </label>
+                <input
+                  type="date"
+                  value={formData.reviewDueDate}
+                  onChange={(e) => setFormData({ ...formData, reviewDueDate: e.target.value })}
+                  className="input"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Data entro cui il documento deve essere rivisto
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Frequenza revisione (giorni)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={3650}
+                  value={formData.reviewFrequencyDays}
+                  onChange={(e) => setFormData({ ...formData, reviewFrequencyDays: e.target.value })}
+                  className="input"
+                  placeholder="es. 365"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Ogni quanti giorni il documento deve essere rivisto
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -284,7 +332,7 @@ export default function DocumentFormPage() {
                       setFile(null)
                       if (fileInputRef.current) fileInputRef.current.value = ''
                     }}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                    className="btn-icon text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
                     aria-label="Rimuovi file"
                   >
                     <X className="w-5 h-5" />

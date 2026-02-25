@@ -73,7 +73,7 @@ export const useDocumentStore = create<DocumentState>((set) => ({
         `/documents?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         set({
           documents: response.data.data,
           pagination: response.data.pagination,

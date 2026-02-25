@@ -7,7 +7,7 @@
 // ENUMS
 // ============================================================
 
-export type UserRole = 'admin' | 'direzione' | 'dipendente'
+export type UserRole = 'admin' | 'direzione' | 'dipendente' | 'guest'
 
 export type ProjectStatus =
   | 'planning'
@@ -63,6 +63,7 @@ export interface User {
   isActive?: boolean
   createdAt?: string
   lastLoginAt?: string | null
+  weeklyHoursTarget?: number | null
 }
 
 export interface ProjectTemplate {
@@ -119,6 +120,13 @@ export interface Project {
     completed: number
     blocked: number
   }
+  totalHoursLogged?: number
+  nextMilestone?: {
+    id: string
+    title: string
+    dueDate: string | null
+    daysRemaining: number | null
+  } | null
 }
 
 export interface Task {
@@ -131,8 +139,8 @@ export interface Task {
   priority: TaskPriority
   startDate: string | null
   dueDate: string | null
-  estimatedHours: string | null
-  actualHours: string | null
+  estimatedHours: number | null
+  actualHours: number | null
   blockedReason: string | null // Required when status is 'blocked'
   isDeleted: boolean
   createdAt: string
@@ -140,6 +148,7 @@ export interface Task {
   projectId: string | null
   parentTaskId: string | null
   assigneeId: string | null
+  departmentId: string | null
   createdById: string
   position: number
   isRecurring?: boolean
@@ -162,6 +171,11 @@ export interface Task {
     lastName: string
     email: string
     avatarUrl: string | null
+  } | null
+  department?: {
+    id: string
+    name: string
+    color: string
   } | null
   createdBy?: {
     id: string
@@ -270,6 +284,8 @@ export interface Comment {
   updatedAt: string
   taskId: string
   userId: string
+  parentId: string | null
+  replies?: Comment[]
   user?: {
     id: string
     firstName: string
@@ -406,6 +422,8 @@ export interface Document {
   createdById: string
   approvedById: string | null
   approvedAt: string | null
+  reviewDueDate: string | null
+  reviewFrequencyDays: number | null
   isDeleted: boolean
   createdAt: string
   updatedAt: string
@@ -438,14 +456,24 @@ export interface DocumentStats {
 
 export type NotificationType =
   | 'new_comment'
+  | 'mention'
   | 'task_assigned'
   | 'task_blocked'
+  | 'task_status_changed'
   | 'approval_requested'
   | 'risk_critical'
+  | 'risk_high'
+  | 'risk_assigned'
   | 'document_review'
+  | 'document_approved'
   | 'input_received'
   | 'input_processed'
   | 'input_converted'
+  | 'input_mention'
+  | 'task_blocked_mention'
+  | 'note_mention'
+  | 'automation'
+  | 'weekly_report_reminder'
 
 export interface Notification {
   id: string
@@ -670,7 +698,31 @@ export interface BlockerAnalysis {
   items: EnrichedBlockedTask[]
 }
 
+export interface RiskSummary {
+  id: string
+  code: string
+  title: string
+  description: string | null
+  category: string
+  probability: string
+  impact: string
+  riskLevel: number
+  status: string
+  mitigationPlan: string | null
+  projectId: string
+  projectName: string
+  projectCode: string
+  ownerName: string | null
+}
+
 export type ProjectHealthStatus = 'on-track' | 'at-risk' | 'off-track'
+
+export interface TaskBrief {
+  id: string
+  code: string
+  title: string
+  assigneeName: string | null
+}
 
 export interface ProjectHealthData {
   projectId: string
@@ -692,6 +744,9 @@ export interface ProjectHealthData {
     daysLeft: number | null
     completionPercent: number
   } | null
+  completedThisWeek: (TaskBrief & { completedAt: string })[]
+  inProgressTasks: (TaskBrief & { dueDate: string | null; isOverdue: boolean })[]
+  blockedTasksList: (TaskBrief & { blockedReason: string | null; daysBlocked: number })[]
 }
 
 export interface ProductivityMetrics {
@@ -699,6 +754,34 @@ export interface ProductivityMetrics {
   daysWorked: number
   avgHoursPerDay: number
   onTimeDeliveryRate: number
+}
+
+export interface PlannedTask {
+  id: string
+  code: string
+  title: string
+  projectId: string
+  projectName: string | null
+  assigneeId: string | null
+  assigneeName: string | null
+  dueDate: string | null
+  status: string
+  isOverdue: boolean
+}
+
+export interface MilestoneRow {
+  id: string
+  code: string
+  title: string
+  projectId: string
+  projectName: string
+  projectCode: string
+  baselineDate: string | null
+  currentDate: string | null
+  status: string
+  daysLeft: number | null
+  completionPercent: number
+  isOverdue: boolean
 }
 
 export interface PreviousWeekMetrics {
@@ -764,6 +847,9 @@ export interface WeeklyReportData {
   blockerAnalysis?: BlockerAnalysis
   productivity?: ProductivityMetrics
   previousWeek?: PreviousWeekMetrics
+  risks?: RiskSummary[]
+  plannedNextWeek?: PlannedTask[]
+  milestonesTable?: MilestoneRow[]
 }
 
 export interface WeeklyReport {
@@ -807,6 +893,12 @@ export interface TaskTreeStats {
   estimatedHours: number
 }
 
+export interface TaskDependencyRef {
+  id: string
+  code: string
+  title: string
+}
+
 export interface SubtaskNode {
   id: string
   code: string
@@ -820,11 +912,14 @@ export interface SubtaskNode {
     lastName: string
     avatarUrl: string | null
   } | null
+  department?: { id: string; name: string; color: string } | null
   dueDate: string | null
   estimatedHours: number
   actualHours: number
   stats: TaskTreeStats
   subtasks: SubtaskNode[]
+  blockedBy?: TaskDependencyRef[]
+  blocks?: TaskDependencyRef[]
 }
 
 export interface TaskNode {
@@ -840,11 +935,14 @@ export interface TaskNode {
     lastName: string
     avatarUrl: string | null
   } | null
+  department?: { id: string; name: string; color: string } | null
   dueDate: string | null
   estimatedHours: number
   actualHours: number
   stats: TaskTreeStats
   subtasks: SubtaskNode[]
+  blockedBy?: TaskDependencyRef[]
+  blocks?: TaskDependencyRef[]
 }
 
 export interface MilestoneNode {
@@ -860,11 +958,14 @@ export interface MilestoneNode {
     lastName: string
     avatarUrl: string | null
   } | null
+  department?: { id: string; name: string; color: string } | null
   dueDate: string | null
   estimatedHours: number
   actualHours: number
   stats: TaskTreeStats
   tasks: TaskNode[]
+  blockedBy?: TaskDependencyRef[]
+  blocks?: TaskDependencyRef[]
 }
 
 export interface ProjectNode {
@@ -997,6 +1098,101 @@ export interface TagAssignment {
 }
 
 // ============================================================
+// DEPARTMENT TYPES
+// ============================================================
+
+export interface Department {
+  id: string
+  name: string
+  description: string | null
+  color: string
+  isActive: boolean
+  isDeleted: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// ============================================================
+// CHECKLIST TYPES
+// ============================================================
+
+export interface ChecklistItem {
+  id: string
+  taskId: string
+  title: string
+  isChecked: boolean
+  position: number
+  createdAt: string
+  updatedAt: string
+}
+
+// ============================================================
+// CUSTOM FIELD TYPES
+// ============================================================
+
+export type CustomFieldType = 'text' | 'number' | 'dropdown' | 'date' | 'checkbox'
+
+export interface CustomFieldDefinition {
+  id: string
+  name: string
+  fieldType: CustomFieldType
+  options: string[] | null // dropdown options
+  projectId: string | null
+  isRequired: boolean
+  position: number
+  isActive: boolean
+  createdById: string
+  createdAt: string
+  updatedAt: string
+  project?: {
+    id: string
+    code: string
+    name: string
+  } | null
+}
+
+export interface CustomFieldValue {
+  id: string
+  definitionId: string
+  taskId: string
+  value: string | null
+  createdAt: string
+  updatedAt: string
+  definition?: CustomFieldDefinition
+}
+
+export interface CustomFieldWithValue {
+  definition: CustomFieldDefinition
+  value: CustomFieldValue | null
+}
+
+// ============================================================
+// SAVED VIEW TYPES
+// ============================================================
+
+export type SavedViewEntity = 'task' | 'project' | 'risk'
+
+export interface SavedView {
+  id: string
+  name: string
+  entity: SavedViewEntity
+  filters: Record<string, unknown>
+  columns: string[] | null
+  sortBy: string | null
+  sortOrder: 'asc' | 'desc' | null
+  isShared: boolean
+  isDefault: boolean
+  userId: string
+  createdAt: string
+  updatedAt: string
+  user?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
+
+// ============================================================
 // MILESTONE TYPES
 // ============================================================
 
@@ -1022,7 +1218,7 @@ export interface MilestoneWithStats extends Task {
     priority: TaskPriority
     startDate: string | null
     dueDate: string | null
-    estimatedHours: string | null
+    estimatedHours: number | null
     assignee?: {
       id: string
       firstName: string
@@ -1033,4 +1229,242 @@ export interface MilestoneWithStats extends Task {
       subtasks: number
     }
   }>
+}
+
+// ============================================================
+// PROJECT MEMBER TYPES
+// ============================================================
+
+export type ProjectRole = 'owner' | 'manager' | 'member' | 'viewer' | 'guest'
+
+export interface ProjectMember {
+  id: string
+  projectId: string
+  userId: string
+  projectRole: ProjectRole
+  addedById: string
+  createdAt: string
+  updatedAt: string
+  user?: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+    avatarUrl: string | null
+  }
+  addedBy?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
+
+export interface ProjectInvitation {
+  id: string
+  email: string
+  projectId: string
+  projectRole: ProjectRole
+  invitedById: string
+  token?: string
+  expiresAt: string
+  acceptedAt: string | null
+  createdAt: string
+  project?: {
+    id: string
+    code: string
+    name: string
+  }
+  invitedBy?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
+
+// ============================================================
+// WORKFLOW TYPES
+// ============================================================
+
+export interface WorkflowStatus {
+  key: string
+  label: string
+  color: string
+  isFinal: boolean
+  isInitial: boolean
+  requiresComment: boolean
+}
+
+export interface WorkflowTemplate {
+  id: string
+  name: string
+  description?: string
+  statuses: WorkflowStatus[]
+  transitions: Record<string, string[]>
+  isSystem: boolean
+  isDefault?: boolean
+  isActive?: boolean
+  createdAt?: string
+}
+
+// ============================================================
+// AUTOMATION TYPES
+// ============================================================
+
+export type TriggerType =
+  | 'task_status_changed'
+  | 'task_created'
+  | 'task_assigned'
+  | 'all_subtasks_completed'
+  | 'task_overdue'
+  | 'task_deadline_approaching'
+
+export type ActionType =
+  | 'notify_user'
+  | 'notify_assignee'
+  | 'notify_project_owner'
+  | 'update_parent_status'
+  | 'set_task_field'
+  | 'create_comment'
+  | 'assign_to_user'
+
+export type ConditionType =
+  | 'task_priority_is'
+  | 'task_type_is'
+  | 'task_has_assignee'
+  | 'task_in_project'
+  | 'task_has_subtasks'
+  | 'task_field_equals'
+
+export interface TriggerConfig {
+  type: TriggerType
+  params: Record<string, unknown>
+}
+
+export interface ConditionConfig {
+  type: ConditionType
+  params: Record<string, unknown>
+}
+
+export interface ActionConfig {
+  type: ActionType
+  params: Record<string, unknown>
+}
+
+export interface AutomationRule {
+  id: string
+  name: string
+  description: string | null
+  projectId: string | null
+  trigger: TriggerConfig
+  conditions: ConditionConfig[]
+  actions: ActionConfig[]
+  isActive: boolean
+  priority: number
+  createdById: string
+  lastTriggeredAt: string | null
+  triggerCount: number
+  createdAt: string
+  updatedAt: string
+  project?: { id: string; code: string; name: string } | null
+  createdBy?: { id: string; firstName: string; lastName: string } | null
+}
+
+export interface AutomationLog {
+  id: string
+  ruleId: string
+  triggerId: string | null
+  status: 'success' | 'error' | 'skipped'
+  details: Record<string, unknown> | null
+  createdAt: string
+}
+
+// ============================================================
+// ANALYTICS EXTENDED TYPES
+// ============================================================
+
+export interface PreviousWeekOverview {
+  totalMinutesLogged: number
+  completedTasks: number
+  blockedTasks: number
+  activeProjects: number
+}
+
+export interface TeamWorkloadEntry {
+  userId: string
+  firstName: string
+  lastName: string
+  minutesLogged: number
+  weeklyHoursTarget: number
+  utilizationPercent: number
+}
+
+export interface UserWeeklyHours {
+  byDay: Array<{ dayOfWeek: number; date: string; totalMinutes: number }>
+  byProject: Array<{ projectId: string; projectName: string; totalMinutes: number }>
+  totalMinutes: number
+  weeklyTarget: number
+}
+
+export interface DeliveryForecast {
+  projectId: string
+  projectCode: string
+  projectName: string
+  progress: number
+  targetEndDate: string | null
+  daysRemaining: number | null
+  healthStatus: 'healthy' | 'at_risk' | 'critical'
+  velocityTasksPerWeek: number
+  remainingTasks: number
+  estimatedCompletionDays: number | null
+  predictedDelay: number | null
+}
+
+export interface ProjectBudgetData {
+  projectId: string
+  projectName: string
+  projectCode: string
+  budget: number
+  totalHoursLogged: number
+  estimatedHours: number
+  budgetUsedPercent: number
+  status: 'on_track' | 'at_risk' | 'over_budget'
+}
+
+// ============================================================
+// ADVANCED FILTER TYPES
+// ============================================================
+
+export type FilterFieldType = 'select' | 'date' | 'boolean' | 'text'
+
+export type FilterFieldKey =
+  | 'status'
+  | 'priority'
+  | 'assigneeId'
+  | 'projectId'
+  | 'dueDate'
+  | 'departmentId'
+  | 'taskType'
+  | 'hasBlockedReason'
+
+export type FilterOperator =
+  | 'is'
+  | 'is_not'
+  | 'before'
+  | 'after'
+  | 'between'
+  | 'is_true'
+  | 'is_false'
+  | 'contains'
+  | 'not_contains'
+
+export interface FilterRule {
+  id: string
+  field: FilterFieldKey
+  operator: FilterOperator
+  value: string | string[]
+}
+
+export interface AdvancedFilter {
+  logic: 'and' | 'or'
+  rules: FilterRule[]
 }
