@@ -43,9 +43,10 @@ function resolveKey(key: string, context: AutomationContext): string | number | 
     case 'domain':
       return context.domain
     case 'dueDate':
-      return context.task?.dueDate
-        ? formatDate(context.task.dueDate)
-        : undefined
+      if (context.task?.dueDate) return formatDate(context.task.dueDate)
+      if (context.document?.reviewDueDate) return formatDate(context.document.reviewDueDate)
+      if (context.project?.targetEndDate) return formatDate(context.project.targetEndDate)
+      return undefined
   }
 
   const parts = key.split('.')

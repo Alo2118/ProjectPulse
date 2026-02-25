@@ -100,7 +100,7 @@ interface MatchedRule {
  */
 async function getMatchingRules(
   domain: AutomationDomain,
-  _triggerType: TriggerType,
+  triggerType: TriggerType,
   projectId: string | null
 ): Promise<MatchedRule[]> {
   const projectFilter: Array<{ projectId: string | null }> = [{ projectId: null }]
@@ -108,7 +108,7 @@ async function getMatchingRules(
     projectFilter.push({ projectId })
   }
 
-  return prisma.automationRule.findMany({
+  const allRules = await prisma.automationRule.findMany({
     where: {
       isActive: true,
       isDeleted: false,
@@ -125,6 +125,16 @@ async function getMatchingRules(
       conditionLogic: true,
       cooldownMinutes: true,
     },
+  })
+
+  // Post-fetch filter by trigger type to avoid processing non-matching rules
+  return allRules.filter(rule => {
+    try {
+      const trigger = JSON.parse(rule.trigger) as { type: string }
+      return trigger.type === triggerType
+    } catch {
+      return true // let processRule handle parse errors
+    }
   })
 }
 
