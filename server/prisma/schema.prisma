@@ -24,6 +24,8 @@ model User {
   theme         String    @default("system")
   isActive      Boolean   @default(true) @map("is_active")
   isDeleted     Boolean   @default(false) @map("is_deleted")
+  isExternal    Boolean   @default(false) @map("is_external")
+  weeklyHoursTarget  Float?   @default(40) @map("weekly_hours_target")
   lastLoginAt   DateTime? @map("last_login_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -50,6 +52,14 @@ model User {
   attachments        Attachment[]
   taskCompletions    TaskCompletion[] @relation("TaskCompletions")
   createdTags        Tag[]
+  customFieldDefs    CustomFieldDefinition[] @relation("CustomFieldCreator")
+  savedViews         SavedView[]            @relation("SavedViewUser")
+  projectMemberships  ProjectMember[]      @relation("ProjectMembers")
+  addedMembers        ProjectMember[]      @relation("ProjectMemberAdder")
+  sentInvitations     ProjectInvitation[]  @relation("InvitationSender")
+  createdWorkflows    WorkflowTemplate[]   @relation("WorkflowCreator")
+  createdAutomations  AutomationRule[]     @relation("AutomationCreator")
+  recommendationsDismissed AutomationRecommendation[] @relation("RecommendationDismisser")
 
   @@map("users")
 }
@@ -80,6 +90,7 @@ model Project {
   ownerId         String    @map("owner_id")
   createdById     String    @map("created_by_id")
   templateId      String?   @map("template_id")
+  workflowTemplateId String? @map("workflow_template_id")
   isDeleted       Boolean   @default(false) @map("is_deleted")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -88,10 +99,16 @@ model Project {
   owner       User             @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy   User             @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   template    ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tasks       Task[]
-  risks       Risk[]
-  documents   Document[]
-  userInputs  UserInput[]
+  workflowTemplate WorkflowTemplate? @relation(fields: [workflowTemplateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tasks            Task[]
+  risks            Risk[]
+  documents        Document[]
+  userInputs       UserInput[]
+  customFieldDefs  CustomFieldDefinition[]
+  members          ProjectMember[]
+  invitations      ProjectInvitation[]
+  automationRules  AutomationRule[]
+  automationRecommendations AutomationRecommendation[]
 
   @@index([ownerId])
   @@index([status])
@@ -114,6 +131,22 @@ model ProjectTemplate {
   @@map("project_templates")
 }
 
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  color       String   @default("#6B7280")
+  isActive    Boolean  @default(true) @map("is_active")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tasks Task[]
+
+  @@index([isDeleted])
+  @@map("departments")
+}
+
 model Task {
   id                String    @id @default(uuid())
   code              String    @unique
@@ -124,6 +157,7 @@ model Task {
   priority          String    @default("medium")
   projectId         String?   @map("project_id")
   assigneeId        String?   @map("assignee_id")
+  departmentId      String?   @map("department_id")
   createdById       String    @map("created_by_id")
   parentTaskId      String?   @map("parent_task_id")
   startDate         DateTime? @map("start_date")
@@ -141,6 +175,7 @@ model Task {
   // Relations
   project       Project?          @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   assignee      User?             @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  department    Department?       @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy     User              @relation("TaskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   parentTask    Task?             @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subtasks      Task[]            @relation("TaskHierarchy")
@@ -149,10 +184,13 @@ model Task {
   userInputs    UserInput[]
   predecessors  TaskDependency[]  @relation("DependencySuccessor")
   successors    TaskDependency[]  @relation("DependencyPredecessor")
-  completions   TaskCompletion[]
+  completions      TaskCompletion[]
+  checklistItems   ChecklistItem[]
+  customFieldValues CustomFieldValue[]
 
   @@index([projectId])
   @@index([assigneeId])
+  @@index([departmentId])
   @@index([status])
   @@index([taskType])
   @@index([isDeleted])
@@ -293,10 +331,12 @@ model Document {
   status       String    @default("draft")
   createdById  String    @map("created_by_id")
   approvedById String?   @map("approved_by_id")
-  approvedAt   DateTime? @map("approved_at")
-  isDeleted    Boolean   @default(false) @map("is_deleted")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  approvedAt          DateTime? @map("approved_at")
+  reviewDueDate       DateTime? @map("review_due_date")
+  reviewFrequencyDays Int?      @map("review_frequency_days")
+  isDeleted           Boolean   @default(false) @map("is_deleted")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   // Relations
   project    Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -505,4 +545,238 @@ model Attachment {
   @@index([uploadedById])
   @@index([isDeleted])
   @@map("attachments")
+}
+
+// ============================================================
+// CUSTOM FIELDS - User-defined fields per project/global
+// ============================================================
+
+model CustomFieldDefinition {
+  id         String   @id @default(uuid())
+  name       String
+  fieldType  String   @map("field_type") // text | number | dropdown | date | checkbox
+  options    String?  @db.NVarChar(Max) // JSON for dropdown options
+  projectId  String?  @map("project_id") // null = global
+  isRequired Boolean  @default(false) @map("is_required")
+  position   Int      @default(0)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdById String  @map("created_by_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User    @relation("CustomFieldCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  values   CustomFieldValue[]
+
+  @@index([projectId])
+  @@index([isActive])
+  @@map("custom_field_definitions")
+}
+
+model CustomFieldValue {
+  id           String   @id @default(uuid())
+  definitionId String   @map("definition_id")
+  taskId       String   @map("task_id")
+  value        String?  @db.NVarChar(Max)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  definition CustomFieldDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  task       Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([definitionId, taskId])
+  @@index([taskId])
+  @@index([definitionId])
+  @@map("custom_field_values")
+}
+
+// ============================================================
+// SAVED VIEWS - Saved filter combinations
+// ============================================================
+
+model SavedView {
+  id        String   @id @default(uuid())
+  name      String
+  entity    String   // task | project | risk
+  filters   String   @db.NVarChar(Max) // JSON filters
+  columns   String?  @db.NVarChar(Max) // JSON visible columns
+  sortBy    String?  @map("sort_by")
+  sortOrder String?  @map("sort_order") // asc | desc
+  isShared  Boolean  @default(false) @map("is_shared")
+  isDefault Boolean  @default(false) @map("is_default")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation("SavedViewUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([entity])
+  @@index([isShared])
+  @@map("saved_views")
+}
+
+// ============================================================
+// CHECKLIST - Quick checkbox items within tasks
+// ============================================================
+
+model ChecklistItem {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  title     String   @db.NVarChar(500)
+  isChecked Boolean  @default(false) @map("is_checked")
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([taskId])
+  @@map("checklist_items")
+}
+
+// ============================================================
+// PHASE 4 - GOVERNANCE: Members, Invitations, Workflows, Automations
+// ============================================================
+
+model ProjectMember {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  userId      String   @map("user_id")
+  projectRole String   @default("member") @map("project_role") // owner | manager | member | viewer | guest
+  addedById   String   @map("added_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user     User    @relation("ProjectMembers", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  addedBy  User    @relation("ProjectMemberAdder", fields: [addedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model ProjectInvitation {
+  id          String    @id @default(uuid())
+  email       String
+  projectId   String    @map("project_id")
+  projectRole String    @default("guest") @map("project_role")
+  invitedById String    @map("invited_by_id")
+  token       String    @unique
+  expiresAt   DateTime  @map("expires_at")
+  acceptedAt  DateTime? @map("accepted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  invitedBy User    @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([token])
+  @@index([email])
+  @@index([projectId])
+  @@map("project_invitations")
+}
+
+model WorkflowTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  statuses    String   @db.NVarChar(Max) // JSON: WorkflowStatus[]
+  transitions String   @db.NVarChar(Max) // JSON: Record<string, string[]>
+  isDefault   Boolean  @default(false) @map("is_default")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdById String   @map("created_by_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy User      @relation("WorkflowCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  projects  Project[]
+
+  @@index([isActive])
+  @@map("workflow_templates")
+}
+
+model AutomationRule {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  projectId       String?   @map("project_id")
+  trigger         String    @db.NVarChar(Max) // JSON: TriggerConfig
+  conditions      String    @default("[]") @db.NVarChar(Max) // JSON: ConditionConfig[]
+  actions         String    @db.NVarChar(Max) // JSON: ActionConfig[]
+  isActive        Boolean   @default(true) @map("is_active")
+  priority        Int       @default(0)
+  domain          String    @default("task")
+  conditionLogic  String    @default("AND") @map("condition_logic")
+  cooldownMinutes Int       @default(0) @map("cooldown_minutes")
+  createdById     String    @map("created_by_id")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  triggerCount    Int       @default(0) @map("trigger_count")
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  project         Project? @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy       User     @relation("AutomationCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  logs            AutomationLog[]
+  cooldowns       AutomationCooldown[]
+  recommendations AutomationRecommendation[]
+
+  @@index([projectId])
+  @@index([isActive])
+  @@index([isDeleted])
+  @@map("automation_rules")
+}
+
+model AutomationLog {
+  id        String   @id @default(uuid())
+  ruleId    String   @map("rule_id")
+  triggerId String?  @map("trigger_id")
+  status    String   @default("success") // success | error | skipped
+  details   String?  @db.NVarChar(Max)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ruleId])
+  @@index([createdAt])
+  @@map("automation_logs")
+}
+
+model AutomationCooldown {
+  id          String   @id @default(uuid())
+  ruleId      String   @map("rule_id")
+  entityId    String   @map("entity_id")
+  lastFiredAt DateTime @map("last_fired_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([ruleId, entityId])
+  @@index([ruleId])
+  @@map("automation_cooldowns")
+}
+
+model AutomationRecommendation {
+  id            String    @id @default(uuid())
+  projectId     String?   @map("project_id")
+  pattern       String    @db.VarChar(100)
+  evidence      String    @db.NVarChar(Max)
+  suggestedRule String    @db.NVarChar(Max) @map("suggested_rule")
+  impact        String    @db.VarChar(20)
+  status        String    @default("pending") @db.VarChar(20)
+  appliedRuleId String?   @map("applied_rule_id")
+  dismissedAt   DateTime? @map("dismissed_at")
+  dismissedBy   String?   @map("dismissed_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  project     Project?        @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  appliedRule AutomationRule? @relation(fields: [appliedRuleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dismisser   User?           @relation("RecommendationDismisser", fields: [dismissedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([projectId])
+  @@index([status])
+  @@map("automation_recommendations")
 }
