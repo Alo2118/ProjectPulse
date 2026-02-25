@@ -24,10 +24,16 @@ import { allProjectTriggers } from './triggers/projectTriggers.js'
 
 // Conditions
 import { allTaskConditions } from './conditions/taskConditions.js'
+import { allCrossDomainConditions } from './conditions/crossDomainConditions.js'
 
 // Actions
 import { allNotifyActions } from './actions/notifyActions.js'
 import { allTaskActions } from './actions/taskActions.js'
+import { allEntityActions } from './actions/entityActions.js'
+import { allEmailActions } from './actions/emailAction.js'
+import { allRiskDocActions } from './actions/riskDocActions.js'
+import { allWebhookActions } from './actions/webhookAction.js'
+import { allEscalateActions } from './actions/escalateAction.js'
 
 /**
  * Registers all V2 automation handlers into the global registry.
@@ -58,12 +64,30 @@ export function initializeAutomationRegistry(): void {
   for (const condition of allTaskConditions) {
     registry.registerCondition(condition)
   }
+  for (const condition of allCrossDomainConditions) {
+    registry.registerCondition(condition)
+  }
 
   // Register actions
   for (const action of allNotifyActions) {
     registry.registerAction(action)
   }
   for (const action of allTaskActions) {
+    registry.registerAction(action)
+  }
+  for (const action of allEntityActions) {
+    registry.registerAction(action)
+  }
+  for (const action of allEmailActions) {
+    registry.registerAction(action)
+  }
+  for (const action of allRiskDocActions) {
+    registry.registerAction(action)
+  }
+  for (const action of allWebhookActions) {
+    registry.registerAction(action)
+  }
+  for (const action of allEscalateActions) {
     registry.registerAction(action)
   }
 

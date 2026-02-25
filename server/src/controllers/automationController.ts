@@ -35,6 +35,9 @@ const triggerConfigSchema = z.object({
     'task_status_changed',
     'task_created',
     'task_assigned',
+    'task_updated',
+    'task_commented',
+    'task_idle',
     'all_subtasks_completed',
     'task_overdue',
     'task_deadline_approaching',
@@ -72,6 +75,10 @@ const conditionConfigSchema = z.object({
     // Project conditions
     'project_status_is',
     'project_priority_is',
+    // Cross-domain conditions
+    'entity_in_project',
+    'time_since_last_update',
+    'user_workload_above',
   ]),
   params: z.record(z.unknown()).default({}),
 })
@@ -87,9 +94,18 @@ const actionConfigSchema = z.object({
     'set_task_field',
     'create_comment',
     'assign_to_user',
+    // Entity actions
+    'set_due_date',
+    'create_subtask',
+    // Email action
+    'send_email',
     // Risk/Document actions
     'set_risk_field',
     'set_document_field',
+    // Integration actions
+    'webhook',
+    // Escalation action
+    'escalate',
   ]),
   params: z.record(z.unknown()).default({}),
 })
@@ -460,6 +476,8 @@ export async function createFromTemplateHandler(
       actions,
       isActive,
       priority,
+      domain: template.domain,
+      cooldownMinutes: template.cooldownMinutes ?? 0,
     })
 
     const rule = await automationService.createAutomationRule(input, req.user.userId)

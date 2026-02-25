@@ -67,6 +67,10 @@ export type ConditionType =
   // Project conditions
   | 'project_status_is'
   | 'project_priority_is'
+  // Cross-domain conditions
+  | 'entity_in_project'
+  | 'time_since_last_update'
+  | 'user_workload_above'
 
 // ============================================================
 // ACTION TYPES
@@ -82,9 +86,18 @@ export type ActionType =
   | 'set_task_field'
   | 'create_comment'
   | 'assign_to_user'
-  // New risk/document actions
+  // Entity actions
+  | 'set_due_date'
+  | 'create_subtask'
+  // Email action
+  | 'send_email'
+  // Risk/Document actions
   | 'set_risk_field'
   | 'set_document_field'
+  // Integration actions
+  | 'webhook'
+  // Escalation action
+  | 'escalate'
 
 // ============================================================
 // CONFIG INTERFACES
