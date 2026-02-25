@@ -7,6 +7,15 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { notificationService } from './notificationService.js'
+import { evaluateRules } from './automation/index.js'
+import { parseMentionedUserIds } from '../utils/mentions.js'
+import { getIO } from '../socket/socketManager.js'
+import {
+  emitCommentCreated,
+  emitCommentUpdated,
+  emitCommentDeleted,
+} from '../socket/index.js'
 import {
   CreateCommentInput,
   UpdateCommentInput,
@@ -24,6 +33,7 @@ const commentSelectFields = {
   updatedAt: true,
   taskId: true,
   userId: true,
+  parentId: true,
 }
 
 const commentWithRelationsSelect = {
@@ -40,6 +50,36 @@ const commentWithRelationsSelect = {
       project: {
         select: { id: true, code: true, name: true, ownerId: true },
       },
+    },
+  },
+}
+
+/** Select shape for threaded root comments (includes replies nested 1 level) */
+const rootCommentThreadedSelect = {
+  id: true,
+  content: true,
+  isInternal: true,
+  isDeleted: true,
+  createdAt: true,
+  updatedAt: true,
+  taskId: true,
+  userId: true,
+  parentId: true,
+  user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+  replies: {
+    where: { isDeleted: false },
+    orderBy: { createdAt: 'asc' as const },
+    select: {
+      id: true,
+      content: true,
+      isInternal: true,
+      isDeleted: true,
+      createdAt: true,
+      updatedAt: true,
+      taskId: true,
+      userId: true,
+      parentId: true,
+      user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
     },
   },
 }
@@ -69,6 +109,7 @@ export async function createComment(data: CreateCommentInput, userId: string) {
     throw new Error('Task not found')
   }
 
+  // Create comment + audit in a transaction (notifications handled separately for Socket.io)
   const comment = await prisma.$transaction(async (tx) => {
     const newComment = await tx.comment.create({
       data: {
@@ -76,48 +117,95 @@ export async function createComment(data: CreateCommentInput, userId: string) {
         userId,
         content: data.content,
         isInternal: data.isInternal || false,
+        ...(data.parentId ? { parentId: data.parentId } : {}),
       },
       select: commentWithRelationsSelect,
     })
 
     await auditService.logCreate(EntityType.COMMENT, newComment.id, userId, { content: data.content }, tx)
 
-    // Create notifications
-    const notifyUserIds = new Set<string>()
-
-    // Notify task assignee if not the commenter
-    if (task.assigneeId && task.assigneeId !== userId) {
-      notifyUserIds.add(task.assigneeId)
-    }
-
-    // Notify project owner if not the commenter (for internal comments)
-    if (data.isInternal && task.project?.ownerId && task.project.ownerId !== userId) {
-      notifyUserIds.add(task.project.ownerId)
-    }
-
-    // Parse mentions (@username pattern would need user lookup)
-    // For now, simplified notification
-
-    for (const notifyUserId of notifyUserIds) {
-      await tx.notification.create({
-        data: {
-          userId: notifyUserId,
-          type: 'new_comment',
-          title: 'New Comment',
-          message: `New comment on task ${task.code}: ${data.content.substring(0, 100)}${data.content.length > 100 ? '...' : ''}`,
-          data: JSON.stringify({
-            taskId: task.id,
-            taskCode: task.code,
-            commentId: newComment.id,
-          }),
-        },
-      })
-    }
-
     return newComment
   })
 
+  // Send notifications outside the transaction so Socket.io emission works correctly
+  try {
+    // Determine recipients: assignee and project owner get 'new_comment'
+    const notifyNewComment = new Set<string>()
+    const notifyMention = new Set<string>()
+
+    if (task.assigneeId && task.assigneeId !== userId) {
+      notifyNewComment.add(task.assigneeId)
+    }
+    if (data.isInternal && task.project?.ownerId && task.project.ownerId !== userId) {
+      notifyNewComment.add(task.project.ownerId)
+    }
+
+    // @mentioned users get the dedicated 'mention' type (takes priority over generic comment)
+    const mentionedIds = await parseMentionedUserIds(data.content, userId)
+    for (const mid of mentionedIds) {
+      notifyMention.add(mid)
+      notifyNewComment.delete(mid)
+    }
+
+    const truncated = data.content.substring(0, 100) + (data.content.length > 100 ? '...' : '')
+    const notifData = { taskId: task.id, taskCode: task.code, commentId: comment.id }
+
+    // Generic comment notifications
+    for (const notifyUserId of notifyNewComment) {
+      await notificationService.createNotification({
+        userId: notifyUserId,
+        type: 'new_comment',
+        title: 'Nuovo Commento',
+        message: `Nuovo commento su ${task.code}: ${truncated}`,
+        data: notifData,
+      })
+    }
+
+    // Mention notifications: include commenter name for context
+    if (notifyMention.size > 0) {
+      const commenter = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true },
+      })
+      const commenterName = commenter ? `${commenter.firstName} ${commenter.lastName}` : 'Qualcuno'
+
+      for (const mentionedId of notifyMention) {
+        await notificationService.createNotification({
+          userId: mentionedId,
+          type: 'mention',
+          title: 'Sei stato menzionato',
+          message: `${commenterName} ti ha menzionato in ${task.code}: ${truncated}`,
+          data: notifData,
+        })
+      }
+    }
+  } catch (notifError) {
+    logger.error('Failed to send comment notifications', { error: notifError, taskId: data.taskId })
+  }
+
   logger.info(`Comment created on task ${task.code}`, { commentId: comment.id, taskId: data.taskId, userId })
+
+  // Emit real-time event to everyone viewing the task (fire-and-forget)
+  const ioCreate = getIO()
+  if (ioCreate) {
+    emitCommentCreated(ioCreate, { comment, taskId: data.taskId })
+  }
+
+  // Fire task_commented automation trigger
+  if (task.project) {
+    const mentionedIds = await parseMentionedUserIds(data.content, userId)
+    evaluateRules({
+      type: 'task_commented',
+      domain: 'task',
+      entityId: data.taskId,
+      projectId: task.project.id,
+      userId,
+      data: {
+        commentId: comment.id,
+        ...(mentionedIds.length > 0 ? { mentionedUserIds: mentionedIds } : {}),
+      },
+    }).catch(err => logger.error('Automation task_commented failed', { error: err }))
+  }
 
   return comment
 }
@@ -139,6 +227,7 @@ export async function getTaskComments(
   const where: Prisma.CommentWhereInput = {
     taskId,
     isDeleted: false,
+    parentId: null, // Only root comments; replies are nested inside each root
   }
 
   // Non-direzione/admin users cannot see internal comments
@@ -151,10 +240,10 @@ export async function getTaskComments(
   const [comments, total] = await Promise.all([
     prisma.comment.findMany({
       where,
-      select: commentWithRelationsSelect,
+      select: rootCommentThreadedSelect,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     }),
     prisma.comment.count({ where }),
   ])
@@ -224,6 +313,12 @@ export async function updateComment(commentId: string, data: UpdateCommentInput,
 
   logger.info(`Comment updated`, { commentId, userId })
 
+  // Emit real-time event to everyone viewing the task
+  const ioUpdate = getIO()
+  if (ioUpdate) {
+    emitCommentUpdated(ioUpdate, { comment, taskId: comment.taskId })
+  }
+
   return comment
 }
 
@@ -264,6 +359,12 @@ export async function deleteComment(commentId: string, userId: string, userRole:
   })
 
   logger.info(`Comment soft deleted`, { commentId, userId })
+
+  // Emit real-time deletion event to everyone viewing the task
+  const ioDelete = getIO()
+  if (ioDelete) {
+    emitCommentDeleted(ioDelete, { commentId, taskId: existing.taskId })
+  }
 
   return true
 }

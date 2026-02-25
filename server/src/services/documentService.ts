@@ -7,6 +7,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { notificationService } from './notificationService.js'
+import { evaluateRules } from './automation/index.js'
 import { EntityType, PaginatedResponse, PaginationParams, DocumentType, DocumentStatus } from '../types/index.js'
 
 // ============================================================
@@ -140,6 +142,16 @@ export async function createDocument(
   })
 
   logger.info(`Document created: ${document.code}`, { documentId: document.id, projectId: data.projectId, userId })
+
+  // Fire document_created automation trigger
+  evaluateRules({
+    type: 'document_created',
+    domain: 'document',
+    entityId: document.id,
+    projectId: data.projectId,
+    userId,
+    data: { documentType: document.type },
+  }).catch(err => logger.error('Automation document_created failed', { error: err }))
 
   return document
 }
@@ -358,14 +370,27 @@ export async function changeDocumentStatus(
         select: { ownerId: true },
       })
       if (project && project.ownerId !== userId) {
-        await tx.notification.create({
-          data: {
+        await notificationService.createNotification(
+          {
             userId: project.ownerId,
             type: 'document_approved',
             title: 'Documento Approvato',
             message: `Il documento "${updated.title}" è stato approvato`,
-            data: JSON.stringify({ documentId: updated.id, documentCode: updated.code }),
+            data: { documentId: updated.id, documentCode: updated.code },
           },
+          tx
+        )
+      }
+
+      // Auto-compute reviewDueDate when approved and reviewFrequencyDays is set
+      // Cast needed: reviewFrequencyDays/reviewDueDate exist in schema but Prisma client may not be regenerated yet
+      const existingRecord = existing as Record<string, unknown>
+      if (existingRecord['reviewFrequencyDays']) {
+        const reviewDueDate = new Date()
+        reviewDueDate.setDate(reviewDueDate.getDate() + (existingRecord['reviewFrequencyDays'] as number))
+        await tx.document.update({
+          where: { id: documentId },
+          data: { reviewDueDate } as Record<string, unknown>,
         })
       }
     }
@@ -374,6 +399,16 @@ export async function changeDocumentStatus(
   })
 
   logger.info(`Document status changed: ${currentStatus} → ${newStatus}`, { documentId, userId })
+
+  // Fire document_status_changed automation trigger
+  evaluateRules({
+    type: 'document_status_changed',
+    domain: 'document',
+    entityId: documentId,
+    projectId: existing.projectId,
+    userId,
+    data: { oldStatus: currentStatus, newStatus },
+  }).catch(err => logger.error('Automation document_status_changed failed', { error: err }))
 
   return document
 }

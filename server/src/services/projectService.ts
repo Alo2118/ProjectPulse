@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { evaluateRules } from './automation/index.js'
 import {
   CreateProjectInput,
   UpdateProjectInput,
@@ -15,46 +16,7 @@ import {
   ProjectStatus,
   ProjectPriority,
 } from '../types/index.js'
-
-// Select fields for project queries (Rule 9: Query Optimization)
-const projectSelectFields = {
-  id: true,
-  code: true,
-  name: true,
-  description: true,
-  status: true,
-  priority: true,
-  startDate: true,
-  targetEndDate: true,
-  actualEndDate: true,
-  budget: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-  ownerId: true,
-  templateId: true,
-  createdById: true,
-}
-
-const projectWithRelationsSelect = {
-  ...projectSelectFields,
-  owner: {
-    select: { id: true, firstName: true, lastName: true, email: true },
-  },
-  createdBy: {
-    select: { id: true, firstName: true, lastName: true },
-  },
-  template: {
-    select: { id: true, name: true },
-  },
-  _count: {
-    select: {
-      tasks: { where: { isDeleted: false } },
-      risks: true,
-      documents: true,
-    },
-  },
-}
+import { projectSelectFields, projectWithRelationsSelect } from '../utils/selectFields.js'
 
 /**
  * Generates unique project code in format PRJ-YYYY-NNN
@@ -306,6 +268,18 @@ export async function updateProject(
 
   logger.info(`Project updated: ${project.code}`, { projectId, userId })
 
+  // Fire project_status_changed if status changed via updateProject
+  if (data.status && data.status !== oldStatus) {
+    evaluateRules({
+      type: 'project_status_changed',
+      domain: 'project',
+      entityId: projectId,
+      projectId,
+      userId,
+      data: { oldStatus, newStatus: data.status },
+    }).catch(err => logger.error('Automation project_status_changed failed', { error: err }))
+  }
+
   return project
 }
 
@@ -459,6 +433,16 @@ export async function changeProjectStatus(
   })
 
   logger.info(`Project status changed: ${oldStatus} → ${newStatus}`, { projectId, userId })
+
+  // Fire project_status_changed automation trigger
+  evaluateRules({
+    type: 'project_status_changed',
+    domain: 'project',
+    entityId: projectId,
+    projectId,
+    userId,
+    data: { oldStatus, newStatus },
+  }).catch(err => logger.error('Automation project_status_changed failed', { error: err }))
 
   return project
 }

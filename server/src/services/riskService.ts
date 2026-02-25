@@ -7,6 +7,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { notificationService } from './notificationService.js'
+import { evaluateRules } from './automation/index.js'
 import {
   CreateRiskInput,
   UpdateRiskInput,
@@ -156,34 +158,50 @@ export async function createRisk(data: CreateRiskInput, userId: string) {
       newRisk.impact as RiskImpact
     )
     if (riskLevel >= 6 && project.ownerId !== userId) {
-      await tx.notification.create({
-        data: {
+      await notificationService.createNotification(
+        {
           userId: project.ownerId,
           type: 'risk_high',
           title: 'High Risk Identified',
           message: `A high-level risk has been identified: ${newRisk.title}`,
-          data: JSON.stringify({ riskId: newRisk.id, riskCode: newRisk.code, riskLevel }),
+          data: { riskId: newRisk.id, riskCode: newRisk.code, riskLevel },
         },
-      })
+        tx
+      )
     }
 
     // Notify risk owner if assigned
     if (data.ownerId && data.ownerId !== userId) {
-      await tx.notification.create({
-        data: {
+      await notificationService.createNotification(
+        {
           userId: data.ownerId,
           type: 'risk_assigned',
           title: 'Risk Assigned',
           message: `You have been assigned as owner of risk: ${newRisk.title}`,
-          data: JSON.stringify({ riskId: newRisk.id, riskCode: newRisk.code }),
+          data: { riskId: newRisk.id, riskCode: newRisk.code },
         },
-      })
+        tx
+      )
     }
 
     return newRisk
   })
 
   logger.info(`Risk created: ${risk.code}`, { riskId: risk.id, projectId: data.projectId, userId })
+
+  // Fire risk_created automation trigger
+  const createdRiskLevel = calculateRiskLevel(
+    risk.probability as RiskProbability,
+    risk.impact as RiskImpact
+  )
+  evaluateRules({
+    type: 'risk_created',
+    domain: 'risk',
+    entityId: risk.id,
+    projectId: data.projectId,
+    userId,
+    data: { severity: getRiskLevelLabel(createdRiskLevel) },
+  }).catch(err => logger.error('Automation risk_created failed', { error: err }))
 
   return risk
 }
@@ -312,21 +330,57 @@ export async function updateRisk(riskId: string, data: UpdateRiskInput, userId: 
 
     // Notify new owner if changed
     if (data.ownerId && data.ownerId !== oldOwnerId && data.ownerId !== userId) {
-      await tx.notification.create({
-        data: {
+      await notificationService.createNotification(
+        {
           userId: data.ownerId,
           type: 'risk_assigned',
           title: 'Risk Assigned',
           message: `You have been assigned as owner of risk: ${updated.title}`,
-          data: JSON.stringify({ riskId: updated.id, riskCode: updated.code }),
+          data: { riskId: updated.id, riskCode: updated.code },
         },
-      })
+        tx
+      )
     }
 
     return updated
   })
 
   logger.info(`Risk updated: ${risk.code}`, { riskId, userId })
+
+  // Fire risk_status_changed if status changed via updateRisk
+  if (data.status && data.status !== oldStatus) {
+    evaluateRules({
+      type: 'risk_status_changed',
+      domain: 'risk',
+      entityId: riskId,
+      projectId: existing.projectId,
+      userId,
+      data: { oldStatus, newStatus: data.status },
+    }).catch(err => logger.error('Automation risk_status_changed failed', { error: err }))
+  }
+
+  // Fire risk_level_changed if probability or impact changed
+  if (data.probability || data.impact) {
+    const oldLevel = getRiskLevelLabel(
+      calculateRiskLevel(existing.probability as RiskProbability, existing.impact as RiskImpact)
+    )
+    const newLevel = getRiskLevelLabel(
+      calculateRiskLevel(
+        (data.probability ?? existing.probability) as RiskProbability,
+        (data.impact ?? existing.impact) as RiskImpact
+      )
+    )
+    if (oldLevel !== newLevel) {
+      evaluateRules({
+        type: 'risk_level_changed',
+        domain: 'risk',
+        entityId: riskId,
+        projectId: existing.projectId,
+        userId,
+        data: { fromLevel: oldLevel, toLevel: newLevel },
+      }).catch(err => logger.error('Automation risk_level_changed failed', { error: err }))
+    }
+  }
 
   return risk
 }
@@ -362,6 +416,16 @@ export async function changeRiskStatus(riskId: string, newStatus: RiskStatus, us
   })
 
   logger.info(`Risk status changed: ${oldStatus} → ${newStatus}`, { riskId, userId })
+
+  // Fire risk_status_changed automation trigger
+  evaluateRules({
+    type: 'risk_status_changed',
+    domain: 'risk',
+    entityId: riskId,
+    projectId: existing.projectId,
+    userId,
+    data: { oldStatus, newStatus },
+  }).catch(err => logger.error('Automation risk_status_changed failed', { error: err }))
 
   return risk
 }

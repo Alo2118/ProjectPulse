@@ -131,11 +131,69 @@ export const taskDeadlineApproachingTrigger: TriggerHandler = {
   },
 }
 
+/**
+ * Fires when a task field is updated (e.g. priority, dueDate, estimatedHours).
+ * Optional params: field, fromValue, toValue.
+ */
+export const taskUpdatedTrigger: TriggerHandler = {
+  type: 'task_updated',
+  domain: 'task',
+
+  matches(config, event, _context) {
+    if (config.type !== event.type) return false
+
+    const params = config.params
+    const data = event.data
+
+    if (params['field'] && data['field'] !== params['field']) return false
+    if (params['fromValue'] && String(data['fromValue']) !== String(params['fromValue'])) return false
+    if (params['toValue'] && String(data['toValue']) !== String(params['toValue'])) return false
+
+    return true
+  },
+}
+
+/**
+ * Fires when a comment is added to a task.
+ * Optional params: mentionsUser (matches if the specified user was @mentioned).
+ */
+export const taskCommentedTrigger: TriggerHandler = {
+  type: 'task_commented',
+  domain: 'task',
+
+  matches(config, event, _context) {
+    if (config.type !== event.type) return false
+
+    if (config.params['mentionsUser'] && event.data['mentionedUserIds']) {
+      const mentions = event.data['mentionedUserIds'] as string[]
+      return mentions.includes(config.params['mentionsUser'] as string)
+    }
+
+    return true
+  },
+}
+
+/**
+ * Fires when a task has been idle (no updates) for a configured period.
+ * Triggered by the scheduler — always matches.
+ */
+export const taskIdleTrigger: TriggerHandler = {
+  type: 'task_idle',
+  domain: 'task',
+
+  matches(config, event, _context) {
+    return config.type === event.type
+  },
+}
+
 /** All task trigger handlers for bulk registration */
 export const allTaskTriggers: TriggerHandler[] = [
   taskStatusChangedTrigger,
   taskCreatedTrigger,
   taskAssignedTrigger,
+  taskUpdatedTrigger,
+  taskCommentedTrigger,
+  taskIdleTrigger,
   allSubtasksCompletedTrigger,
   taskOverdueTrigger,
   taskDeadlineApproachingTrigger,

@@ -540,6 +540,21 @@ export async function updateTask(taskId: string, data: UpdateTaskInput, userId: 
     )
   }
 
+  // Detect field changes and fire task_updated automation events
+  const TRACKED_FIELDS = ['priority', 'dueDate', 'estimatedHours', 'title', 'description'] as const
+  for (const field of TRACKED_FIELDS) {
+    if (data[field] !== undefined && String(data[field] ?? '') !== String((existing as Record<string, unknown>)[field] ?? '')) {
+      evaluateRules({
+        type: 'task_updated',
+        domain: 'task',
+        entityId: task.id,
+        projectId: task.projectId ?? null,
+        userId,
+        data: { field, fromValue: (existing as Record<string, unknown>)[field], toValue: data[field] },
+      }).catch(err => logger.error('Automation task_updated failed', { error: err }))
+    }
+  }
+
   // Emit real-time event to project members and task detail viewers
   const ioUpdate = getIO()
   if (ioUpdate) {

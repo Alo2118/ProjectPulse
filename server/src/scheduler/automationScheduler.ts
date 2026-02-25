@@ -162,6 +162,133 @@ async function runDeadlineApproachingCheck(): Promise<void> {
 }
 
 /**
+ * Runs the idle-task check and fires automation rules for tasks
+ * that have not been updated in the last 7 days.
+ */
+async function runIdleCheck(): Promise<void> {
+  try {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const idleTasks = await prisma.task.findMany({
+      where: {
+        isDeleted: false,
+        status: { notIn: ['done', 'cancelled'] },
+        updatedAt: { lt: cutoff },
+      },
+      select: { id: true, projectId: true },
+      take: 500, // batch limit
+    })
+
+    logger.info(`Automation scheduler: found ${idleTasks.length} idle tasks`)
+
+    for (const task of idleTasks) {
+      evaluateRules({
+        type: 'task_idle',
+        domain: 'task',
+        entityId: task.id,
+        projectId: task.projectId,
+        userId: 'system',
+        data: { idleDays: 7 },
+      }).catch(err => logger.error('Automation task_idle failed', { error: err }))
+    }
+  } catch (err) {
+    logger.error('Automation scheduler: idle check failed', { error: err })
+  }
+}
+
+/**
+ * Runs the document review due check and fires automation rules for documents
+ * whose reviewDueDate is approaching (within 7, 14, or 30 days).
+ */
+async function runDocumentReviewCheck(): Promise<void> {
+  try {
+    const windows = [7, 14, 30]
+
+    for (const daysBeforeExpiry of windows) {
+      const { startOfDay, endOfDay } = getFutureDayBounds(daysBeforeExpiry)
+
+      // Cast needed: reviewDueDate exists in schema but Prisma client may not be regenerated yet
+      const documents = await prisma.document.findMany({
+        where: {
+          isDeleted: false,
+          reviewDueDate: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+          status: { not: 'obsolete' },
+        } as Record<string, unknown>,
+        select: { id: true, projectId: true },
+        take: 500,
+      })
+
+      if (documents.length === 0) continue
+
+      logger.info(`Automation scheduler: ${documents.length} document(s) review due in ${daysBeforeExpiry} day(s)`)
+
+      for (const doc of documents) {
+        evaluateRules({
+          type: 'document_review_due',
+          domain: 'document',
+          entityId: doc.id,
+          projectId: doc.projectId,
+          userId: 'system',
+          data: { daysBeforeExpiry },
+        }).catch(err => logger.error('Automation document_review_due failed', { error: err }))
+      }
+    }
+
+    logger.info('Automation scheduler: document review check completed')
+  } catch (err) {
+    logger.error('Automation scheduler: document review check failed', { error: err })
+  }
+}
+
+/**
+ * Runs the project deadline approaching check and fires automation rules
+ * for projects whose targetEndDate is approaching (within 7, 14, or 30 days).
+ */
+async function runProjectDeadlineCheck(): Promise<void> {
+  try {
+    const deadlineWindows = [7, 14, 30]
+
+    for (const daysOffset of deadlineWindows) {
+      const { startOfDay, endOfDay } = getFutureDayBounds(daysOffset)
+
+      const projects = await prisma.project.findMany({
+        where: {
+          isDeleted: false,
+          targetEndDate: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+          status: { notIn: ['completed', 'cancelled'] },
+        },
+        select: { id: true },
+        take: 500,
+      })
+
+      if (projects.length === 0) continue
+
+      logger.info(`Automation scheduler: ${projects.length} project(s) deadline in ${daysOffset} day(s)`)
+
+      for (const project of projects) {
+        evaluateRules({
+          type: 'project_deadline_approaching',
+          domain: 'project',
+          entityId: project.id,
+          projectId: project.id,
+          userId: 'system',
+          data: { daysBeforeDeadline: daysOffset },
+        }).catch(err => logger.error('Automation project_deadline_approaching failed', { error: err }))
+      }
+    }
+
+    logger.info('Automation scheduler: project deadline check completed')
+  } catch (err) {
+    logger.error('Automation scheduler: project deadline check failed', { error: err })
+  }
+}
+
+/**
  * Starts the automation scheduler.
  * Performs an initial run immediately on startup, then repeats every 15 minutes.
  * Safe to call multiple times - will clear any existing interval first.
@@ -177,11 +304,17 @@ export function startAutomationScheduler(): void {
   // Run immediately on startup so checks are handled without waiting 15 min
   void runOverdueCheck()
   void runDeadlineApproachingCheck()
+  void runIdleCheck()
+  void runDocumentReviewCheck()
+  void runProjectDeadlineCheck()
 
   schedulerHandle = setInterval(() => {
     void cleanupStaleCooldowns()
     void runOverdueCheck()
     void runDeadlineApproachingCheck()
+    void runIdleCheck()
+    void runDocumentReviewCheck()
+    void runProjectDeadlineCheck()
   }, INTERVAL_MS)
 }
 

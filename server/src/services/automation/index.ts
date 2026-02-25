@@ -18,6 +18,9 @@ import {
 
 // Triggers
 import { allTaskTriggers } from './triggers/taskTriggers.js'
+import { allRiskTriggers } from './triggers/riskTriggers.js'
+import { allDocumentTriggers } from './triggers/documentTriggers.js'
+import { allProjectTriggers } from './triggers/projectTriggers.js'
 
 // Conditions
 import { allTaskConditions } from './conditions/taskConditions.js'
@@ -39,6 +42,15 @@ export function initializeAutomationRegistry(): void {
 
   // Register triggers
   for (const trigger of allTaskTriggers) {
+    registry.registerTrigger(trigger)
+  }
+  for (const trigger of allRiskTriggers) {
+    registry.registerTrigger(trigger)
+  }
+  for (const trigger of allDocumentTriggers) {
+    registry.registerTrigger(trigger)
+  }
+  for (const trigger of allProjectTriggers) {
     registry.registerTrigger(trigger)
   }
 
