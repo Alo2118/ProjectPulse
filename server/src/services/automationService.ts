@@ -1,6 +1,6 @@
 /**
  * Automation Service - CRUD operations for automation rules and logs (Feature 4.4)
- * All business logic for managing automation rules; the engine itself lives in automationEngine.ts.
+ * All business logic for managing automation rules; the engine itself lives in automation/engine.ts.
  * @module services/automationService
  */
 
