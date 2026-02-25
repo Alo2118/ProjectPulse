@@ -14,7 +14,7 @@
 import { prisma } from '../../../models/prismaClient.js'
 import { logger } from '../../../utils/logger.js'
 import { interpolateMessage } from '../interpolation.js'
-import type { ActionExecutor, TriggerEvent, AutomationContext } from '../types.js'
+import type { ActionExecutor, TriggerEvent } from '../types.js'
 
 /** Allowlist of safe, non-relational task fields that can be set by automation */
 const ALLOWED_SET_FIELDS = new Set([
@@ -244,7 +244,7 @@ export const assignToUserAction: ActionExecutor = {
   type: 'assign_to_user',
   domain: 'task',
 
-  async execute(config, event, context, fireEvent) {
+  async execute(config, _event, context, fireEvent) {
     const targetUserId = config.params['userId'] as string | undefined
     if (!targetUserId) {
       logger.warn('assign_to_user action missing userId param', { entityId: context.entityId })

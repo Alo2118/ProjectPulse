@@ -35,11 +35,22 @@ const ProfilePage = lazy(() => import('@pages/profile/ProfilePage'))
 const AnalyticsPage = lazy(() => import('@pages/analytics/AnalyticsPage'))
 const WeeklyReportPage = lazy(() => import('@pages/reports/WeeklyReportPage'))
 const GanttPage = lazy(() => import('@pages/gantt/GanttPage'))
+const CalendarPage = lazy(() => import('@pages/calendar/CalendarPage'))
 const NotFoundPage = lazy(() => import('@pages/NotFoundPage'))
 const AuditTrailPage = lazy(() => import('@pages/audit/AuditTrailPage'))
 const TemplateListPage = lazy(() => import('@pages/admin/TemplateListPage'))
 const TemplateFormPage = lazy(() => import('@pages/admin/TemplateFormPage'))
-const TimeApprovalPage = lazy(() => import('@pages/time-tracking/TimeApprovalPage'))
+const DepartmentListPage = lazy(() => import('@pages/admin/DepartmentListPage'))
+const CustomFieldsPage = lazy(() => import('@pages/admin/CustomFieldsPage'))
+const ImportPage = lazy(() => import('@pages/admin/ImportPage'))
+const WorkflowEditorPage = lazy(() => import('@pages/admin/WorkflowEditorPage'))
+const AutomationListPage = lazy(() => import('@pages/admin/AutomationListPage'))
+const AutomationEditorPage = lazy(() => import('@pages/admin/AutomationEditorPage'))
+const AcceptInvitationPage = lazy(() => import('@pages/auth/AcceptInvitationPage'))
+const NotificationCenterPage = lazy(() => import('@pages/notifications/NotificationCenterPage'))
+const PlanningDashboardPage = lazy(() => import('@pages/planning/PlanningDashboardPage'))
+const PlanningWizardPage = lazy(() => import('@pages/planning/PlanningWizardPage'))
+const MyDayPage = lazy(() => import('@pages/my-day/MyDayPage'))
 
 /** Suspense fallback for lazy-loaded pages */
 function PageLoader() {
@@ -154,6 +165,13 @@ function AuthInitializer({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+/** Redirect / to /my-day for dipendente, /dashboard for others */
+function DefaultRedirect() {
+  const { user } = useAuthStore()
+  const target = user?.role === 'dipendente' ? '/my-day' : '/dashboard'
+  return <Navigate to={target} replace />
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -173,8 +191,9 @@ function App() {
                 </PrivateRoute>
               }
             >
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<DefaultRedirect />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/my-day" element={<MyDayPage />} />
               <Route path="/projects" element={<ProjectListPage />} />
               <Route path="/projects/new" element={<ProjectFormPage />} />
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
@@ -185,9 +204,9 @@ function App() {
               <Route path="/tasks/:id/edit" element={<TaskFormPage />} />
               <Route path="/time-tracking" element={<TimeTrackingPage />} />
               <Route path="/team-time" element={<TeamTimePage />} />
-              <Route path="/time-approval" element={<TimeApprovalPage />} />
               <Route path="/kanban" element={<KanbanBoardPage />} />
               <Route path="/gantt" element={<GanttPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/risks" element={<RiskListPage />} />
               <Route path="/risks/new" element={<RiskFormPage />} />
               <Route path="/risks/:id" element={<RiskDetailPage />} />
@@ -198,8 +217,11 @@ function App() {
               <Route path="/documents/new" element={<DocumentFormPage />} />
               <Route path="/documents/:id" element={<DocumentDetailPage />} />
               <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
+              <Route path="/planning" element={<PlanningDashboardPage />} />
+              <Route path="/planning/wizard" element={<PlanningWizardPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/reports/weekly" element={<WeeklyReportPage />} />
+              <Route path="/notifications" element={<NotificationCenterPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/users" element={<UserListPage />} />
               <Route path="/users/new" element={<UserFormPage />} />
@@ -208,7 +230,17 @@ function App() {
               <Route path="/admin/templates" element={<TemplateListPage />} />
               <Route path="/admin/templates/new" element={<TemplateFormPage />} />
               <Route path="/admin/templates/:id/edit" element={<TemplateFormPage />} />
+              <Route path="/admin/departments" element={<DepartmentListPage />} />
+              <Route path="/admin/custom-fields" element={<CustomFieldsPage />} />
+              <Route path="/admin/import" element={<ImportPage />} />
+              <Route path="/admin/workflows" element={<WorkflowEditorPage />} />
+              <Route path="/admin/automations" element={<AutomationListPage />} />
+              <Route path="/admin/automations/new" element={<AutomationEditorPage />} />
+              <Route path="/admin/automations/:id/edit" element={<AutomationEditorPage />} />
             </Route>
+
+            {/* Public invitation acceptance page - no auth required */}
+            <Route path="/invite/:token" element={<AcceptInvitationPage />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />

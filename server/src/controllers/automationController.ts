@@ -403,7 +403,7 @@ export async function getAutomationTemplatesHandler(
  * GET /api/automations/registry
  * Returns metadata about all registered triggers, conditions, and actions from the V2 registry.
  */
-export async function getRegistryMetadata(req: Request, res: Response) {
+export async function getRegistryMetadata(_req: Request, res: Response) {
   try {
     const { registry } = await import('../services/automation/index.js')
     const triggers = registry.getAllTriggers()

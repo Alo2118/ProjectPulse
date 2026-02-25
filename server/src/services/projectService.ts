@@ -16,7 +16,7 @@ import {
   ProjectStatus,
   ProjectPriority,
 } from '../types/index.js'
-import { projectSelectFields, projectWithRelationsSelect } from '../utils/selectFields.js'
+import { projectWithRelationsSelect } from '../utils/selectFields.js'
 
 /**
  * Generates unique project code in format PRJ-YYYY-NNN
