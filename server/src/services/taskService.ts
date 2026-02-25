@@ -7,6 +7,20 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { parseMentionedUserIds } from '../utils/mentions.js'
+import { AppError } from '../middleware/errorMiddleware.js'
+import * as workflowService from './workflowService.js'
+import { notificationService } from './notificationService.js'
+import { evaluateRules } from './automation/index.js'
+import type { TriggerEvent } from './automation/types.js'
+import { toNumber } from '../utils/toNumber.js'
+import { getIO } from '../socket/socketManager.js'
+import {
+  emitTaskCreated,
+  emitTaskUpdated,
+  emitTaskStatusChanged,
+  emitTaskDeleted,
+} from '../socket/index.js'
 import {
   CreateTaskInput,
   UpdateTaskInput,
@@ -21,51 +35,8 @@ import {
   TaskPriority,
   TaskType,
 } from '../types/index.js'
-
-// Select fields for task queries (Rule 9: Query Optimization)
-const taskSelectFields = {
-  id: true,
-  code: true,
-  title: true,
-  description: true,
-  taskType: true,
-  status: true,
-  priority: true,
-  startDate: true,
-  dueDate: true,
-  estimatedHours: true,
-  actualHours: true,
-  blockedReason: true, // Required when status is 'blocked'
-  isRecurring: true,
-  recurrencePattern: true,
-  position: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-  projectId: true,
-  assigneeId: true,
-  createdById: true,
-}
-
-const taskWithRelationsSelect = {
-  ...taskSelectFields,
-  parentTaskId: true,
-  project: {
-    select: { id: true, code: true, name: true },
-  },
-  assignee: {
-    select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
-  },
-  createdBy: {
-    select: { id: true, firstName: true, lastName: true },
-  },
-  parentTask: {
-    select: { id: true, code: true, title: true, taskType: true },
-  },
-  _count: {
-    select: { comments: true, timeEntries: true, subtasks: true },
-  },
-}
+import { taskSelectFields, taskWithRelationsSelect } from '../utils/selectFields.js'
+import { getTaskStats } from './statsService.js'
 
 /**
  * Generates unique task code based on project, task type, and standalone prefix
@@ -169,7 +140,7 @@ export async function createTask(data: CreateTaskInput, userId: string) {
   if (data.parentTaskId) {
     const parentTask = await prisma.task.findFirst({
       where: { id: data.parentTaskId, isDeleted: false },
-      select: { id: true, projectId: true, taskType: true },
+      select: { id: true, projectId: true, taskType: true, assigneeId: true, departmentId: true },
     })
 
     if (!parentTask) {
@@ -210,6 +181,14 @@ export async function createTask(data: CreateTaskInput, userId: string) {
         projectId = parentProject.id
       }
     }
+
+    // Inherit additional fields from parent task if not explicitly provided
+    if (!data.assigneeId && parentTask.assigneeId) {
+      data.assigneeId = parentTask.assigneeId
+    }
+    if (!data.departmentId && parentTask.departmentId) {
+      data.departmentId = parentTask.departmentId
+    }
   } else {
     // No parent - milestone must have a project
     if (taskType === 'milestone' && !projectId) {
@@ -230,6 +209,7 @@ export async function createTask(data: CreateTaskInput, userId: string) {
         projectId: projectId,
         parentTaskId: data.parentTaskId,
         assigneeId: data.assigneeId,
+        departmentId: data.departmentId ?? null,
         priority: (data.priority as TaskPriority) || 'medium',
         startDate: data.startDate,
         dueDate: data.dueDate,
@@ -248,21 +228,37 @@ export async function createTask(data: CreateTaskInput, userId: string) {
 
     // Create notification if task is assigned
     if (data.assigneeId && data.assigneeId !== userId) {
-      await tx.notification.create({
-        data: {
-          userId: data.assigneeId,
-          type: 'task_assigned',
-          title: 'New Task Assigned',
-          message: `You have been assigned to task: ${newTask.title}`,
-          data: JSON.stringify({ taskId: newTask.id, taskCode: newTask.code }),
-        },
-      })
+      await notificationService.createNotification({
+        userId: data.assigneeId,
+        type: 'task_assigned',
+        title: 'New Task Assigned',
+        message: `You have been assigned to task: ${newTask.title}`,
+        data: { taskId: newTask.id, taskCode: newTask.code },
+      }, tx)
     }
 
     return newTask
   })
 
   logger.info(`Task created: ${task.code}`, { taskId: task.id, projectId, userId })
+
+  // Fire automation rules (async, don't block response)
+  evaluateRules({
+    type: 'task_created',
+    domain: 'task',
+    entityId: task.id,
+    projectId: task.projectId ?? null,
+    userId,
+    data: {},
+  }).catch(err =>
+    logger.error('Automation evaluation failed after task creation', { error: err })
+  )
+
+  // Emit real-time event to project members (fire-and-forget)
+  const io = getIO()
+  if (io) {
+    emitTaskCreated(io, { task, projectId: task.projectId ?? null })
+  }
 
   return task
 }
@@ -275,7 +271,7 @@ export async function createTask(data: CreateTaskInput, userId: string) {
 export async function getTasks(
   params: TaskQueryParams
 ): Promise<PaginatedResponse<Prisma.TaskGetPayload<{ select: typeof taskWithRelationsSelect }>>> {
-  const { page = 1, limit = 20, projectId, taskType, status, priority, assigneeId, search, standalone, parentTaskId, includeSubtasks } = params
+  const { page = 1, limit = 20, projectId, taskType, status, priority, assigneeId, departmentId, search, standalone, parentTaskId, includeSubtasks } = params
 
   const where: Prisma.TaskWhereInput = {
     isDeleted: false, // Rule 11: Soft Delete filter
@@ -301,6 +297,7 @@ export async function getTasks(
   }
   if (priority) where.priority = priority as TaskPriority
   if (assigneeId) where.assigneeId = assigneeId
+  if (departmentId) where.departmentId = departmentId
   if (search) {
     where.OR = [
       { title: { contains: search } },
@@ -487,6 +484,7 @@ export async function updateTask(taskId: string, data: UpdateTaskInput, userId: 
         projectId: data.projectId,
         parentTaskId: data.parentTaskId,
         assigneeId: data.assigneeId,
+        departmentId: data.departmentId,
         status: data.status as TaskStatus | undefined,
         priority: data.priority as TaskPriority | undefined,
         startDate: data.startDate,
@@ -511,21 +509,42 @@ export async function updateTask(taskId: string, data: UpdateTaskInput, userId: 
 
     // Notify new assignee if changed
     if (data.assigneeId && data.assigneeId !== oldAssigneeId && data.assigneeId !== userId) {
-      await tx.notification.create({
-        data: {
-          userId: data.assigneeId,
-          type: 'task_assigned',
-          title: 'Task Assigned',
-          message: `You have been assigned to task: ${updated.title}`,
-          data: JSON.stringify({ taskId: updated.id, taskCode: updated.code }),
-        },
-      })
+      await notificationService.createNotification({
+        userId: data.assigneeId,
+        type: 'task_assigned',
+        title: 'Task Assigned',
+        message: `You have been assigned to task: ${updated.title}`,
+        data: { taskId: updated.id, taskCode: updated.code },
+      }, tx)
     }
 
     return updated
   })
 
   logger.info(`Task updated: ${task.code}`, { taskId, userId })
+
+  // Check if assignee changed — fire automation hook
+  if (data.assigneeId && data.assigneeId !== existing.assigneeId) {
+    evaluateRules({
+      type: 'task_assigned',
+      domain: 'task',
+      entityId: task.id,
+      projectId: task.projectId ?? null,
+      userId,
+      data: {
+        oldAssigneeId: existing.assigneeId ?? undefined,
+        newAssigneeId: data.assigneeId,
+      },
+    }).catch(err =>
+      logger.error('Automation evaluation failed after task assignment', { error: err })
+    )
+  }
+
+  // Emit real-time event to project members and task detail viewers
+  const ioUpdate = getIO()
+  if (ioUpdate) {
+    emitTaskUpdated(ioUpdate, { task, projectId: task.projectId ?? null })
+  }
 
   return task
 }
@@ -558,6 +577,26 @@ export async function changeTaskStatus(
     return null
   }
 
+  // Validate transition via workflow
+  const validation = await workflowService.validateTransition(
+    existing.projectId,
+    existing.status,
+    newStatus
+  )
+  if (!validation.valid) {
+    throw new AppError(
+      `Transizione da '${existing.status}' a '${newStatus}' non consentita dal workflow`,
+      400
+    )
+  }
+  // If workflow requires comment for this transition, enforce it
+  if (validation.requiresComment && !blockedReason?.trim()) {
+    throw new AppError(
+      `È richiesto un commento per la transizione a '${newStatus}'`,
+      400
+    )
+  }
+
   const oldStatus = existing.status
 
   // Use transaction for update + audit log
@@ -584,6 +623,17 @@ export async function changeTaskStatus(
 
     await auditService.logStatusChange(EntityType.TASK, taskId, userId, oldStatus, newStatus, tx)
 
+    // Notify assignee about status change (if changed by someone else)
+    if (updated.assigneeId && updated.assigneeId !== userId && newStatus !== 'blocked') {
+      await notificationService.createNotification({
+        userId: updated.assigneeId,
+        type: 'task_status_changed',
+        title: 'Stato task aggiornato',
+        message: `Lo stato del task ${updated.code} è cambiato da "${oldStatus}" a "${newStatus}"`,
+        data: { taskId: updated.id, taskCode: updated.code, oldStatus, newStatus },
+      }, tx)
+    }
+
     // Notify if task is blocked
     if (newStatus === 'blocked' && updated.assigneeId && updated.projectId) {
       // Notify project owner or direzione
@@ -593,15 +643,30 @@ export async function changeTaskStatus(
       })
 
       if (project?.ownerId && project.ownerId !== userId) {
-        await tx.notification.create({
-          data: {
-            userId: project.ownerId,
-            type: 'task_blocked',
-            title: 'Task Blocked',
-            message: `Task ${updated.code} has been marked as blocked: ${blockedReason}`,
-            data: JSON.stringify({ taskId: updated.id, taskCode: updated.code, blockedReason }),
-          },
-        })
+        await notificationService.createNotification({
+          userId: project.ownerId,
+          type: 'task_blocked',
+          title: 'Task Blocked',
+          message: `Task ${updated.code} has been marked as blocked: ${blockedReason}`,
+          data: { taskId: updated.id, taskCode: updated.code, blockedReason },
+        }, tx)
+      }
+
+      // Notify users mentioned in the blockedReason
+      if (blockedReason) {
+        const mentionedIds = await parseMentionedUserIds(blockedReason, userId, tx)
+        for (const mentionedId of mentionedIds) {
+          const alreadyNotified = project?.ownerId === mentionedId
+          if (!alreadyNotified) {
+            await notificationService.createNotification({
+              userId: mentionedId,
+              type: 'task_blocked_mention',
+              title: 'Sei stato menzionato in un blocco',
+              message: `Sei stato menzionato nel blocco del task ${updated.code}: ${blockedReason}`,
+              data: { taskId: updated.id, taskCode: updated.code, blockedReason },
+            }, tx)
+          }
+        }
       }
     }
 
@@ -609,6 +674,62 @@ export async function changeTaskStatus(
   })
 
   logger.info(`Task status changed: ${oldStatus} → ${newStatus}`, { taskId, userId, blockedReason })
+
+  // Fire automation rules (async, don't block response)
+  const automationEvent: TriggerEvent = {
+    type: 'task_status_changed',
+    domain: 'task',
+    entityId: taskId,
+    projectId: task.projectId ?? null,
+    userId,
+    data: {
+      oldStatus: existing.status,
+      newStatus,
+    },
+  }
+  // Don't await - fire and forget to avoid blocking the response
+  evaluateRules(automationEvent).catch(err =>
+    logger.error('Automation evaluation failed after status change', { error: err })
+  )
+
+  // Check if all subtasks are completed (for parent auto-complete automation)
+  if (newStatus === 'done' && existing.parentTaskId) {
+    const siblings = await prisma.task.findMany({
+      where: { parentTaskId: existing.parentTaskId, isDeleted: false },
+      select: { status: true },
+    })
+    const allDone = siblings.every(s => s.status === 'done' || s.status === 'cancelled')
+    if (allDone) {
+      const parentTask = await prisma.task.findFirst({
+        where: { id: existing.parentTaskId, isDeleted: false },
+        select: { id: true, code: true, title: true, taskType: true, status: true, priority: true, assigneeId: true, parentTaskId: true, projectId: true },
+      })
+      if (parentTask) {
+        evaluateRules({
+          type: 'all_subtasks_completed',
+          domain: 'task',
+          entityId: parentTask.id,
+          projectId: parentTask.projectId,
+          userId,
+          data: {},
+        }).catch(err =>
+          logger.error('Automation evaluation failed for all_subtasks_completed', { error: err })
+        )
+      }
+    }
+  }
+
+  // Emit real-time status change event
+  const ioStatus = getIO()
+  if (ioStatus) {
+    emitTaskStatusChanged(ioStatus, {
+      taskId: task.id,
+      projectId: task.projectId ?? null,
+      oldStatus,
+      newStatus,
+      updatedBy: userId,
+    })
+  }
 
   return task
 }
@@ -643,6 +764,15 @@ export async function deleteTask(taskId: string, userId: string): Promise<boolea
 
   logger.info(`Task soft deleted: ${existing.code}`, { taskId, userId })
 
+  // Emit real-time deletion event
+  const ioDelete = getIO()
+  if (ioDelete) {
+    emitTaskDeleted(ioDelete, {
+      taskId,
+      projectId: existing.projectId ?? null,
+    })
+  }
+
   return true
 }
 
@@ -662,20 +792,9 @@ export async function getMyTasks(userId: string, params: TaskQueryParams) {
  * @returns Task statistics
  */
 export async function getUserTaskStats(userId: string) {
-  const [byStatus, overdue, completedToday] = await Promise.all([
-    prisma.task.groupBy({
-      by: ['status'],
-      where: { assigneeId: userId, isDeleted: false },
-      _count: { id: true },
-    }),
-    prisma.task.count({
-      where: {
-        assigneeId: userId,
-        isDeleted: false,
-        status: { notIn: ['done', 'cancelled'] },
-        dueDate: { lt: new Date() },
-      },
-    }),
+  // Delegate grouped counts + overdue to statsService (single source of truth)
+  const [stats, completedToday] = await Promise.all([
+    getTaskStats({ assigneeId: userId }),
     prisma.task.count({
       where: {
         assigneeId: userId,
@@ -686,18 +805,17 @@ export async function getUserTaskStats(userId: string) {
     }),
   ])
 
-  const statusCounts = byStatus.reduce(
-    (acc, item) => {
-      acc[item.status] = item._count.id
-      return acc
-    },
-    {} as Record<string, number>
-  )
-
   return {
-    total: Object.values(statusCounts).reduce((a, b) => a + b, 0),
-    byStatus: statusCounts,
-    overdue,
+    total: stats.total,
+    byStatus: {
+      todo: stats.todo,
+      in_progress: stats.inProgress,
+      review: stats.review,
+      blocked: stats.blocked,
+      done: stats.done,
+      cancelled: stats.cancelled,
+    },
+    overdue: stats.overdue,
     completedToday,
   }
 }
@@ -760,15 +878,13 @@ export async function assignSubtasksRecursively(
 
         // Notify new assignee if changed and not self
         if (assigneeId && assigneeId !== oldAssigneeId && assigneeId !== userId) {
-          await tx.notification.create({
-            data: {
-              userId: assigneeId,
-              type: 'task_assigned',
-              title: 'Task Assigned',
-              message: `You have been assigned to task: ${subtask.title}`,
-              data: JSON.stringify({ taskId: subtask.id, taskCode: subtask.code }),
-            },
-          })
+          await notificationService.createNotification({
+            userId: assigneeId,
+            type: 'task_assigned',
+            title: 'Task Assigned',
+            message: `You have been assigned to task: ${subtask.title}`,
+            data: { taskId: subtask.id, taskCode: subtask.code },
+          }, tx)
         }
 
         // Recurse to children (N levels deep)
@@ -905,7 +1021,10 @@ export async function getTasksForGantt(params: GanttQueryParams): Promise<GanttT
       startDate: task.startDate,
       endDate: task.dueDate,
       estimatedHours: task.estimatedHours ? Number(task.estimatedHours) : null,
-      progress: estimatedMinutes > 0 ? Math.min(100, Math.round((actualMinutes / estimatedMinutes) * 100)) : 0,
+      progress: task.status === 'done' ? 100
+        : task.status === 'cancelled' ? 0
+        : estimatedMinutes > 0 ? Math.min(100, Math.round((actualMinutes / estimatedMinutes) * 100))
+        : 0,
       parentTaskId: task.parentTaskId,
       subtaskCount: task._count.subtasks,
       depth: getDepth(task.id),
@@ -976,12 +1095,31 @@ export async function createTaskDependency(
     throw new Error('A task cannot depend on itself')
   }
 
-  // Check for circular dependency (basic check - predecessor cannot already depend on successor)
-  const existingReverse = await prisma.taskDependency.findFirst({
-    where: { predecessorId: data.successorId, successorId: data.predecessorId },
-  })
-  if (existingReverse) {
-    throw new Error('Circular dependency detected')
+  // Check for circular dependency using BFS traversal
+  // Starting from successorId, follow all successor chains to check if predecessorId is reachable
+  const MAX_BFS_DEPTH = 50
+  const visited = new Set<string>()
+  const queue: string[] = [data.successorId]
+  let depth = 0
+
+  while (queue.length > 0 && depth < MAX_BFS_DEPTH) {
+    const current = queue.shift()!
+    if (current === data.predecessorId) {
+      throw new Error('Circular dependency detected: adding this dependency would create a cycle')
+    }
+    if (visited.has(current)) continue
+    visited.add(current)
+
+    const outgoing = await prisma.taskDependency.findMany({
+      where: { predecessorId: current },
+      select: { successorId: true },
+    })
+    for (const dep of outgoing) {
+      if (!visited.has(dep.successorId)) {
+        queue.push(dep.successorId)
+      }
+    }
+    depth++
   }
 
   const dependency = await prisma.taskDependency.create({
@@ -1126,16 +1264,66 @@ export async function getProjectMilestones(projectId: string) {
     orderBy: [{ startDate: 'asc' }, { createdAt: 'asc' }],
   })
 
-  // Calculate derived statistics for each milestone
-  return Promise.all(
-    milestones.map(async (milestone) => {
-      const stats = await calculateMilestoneStats(milestone.id)
-      return {
-        ...milestone,
-        derivedStats: stats,
-      }
-    })
-  )
+  // Batch fetch all tasks in the project to avoid N+1 queries
+  const allProjectTasks = await prisma.task.findMany({
+    where: { projectId, isDeleted: false, taskType: { not: 'milestone' } },
+    select: {
+      id: true,
+      taskType: true,
+      status: true,
+      estimatedHours: true,
+      actualHours: true,
+      startDate: true,
+      dueDate: true,
+      parentTaskId: true,
+    },
+  })
+
+  // Build parent→children map
+  const childrenMap = new Map<string, typeof allProjectTasks>()
+  for (const task of allProjectTasks) {
+    if (task.parentTaskId) {
+      const existing = childrenMap.get(task.parentTaskId) || []
+      existing.push(task)
+      childrenMap.set(task.parentTaskId, existing)
+    }
+  }
+
+  // Recursive in-memory descendant collection
+  function collectDescendants(parentId: string): typeof allProjectTasks {
+    const children = childrenMap.get(parentId) || []
+    const all = [...children]
+    for (const child of children) {
+      all.push(...collectDescendants(child.id))
+    }
+    return all
+  }
+
+  return milestones.map((milestone) => {
+    const descendants = collectDescendants(milestone.id)
+    const workItems = descendants.filter((t) => t.taskType !== 'milestone')
+
+    const totalTasks = workItems.length
+    const completedTasks = workItems.filter((t) => t.status === 'done').length
+    const totalEstimatedHours = workItems.reduce((sum, t) => sum + toNumber(t.estimatedHours), 0)
+    const totalActualHours = workItems.reduce((sum, t) => sum + toNumber(t.actualHours), 0)
+    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+    const startDates = workItems.filter((t) => t.startDate).map((t) => t.startDate!)
+    const dueDates = workItems.filter((t) => t.dueDate).map((t) => t.dueDate!)
+    const earliestStartDate = startDates.length > 0 ? new Date(Math.min(...startDates.map((d) => d.getTime()))) : null
+    const latestDueDate = dueDates.length > 0 ? new Date(Math.max(...dueDates.map((d) => d.getTime()))) : null
+
+    const statusSummary = workItems.reduce((acc, t) => {
+      acc[t.status] = (acc[t.status] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    return {
+      ...milestone,
+      derivedStats: { totalTasks, completedTasks, totalEstimatedHours, totalActualHours, progress, earliestStartDate, latestDueDate, statusSummary },
+    }
+  })
 }
 
 /**
@@ -1162,8 +1350,8 @@ export async function calculateMilestoneStats(milestoneId: string): Promise<{
   const totalTasks = workItems.length
   const completedTasks = workItems.filter((t) => t.status === 'done').length
 
-  const totalEstimatedHours = workItems.reduce((sum, t) => sum + (t.estimatedHours ? Number(t.estimatedHours) : 0), 0)
-  const totalActualHours = workItems.reduce((sum, t) => sum + (t.actualHours ? Number(t.actualHours) : 0), 0)
+  const totalEstimatedHours = workItems.reduce((sum, t) => sum + toNumber(t.estimatedHours), 0)
+  const totalActualHours = workItems.reduce((sum, t) => sum + toNumber(t.actualHours), 0)
 
   // Calculate progress based on completed tasks
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
@@ -1378,6 +1566,183 @@ export async function bulkDeleteTasks(ids: string[], userId: string): Promise<nu
   return totalDeleted
 }
 
+// ============================================================
+// CALENDAR FUNCTIONS
+// ============================================================
+
+/**
+ * Gets tasks whose dates overlap with the given date range for calendar view
+ * @param params - Query parameters including start, end, optional filters, and role-based access
+ * @returns Tasks with minimal fields needed for calendar display
+ */
+export async function getTasksForCalendar(params: {
+  start: Date
+  end: Date
+  projectId?: string
+  assigneeId?: string
+  userId?: string
+  role?: string
+}) {
+  const where: Prisma.TaskWhereInput = {
+    isDeleted: false,
+    OR: [
+      { dueDate: { gte: params.start, lte: params.end } },
+      { startDate: { gte: params.start, lte: params.end } },
+      { AND: [{ startDate: { lte: params.start } }, { dueDate: { gte: params.end } }] },
+    ],
+  }
+
+  if (params.projectId) where.projectId = params.projectId
+  if (params.assigneeId) where.assigneeId = params.assigneeId
+  // dipendente can only see their own assigned tasks
+  if (params.role === 'dipendente') where.assigneeId = params.userId
+
+  const tasks = await prisma.task.findMany({
+    where,
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      status: true,
+      priority: true,
+      taskType: true,
+      startDate: true,
+      dueDate: true,
+      project: { select: { id: true, name: true } },
+      assignee: { select: { id: true, firstName: true, lastName: true } },
+    },
+    orderBy: { dueDate: 'asc' },
+  })
+
+  return tasks
+}
+
+/**
+ * Clones a task with optional subtask cloning
+ */
+export async function cloneTask(
+  taskId: string,
+  userId: string,
+  options: { includeSubtasks?: boolean } = {}
+): Promise<any> {
+  const original = await prisma.task.findFirst({
+    where: { id: taskId, isDeleted: false },
+    select: taskWithRelationsSelect,
+  })
+
+  if (!original) throw new Error('Task not found')
+
+  // Fetch tags separately (polymorphic TagAssignment)
+  const originalTags = await prisma.tagAssignment.findMany({
+    where: { entityType: 'task', entityId: taskId },
+    select: { tagId: true },
+  })
+
+  const projectCode = (original as any).project?.code ?? null
+  const code = await generateTaskCode(
+    projectCode,
+    original.projectId ?? null,
+    original.taskType as TaskType
+  )
+
+  const cloned = await prisma.$transaction(async (tx) => {
+    const newTask = await tx.task.create({
+      data: {
+        code,
+        title: `Copia di ${original.title}`,
+        description: original.description,
+        taskType: original.taskType,
+        status: 'todo',
+        priority: original.priority,
+        startDate: original.startDate,
+        dueDate: original.dueDate,
+        estimatedHours: original.estimatedHours,
+        projectId: original.projectId,
+        parentTaskId: original.parentTaskId,
+        assigneeId: original.assigneeId,
+        departmentId: original.departmentId,
+        createdById: userId,
+      },
+      select: taskWithRelationsSelect,
+    })
+
+    // Clone tags (polymorphic TagAssignment)
+    if (originalTags.length > 0) {
+      await tx.tagAssignment.createMany({
+        data: originalTags.map((t) => ({ tagId: t.tagId, entityType: 'task', entityId: newTask.id })),
+      })
+    }
+
+    // Clone subtasks recursively if requested
+    if (options.includeSubtasks) {
+      await cloneSubtasksRecursive(tx, taskId, newTask.id, userId, original.projectId ?? null)
+    }
+
+    await auditService.logCreate(EntityType.TASK, newTask.id, userId, { originalTaskId: taskId, includeSubtasks: options.includeSubtasks }, tx)
+
+    return newTask
+  })
+
+  return cloned
+}
+
+async function cloneSubtasksRecursive(
+  tx: Prisma.TransactionClient,
+  originalParentId: string,
+  newParentId: string,
+  userId: string,
+  projectId: string | null
+) {
+  const subtasks = await tx.task.findMany({
+    where: { parentTaskId: originalParentId, isDeleted: false },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      taskType: true,
+      priority: true,
+      startDate: true,
+      dueDate: true,
+      estimatedHours: true,
+      assigneeId: true,
+      departmentId: true,
+    },
+  })
+
+  for (const sub of subtasks) {
+    const projectCode = projectId
+      ? (
+          await prisma.project.findFirst({
+            where: { id: projectId },
+            select: { code: true },
+          })
+        )?.code ?? null
+      : null
+    const code = await generateTaskCode(projectCode, projectId, sub.taskType as TaskType)
+    const newSub = await tx.task.create({
+      data: {
+        code,
+        title: sub.title,
+        description: sub.description,
+        taskType: sub.taskType,
+        status: 'todo',
+        priority: sub.priority,
+        startDate: sub.startDate,
+        dueDate: sub.dueDate,
+        estimatedHours: sub.estimatedHours,
+        projectId,
+        parentTaskId: newParentId,
+        assigneeId: sub.assigneeId,
+        departmentId: sub.departmentId,
+        createdById: userId,
+      },
+    })
+
+    // Recurse for nested subtasks
+    await cloneSubtasksRecursive(tx, sub.id, newSub.id, userId, projectId)
+  }
+}
+
 export const taskService = {
   createTask,
   getTasks,
@@ -1396,6 +1761,8 @@ export const taskService = {
   bulkDeleteTasks,
   // Gantt
   getTasksForGantt,
+  // Calendar
+  getTasksForCalendar,
   // Dependencies
   getTaskDependencyById,
   createTaskDependency,
@@ -1405,4 +1772,6 @@ export const taskService = {
   getProjectMilestones,
   getMilestoneWithStats,
   calculateMilestoneStats,
+  // Clone
+  cloneTask,
 }

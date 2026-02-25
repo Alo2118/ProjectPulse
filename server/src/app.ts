@@ -5,6 +5,10 @@ import rateLimit from 'express-rate-limit'
 import routes from './routes/index.js'
 import { errorMiddleware } from './middleware/errorMiddleware.js'
 import { logger } from './utils/logger.js'
+import { initializeAutomationRegistry } from './services/automation/index.js'
+
+// Initialize automation V2 registry (must run before routes)
+initializeAutomationRegistry()
 
 const app = express()
 
@@ -27,7 +31,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit for development
+  max: process.env.NODE_ENV === 'production' ? 500 : 1000, // 500 req/15min in prod, 1000 in dev
   message: 'Too many requests from this IP, please try again later.',
 })
 app.use('/api', limiter)
