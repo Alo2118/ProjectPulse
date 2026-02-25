@@ -10,6 +10,7 @@
 import { prisma } from '../models/prismaClient.js'
 import { evaluateRules } from '../services/automation/index.js'
 import { cleanupStaleCooldowns } from '../services/automation/cooldown.js'
+import { generateRecommendations } from '../services/automation/recommendationService.js'
 import { logger } from '../utils/logger.js'
 
 const INTERVAL_MS = 15 * 60 * 1000 // 15 minutes
@@ -18,6 +19,9 @@ const INTERVAL_MS = 15 * 60 * 1000 // 15 minutes
 const DEADLINE_DAYS_WINDOWS = [1, 2, 3] as const
 
 let schedulerHandle: NodeJS.Timeout | null = null
+
+// Track last recommendation generation time (once per day)
+let lastRecommendationRun = 0
 
 /**
  * Runs the overdue-task check and fires automation rules for each matching task.
@@ -315,6 +319,15 @@ export function startAutomationScheduler(): void {
     void runIdleCheck()
     void runDocumentReviewCheck()
     void runProjectDeadlineCheck()
+
+    // Daily recommendation generation (once every 24 hours)
+    const now = Date.now()
+    if (now - lastRecommendationRun > 24 * 60 * 60 * 1000) {
+      lastRecommendationRun = now
+      void generateRecommendations().catch((err) =>
+        logger.error('Recommendation generation failed', { error: err })
+      )
+    }
   }, INTERVAL_MS)
 }
 

@@ -20,10 +20,12 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import * as automationService from '../services/automationService.js'
-import { AUTOMATION_TEMPLATES } from '../services/automationTemplates.js'
+import * as recommendationService from '../services/automation/recommendationService.js'
+import { AUTOMATION_TEMPLATES, AUTOMATION_PACKAGES } from '../services/automationTemplates.js'
 import { assertProjectCapability } from '../services/permissionService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { logger } from '../utils/logger.js'
+import type { TriggerConfig, ConditionConfig, ActionConfig } from '../services/automation/types.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -491,6 +493,191 @@ export async function createFromTemplateHandler(
     res.status(201).json({ success: true, data: rule })
   } catch (error) {
     logger.error('Error creating automation rule from template', { error })
+    next(error)
+  }
+}
+
+// ============================================================
+// HANDLERS - RECOMMENDATIONS
+// ============================================================
+
+/**
+ * GET /api/automations/recommendations?projectId=...
+ * Returns all pending automation recommendations, optionally filtered by project.
+ */
+export async function getRecommendationsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const projectId = req.query['projectId'] as string | undefined
+    const recommendations =
+      await recommendationService.getRecommendations(projectId)
+    res.json({ success: true, data: recommendations })
+  } catch (error) {
+    logger.error('Error fetching automation recommendations', { error })
+    next(error)
+  }
+}
+
+/**
+ * POST /api/automations/recommendations/generate
+ * Triggers pattern analysis and generates new recommendations.
+ */
+export async function generateRecommendationsHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const count = await recommendationService.generateRecommendations()
+    res.json({ success: true, data: { generated: count } })
+  } catch (error) {
+    logger.error('Error generating automation recommendations', { error })
+    next(error)
+  }
+}
+
+/**
+ * POST /api/automations/recommendations/:id/apply
+ * Applies a recommendation by creating the suggested automation rule.
+ */
+export async function applyRecommendationHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      return next(new AppError('Unauthorized', 401))
+    }
+
+    const rule = await recommendationService.applyRecommendation(
+      req.params['id']!,
+      req.user.userId
+    )
+    res.json({ success: true, data: rule })
+  } catch (error) {
+    logger.error('Error applying automation recommendation', {
+      error,
+      recommendationId: req.params['id'],
+    })
+    next(error)
+  }
+}
+
+/**
+ * POST /api/automations/recommendations/:id/dismiss
+ * Dismisses a recommendation so it no longer shows up.
+ */
+export async function dismissRecommendationHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      return next(new AppError('Unauthorized', 401))
+    }
+
+    await recommendationService.dismissRecommendation(
+      req.params['id']!,
+      req.user.userId
+    )
+    res.json({ success: true })
+  } catch (error) {
+    logger.error('Error dismissing automation recommendation', {
+      error,
+      recommendationId: req.params['id'],
+    })
+    next(error)
+  }
+}
+
+// ============================================================
+// HANDLERS - PACKAGES
+// ============================================================
+
+/**
+ * GET /api/automations/packages
+ * Returns all available automation packages.
+ */
+export async function getPackagesHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    res.json({ success: true, data: AUTOMATION_PACKAGES })
+  } catch (error) {
+    logger.error('Error fetching automation packages', { error })
+    next(error)
+  }
+}
+
+/**
+ * POST /api/automations/packages/:key/activate?projectId=...
+ * Activates all templates in a package, creating automation rules for each.
+ */
+export async function activatePackageHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      return next(new AppError('Unauthorized', 401))
+    }
+
+    const { key } = req.params
+    const projectId = req.query['projectId'] as string | undefined
+
+    const pkg = AUTOMATION_PACKAGES.find((p) => p.key === key)
+    if (!pkg) {
+      return next(new AppError('Package not found', 404))
+    }
+
+    const createdRules = []
+    for (const templateKey of pkg.templates) {
+      const template = AUTOMATION_TEMPLATES.find((t) => t.key === templateKey)
+      if (!template) continue
+
+      const rule = await automationService.createAutomationRule(
+        {
+          name: template.name,
+          description: template.description,
+          projectId,
+          domain: template.domain,
+          trigger: template.trigger as TriggerConfig,
+          conditions: template.conditions as ConditionConfig[],
+          actions: template.actions as ActionConfig[],
+          isActive: true,
+          priority: 0,
+          conditionLogic: 'AND',
+          cooldownMinutes: template.cooldownMinutes ?? 0,
+        },
+        req.user.userId
+      )
+      createdRules.push(rule)
+    }
+
+    logger.info('Automation package activated', {
+      packageKey: key,
+      rulesCreated: createdRules.length,
+      projectId,
+      activatedBy: req.user.userId,
+    })
+
+    res.json({
+      success: true,
+      data: { package: pkg.name, rulesCreated: createdRules.length, rules: createdRules },
+    })
+  } catch (error) {
+    logger.error('Error activating automation package', {
+      error,
+      packageKey: req.params['key'],
+    })
     next(error)
   }
 }

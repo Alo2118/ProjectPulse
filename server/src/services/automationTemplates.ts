@@ -23,6 +23,13 @@ export interface AutomationTemplate {
   cooldownMinutes?: number
 }
 
+export interface AutomationPackage {
+  key: string
+  name: string
+  description: string
+  templates: string[] // template keys
+}
+
 // ============================================================
 // PREDEFINED TEMPLATES
 // ============================================================
@@ -362,5 +369,36 @@ export const AUTOMATION_TEMPLATES: AutomationTemplate[] = [
       },
     ],
     cooldownMinutes: 10080, // 7 days
+  },
+]
+
+// ============================================================
+// AUTOMATION PACKAGES - Curated bundles of templates
+// ============================================================
+
+export const AUTOMATION_PACKAGES: AutomationPackage[] = [
+  {
+    key: 'base',
+    name: 'Pacchetto Base',
+    description: 'Notifiche scadenze + completamento automatico parent',
+    templates: ['notify_overdue', 'notify_deadline_1day', 'auto_complete_parent'],
+  },
+  {
+    key: 'risk_management',
+    name: 'Gestione Rischi',
+    description: 'Alert rischi critici + escalation rischi scaduti',
+    templates: ['notify_risk_high', 'escalate_risk_overdue'],
+  },
+  {
+    key: 'document_compliance',
+    name: 'Compliance Documentale',
+    description: 'Notifica revisori + reminder scadenze + alert documenti scaduti',
+    templates: ['notify_reviewers', 'reminder_doc_expiring', 'alert_doc_expired'],
+  },
+  {
+    key: 'strict_deadlines',
+    name: 'Scadenze Rigorose',
+    description: 'Escalation progressiva + alert task inattivi',
+    templates: ['escalate_48h', 'notify_deadline_1day', 'notify_overdue', 'alert_idle_task'],
   },
 ]

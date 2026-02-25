@@ -52,6 +52,46 @@ router.get(
   automationController.getRegistryMetadata
 )
 
+// ── Recommendations (admin / direzione) ─────────────────────────────────────
+
+router.get(
+  '/automations/recommendations',
+  requireRole('admin', 'direzione'),
+  automationController.getRecommendationsHandler
+)
+
+router.post(
+  '/automations/recommendations/generate',
+  requireRole('admin'),
+  automationController.generateRecommendationsHandler
+)
+
+router.post(
+  '/automations/recommendations/:id/apply',
+  requireRole('admin', 'direzione'),
+  automationController.applyRecommendationHandler
+)
+
+router.post(
+  '/automations/recommendations/:id/dismiss',
+  requireRole('admin', 'direzione'),
+  automationController.dismissRecommendationHandler
+)
+
+// ── Packages (admin / direzione) ────────────────────────────────────────────
+
+router.get(
+  '/automations/packages',
+  requireRole('admin', 'direzione'),
+  automationController.getPackagesHandler
+)
+
+router.post(
+  '/automations/packages/:key/activate',
+  requireRole('admin', 'direzione'),
+  automationController.activatePackageHandler
+)
+
 router.patch(
   '/automations/:id/toggle',
   requireRole('admin', 'direzione'),
