@@ -122,7 +122,7 @@ export default function ProfilePage() {
           </h1>
           <div className="flex items-center gap-2 mt-0.5">
             <Shield className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-sm text-slate-500 dark:text-slate-400">
+            <span className="text-sm text-themed-secondary">
               {roleLabel}
             </span>
           </div>
@@ -196,7 +196,7 @@ export default function ProfilePage() {
       <form onSubmit={handleSubmit} className="card p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
               Nome *
             </label>
             <input
@@ -211,7 +211,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
               Cognome *
             </label>
             <input
@@ -227,7 +227,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
             Email *
           </label>
           <input
@@ -240,7 +240,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
             Nuova password
           </label>
           <div className="relative">
@@ -254,7 +254,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-themed-tertiary hover:text-themed-primary"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -264,10 +264,10 @@ export default function ProfilePage() {
 
         {/* Role info - read only */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
             Ruolo
           </label>
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-themed-secondary" style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
             <User className="w-4 h-4" />
             <span>{roleLabel}</span>
             <span className="text-xs ml-auto">(non modificabile)</span>
@@ -275,7 +275,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex justify-end pt-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
           <button type="submit" disabled={isSaving || isLoading} className="btn-primary flex items-center">
             {isSaving ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

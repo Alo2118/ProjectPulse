@@ -151,7 +151,7 @@ export default function Sidebar() {
         >
           <Search className="w-4 h-4" />
           <span className="text-xs">Cerca...</span>
-          <kbd className="ml-auto hidden sm:inline-flex text-[10px] text-slate-600 border border-slate-700 rounded px-1 py-0.5">
+          <kbd className="ml-auto hidden sm:inline-flex text-[10px] rounded px-1 py-0.5" style={{ color: 'var(--text-tertiary)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'var(--border-default)' }}>
             Ctrl K
           </kbd>
         </button>
@@ -178,7 +178,7 @@ export default function Sidebar() {
                     {group.label}
                   </span>
                   <ChevronRight
-                    className={`nav-group-chevron group-hover:text-slate-400 ${
+                    className={`nav-group-chevron ${
                       !isCollapsed ? 'rotate-90' : ''
                     }`}
                   />
@@ -238,17 +238,17 @@ export default function Sidebar() {
               </span>
             </div>
             <div className="text-left min-w-0">
-              <p className="text-sm font-medium text-slate-200 truncate">
+              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-slate-500 capitalize">
+              <p className="text-xs capitalize" style={{ color: 'var(--text-tertiary)' }}>
                 {user?.role}
               </p>
             </div>
           </button>
           <button
             onClick={handleLogout}
-            className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 flex-shrink-0"
+            className="p-2 rounded-lg text-themed-tertiary hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 flex-shrink-0"
             aria-label="Esci"
             title="Esci"
           >

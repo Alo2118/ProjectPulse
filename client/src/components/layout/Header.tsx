@@ -84,11 +84,11 @@ export default function Header() {
                   <span className="text-cyan-500/30 mx-1">/</span>
                 )}
                 {i === breadcrumbs.length - 1 ? (
-                  <span className="text-slate-200 font-medium truncate">{crumb.label}</span>
+                  <span className="text-themed-primary font-medium truncate">{crumb.label}</span>
                 ) : (
                   <Link
                     to={crumb.path}
-                    className="text-slate-500 hover:text-cyan-400 transition-colors truncate"
+                    className="text-themed-tertiary hover:text-themed-accent transition-colors truncate"
                   >
                     {crumb.label}
                   </Link>
