@@ -21,9 +21,8 @@ import {
   Pencil,
   Trash2,
   Download,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
+  List,
+  Grid3X3,
 } from 'lucide-react'
 import { Pagination } from '@components/common/Pagination'
 import { TimeEntry, PaginatedResponse } from '@/types'
@@ -31,23 +30,8 @@ import TimeEntryFormModal from './TimeEntryFormModal'
 import { TimeEntryDetailModal } from './TimeEntryDetailModal'
 import TaskSearchSelect from '@components/TaskSearchSelect'
 import { RunningTimerBanner } from '@/components/ui/RunningTimerBanner'
-
-function formatDuration(minutes: number | null): string {
-  if (!minutes || minutes <= 0) return '0m'
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
-  if (hours === 0) return `${mins}m`
-  return `${hours}h ${mins}m`
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
-}
+import { TimesheetView } from './TimesheetView'
+import { formatDate, formatDuration } from '@utils/dateFormatters'
 
 function formatTime(dateString: string): string {
   const date = new Date(dateString)
@@ -57,7 +41,7 @@ function formatTime(dateString: string): string {
   })
 }
 
-function formatDateShort(dateString: string): string {
+function formatDateGroup(dateString: string): string {
   const date = new Date(dateString)
   const today = new Date()
   const yesterday = new Date(today)
@@ -79,6 +63,8 @@ export default function TimeTrackingPage() {
   const { user: currentUser, token } = useAuthStore()
 
   const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'direzione'
+
+  const [viewMode, setViewMode] = useState<'list' | 'timesheet'>('list')
 
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 })
@@ -125,7 +111,7 @@ export default function TimeTrackingPage() {
         `/time-entries?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         setTimeEntries(response.data.data)
         setPagination(response.data.pagination)
       }
@@ -261,6 +247,31 @@ export default function TimeTrackingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 self-start">
+          {/* View toggle */}
+          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              <span className="hidden sm:inline">Lista</span>
+            </button>
+            <button
+              onClick={() => setViewMode('timesheet')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'timesheet'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <Grid3X3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Timesheet</span>
+            </button>
+          </div>
           {isPrivileged && (
             <button
               onClick={handleExportCSV}
@@ -296,6 +307,11 @@ export default function TimeTrackingPage() {
         <RunningTimerBanner timer={runningTimer} onStop={handleStopTimer} />
       )}
 
+      {/* Timesheet view */}
+      {viewMode === 'timesheet' && <TimesheetView />}
+
+      {/* List view */}
+      {viewMode === 'list' && <>
       {/* Timer + Filters (unified card) */}
       <div className="card p-4 space-y-4 overflow-visible relative z-10">
         {/* Start timer row */}
@@ -336,7 +352,7 @@ export default function TimeTrackingPage() {
             <option value="">Tutti i progetti</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.code} - {p.name}
+                {p.name}
               </option>
             ))}
           </select>
@@ -467,7 +483,7 @@ export default function TimeTrackingPage() {
                 <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {formatDateShort(entries[0].startTime)} - {formatDate(entries[0].startTime)}
+                      {formatDateGroup(entries[0].startTime)} - {formatDate(entries[0].startTime)}
                     </span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       {formatDuration(entries.reduce((sum, e) => sum + (e.duration || 0), 0))}
@@ -503,26 +519,7 @@ export default function TimeTrackingPage() {
                             [{entry.user.firstName} {entry.user.lastName}]
                           </span>
                         )}
-                        {/* Approval status badge */}
-                        {!entry.isRunning && (
-                          <span
-                            className={`hidden sm:inline-flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${
-                              entry.approvalStatus === 'approved'
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : entry.approvalStatus === 'rejected'
-                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                            }`}
-                          >
-                            {entry.approvalStatus === 'approved' ? (
-                              <><CheckCircle className="w-2.5 h-2.5" /> Approvata</>
-                            ) : entry.approvalStatus === 'rejected' ? (
-                              <><XCircle className="w-2.5 h-2.5" /> Rifiutata</>
-                            ) : (
-                              <><AlertCircle className="w-2.5 h-2.5" /> In attesa</>
-                            )}
-                          </span>
-                        )}
+                        {/* Approval status badge rimosso - funzione disabilitata */}
                       </div>
                       {/* Time info */}
                       <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0 hidden sm:inline">
@@ -572,6 +569,8 @@ export default function TimeTrackingPage() {
           className="px-4 py-3 border-t border-gray-200 dark:border-gray-700"
         />
       </div>
+
+      </>}
 
       {/* Form Modal */}
       <TimeEntryFormModal

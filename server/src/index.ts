@@ -5,9 +5,11 @@ import app from './app.js'
 import { logger } from './utils/logger.js'
 import { initializeSocket } from './socket/index.js'
 import { setSocketIO } from './services/notificationService.js'
+import { setIO } from './socket/socketManager.js'
 import { initWeeklyReportScheduler } from './scheduler/weeklyReportScheduler.js'
 import { initEmailService } from './services/emailService.js'
 import { initEmailNotificationScheduler } from './scheduler/emailNotificationScheduler.js'
+import { startAutomationScheduler } from './scheduler/automationScheduler.js'
 
 const PORT = process.env.PORT || 3000
 
@@ -29,6 +31,7 @@ const io = new Server(httpServer, {
 
 initializeSocket(io)
 setSocketIO(io)
+setIO(io)
 
 httpServer.listen(Number(PORT), '0.0.0.0', async () => {
   logger.info(`Server running on http://0.0.0.0:${PORT}`)
@@ -40,6 +43,9 @@ httpServer.listen(Number(PORT), '0.0.0.0', async () => {
   // Initialize email service + notification scheduler
   await initEmailService()
   initEmailNotificationScheduler()
+
+  // Initialize automation scheduler (overdue task checks every 15 min)
+  startAutomationScheduler()
 })
 
 // Handle uncaught exceptions

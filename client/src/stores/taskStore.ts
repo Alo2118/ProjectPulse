@@ -8,13 +8,34 @@ import api from '@services/api'
 import { toast } from '@stores/toastStore'
 import { Task, PaginatedResponse, TaskStats, TaskStatus } from '@/types'
 
+// ─── Socket payload types (mirrors the backend emit shapes) ──────────────────
+
+export interface TaskSocketPayload {
+  task: Task
+  projectId: string | null
+}
+
+export interface TaskStatusChangedSocketPayload {
+  taskId: string
+  projectId: string | null
+  oldStatus: TaskStatus
+  newStatus: TaskStatus
+  updatedBy: string
+}
+
+export interface TaskDeletedSocketPayload {
+  taskId: string
+  projectId: string | null
+}
+
 // Helper function to parse recurrencePattern from JSON string to object
-function parseTaskRecurrence(task: any): Task {
-  if (task.recurrencePattern && typeof task.recurrencePattern === 'string') {
+function parseTaskRecurrence(task: Task): Task {
+  const raw = task.recurrencePattern as unknown
+  if (raw && typeof raw === 'string') {
     try {
-      task.recurrencePattern = JSON.parse(task.recurrencePattern)
+      task.recurrencePattern = JSON.parse(raw)
     } catch {
-      task.recurrencePattern = null
+      task.recurrencePattern = undefined
     }
   }
   return task
@@ -30,6 +51,8 @@ interface TaskFilters {
   search?: string
   standalone?: boolean
   parentTaskId?: string
+  departmentId?: string
+  includeSubtasks?: boolean
 }
 
 interface KanbanTasks {
@@ -68,9 +91,18 @@ interface TaskState {
   reorderMyTasks: (taskPositions: Array<{ taskId: string; position: number }>) => Promise<void>
   clearError: () => void
   clearCurrentTask: () => void
+  bulkUpdateTasks: (ids: string[], update: { status?: string; priority?: string; assigneeId?: string }) => Promise<void>
+  bulkDeleteTasks: (ids: string[]) => Promise<void>
+  cloneTask: (id: string, includeSubtasks?: boolean) => Promise<Task>
+
+  // Real-time helpers — update local state only, no API calls
+  addTaskToStore: (task: Task) => void
+  updateTaskInStore: (task: Task) => void
+  updateTaskStatusInStore: (taskId: string, newStatus: TaskStatus) => void
+  removeTaskFromStore: (taskId: string) => void
 }
 
-export const useTaskStore = create<TaskState>((set) => ({
+export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   myTasks: [],
   currentTask: null,
@@ -98,12 +130,14 @@ export const useTaskStore = create<TaskState>((set) => ({
       if (filters.search) params.append('search', filters.search)
       if (filters.standalone) params.append('standalone', 'true')
       if (filters.parentTaskId) params.append('parentTaskId', filters.parentTaskId)
+      if (filters.departmentId) params.append('departmentId', filters.departmentId)
+      if (filters.includeSubtasks) params.append('includeSubtasks', 'true')
 
       const response = await api.get<{ success: boolean } & PaginatedResponse<Task>>(
         `/tasks?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         // Parse recurrencePattern from JSON strings to objects
         const tasks = response.data.data.map(parseTaskRecurrence)
         set({
@@ -133,7 +167,7 @@ export const useTaskStore = create<TaskState>((set) => ({
         `/tasks/my?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         // Parse recurrencePattern from JSON strings to objects
         const myTasks = response.data.data.map(parseTaskRecurrence)
         set({
@@ -194,7 +228,7 @@ export const useTaskStore = create<TaskState>((set) => ({
         set({ taskStats: response.data.data })
       }
     } catch {
-      // silently ignore
+      // Stats are non-critical, silently ignore
     }
   },
 
@@ -222,30 +256,69 @@ export const useTaskStore = create<TaskState>((set) => ({
   },
 
   updateTask: async (id, data) => {
-    set({ isLoading: true, error: null })
+    // 1. Save previous state for rollback
+    const previousTasks = get().tasks
+    const previousMyTasks = get().myTasks
+    const previousCurrentTask = get().currentTask
+
+    // 2. Optimistically apply the partial update immediately (no isLoading flag — keeps UI responsive)
+    const applyPatch = (tasks: Task[]) =>
+      tasks.map((t) => (t.id === id ? { ...t, ...data } : t))
+
+    set({
+      tasks: applyPatch(get().tasks),
+      myTasks: applyPatch(get().myTasks),
+      currentTask:
+        get().currentTask?.id === id
+          ? { ...get().currentTask!, ...data }
+          : get().currentTask,
+    })
+
     try {
       const response = await api.put<{ success: boolean; data: Task }>(`/tasks/${id}`, data)
 
       if (response.data.success && response.data.data) {
+        // 3. Replace with authoritative server response
         const updatedTask = parseTaskRecurrence(response.data.data)
         set((state) => ({
           tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
           myTasks: state.myTasks.map((t) => (t.id === id ? updatedTask : t)),
           currentTask: state.currentTask?.id === id ? updatedTask : state.currentTask,
-          isLoading: false,
         }))
         toast.success('Task aggiornato')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update task'
-      set({ error: message, isLoading: false })
+      // 4. Rollback on error
+      set({
+        tasks: previousTasks,
+        myTasks: previousMyTasks,
+        currentTask: previousCurrentTask,
+        error: error instanceof Error ? error.message : 'Failed to update task',
+      })
       toast.error('Errore', 'Impossibile aggiornare il task')
       throw error
     }
   },
 
   changeTaskStatus: async (id, status, blockedReason) => {
-    set({ isLoading: true, error: null })
+    // 1. Save previous state for rollback
+    const previousTasks = get().tasks
+    const previousMyTasks = get().myTasks
+    const previousCurrentTask = get().currentTask
+
+    // 2. Optimistically update status immediately
+    const applyStatus = (tasks: Task[]) =>
+      tasks.map((t) => (t.id === id ? { ...t, status } : t))
+
+    set({
+      tasks: applyStatus(get().tasks),
+      myTasks: applyStatus(get().myTasks),
+      currentTask:
+        get().currentTask?.id === id
+          ? { ...get().currentTask!, status }
+          : get().currentTask,
+    })
+
     try {
       const response = await api.patch<{ success: boolean; data: Task }>(`/tasks/${id}/status`, {
         status,
@@ -253,44 +326,79 @@ export const useTaskStore = create<TaskState>((set) => ({
       })
 
       if (response.data.success && response.data.data) {
+        // 3. Replace with authoritative server response (may carry extra computed fields)
         const updatedTask = parseTaskRecurrence(response.data.data)
         set((state) => ({
           tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
           myTasks: state.myTasks.map((t) => (t.id === id ? updatedTask : t)),
           currentTask: state.currentTask?.id === id ? updatedTask : state.currentTask,
-          isLoading: false,
         }))
         toast.success('Stato aggiornato')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to change task status'
-      set({ error: message, isLoading: false })
+      // 4. Rollback on error
+      set({
+        tasks: previousTasks,
+        myTasks: previousMyTasks,
+        currentTask: previousCurrentTask,
+        error: error instanceof Error ? error.message : 'Failed to change task status',
+      })
       toast.error('Errore', 'Impossibile cambiare lo stato')
       throw error
     }
   },
 
   deleteTask: async (id) => {
-    set({ isLoading: true, error: null })
-    try {
-      await api.delete(`/tasks/${id}`)
-      set((state) => ({
-        tasks: state.tasks.filter((t) => t.id !== id),
-        myTasks: state.myTasks.filter((t) => t.id !== id),
-        currentTask: state.currentTask?.id === id ? null : state.currentTask,
-        isLoading: false,
-      }))
-      toast.success('Task eliminato')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete task'
-      set({ error: message, isLoading: false })
-      toast.error('Errore', 'Impossibile eliminare il task')
-      throw error
-    }
+    // Snapshot affected items for potential undo restore
+    const state = get()
+    const removedFromTasks = state.tasks.find((t) => t.id === id)
+    const removedFromMyTasks = state.myTasks.find((t) => t.id === id)
+    const previousCurrentTask = state.currentTask?.id === id ? state.currentTask : null
+
+    // Optimistically remove from UI immediately
+    set((s) => ({
+      tasks: s.tasks.filter((t) => t.id !== id),
+      myTasks: s.myTasks.filter((t) => t.id !== id),
+      currentTask: s.currentTask?.id === id ? null : s.currentTask,
+    }))
+
+    toast.withUndo(
+      'Task eliminato',
+      async () => {
+        try {
+          await api.delete(`/tasks/${id}`)
+        } catch (error) {
+          // Restore on API failure
+          set((s) => ({
+            tasks: removedFromTasks ? [removedFromTasks, ...s.tasks] : s.tasks,
+            myTasks: removedFromMyTasks ? [removedFromMyTasks, ...s.myTasks] : s.myTasks,
+            currentTask: previousCurrentTask ?? s.currentTask,
+            error: error instanceof Error ? error.message : 'Failed to delete task',
+          }))
+          toast.error('Errore', 'Impossibile eliminare il task')
+          throw error
+        }
+      },
+      () => {
+        // Undo: restore the items back into the store
+        set((s) => ({
+          tasks: removedFromTasks
+            ? [removedFromTasks, ...s.tasks.filter((t) => t.id !== id)]
+            : s.tasks,
+          myTasks: removedFromMyTasks
+            ? [removedFromMyTasks, ...s.myTasks.filter((t) => t.id !== id)]
+            : s.myTasks,
+          currentTask: previousCurrentTask ?? s.currentTask,
+        }))
+      }
+    )
   },
 
   reorderMyTasks: async (taskPositions) => {
-    // Optimistic update
+    // 1. Save previous state for rollback
+    const previousMyTasks = get().myTasks
+
+    // 2. Optimistic update — apply new positions and re-sort immediately
     set((state) => ({
       myTasks: state.myTasks
         .map((task) => {
@@ -303,9 +411,10 @@ export const useTaskStore = create<TaskState>((set) => ({
     try {
       await api.patch('/tasks/reorder', { tasks: taskPositions })
     } catch (error) {
-      // Revert on error by refetching
+      // 3. Rollback to previous order on error
       const message = error instanceof Error ? error.message : 'Failed to reorder tasks'
-      set({ error: message })
+      set({ error: message, myTasks: previousMyTasks })
+      toast.error('Errore', 'Impossibile riordinare i task')
       throw error
     }
   },
@@ -313,4 +422,126 @@ export const useTaskStore = create<TaskState>((set) => ({
   clearError: () => set({ error: null }),
 
   clearCurrentTask: () => set({ currentTask: null }),
+
+  bulkUpdateTasks: async (ids: string[], update: { status?: string; priority?: string; assigneeId?: string }) => {
+    set({ isLoading: true, error: null })
+    try {
+      await api.patch('/tasks/bulk', { ids, update })
+      toast.success('Aggiornamento', `${ids.length} task aggiornati`)
+      // Refetch to get updated data
+      await get().fetchMyTasks()
+      await get().fetchTasks()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Bulk update failed'
+      set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile aggiornare i task')
+      throw error
+    }
+  },
+
+  bulkDeleteTasks: async (ids: string[]) => {
+    // Snapshot items for potential undo
+    const state = get()
+    const removedTasks = state.tasks.filter((t) => ids.includes(t.id))
+    const removedMyTasks = state.myTasks.filter((t) => ids.includes(t.id))
+
+    // Optimistically remove from UI
+    set((s) => ({
+      tasks: s.tasks.filter((t) => !ids.includes(t.id)),
+      myTasks: s.myTasks.filter((t) => !ids.includes(t.id)),
+    }))
+
+    toast.withUndo(
+      `${ids.length} task eliminati`,
+      async () => {
+        try {
+          await api.delete('/tasks/bulk', { data: { ids } })
+        } catch (error) {
+          // Restore on API failure
+          set((s) => ({
+            tasks: [...removedTasks, ...s.tasks],
+            myTasks: [...removedMyTasks, ...s.myTasks],
+            error: error instanceof Error ? error.message : 'Bulk delete failed',
+          }))
+          toast.error('Errore', 'Impossibile eliminare i task')
+          throw error
+        }
+      },
+      () => {
+        // Undo: put tasks back
+        set((s) => ({
+          tasks: [...removedTasks, ...s.tasks.filter((t) => !ids.includes(t.id))],
+          myTasks: [...removedMyTasks, ...s.myTasks.filter((t) => !ids.includes(t.id))],
+        }))
+      }
+    )
+  },
+
+  cloneTask: async (id: string, includeSubtasks = false) => {
+    set({ isLoading: true, error: null })
+    try {
+      const response = await api.post(`/tasks/${id}/clone`, { includeSubtasks })
+      const cloned = parseTaskRecurrence(response.data.data)
+      set((state) => ({
+        tasks: [cloned, ...state.tasks],
+        isLoading: false,
+      }))
+      toast.success('Duplicazione', 'Task duplicato con successo')
+      return cloned
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Clone failed'
+      set({ error: message, isLoading: false })
+      toast.error('Errore', 'Impossibile duplicare il task')
+      throw error
+    }
+  },
+
+  // ── Real-time helpers: update local state without API calls ──────────────
+
+  addTaskToStore: (task: Task) => {
+    const parsed = parseTaskRecurrence(task)
+    set((state) => {
+      // Avoid duplicate if the task was already added by the creator's own action
+      const alreadyInTasks = state.tasks.some((t) => t.id === parsed.id)
+      const alreadyInMyTasks = state.myTasks.some((t) => t.id === parsed.id)
+      return {
+        tasks: alreadyInTasks ? state.tasks : [parsed, ...state.tasks],
+        myTasks: alreadyInMyTasks ? state.myTasks : state.myTasks,
+      }
+    })
+  },
+
+  updateTaskInStore: (task: Task) => {
+    const parsed = parseTaskRecurrence(task)
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t.id === parsed.id ? parsed : t)),
+      myTasks: state.myTasks.map((t) => (t.id === parsed.id ? parsed : t)),
+      currentTask:
+        state.currentTask?.id === parsed.id ? parsed : state.currentTask,
+    }))
+  },
+
+  updateTaskStatusInStore: (taskId: string, newStatus: TaskStatus) => {
+    set((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === taskId ? { ...t, status: newStatus } : t
+      ),
+      myTasks: state.myTasks.map((t) =>
+        t.id === taskId ? { ...t, status: newStatus } : t
+      ),
+      currentTask:
+        state.currentTask?.id === taskId
+          ? { ...state.currentTask, status: newStatus }
+          : state.currentTask,
+    }))
+  },
+
+  removeTaskFromStore: (taskId: string) => {
+    set((state) => ({
+      tasks: state.tasks.filter((t) => t.id !== taskId),
+      myTasks: state.myTasks.filter((t) => t.id !== taskId),
+      currentTask:
+        state.currentTask?.id === taskId ? null : state.currentTask,
+    }))
+  },
 }))

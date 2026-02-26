@@ -4,8 +4,7 @@
  */
 
 import { Router } from 'express'
-import { authMiddleware } from '../middleware/authMiddleware.js'
-import { authorize } from '../middleware/authMiddleware.js'
+import { authMiddleware, requireRole as authorize } from '../middleware/authMiddleware.js'
 import {
   getTemplates,
   getTemplate,

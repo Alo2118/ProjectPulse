@@ -22,14 +22,7 @@ import {
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { TimeEntry } from '@/types'
-
-function formatDuration(minutes: number | null): string {
-  if (!minutes || minutes <= 0) return '0m'
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
-  if (hours === 0) return `${mins}m`
-  return `${hours}h ${mins}m`
-}
+import { formatDuration, formatHoursFromDecimal } from '@utils/dateFormatters'
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
@@ -195,7 +188,7 @@ export default function TeamTimePage() {
               <option value="">Tutti i progetti</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.code} - {project.name}
+                  {project.name}
                 </option>
               ))}
             </select>
@@ -243,7 +236,7 @@ export default function TeamTimePage() {
                   Ore Totali
                 </p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
-                  {summary.totalHours.toFixed(1)}h
+                  {formatHoursFromDecimal(summary.totalHours)}
                 </p>
               </div>
             </div>
@@ -307,9 +300,8 @@ export default function TeamTimePage() {
                 </p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
                   {summary.userCount > 0
-                    ? (summary.totalHours / summary.userCount).toFixed(1)
-                    : 0}
-                  h
+                    ? formatHoursFromDecimal(summary.totalHours / summary.userCount)
+                    : '0h'}
                 </p>
               </div>
             </div>
@@ -435,9 +427,6 @@ export default function TeamTimePage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-gray-900 dark:text-white truncate">
                           {project.projectName}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {project.projectCode}
                         </p>
                       </div>
                       <span className="text-lg font-bold text-gray-900 dark:text-white ml-2 tabular-nums">

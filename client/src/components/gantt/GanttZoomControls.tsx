@@ -38,6 +38,7 @@ export default function GanttZoomControls({
           onClick={() => onNavigate('prev')}
           className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-surface-800 dark:hover:text-white"
           title="Precedente"
+          aria-label="Periodo precedente"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -55,6 +56,7 @@ export default function GanttZoomControls({
           onClick={() => onNavigate('next')}
           className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-surface-800 dark:hover:text-white"
           title="Successivo"
+          aria-label="Periodo successivo"
         >
           <ChevronRight className="h-5 w-5" />
         </button>

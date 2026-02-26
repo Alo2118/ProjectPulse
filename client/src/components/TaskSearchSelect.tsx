@@ -54,7 +54,7 @@ export default function TaskSearchSelect({
         const response = await api.get<{ success: boolean; data: Task[] }>(
           `${base}?${params.toString()}`
         )
-        if (response.data.success !== false) {
+        if (response.data.success) {
           setTasks(response.data.data)
         }
       } catch {
@@ -175,7 +175,7 @@ export default function TaskSearchSelect({
     for (const [, projectTasks] of projectMap) {
       const firstTask = projectTasks[0]
       groups.push({
-        label: `${firstTask.project!.code} - ${firstTask.project!.name}`,
+        label: firstTask.project!.name,
         projectCode: firstTask.project!.code,
         tasks: buildTree(projectTasks),
       })
@@ -225,7 +225,7 @@ export default function TaskSearchSelect({
             disabled={disabled}
             className="input w-full pl-9 pr-8 text-left truncate disabled:opacity-50"
           >
-            <span className="text-xs text-gray-500 mr-1.5">{selectedTask.project?.code || '—'}</span>
+            <span className="text-xs text-gray-500 mr-1.5">{selectedTask.project?.name || '—'}</span>
             {selectedTask.title}
           </button>
         ) : (

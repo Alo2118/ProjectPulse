@@ -199,6 +199,7 @@ export async function getRecurringTaskWithCompletions(
       priority: true,
       projectId: true,
       assigneeId: true,
+      departmentId: true,
       createdById: true,
       parentTaskId: true,
       startDate: true,

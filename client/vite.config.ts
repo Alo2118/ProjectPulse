@@ -24,6 +24,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
   },
+  optimizeDeps: {
+    include: ['date-fns'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

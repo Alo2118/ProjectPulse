@@ -92,7 +92,7 @@ export default function ProjectFormPage() {
     const loadUsers = async () => {
       try {
         const response = await api.get<{ success: boolean; data: User[] }>('/users?isActive=true&limit=100')
-        if (response.data.success !== false) {
+        if (response.data.success) {
           setUsers(response.data.data)
         }
       } catch {

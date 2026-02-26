@@ -35,7 +35,7 @@ export function CollapsibleSection({
     <div className={`${borderTop ? 'mt-4 pt-4 border-t border-gray-100 dark:border-gray-700' : ''} ${className}`}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between text-left"
+        className="w-full flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg -mx-1 px-1 transition-colors"
       >
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
           {Icon && <Icon className="w-4 h-4 text-gray-400" />}

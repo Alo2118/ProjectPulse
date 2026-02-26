@@ -1,4 +1,4 @@
-import { MessageSquare, UserPlus, AlertTriangle, FileText, Lightbulb, CheckCircle, XCircle } from 'lucide-react'
+import { MessageSquare, AtSign, UserPlus, AlertTriangle, FileText, Lightbulb, CheckCircle, XCircle, ArrowRightLeft, ShieldAlert, UserCheck, FileCheck, Zap, CalendarClock } from 'lucide-react'
 import type { Notification, NotificationType } from '@/types'
 
 interface NotificationItemProps {
@@ -10,26 +10,46 @@ interface NotificationItemProps {
 
 const iconMap: Record<NotificationType, React.ElementType> = {
   new_comment: MessageSquare,
+  mention: AtSign,
   task_assigned: UserPlus,
   task_blocked: XCircle,
+  task_status_changed: ArrowRightLeft,
   approval_requested: CheckCircle,
   risk_critical: AlertTriangle,
+  risk_high: ShieldAlert,
+  risk_assigned: UserCheck,
   document_review: FileText,
+  document_approved: FileCheck,
   input_received: Lightbulb,
   input_processed: CheckCircle,
   input_converted: Lightbulb,
+  input_mention: AtSign,
+  task_blocked_mention: AtSign,
+  note_mention: AtSign,
+  automation: Zap,
+  weekly_report_reminder: CalendarClock,
 }
 
 const colorMap: Record<NotificationType, string> = {
   new_comment: 'text-blue-500',
+  mention: 'text-violet-500',
   task_assigned: 'text-green-500',
   task_blocked: 'text-red-500',
+  task_status_changed: 'text-indigo-500',
   approval_requested: 'text-amber-500',
   risk_critical: 'text-red-600',
+  risk_high: 'text-red-500',
+  risk_assigned: 'text-orange-500',
   document_review: 'text-purple-500',
+  document_approved: 'text-green-600',
   input_received: 'text-cyan-500',
   input_processed: 'text-green-500',
   input_converted: 'text-emerald-500',
+  input_mention: 'text-cyan-500',
+  task_blocked_mention: 'text-orange-500',
+  note_mention: 'text-yellow-600',
+  automation: 'text-amber-500',
+  weekly_report_reminder: 'text-blue-600',
 }
 
 function timeAgo(dateStr: string): string {

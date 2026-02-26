@@ -5,7 +5,7 @@ import { AppError } from './errorMiddleware.js'
 export interface JwtPayload {
   userId: string
   email: string
-  role: 'admin' | 'direzione' | 'dipendente'
+  role: 'admin' | 'direzione' | 'dipendente' | 'guest'
 }
 
 declare global {
@@ -32,7 +32,7 @@ export const authMiddleware = (
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'your-secret-key'
+      process.env.JWT_SECRET!
     ) as JwtPayload
 
     req.user = decoded

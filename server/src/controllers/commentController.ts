@@ -3,10 +3,11 @@
  * @module controllers/commentController
  */
 
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { commentService } from '../services/commentService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -16,6 +17,7 @@ const createCommentSchema = z.object({
   taskId: z.string().uuid('Invalid task ID'),
   content: z.string().min(1, 'Content is required').max(10000),
   isInternal: z.boolean().default(false),
+  parentId: z.string().uuid('Invalid parent comment ID').optional(),
 })
 
 const updateCommentSchema = z.object({
@@ -56,11 +58,12 @@ export async function createComment(req: Request, res: Response, next: NextFunct
         taskId: data.taskId,
         content: data.content,
         isInternal: data.isInternal,
+        ...(data.parentId ? { parentId: data.parentId } : {}),
       },
       userId
     )
 
-    res.status(201).json({ success: true, data: comment })
+    sendCreated(res, comment)
   } catch (error) {
     if (error instanceof Error && error.message === 'Task not found') {
       next(new AppError('Task not found', 404))
@@ -86,11 +89,7 @@ export async function getTaskComments(req: Request, res: Response, next: NextFun
       userRole
     )
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -116,7 +115,7 @@ export async function getComment(req: Request, res: Response, next: NextFunction
       throw new AppError('Comment not found', 404) // Hide existence of internal comments
     }
 
-    res.json({ success: true, data: comment })
+    sendSuccess(res, comment)
   } catch (error) {
     next(error)
   }
@@ -155,7 +154,7 @@ export async function updateComment(req: Request, res: Response, next: NextFunct
       throw new AppError('Comment not found or not owned by user', 404)
     }
 
-    res.json({ success: true, data: comment })
+    sendSuccess(res, comment)
   } catch (error) {
     next(error)
   }
@@ -203,7 +202,7 @@ export async function getRecentComments(req: Request, res: Response, next: NextF
 
     const comments = await commentService.getRecentComments(userId, limit)
 
-    res.json({ success: true, data: comments })
+    sendSuccess(res, comments)
   } catch (error) {
     next(error)
   }

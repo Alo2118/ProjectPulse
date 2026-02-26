@@ -3,6 +3,7 @@
  * @module stores/userInputStore
  */
 
+import axios from 'axios'
 import { create } from 'zustand'
 import api from '@services/api'
 import {
@@ -10,10 +11,29 @@ import {
   PaginatedResponse,
   UserInputStats,
   TaskPriority,
-  Task,
   Project,
 } from '@/types'
 import { toast } from '@stores/toastStore'
+
+// The convert-to-task endpoint returns only a partial task (id, code, title)
+interface ConvertedTask {
+  id: string
+  code: string
+  title: string
+}
+
+/**
+ * Extracts the human-readable error message from an Axios error or plain Error.
+ * Axios errors carry the server message in error.response.data.message (not error.message,
+ * which is the generic "Request failed with status code 4xx").
+ */
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { message?: string; error?: string } | undefined
+    return data?.message ?? data?.error ?? error.message ?? fallback
+  }
+  return error instanceof Error ? error.message : fallback
+}
 
 interface UserInputFilters {
   page?: number
@@ -64,7 +84,7 @@ interface UserInputState {
   updateInput: (id: string, data: Partial<UserInput>) => Promise<void>
   deleteInput: (id: string) => Promise<void>
   startProcessing: (id: string) => Promise<void>
-  convertToTask: (id: string, data: ConvertToTaskData) => Promise<{ userInput: UserInput; task: Task }>
+  convertToTask: (id: string, data: ConvertToTaskData) => Promise<{ userInput: UserInput; task: ConvertedTask }>
   convertToProject: (id: string, data: ConvertToProjectData) => Promise<{ userInput: UserInput; project: Project }>
   acknowledgeInput: (id: string, notes?: string) => Promise<void>
   rejectInput: (id: string, reason: string) => Promise<void>
@@ -102,7 +122,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         `/inputs?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         set({
           inputs: response.data.data,
           pagination: response.data.pagination,
@@ -110,8 +130,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         })
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch inputs'
-      set({ error: message, isLoading: false })
+      set({ error: extractErrorMessage(error, 'Failed to fetch inputs'), isLoading: false })
     }
   },
 
@@ -130,7 +149,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         `/inputs/my?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         set({
           myInputs: response.data.data,
           pagination: response.data.pagination,
@@ -138,8 +157,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         })
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch my inputs'
-      set({ error: message, isLoading: false })
+      set({ error: extractErrorMessage(error, 'Failed to fetch my inputs'), isLoading: false })
     }
   },
 
@@ -152,8 +170,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         set({ currentInput: response.data.data, isLoading: false })
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch input'
-      set({ error: message, isLoading: false })
+      set({ error: extractErrorMessage(error, 'Failed to fetch input'), isLoading: false })
     }
   },
 
@@ -185,7 +202,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
       }
       throw new Error('Impossibile creare la segnalazione')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile creare la segnalazione'
+      const message = extractErrorMessage(error, 'Impossibile creare la segnalazione')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
       throw error
@@ -208,7 +225,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
       }
       toast.success('Segnalazione aggiornata')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile aggiornare la segnalazione'
+      const message = extractErrorMessage(error, 'Impossibile aggiornare la segnalazione')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
       throw error
@@ -227,7 +244,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
       }))
       toast.success('Segnalazione eliminata')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile eliminare la segnalazione'
+      const message = extractErrorMessage(error, 'Impossibile eliminare la segnalazione')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
       throw error
@@ -250,7 +267,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         toast.success('Lavorazione avviata')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile avviare la lavorazione'
+      const message = extractErrorMessage(error, 'Impossibile avviare la lavorazione')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
       throw error
@@ -260,7 +277,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
   convertToTask: async (id, data) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await api.post<{ success: boolean; data: { userInput: UserInput; task: Task } }>(
+      const response = await api.post<{ success: boolean; data: { userInput: UserInput; task: ConvertedTask } }>(
         `/inputs/${id}/convert-to-task`,
         data
       )
@@ -278,9 +295,19 @@ export const useUserInputStore = create<UserInputState>((set) => ({
       }
       throw new Error('Impossibile convertire in task')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile convertire in task'
+      const message = extractErrorMessage(error, 'Impossibile convertire in task')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
+      // If the input was already resolved (stale UI state), refresh it from the server
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        api.get<{ success: boolean; data: UserInput }>(`/inputs/${id}`).then((res) => {
+          if (res.data.success) {
+            set((state) => ({
+              currentInput: state.currentInput?.id === id ? res.data.data : state.currentInput,
+            }))
+          }
+        }).catch(() => undefined)
+      }
       throw error
     }
   },
@@ -306,7 +333,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
       }
       throw new Error('Impossibile convertire in progetto')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile convertire in progetto'
+      const message = extractErrorMessage(error, 'Impossibile convertire in progetto')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
       throw error
@@ -331,7 +358,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         toast.success('Segnalazione presa in carico')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile prendere in carico la segnalazione'
+      const message = extractErrorMessage(error, 'Impossibile prendere in carico la segnalazione')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
       throw error
@@ -356,7 +383,7 @@ export const useUserInputStore = create<UserInputState>((set) => ({
         toast.success('Segnalazione rifiutata')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Impossibile rifiutare la segnalazione'
+      const message = extractErrorMessage(error, 'Impossibile rifiutare la segnalazione')
       set({ error: message, isLoading: false })
       toast.error('Errore', message)
       throw error

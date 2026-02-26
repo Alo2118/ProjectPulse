@@ -400,18 +400,21 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Amministratore',
   direzione: 'Direzione',
   dipendente: 'Dipendente',
+  guest: 'Ospite',
 }
 
 export const USER_ROLE_COLORS: Record<UserRole, string> = {
   admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   direzione: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   dipendente: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  guest: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
 }
 
 export const USER_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Amministratore' },
   { value: 'direzione', label: 'Direzione' },
   { value: 'dipendente', label: 'Dipendente' },
+  { value: 'guest', label: 'Ospite' },
 ]
 
 // ============================================================

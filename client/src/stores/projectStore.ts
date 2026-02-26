@@ -84,7 +84,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         `/projects?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         set({
           projects: response.data.data,
           pagination: response.data.pagination,

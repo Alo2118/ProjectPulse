@@ -1,7 +1,8 @@
-import { LogOut, Moon, Sun, Menu, Square } from 'lucide-react'
+import { LogOut, Moon, Sun, Menu, Square, Search } from 'lucide-react'
 import { useAuthStore } from '@stores/authStore'
 import { useThemeStore } from '@stores/themeStore'
 import { useDashboardStore } from '@stores/dashboardStore'
+import { useSearchStore } from '@stores/searchStore'
 import { Link, useNavigate } from 'react-router-dom'
 import NotificationBell from '@/components/features/notifications/NotificationBell'
 import { LiveTimer } from '@/components/ui/LiveTimer'
@@ -10,6 +11,7 @@ export default function Header() {
   const { logout } = useAuthStore()
   const { theme, setTheme } = useThemeStore()
   const { runningTimer, stopTimer } = useDashboardStore()
+  const openSearch = useSearchStore((s) => s.open)
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -64,6 +66,28 @@ export default function Header() {
 
         {/* Actions */}
         <div className="flex items-center space-x-1">
+          {/* Search / Command Palette trigger */}
+          <button
+            onClick={openSearch}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
+            aria-label="Apri ricerca globale (Ctrl+K)"
+          >
+            <Search className="w-4 h-4" />
+            <span className="hidden md:inline text-xs">Cerca...</span>
+            <kbd className="hidden md:inline-flex items-center gap-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5">
+              Ctrl K
+            </kbd>
+          </button>
+
+          {/* Mobile search icon only */}
+          <button
+            onClick={openSearch}
+            className="sm:hidden btn-icon"
+            aria-label="Apri ricerca globale"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+
           {/* Notifications */}
           <NotificationBell />
 

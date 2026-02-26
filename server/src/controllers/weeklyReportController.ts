@@ -3,10 +3,12 @@
  * @module controllers/weeklyReportController
  */
 
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { weeklyReportService } from '../services/weeklyReportService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { logger } from '../utils/logger.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -52,18 +54,13 @@ export async function getWeeklyPreview(req: Request, res: Response, next: NextFu
       preview = await weeklyReportService.generateReportPreview(userId)
     }
 
-    console.log('=========================================')
-    console.log('Controller - Preview to send:')
-    console.log('  hasTimeTracking:', !!preview.timeTracking)
-    console.log('  hasEntries:', !!preview.timeTracking.entries)
-    console.log('  entriesLength:', preview.timeTracking.entries?.length || 0)
-    console.log('  byProjectLength:', preview.timeTracking.byProject.length)
-    if (preview.timeTracking.entries && preview.timeTracking.entries.length > 0) {
-      console.log('  First entry ID:', preview.timeTracking.entries[0].id)
-    }
-    console.log('=========================================')
+    logger.debug('Weekly report preview generated', {
+      hasTimeTracking: !!preview.timeTracking,
+      entriesCount: preview.timeTracking.entries?.length || 0,
+      byProjectCount: preview.timeTracking.byProject.length,
+    })
 
-    res.json({ success: true, data: preview })
+    sendSuccess(res, preview)
   } catch (error) {
     next(error)
   }
@@ -92,7 +89,7 @@ export async function generateReport(req: Request, res: Response, next: NextFunc
       weekEnd
     )
 
-    res.status(201).json({ success: true, data: report })
+    sendCreated(res, report)
   } catch (error) {
     next(error)
   }
@@ -119,11 +116,7 @@ export async function getMyReports(req: Request, res: Response, next: NextFuncti
       weekNumber: params.weekNumber,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -150,7 +143,7 @@ export async function getReportById(req: Request, res: Response, next: NextFunct
       throw new AppError('Report not found', 404)
     }
 
-    res.json({ success: true, data: report })
+    sendSuccess(res, report)
   } catch (error) {
     next(error)
   }
@@ -177,11 +170,7 @@ export async function getTeamReports(req: Request, res: Response, next: NextFunc
       weekNumber: params.weekNumber,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -195,14 +184,11 @@ export async function getCurrentWeekInfo(_req: Request, res: Response, next: Nex
   try {
     const weekInfo = weeklyReportService.getCurrentWeekBounds()
 
-    res.json({
-      success: true,
-      data: {
-        weekNumber: weekInfo.weekNumber,
-        year: weekInfo.year,
-        weekStartDate: weekInfo.weekStart.toISOString(),
-        weekEndDate: weekInfo.weekEnd.toISOString(),
-      },
+    sendSuccess(res, {
+      weekNumber: weekInfo.weekNumber,
+      year: weekInfo.year,
+      weekStartDate: weekInfo.weekStart.toISOString(),
+      weekEndDate: weekInfo.weekEnd.toISOString(),
     })
   } catch (error) {
     next(error)

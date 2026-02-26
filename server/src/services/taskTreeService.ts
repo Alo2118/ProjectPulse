@@ -16,6 +16,18 @@ interface TaskTreeStats {
   estimatedHours: number
 }
 
+interface DeptRef {
+  id: string
+  name: string
+  color: string
+}
+
+interface DependencyRef {
+  id: string
+  code: string
+  title: string
+}
+
 interface SubtaskNode {
   id: string
   code: string
@@ -30,11 +42,14 @@ interface SubtaskNode {
     lastName: string
     avatarUrl: string | null
   } | null
+  department: DeptRef | null
   dueDate: string | null
   estimatedHours: number
   actualHours: number
   stats: TaskTreeStats
   subtasks: SubtaskNode[]
+  blockedBy: DependencyRef[]
+  blocks: DependencyRef[]
 }
 
 interface TaskNode {
@@ -51,11 +66,14 @@ interface TaskNode {
     lastName: string
     avatarUrl: string | null
   } | null
+  department: DeptRef | null
   dueDate: string | null
   estimatedHours: number
   actualHours: number
   stats: TaskTreeStats
   subtasks: SubtaskNode[]
+  blockedBy: DependencyRef[]
+  blocks: DependencyRef[]
 }
 
 interface MilestoneNode {
@@ -71,11 +89,14 @@ interface MilestoneNode {
     lastName: string
     avatarUrl: string | null
   } | null
+  department: DeptRef | null
   dueDate: string | null
   estimatedHours: number
   actualHours: number
   stats: TaskTreeStats
   tasks: TaskNode[]
+  blockedBy: DependencyRef[]
+  blocks: DependencyRef[]
 }
 
 interface ProjectNode {
@@ -128,6 +149,9 @@ interface ParsedTask {
     lastName: string
     avatarUrl: string | null
   } | null
+  department: DeptRef | null
+  blockedBy: DependencyRef[]
+  blocks: DependencyRef[]
 }
 
 /**
@@ -136,12 +160,14 @@ interface ParsedTask {
 function buildSubtaskTree(
   parentId: string,
   allTasks: Map<string, ParsedTask[]>,
-  taskHours: Map<string, number>
+  taskHours: Map<string, number>,
+  blockedByMap?: Map<string, DependencyRef[]>,
+  blocksMap?: Map<string, DependencyRef[]>
 ): SubtaskNode[] {
   const children = allTasks.get(parentId) || []
 
   return children.map((task) => {
-    const subtasks = buildSubtaskTree(task.id, allTasks, taskHours)
+    const subtasks = buildSubtaskTree(task.id, allTasks, taskHours, blockedByMap, blocksMap)
     const actualHours = taskHours.get(task.id) || task.actualHours || 0
 
     const nestedStats = subtasks.reduce(
@@ -177,11 +203,14 @@ function buildSubtaskTree(
       priority: task.priority,
       isRecurring: task.isRecurring,
       assignee: task.assignee,
+      department: task.department,
       dueDate: task.dueDate?.toISOString() ?? null,
       estimatedHours: task.estimatedHours,
       actualHours,
       stats,
       subtasks,
+      blockedBy: blockedByMap?.get(task.id) ?? task.blockedBy,
+      blocks: blocksMap?.get(task.id) ?? task.blocks,
     }
   })
 }
@@ -204,30 +233,43 @@ async function getSubtaskTree(
   parentTaskId: string,
   excludeCompleted: boolean
 ): Promise<TaskTreeResponse> {
-  // Fetch all descendant tasks recursively
-  const allDescendants = await prisma.task.findMany({
-    where: {
-      isDeleted: false,
-      ...(excludeCompleted ? { status: { notIn: ['done', 'cancelled'] } } : {}),
-    },
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      taskType: true,
-      status: true,
-      priority: true,
-      projectId: true,
-      parentTaskId: true,
-      dueDate: true,
-      estimatedHours: true,
-      isRecurring: true,
-      assignee: {
-        select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+  // Iteratively fetch descendants level by level instead of loading all tasks
+  const allDescendants: Array<any> = []
+  let currentParentIds = [parentTaskId]
+  const MAX_LEVELS = 20
+
+  for (let level = 0; level < MAX_LEVELS && currentParentIds.length > 0; level++) {
+    const levelTasks = await prisma.task.findMany({
+      where: {
+        parentTaskId: { in: currentParentIds },
+        isDeleted: false,
+        ...(excludeCompleted ? { status: { notIn: ['done', 'cancelled'] } } : {}),
       },
-    },
-    orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
-  })
+      select: {
+        id: true,
+        code: true,
+        title: true,
+        taskType: true,
+        status: true,
+        priority: true,
+        projectId: true,
+        parentTaskId: true,
+        dueDate: true,
+        estimatedHours: true,
+        isRecurring: true,
+        assignee: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        },
+        department: {
+          select: { id: true, name: true, color: true },
+        },
+      },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+    })
+
+    allDescendants.push(...levelTasks)
+    currentParentIds = levelTasks.map((t) => t.id)
+  }
 
   // Build parent→children map
   const tasksByParent = new Map<string, ParsedTask[]>()
@@ -250,6 +292,9 @@ async function getSubtaskTree(
       estimatedHours,
       actualHours: 0,
       assignee: task.assignee,
+      department: task.department,
+      blockedBy: [],
+      blocks: [],
     }
     const existing = tasksByParent.get(task.parentTaskId) || []
     existing.push(parsed)
@@ -271,7 +316,39 @@ async function getSubtaskTree(
     taskHours.set(entry.taskId, (entry._sum.duration || 0) / 60)
   }
 
-  const subtasks = buildSubtaskTree(parentTaskId, tasksByParent, taskHours)
+  // Fetch dependencies for all descendant tasks
+  const allDescendantIds = [...taskIds]
+  const depRecords = allDescendantIds.length > 0
+    ? await prisma.taskDependency.findMany({
+        where: {
+          OR: [
+            { predecessorId: { in: allDescendantIds } },
+            { successorId: { in: allDescendantIds } },
+          ],
+        },
+        select: {
+          predecessorId: true,
+          successorId: true,
+          predecessor: { select: { id: true, code: true, title: true } },
+          successor: { select: { id: true, code: true, title: true } },
+        },
+      })
+    : []
+
+  const subtaskBlockedByMap = new Map<string, DependencyRef[]>()
+  const subtaskBlocksMap = new Map<string, DependencyRef[]>()
+
+  for (const dep of depRecords) {
+    const blockedByList = subtaskBlockedByMap.get(dep.successorId) || []
+    blockedByList.push(dep.predecessor)
+    subtaskBlockedByMap.set(dep.successorId, blockedByList)
+
+    const blocksList = subtaskBlocksMap.get(dep.predecessorId) || []
+    blocksList.push(dep.successor)
+    subtaskBlocksMap.set(dep.predecessorId, blocksList)
+  }
+
+  const subtasks = buildSubtaskTree(parentTaskId, tasksByParent, taskHours, subtaskBlockedByMap, subtaskBlocksMap)
 
   const totalCount = subtasks.length
   const completedCount = subtasks.filter((s) => s.status === 'done').length
@@ -392,6 +469,9 @@ async function getTaskTree(
       assignee: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true },
       },
+      department: {
+        select: { id: true, name: true, color: true },
+      },
     },
     orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
   })
@@ -407,6 +487,41 @@ async function getTaskTree(
   const taskHours = new Map<string, number>()
   for (const entry of timeEntries) {
     taskHours.set(entry.taskId, (entry._sum.duration || 0) / 60) // Convert minutes to hours
+  }
+
+  // Fetch dependencies for all tasks in the tree
+  const allTaskIds = allTasksRaw.map((t) => t.id)
+  const dependencies = allTaskIds.length > 0
+    ? await prisma.taskDependency.findMany({
+        where: {
+          OR: [
+            { predecessorId: { in: allTaskIds } },
+            { successorId: { in: allTaskIds } },
+          ],
+        },
+        select: {
+          predecessorId: true,
+          successorId: true,
+          predecessor: { select: { id: true, code: true, title: true } },
+          successor: { select: { id: true, code: true, title: true } },
+        },
+      })
+    : []
+
+  // Build dependency maps
+  const blockedByMap = new Map<string, DependencyRef[]>()
+  const blocksMap = new Map<string, DependencyRef[]>()
+
+  for (const dep of dependencies) {
+    // successorId is blocked BY predecessorId
+    const existingBlockedBy = blockedByMap.get(dep.successorId) || []
+    existingBlockedBy.push(dep.predecessor)
+    blockedByMap.set(dep.successorId, existingBlockedBy)
+
+    // predecessorId blocks successorId
+    const existingBlocks = blocksMap.get(dep.predecessorId) || []
+    existingBlocks.push(dep.successor)
+    blocksMap.set(dep.predecessorId, existingBlocks)
   }
 
   // Group tasks by project and parent - convert to parsed format
@@ -435,6 +550,9 @@ async function getTaskTree(
       estimatedHours,
       actualHours,
       assignee: task.assignee,
+      department: task.department,
+      blockedBy: blockedByMap.get(task.id) || [],
+      blocks: blocksMap.get(task.id) || [],
     }
 
     if (!task.parentTaskId && task.projectId) {
@@ -459,7 +577,7 @@ async function getTaskTree(
 
   // Helper function to build TaskNode from ParsedTask
   const buildTaskNode = (task: ParsedTask): TaskNode => {
-    const subtasks = buildSubtaskTree(task.id, tasksByParent, taskHours)
+    const subtasks = buildSubtaskTree(task.id, tasksByParent, taskHours, blockedByMap, blocksMap)
 
     // Calculate stats for this task's subtasks
     const nestedStats = subtasks.reduce(
@@ -485,11 +603,14 @@ async function getTaskTree(
       priority: task.priority,
       isRecurring: task.isRecurring,
       assignee: task.assignee,
+      department: task.department,
       dueDate: task.dueDate?.toISOString() ?? null,
       estimatedHours: task.estimatedHours,
       actualHours: task.actualHours,
       stats: nestedStats,
       subtasks,
+      blockedBy: task.blockedBy,
+      blocks: task.blocks,
     }
   }
 
@@ -564,11 +685,14 @@ async function getTaskTree(
         status: milestone.status,
         priority: milestone.priority,
         assignee: milestone.assignee,
+        department: milestone.department,
         dueDate: milestone.dueDate?.toISOString() ?? null,
         estimatedHours: milestone.estimatedHours,
         actualHours: milestone.actualHours,
         stats: milestoneStats,
         tasks,
+        blockedBy: milestone.blockedBy,
+        blocks: milestone.blocks,
       }
     })
 

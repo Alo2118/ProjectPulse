@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { Attachment, User, AttachableEntityType, Document } from '@/types'
 import api from '@services/api'
+import { toast } from '@stores/toastStore'
 
 // Document types for conversion
 const DOCUMENT_TYPES = [
@@ -139,15 +140,29 @@ export function AttachmentSection({
     }
   }
 
-  const handleDeleteAttachment = async (attachmentId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questo allegato?')) return
+  const handleDeleteAttachment = (attachmentId: string) => {
+    // Find the attachment snapshot for undo restore
+    const deleted = attachments.find((a) => a.id === attachmentId)
 
-    try {
-      await api.delete(`/attachments/${attachmentId}`)
-      onAttachmentDeleted(attachmentId)
-    } catch {
-      // silently ignore
-    }
+    // Optimistically remove from UI
+    onAttachmentDeleted(attachmentId)
+
+    toast.withUndo(
+      'Allegato eliminato',
+      async () => {
+        try {
+          await api.delete(`/attachments/${attachmentId}`)
+        } catch {
+          // Restore on API failure
+          if (deleted) onAttachmentAdded(deleted)
+          toast.error('Errore', 'Impossibile eliminare l\'allegato')
+        }
+      },
+      () => {
+        // Undo: restore the attachment
+        if (deleted) onAttachmentAdded(deleted)
+      }
+    )
   }
 
   const handleDownload = (attachment: Attachment) => {

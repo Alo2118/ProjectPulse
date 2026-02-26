@@ -35,6 +35,15 @@
            hover:border-primary-200/50 dark:hover:border-primary-500/20;
   }
 
+  /* Consistent modal panel styling */
+  .modal-panel {
+    @apply bg-white/95 dark:bg-surface-800/95
+           backdrop-blur-xl
+           rounded-xl shadow-2xl
+           border border-white/20 dark:border-white/5
+           animate-scale-in;
+  }
+
   /* Buttons with micro-interactions */
   .btn-primary {
     @apply bg-gradient-to-r from-primary-600 to-primary-500
@@ -116,6 +125,88 @@
 
   .status-dot-danger {
     @apply w-2.5 h-2.5 rounded-full bg-red-500 shadow-glow-red animate-pulse-dot;
+  }
+
+  /* Tree connector lines for TaskTreeView */
+  .tree-connector {
+    @apply relative;
+  }
+
+  .tree-connector::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 8px;
+    width: 1px;
+    @apply bg-gray-200 dark:bg-gray-700/60;
+  }
+
+  .tree-connector-row {
+    @apply relative;
+  }
+
+  .tree-connector-row::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    width: 12px;
+    height: 1px;
+    @apply bg-gray-200 dark:bg-gray-700/60;
+    transform: translateY(-50%);
+  }
+
+  /* Stat pill — clickable filter badge */
+  .stat-pill {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+           transition-all duration-200 cursor-pointer select-none
+           hover:shadow-md active:scale-[0.97];
+  }
+
+  /* Segmented control — modern view mode toggle */
+  .segmented-control {
+    @apply inline-flex items-center bg-gray-100 dark:bg-gray-800/80 rounded-lg p-1;
+  }
+  .segmented-control-item {
+    @apply px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150
+           text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300
+           cursor-pointer select-none;
+  }
+  .segmented-control-item-active {
+    @apply bg-white dark:bg-surface-800 text-gray-900 dark:text-white shadow-sm;
+  }
+
+  /* Metadata sidebar row */
+  .meta-row {
+    @apply flex items-center justify-between py-2.5
+           border-b border-gray-100 dark:border-gray-700/50;
+  }
+  .meta-row:last-child {
+    @apply border-0;
+  }
+  .meta-row-label {
+    @apply text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-shrink-0;
+  }
+  .meta-row-value {
+    @apply text-sm font-medium text-gray-900 dark:text-white text-right;
+  }
+
+  /* Floating bar (bulk actions) */
+  .floating-bar {
+    @apply fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+           bg-white/95 dark:bg-surface-800/95
+           backdrop-blur-xl
+           rounded-xl shadow-2xl
+           border border-white/20 dark:border-white/5
+           px-4 py-3;
+  }
+
+  /* Form section header */
+  .form-section-header {
+    @apply flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400
+           uppercase tracking-wider pb-2 mb-3
+           border-b border-gray-100 dark:border-gray-700/50;
   }
 }
 

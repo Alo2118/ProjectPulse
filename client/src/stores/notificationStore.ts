@@ -9,9 +9,11 @@ interface NotificationState {
   isLoading: boolean
   pagination: { page: number; limit: number; total: number; pages: number } | null
 
-  // Desktop notification preference
+  // Notification preferences
   desktopEnabled: boolean
   setDesktopEnabled: (enabled: boolean) => void
+  soundEnabled: boolean
+  setSoundEnabled: (enabled: boolean) => void
 
   fetchNotifications: (page?: number) => Promise<void>
   fetchUnreadCount: () => Promise<void>
@@ -29,9 +31,11 @@ export const useNotificationStore = create<NotificationState>()(
   isLoading: false,
   pagination: null,
 
-  // Desktop notifications — default on
+  // Notification preferences — default on
   desktopEnabled: true,
   setDesktopEnabled: (enabled) => set({ desktopEnabled: enabled }),
+  soundEnabled: true,
+  setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
 
   fetchNotifications: async (page = 1) => {
     try {
@@ -110,7 +114,7 @@ export const useNotificationStore = create<NotificationState>()(
     {
       name: 'notification-prefs',
       // Only persist user preferences, not fetched data
-      partialize: (state) => ({ desktopEnabled: state.desktopEnabled }),
+      partialize: (state) => ({ desktopEnabled: state.desktopEnabled, soundEnabled: state.soundEnabled }),
     }
   )
 )

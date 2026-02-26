@@ -31,6 +31,8 @@ import {
   Pie,
   Cell,
 } from 'recharts'
+import { BudgetOverviewSection } from '@/components/dashboard/BudgetOverviewSection'
+import { formatDuration } from '@utils/dateFormatters'
 
 function StatCard({
   label,
@@ -76,6 +78,7 @@ export default function AnalyticsPage() {
     hoursByProject,
     completionTrend,
     topContributors,
+    budgetOverview,
     isLoading,
     fetchAll,
   } = useAnalyticsStore()
@@ -97,9 +100,10 @@ export default function AnalyticsPage() {
   const hoursChartData = useMemo(
     () =>
       hoursByProject.map((h) => ({
-        name: h.projectCode,
-        fullName: `${h.projectCode} - ${h.projectName}`,
-        ore: Number((h.totalMinutes / 60).toFixed(1)),
+        name: h.projectName,
+        fullName: h.projectName,
+        ore: Math.round((h.totalMinutes / 60) * 10) / 10,
+        oreLabel: formatDuration(h.totalMinutes),
       })),
     [hoursByProject]
   )
@@ -183,7 +187,7 @@ export default function AnalyticsPage() {
           />
           <StatCard
             label="Ore Registrate"
-            value={(overview.totalMinutesLogged / 60).toFixed(1)}
+            value={formatDuration(overview.totalMinutesLogged)}
             icon={Clock}
             color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
           />
@@ -252,7 +256,7 @@ export default function AnalyticsPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  label={({ name, ore }: { name: string; ore: number }) => `${name}: ${ore}h`}
+                  label={({ name, oreLabel }: { name: string; oreLabel: string }) => `${name}: ${oreLabel}`}
                   labelLine={{ stroke: '#9CA3AF' }}
                 >
                   {hoursChartData.map((_, index) => (
@@ -346,7 +350,7 @@ export default function AnalyticsPage() {
                       {c.firstName} {c.lastName}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {(c.minutesLogged / 60).toFixed(1)}h registrate &middot; {c.tasksCompleted} task completati
+                      {formatDuration(c.minutesLogged)} registrate &middot; {c.tasksCompleted} task completati
                     </p>
                   </div>
                 </div>
@@ -357,6 +361,9 @@ export default function AnalyticsPage() {
           )}
         </div>
       </div>
+
+      {/* Budget Overview */}
+      <BudgetOverviewSection data={budgetOverview} />
 
       {/* Summary Footer */}
       {overview && (

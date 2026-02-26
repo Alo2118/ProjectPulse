@@ -28,7 +28,7 @@ export function RunningTimerBanner({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse mr-3" />
+            <div className="w-3 h-3 bg-red-400 dark:bg-red-500 rounded-full animate-pulse mr-3" />
             <span className="font-medium text-white">Timer in esecuzione</span>
           </div>
           <LiveTimer startTime={timer.startTime} className="text-white" />
@@ -45,7 +45,7 @@ export function RunningTimerBanner({
         <div className="flex items-center">
           <div className="relative mr-4">
             <Timer className="w-10 h-10 text-white" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 dark:bg-red-400 rounded-full animate-pulse" />
           </div>
           <div>
             <p className="text-sm text-white/80">Timer attivo</p>
@@ -57,7 +57,6 @@ export function RunningTimerBanner({
             </Link>
             <p className="text-sm text-white/70">
               {timer.task?.project?.name}
-              {timer.task?.project?.code && ` (${timer.task.project.code})`}
             </p>
           </div>
         </div>

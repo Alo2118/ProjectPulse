@@ -196,7 +196,7 @@ export default function RiskFormPage() {
               <option value="">Seleziona...</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.code} - {project.name}
+                  {project.name}
                 </option>
               ))}
             </select>

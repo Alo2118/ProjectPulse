@@ -12,28 +12,85 @@ import {
   BarChart3,
   MessageSquarePlus,
   GanttChartSquare,
+  CalendarDays,
   ClipboardList,
   Shield,
   LayoutTemplate,
+  Building2,
+  Settings2,
+  FileDown,
+  GitBranch,
+  Zap,
+  BrainCircuit,
+  LayoutGrid,
+  UserCog,
+  Bell,
+  Sun,
   X,
 } from 'lucide-react'
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'direzione', 'dipendente'] },
-  { name: 'Progetti', href: '/projects', icon: FolderKanban, roles: ['admin', 'direzione', 'dipendente'] },
-  { name: 'Task', href: '/tasks', icon: CheckSquare, roles: ['admin', 'direzione', 'dipendente'] },
-  { name: 'Gantt', href: '/gantt', icon: GanttChartSquare, roles: ['admin', 'direzione', 'dipendente'] },
-  { name: 'Registra Tempo', href: '/time-tracking', icon: Clock, roles: ['admin', 'dipendente'] },
-  { name: 'Tempo Team', href: '/team-time', icon: Users, roles: ['admin', 'direzione'] },
-  { name: 'Approva Ore', href: '/time-approval', icon: CheckSquare, roles: ['admin', 'direzione'] },
-  { name: 'Segnalazioni', href: '/inputs', icon: MessageSquarePlus, roles: ['admin', 'direzione', 'dipendente'] },
-  { name: 'Rischi', href: '/risks', icon: AlertTriangle, roles: ['admin', 'direzione'] },
-  { name: 'Documenti', href: '/documents', icon: FileText, roles: ['admin', 'direzione'] },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['admin', 'direzione'] },
-  { name: 'Report Settimanale', href: '/reports/weekly', icon: ClipboardList, roles: ['admin', 'direzione', 'dipendente'] },
-  { name: 'Utenti', href: '/users', icon: Users, roles: ['admin'] },
-  { name: 'Registro Audit', href: '/audit', icon: Shield, roles: ['admin', 'direzione'] },
-  { name: 'Template', href: '/admin/templates', icon: LayoutTemplate, roles: ['admin'] },
+interface NavItem {
+  name: string
+  href: string
+  icon: typeof LayoutDashboard
+  roles: string[]
+}
+
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+const navigationGroups: NavGroup[] = [
+  {
+    label: '',
+    items: [
+      { name: 'La Mia Giornata', href: '/my-day', icon: Sun, roles: ['admin', 'direzione', 'dipendente'] },
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
+      { name: 'Progetti', href: '/projects', icon: FolderKanban, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
+      { name: 'Task', href: '/tasks', icon: CheckSquare, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
+      { name: 'Kanban', href: '/kanban', icon: LayoutGrid, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
+      { name: 'Gantt', href: '/gantt', icon: GanttChartSquare, roles: ['admin', 'direzione', 'dipendente'] },
+      { name: 'Calendario', href: '/calendar', icon: CalendarDays, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
+      { name: 'Notifiche', href: '/notifications', icon: Bell, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
+    ],
+  },
+  {
+    label: 'Tempo',
+    items: [
+      { name: 'Registra Tempo', href: '/time-tracking', icon: Clock, roles: ['admin', 'dipendente'] },
+      { name: 'Tempo Team', href: '/team-time', icon: Users, roles: ['admin', 'direzione'] },
+    ],
+  },
+  {
+    label: 'Gestione',
+    items: [
+      { name: 'Segnalazioni', href: '/inputs', icon: MessageSquarePlus, roles: ['admin', 'direzione', 'dipendente'] },
+      { name: 'Rischi', href: '/risks', icon: AlertTriangle, roles: ['admin', 'direzione'] },
+      { name: 'Documenti', href: '/documents', icon: FileText, roles: ['admin', 'direzione'] },
+    ],
+  },
+  {
+    label: 'Analisi',
+    items: [
+      { name: 'Pianificazione', href: '/planning', icon: BrainCircuit, roles: ['admin', 'direzione'] },
+      { name: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['admin', 'direzione'] },
+      { name: 'Report Settimanale', href: '/reports/weekly', icon: ClipboardList, roles: ['admin', 'direzione', 'dipendente'] },
+    ],
+  },
+  {
+    label: 'Amministrazione',
+    items: [
+      { name: 'Utenti', href: '/users', icon: UserCog, roles: ['admin'] },
+      { name: 'Reparti', href: '/admin/departments', icon: Building2, roles: ['admin'] },
+      { name: 'Template', href: '/admin/templates', icon: LayoutTemplate, roles: ['admin'] },
+      { name: 'Campi Custom', href: '/admin/custom-fields', icon: Settings2, roles: ['admin', 'direzione'] },
+      { name: 'Import / Export', href: '/admin/import', icon: FileDown, roles: ['admin', 'direzione'] },
+      { name: 'Workflow', href: '/admin/workflows', icon: GitBranch, roles: ['admin'] },
+      { name: 'Automazioni', href: '/admin/automations', icon: Zap, roles: ['admin', 'direzione'] },
+      { name: 'Registro Audit', href: '/audit', icon: Shield, roles: ['admin', 'direzione'] },
+    ],
+  },
 ]
 
 export default function Sidebar() {
@@ -41,10 +98,6 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const userRole = user?.role || 'dipendente'
   const { mobileSidebarOpen, setMobileSidebarOpen } = useDashboardStore()
-
-  const filteredNavigation = navigation.filter((item) =>
-    item.roles.includes(userRole)
-  )
 
   const closeMobile = () => setMobileSidebarOpen(false)
 
@@ -63,31 +116,49 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {filteredNavigation.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.href}
-            onClick={closeMobile}
-            className={({ isActive }) =>
-              `relative flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
-                isActive
-                  ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
-                  : 'text-gray-600 hover:bg-gray-100/60 dark:text-gray-400 dark:hover:bg-white/5'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 bg-primary-500 rounded-full" />
-                )}
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.name}
-              </>
-            )}
-          </NavLink>
-        ))}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        {navigationGroups.map((group) => {
+          const visibleItems = group.items.filter((item) =>
+            item.roles.includes(userRole)
+          )
+          if (visibleItems.length === 0) return null
+
+          return (
+            <div key={group.label || '__primary__'}>
+              {group.label && (
+                <p className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider px-3 pt-4 pb-1">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-1">
+                {visibleItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    onClick={closeMobile}
+                    className={({ isActive }) =>
+                      `relative flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                        isActive
+                          ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+                          : 'text-gray-600 hover:bg-gray-100/60 dark:text-gray-400 dark:hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 bg-primary-500 rounded-full" />
+                        )}
+                        <item.icon className="w-5 h-5 mr-3" />
+                        {item.name}
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </nav>
 
       {/* User info */}

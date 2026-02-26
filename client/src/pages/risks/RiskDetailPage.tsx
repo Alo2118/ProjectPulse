@@ -138,7 +138,7 @@ export default function RiskDetailPage() {
                     className="flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline"
                   >
                     <FolderOpen className="w-4 h-4" />
-                    {currentRisk.project.code}
+                    {currentRisk.project.name}
                   </Link>
                 )}
                 {currentRisk.owner && (

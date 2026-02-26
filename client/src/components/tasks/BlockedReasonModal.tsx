@@ -5,6 +5,8 @@
 
 import { useState } from 'react'
 import { AlertTriangle, Loader2, X } from 'lucide-react'
+import { MentionTextarea } from '@components/common/MentionTextarea'
+import { BaseModal } from '@components/ui/BaseModal'
 
 interface BlockedReasonModalProps {
   isOpen: boolean
@@ -23,8 +25,6 @@ export function BlockedReasonModal({
 }: BlockedReasonModalProps) {
   const [reason, setReason] = useState('')
 
-  if (!isOpen) return null
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (reason.trim()) {
@@ -39,17 +39,23 @@ export function BlockedReasonModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      size="md"
+      showCloseButton={false}
+    >
+      <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-            <AlertTriangle className="w-5 h-5 mr-2 text-yellow-500" />
+            <AlertTriangle className="w-5 h-5 mr-2 text-red-500" />
             Motivo del blocco
           </h3>
           <button
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+            aria-label="Chiudi"
           >
             <X className="w-5 h-5" />
           </button>
@@ -65,23 +71,26 @@ export function BlockedReasonModal({
               htmlFor="blocked-reason"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
-              Spiega perche il task e bloccato <span className="text-red-500">*</span>
+              Spiega perché il task è bloccato <span className="text-red-500">*</span>
             </label>
-            <textarea
+            <MentionTextarea
               id="blocked-reason"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Es: In attesa di risposta dal cliente, Dipendenza da altro task, Problema tecnico..."
-              rows={4}
+              onChange={setReason}
+              placeholder="Es: In attesa di risposta dal cliente... usa @ per notificare un collega"
+              minRows={4}
               disabled={isSubmitting}
+              autoFocus
+              required
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                        placeholder-gray-400 dark:placeholder-gray-500
-                       focus:ring-2 focus:ring-yellow-500 focus:border-transparent
-                       resize-none disabled:opacity-50"
-              autoFocus
-              required
+                       focus:ring-2 focus:ring-red-500 focus:border-transparent
+                       disabled:opacity-50"
             />
+            <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+              Digita <span className="font-mono font-semibold">@</span> per menzionare un collega e inviargli una notifica
+            </p>
           </div>
 
           <div className="flex justify-end gap-3">
@@ -97,7 +106,7 @@ export function BlockedReasonModal({
             <button
               type="submit"
               disabled={!reason.trim() || isSubmitting}
-              className="px-4 py-2 bg-yellow-500 text-white hover:bg-yellow-600
+              className="px-4 py-2 bg-red-500 text-white hover:bg-red-600
                        rounded-lg transition-colors flex items-center disabled:opacity-50"
             >
               {isSubmitting ? (
@@ -115,6 +124,6 @@ export function BlockedReasonModal({
           </div>
         </form>
       </div>
-    </div>
+    </BaseModal>
   )
 }

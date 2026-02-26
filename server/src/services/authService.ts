@@ -11,8 +11,12 @@ import { auditService } from './auditService.js'
 import { JwtPayload, UserWithoutPassword, Theme } from '../types/index.js'
 
 const BCRYPT_ROUNDS = 12
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret'
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required')
+}
+
+const JWT_SECRET = process.env.JWT_SECRET
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET
 const JWT_OPTIONS: SignOptions = { expiresIn: '8h' }
 const JWT_REFRESH_OPTIONS: SignOptions = { expiresIn: '7d' }
 

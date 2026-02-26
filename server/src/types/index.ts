@@ -17,6 +17,7 @@ export type {
   Notification,
   AuditLog,
   ProjectTemplate,
+  Department,
   RefreshToken,
   UserInput,
   TaskDependency,
@@ -24,13 +25,16 @@ export type {
   Attachment,
   Tag,
   TagAssignment,
+  CustomFieldDefinition,
+  CustomFieldValue,
+  SavedView,
 } from '@prisma/client'
 
 // ============================================================
 // ENUM TYPES (string literal unions - SQL Server compatibility)
 // ============================================================
 
-export type UserRole = 'admin' | 'direzione' | 'dipendente'
+export type UserRole = 'admin' | 'direzione' | 'dipendente' | 'guest'
 export type ProjectStatus = 'planning' | 'design' | 'verification' | 'validation' | 'transfer' | 'maintenance' | 'completed' | 'on_hold' | 'cancelled'
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'blocked' | 'done' | 'cancelled'
@@ -72,6 +76,12 @@ export enum EntityType {
   NOTE = 'note',
   ATTACHMENT = 'attachment',
   TAG = 'tag',
+  DEPARTMENT = 'department',
+  CHECKLIST_ITEM = 'checklist_item',
+  CUSTOM_FIELD = 'custom_field',
+  SAVED_VIEW = 'saved_view',
+  PROJECT_MEMBER = 'project_member',
+  PROJECT_INVITATION = 'project_invitation',
 }
 
 // ============================================================
@@ -108,6 +118,7 @@ export interface CreateTaskInput {
   projectId?: string
   parentTaskId?: string
   assigneeId?: string
+  departmentId?: string | null
   priority?: string
   startDate?: Date
   dueDate?: Date
@@ -125,6 +136,7 @@ export interface UpdateTaskInput {
   projectId?: string
   parentTaskId?: string | null
   assigneeId?: string
+  departmentId?: string | null
   status?: string
   priority?: string
   startDate?: Date
@@ -156,6 +168,7 @@ export interface CreateCommentInput {
   taskId: string
   content: string
   isInternal?: boolean
+  parentId?: string
 }
 
 export interface UpdateCommentInput {
@@ -207,6 +220,7 @@ export interface TaskQueryParams extends PaginationParams {
   status?: string
   priority?: string
   assigneeId?: string
+  departmentId?: string
   search?: string
   standalone?: boolean
   parentTaskId?: string
@@ -257,6 +271,7 @@ export interface UserWithoutPassword {
   avatarUrl: string | null
   theme: Theme
   isActive: boolean
+  weeklyHoursTarget?: number | null
   createdAt: Date
   lastLoginAt: Date | null
 }
@@ -474,5 +489,142 @@ export interface RecurringTaskResponse extends Omit<Task, 'recurrencePattern'> {
 export interface SetRecurrenceInput {
   isRecurring: boolean
   recurrencePattern?: RecurrencePattern
+}
+
+// ============================================================
+// DEPARTMENT TYPES
+// ============================================================
+
+export interface CreateDepartmentInput {
+  name: string
+  description?: string
+  color?: string
+}
+
+export interface UpdateDepartmentInput {
+  name?: string
+  description?: string
+  color?: string
+  isActive?: boolean
+}
+
+export interface DepartmentQueryParams extends PaginationParams {
+  search?: string
+  includeInactive?: boolean
+}
+
+// ============================================================
+// CUSTOM FIELD TYPES
+// ============================================================
+
+export type CustomFieldType = 'text' | 'number' | 'dropdown' | 'date' | 'checkbox'
+
+export interface CreateCustomFieldInput {
+  name: string
+  fieldType: CustomFieldType
+  options?: string[] // dropdown options
+  projectId?: string
+  isRequired?: boolean
+  position?: number
+}
+
+export interface UpdateCustomFieldInput {
+  name?: string
+  fieldType?: CustomFieldType
+  options?: string[]
+  isRequired?: boolean
+  position?: number
+  isActive?: boolean
+}
+
+export interface SetCustomFieldValueInput {
+  definitionId: string
+  taskId: string
+  value: string | null
+}
+
+export interface CustomFieldQueryParams {
+  projectId?: string
+  includeGlobal?: boolean
+  includeInactive?: boolean
+}
+
+// ============================================================
+// SAVED VIEW TYPES
+// ============================================================
+
+export type SavedViewEntity = 'task' | 'project' | 'risk'
+
+export interface CreateSavedViewInput {
+  name: string
+  entity: SavedViewEntity
+  filters: Record<string, unknown>
+  columns?: string[]
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  isShared?: boolean
+  isDefault?: boolean
+}
+
+export interface UpdateSavedViewInput {
+  name?: string
+  filters?: Record<string, unknown>
+  columns?: string[] | null
+  sortBy?: string | null
+  sortOrder?: 'asc' | 'desc' | null
+  isShared?: boolean
+  isDefault?: boolean
+}
+
+export interface SavedViewQueryParams {
+  entity?: SavedViewEntity
+  includeShared?: boolean
+}
+
+// ============================================================
+// PROJECT MEMBER TYPES
+// ============================================================
+
+export type ProjectRole = 'owner' | 'manager' | 'member' | 'viewer' | 'guest'
+
+export type ProjectCapability =
+  | 'view_project'
+  | 'edit_project'
+  | 'delete_project'
+  | 'manage_members'
+  | 'create_task'
+  | 'edit_any_task'
+  | 'edit_own_task'
+  | 'view_tasks'
+  | 'manage_risks'
+  | 'view_risks'
+  | 'configure_workflow'
+  | 'view_analytics'
+
+// ============================================================
+// ANALYTICS EXTENDED TYPES
+// ============================================================
+
+export interface PreviousWeekOverview {
+  totalMinutesLogged: number
+  completedTasks: number
+  blockedTasks: number
+  activeProjects: number
+}
+
+export interface TeamWorkloadEntry {
+  userId: string
+  firstName: string
+  lastName: string
+  minutesLogged: number
+  weeklyHoursTarget: number
+  utilizationPercent: number
+}
+
+export interface UserWeeklyHours {
+  byDay: Array<{ dayOfWeek: number; date: string; totalMinutes: number }>
+  byProject: Array<{ projectId: string; projectName: string; totalMinutes: number }>
+  totalMinutes: number
+  weeklyTarget: number
 }
 

@@ -8,6 +8,7 @@ import { X, Loader2 } from 'lucide-react'
 import { useUserInputStore } from '@stores/userInputStore'
 import { UserInput, InputCategory, TaskPriority } from '@/types'
 import { INPUT_CATEGORY_OPTIONS, TASK_PRIORITY_OPTIONS } from '@/constants'
+import { MentionTextarea } from '@components/common/MentionTextarea'
 
 interface UserInputFormModalProps {
   isOpen: boolean
@@ -75,7 +76,7 @@ export default function UserInputFormModal({
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
 
         {/* Modal */}
-        <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+        <div className="relative w-full max-w-lg modal-panel">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -111,13 +112,16 @@ export default function UserInputFormModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Descrizione
               </label>
-              <textarea
+              <MentionTextarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
+                onChange={(val) => setFormData({ ...formData, description: val })}
+                minRows={4}
+                placeholder="Fornisci dettagli aggiuntivi... digita @ per menzionare"
                 className="input"
-                placeholder="Fornisci dettagli aggiuntivi..."
               />
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                Digita <span className="font-mono font-semibold">@</span> per menzionare un collega
+              </p>
             </div>
 
             {/* Category & Priority */}

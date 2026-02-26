@@ -11,19 +11,12 @@ import { NoteSection } from '@/components/common/NoteSection'
 import { AttachmentSection } from '@/components/common/AttachmentSection'
 import { useAuthStore } from '@stores/authStore'
 import api from '@services/api'
+import { formatDuration } from '@utils/dateFormatters'
 
 interface TimeEntryDetailModalProps {
   isOpen: boolean
   entry: TimeEntry | null
   onClose: () => void
-}
-
-function formatDuration(minutes: number | null): string {
-  if (!minutes || minutes <= 0) return '0m'
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
-  if (hours === 0) return `${mins}m`
-  return `${hours}h ${mins}m`
 }
 
 function formatDateTime(dateString: string): string {
@@ -124,7 +117,7 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
-        <div className="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl shadow-xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="relative w-full max-w-2xl modal-panel max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div>
@@ -138,7 +131,7 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+              className="btn-icon"
             >
               <X className="w-5 h-5" />
             </button>
@@ -200,7 +193,6 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
                       >
                         {entry.task.project.name}
                       </Link>
-                      <p className="text-xs text-gray-400 mt-0.5">{entry.task.project.code}</p>
                     </div>
                   </div>
                 )}

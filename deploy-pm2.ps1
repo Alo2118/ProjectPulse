@@ -1,30 +1,31 @@
 # Script per deployment con PM2
+$ErrorActionPreference = "Stop"
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $root
+
+# Installa dipendenze da root (gestisce tutti i workspace)
+Write-Host "Installing dependencies..." -ForegroundColor Cyan
+npm install
 
 # Build del client
-Write-Host "Building client..." -ForegroundColor Cyan
-cd client
-npm install
-npm run build
+Write-Host "`nBuilding client..." -ForegroundColor Cyan
+npm run build --workspace=client
 
 # Build del server
 Write-Host "`nBuilding server..." -ForegroundColor Cyan
-cd ..\server
-npm install
-npm run build
+npm run build --workspace=server
 
 # Crea cartelle logs se non esistono
 Write-Host "`nCreating log directories..." -ForegroundColor Cyan
-if (-not (Test-Path "logs")) {
-    New-Item -ItemType Directory -Path "logs"
+if (-not (Test-Path "server\logs")) {
+    New-Item -ItemType Directory -Path "server\logs" | Out-Null
 }
-cd ..\client
-if (-not (Test-Path "logs")) {
-    New-Item -ItemType Directory -Path "logs"
+if (-not (Test-Path "client\logs")) {
+    New-Item -ItemType Directory -Path "client\logs" | Out-Null
 }
 
 # Restart PM2 apps
 Write-Host "`nRestarting PM2 applications..." -ForegroundColor Cyan
-cd ..
 pm2 delete all
 pm2 start ecosystem.config.js
 

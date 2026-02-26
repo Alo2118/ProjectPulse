@@ -82,7 +82,7 @@ export const useRiskStore = create<RiskState>((set) => ({
         `/risks?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         set({
           risks: response.data.data,
           pagination: response.data.pagination,

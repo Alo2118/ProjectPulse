@@ -17,10 +17,14 @@ import {
   getSubtasks,
   getStandaloneTasks,
   getTasksForGantt,
+  getTasksForCalendar,
   createDependency,
   getTaskDependencies,
   deleteDependency,
   reorderTasks,
+  bulkUpdate,
+  bulkDelete,
+  cloneTask,
 } from '../controllers/taskController.js'
 import {
   completeOccurrence,
@@ -51,8 +55,17 @@ router.get('/standalone', getStandaloneTasks)
 // GET /api/tasks/gantt - Get tasks for Gantt chart
 router.get('/gantt', getTasksForGantt)
 
+// GET /api/tasks/calendar - Get tasks for Calendar view
+router.get('/calendar', getTasksForCalendar)
+
 // GET /api/tasks/kanban/:projectId - Get tasks for Kanban board
 router.get('/kanban/:projectId', getTasksKanban)
+
+// PATCH /api/tasks/bulk - Bulk update tasks
+router.patch('/bulk', bulkUpdate)
+
+// DELETE /api/tasks/bulk - Bulk delete tasks
+router.delete('/bulk', bulkDelete)
 
 // GET /api/tasks - List tasks with pagination
 router.get('/', getTasks)
@@ -65,6 +78,9 @@ router.get('/:id/subtasks', getSubtasks)
 
 // GET /api/tasks/:id/dependencies - Get task dependencies
 router.get('/:id/dependencies', getTaskDependencies)
+
+// POST /api/tasks/:id/clone - Clone a task
+router.post('/:id/clone', cloneTask)
 
 // POST /api/tasks - Create task (all authenticated users)
 router.post('/', createTask)

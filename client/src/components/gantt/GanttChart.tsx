@@ -20,6 +20,7 @@ import {
 import { it } from 'date-fns/locale'
 import GanttBar from './GanttBar'
 import GanttTodayLine from './GanttTodayLine'
+import GanttDependencyLines from './GanttDependencyLines'
 
 interface GanttChartProps {
   tasks: GanttTask[]
@@ -84,7 +85,7 @@ export default function GanttChart({
   const timelineWidth = totalDays * dayWidth
 
   // Calculate bar position and width, clamped to visible view range
-  const getBarStyle = (task: GanttTask) => {
+  const getBarStyle = useCallback((task: GanttTask) => {
     const taskStart = task.startDate ? new Date(task.startDate) : null
     const taskEnd = task.endDate ? new Date(task.endDate) : null
 
@@ -111,7 +112,7 @@ export default function GanttChart({
     const width = Math.max(dayWidth, (clampedEnd - clampedStart) * dayWidth)
 
     return { left, width }
-  }
+  }, [viewStart, totalDays, dayWidth])
 
   // Format header label (top row - provides context: month for day/week, year for month)
   const formatHeaderLabel = (date: Date, index: number) => {
@@ -356,6 +357,14 @@ export default function GanttChart({
                   </div>
                 )
               })}
+
+              {/* Dependency arrow lines overlay */}
+              <GanttDependencyLines
+                tasks={tasks}
+                getBarStyle={getBarStyle}
+                contentHeight={contentHeight}
+                timelineWidth={timelineWidth}
+              />
             </div>
 
             {/* Empty state spacer */}

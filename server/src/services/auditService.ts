@@ -278,6 +278,53 @@ export async function getEntityHistory(entityType: EntityType, entityId: string)
   })
 }
 
+/**
+ * Gets status change timeline for a specific entity (ordered chronologically)
+ * @param entityId - ID of entity
+ * @returns Array of status change audit logs ordered by createdAt ASC
+ */
+export async function getStatusChangeTimeline(entityId: string) {
+  return prisma.auditLog.findMany({
+    where: { entityId, action: AuditAction.STATUS_CHANGE },
+    select: {
+      id: true,
+      oldData: true,
+      newData: true,
+      createdAt: true,
+      user: {
+        select: { id: true, firstName: true, lastName: true },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+}
+
+/**
+ * Gets recent activity for all entities belonging to a project
+ * @param projectId - ID of the project
+ * @param limit - Maximum number of entries to return
+ * @returns Array of audit logs across all project entities
+ */
+export async function getProjectActivity(projectId: string, limit: number = 20) {
+  const taskIds = await prisma.task.findMany({
+    where: { projectId, isDeleted: false },
+    select: { id: true },
+  })
+
+  const entityIds = [projectId, ...taskIds.map((t) => t.id)]
+
+  return prisma.auditLog.findMany({
+    where: { entityId: { in: entityIds } },
+    include: {
+      user: {
+        select: { id: true, firstName: true, lastName: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  })
+}
+
 export const auditService = {
   createAuditLog,
   logCreate,
@@ -288,4 +335,6 @@ export const auditService = {
   logLogout,
   getAuditLogs,
   getEntityHistory,
+  getStatusChangeTimeline,
+  getProjectActivity,
 }

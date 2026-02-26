@@ -12,7 +12,6 @@ import { useTaskStore } from '@stores/taskStore'
 import { useAuthStore } from '@stores/authStore'
 import api from '@services/api'
 import {
-  ArrowLeft,
   Loader2,
   Save,
   AlertCircle,
@@ -20,15 +19,23 @@ import {
   Trash2,
   Target,
   ListTodo,
+  Info,
+  Settings2,
+  FolderTree,
+  Users,
+  Calendar,
+  Tag,
 } from 'lucide-react'
-import { User, Project, Tag } from '@/types'
+import { User, Project, Tag as TagType } from '@/types'
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS, TASK_TYPE_OPTIONS } from '@/constants'
 import TaskSearchSelect from '@components/TaskSearchSelect'
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal'
 import RecurrenceSettings from '@components/tasks/RecurrenceSettings'
 import TagInput from '@components/tags/TagInput'
 import { useTagStore } from '@stores/tagStore'
-import { Breadcrumb } from '@/components/common/Breadcrumb'
+import { useDepartmentStore } from '@stores/departmentStore'
+import { DetailPageHeader } from '@/components/common/DetailPageHeader'
+import { CustomFieldsSection } from '@/components/tasks/CustomFieldsSection'
 
 // Zod validation schema
 const taskSchema = z.object({
@@ -44,6 +51,7 @@ const taskSchema = z.object({
   projectId: z.string().optional().or(z.literal('')),
   parentTaskId: z.string().optional().or(z.literal('')),
   assigneeId: z.string().optional().or(z.literal('')),
+  departmentId: z.string().optional().or(z.literal('')),
   assignToSubtasks: z.boolean().default(false),
   isRecurring: z.boolean().optional(),
   blockedReason: z.string().optional().or(z.literal('')),
@@ -52,6 +60,20 @@ const taskSchema = z.object({
 })
 
 type TaskFormData = z.infer<typeof taskSchema>
+
+// Map taskType to display label (Italian, grammatically correct)
+function getTypeLabel(taskType: string): string {
+  if (taskType === 'milestone') return 'Milestone'
+  if (taskType === 'subtask') return 'Subtask'
+  return 'Task'
+}
+
+// Map taskType to Italian article for "Nuova/Nuovo"
+function getCreateLabel(taskType: string): string {
+  if (taskType === 'milestone') return 'Nuova Milestone'
+  if (taskType === 'subtask') return 'Nuovo Subtask'
+  return 'Nuovo Task'
+}
 
 export default function TaskFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -66,8 +88,10 @@ export default function TaskFormPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [taskTags, setTaskTags] = useState<Tag[]>([])
+  const [taskTags, setTaskTags] = useState<TagType[]>([])
+  const [inheritedFromParent, setInheritedFromParent] = useState(false)
   const { fetchEntityTags, assignTag: storeAssignTag } = useTagStore()
+  const { departments, fetchDepartments } = useDepartmentStore()
 
   const isEditMode = Boolean(id)
   const preselectedProjectId = searchParams.get('projectId') || ''
@@ -95,6 +119,7 @@ export default function TaskFormPage() {
       projectId: preselectedProjectId,
       parentTaskId: preselectedParentTaskId,
       assigneeId: '',
+      departmentId: '',
       assignToSubtasks: false,
     },
   })
@@ -111,12 +136,26 @@ export default function TaskFormPage() {
   )
   const canManageTasks = !isEditMode || isPrivilegedRole || isTaskOwner
 
+  // Warn user before leaving with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  // Load departments
+  useEffect(() => { fetchDepartments() }, [fetchDepartments])
+
   // Load users for assignee select
   useEffect(() => {
     const loadUsers = async () => {
       try {
         const response = await api.get<{ success: boolean; data: User[] }>('/users?limit=100')
-        if (response.data.success !== false) {
+        if (response.data.success) {
           setUsers(response.data.data)
         }
       } catch {
@@ -131,7 +170,7 @@ export default function TaskFormPage() {
     const loadProjects = async () => {
       try {
         const response = await api.get<{ success: boolean; data: Project[] }>('/projects?limit=100')
-        if (response.data.success !== false) {
+        if (response.data.success) {
           setProjects(response.data.data)
         }
       } catch {
@@ -141,18 +180,16 @@ export default function TaskFormPage() {
     loadProjects()
   }, [])
 
-  // Clear project/parent when toggling standalone
+  // Clear project when toggling standalone (keep parentTaskId — standalone tasks can have parents)
   useEffect(() => {
     if (isStandalone) {
       setValue('projectId', '')
-      setValue('parentTaskId', '')
     }
   }, [isStandalone, setValue])
 
   // Handle taskType changes - milestone cannot have parent, subtask must have parent
   useEffect(() => {
     if (selectedTaskType === 'milestone') {
-      // Milestone cannot have a parent task
       setValue('parentTaskId', '')
     }
   }, [selectedTaskType, setValue])
@@ -160,18 +197,9 @@ export default function TaskFormPage() {
   // Auto-set taskType based on parentTaskId
   useEffect(() => {
     if (selectedParentTaskId && selectedTaskType === 'milestone') {
-      // If user selects a parent but is milestone, change to task
       setValue('taskType', 'task')
     }
   }, [selectedParentTaskId, selectedTaskType, setValue])
-
-  // Clear parent task when project changes (parent must belong to same project)
-  useEffect(() => {
-    // Only reset if not in initial load (edit mode populates both at once)
-    if (!isEditMode || currentTask) {
-      setValue('parentTaskId', '')
-    }
-  }, [selectedProjectId, setValue, isEditMode, currentTask])
 
   // Load task data if editing
   useEffect(() => {
@@ -187,6 +215,55 @@ export default function TaskFormPage() {
       fetchEntityTags('task', id).then(setTaskTags)
     }
   }, [isEditMode, id, fetchEntityTags])
+
+  // Pre-fill form fields from parent task when creating a subtask
+  useEffect(() => {
+    if (isEditMode || !preselectedParentTaskId) return
+
+    const fetchParentAndInherit = async () => {
+      try {
+        const response = await api.get<{ success: boolean; data: Record<string, unknown> }>(
+          `/tasks/${preselectedParentTaskId}`
+        )
+        if (!response.data.success) return
+
+        const parent = response.data.data
+        let didInherit = false
+
+        if (!watch('assigneeId') && parent.assigneeId) {
+          setValue('assigneeId', parent.assigneeId as string, { shouldDirty: false })
+          didInherit = true
+        }
+        if (!watch('departmentId') && parent.departmentId) {
+          setValue('departmentId', parent.departmentId as string, { shouldDirty: false })
+          didInherit = true
+        }
+        if (parent.priority) {
+          setValue('priority', parent.priority as 'low' | 'medium' | 'high' | 'critical', { shouldDirty: false })
+          didInherit = true
+        }
+        if (!watch('startDate') && parent.startDate) {
+          const dateStr = (parent.startDate as string).split('T')[0]
+          setValue('startDate', dateStr, { shouldDirty: false })
+          didInherit = true
+        }
+        if (!watch('dueDate') && parent.dueDate) {
+          const dateStr = (parent.dueDate as string).split('T')[0]
+          setValue('dueDate', dateStr, { shouldDirty: false })
+          didInherit = true
+        }
+
+        if (didInherit) {
+          setInheritedFromParent(true)
+        }
+      } catch {
+        // Silent failure — do not block form usage if parent fetch fails
+      }
+    }
+
+    fetchParentAndInherit()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, preselectedParentTaskId])
 
   // Populate form when task is loaded
   useEffect(() => {
@@ -204,6 +281,7 @@ export default function TaskFormPage() {
         projectId: currentTask.projectId || '',
         parentTaskId: currentTask.parentTaskId || '',
         assigneeId: currentTask.assigneeId || '',
+        departmentId: currentTask.departmentId || '',
       })
     }
   }, [isEditMode, currentTask, reset])
@@ -213,7 +291,6 @@ export default function TaskFormPage() {
     setSubmitError(null)
 
     try {
-      // Prepare data for API - convert estimatedHours to number
       const estimatedHoursValue = data.estimatedHours ? parseFloat(data.estimatedHours) : null
       const submitData: Record<string, unknown> = {
         title: data.title,
@@ -225,6 +302,7 @@ export default function TaskFormPage() {
         dueDate: data.dueDate || null,
         estimatedHours: estimatedHoursValue && !isNaN(estimatedHoursValue) ? estimatedHoursValue : null,
         assigneeId: data.assigneeId || null,
+        departmentId: data.departmentId || null,
         assignToSubtasks: data.assignToSubtasks,
       }
 
@@ -240,7 +318,6 @@ export default function TaskFormPage() {
         navigate(`/tasks/${id}`)
       } else {
         const newTask = await createTask(submitData)
-        // Assign selected tags to newly created task
         for (const tag of taskTags) {
           try {
             await storeAssignTag(tag.id, 'task', newTask.id)
@@ -273,11 +350,34 @@ export default function TaskFormPage() {
     }
   }
 
-  // Loading state for edit mode - show before permission check
+  // Loading state — skeleton layout
   if (isEditMode && storeLoading && !currentTask) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        {/* Breadcrumb skeleton */}
+        <div className="flex gap-2">
+          <div className="skeleton h-4 w-16" />
+          <div className="skeleton h-4 w-32" />
+        </div>
+        {/* Header skeleton */}
+        <div className="flex items-center gap-4">
+          <div className="skeleton w-10 h-10 rounded-lg" />
+          <div className="skeleton h-7 w-48" />
+        </div>
+        {/* Body skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="card p-6 space-y-4">
+              <div className="skeleton h-10 w-full" />
+              <div className="skeleton h-40 w-full" />
+            </div>
+          </div>
+          <div className="card p-5 space-y-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton h-10 w-full" />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -300,7 +400,7 @@ export default function TaskFormPage() {
     )
   }
 
-  // Redirect if not authorized (check after task is loaded for edit mode)
+  // Redirect if not authorized
   if (!canManageTasks) {
     return (
       <div className="card p-8 text-center">
@@ -318,377 +418,469 @@ export default function TaskFormPage() {
     )
   }
 
+  const typeLabel = getTypeLabel(selectedTaskType)
+
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Task', href: '/tasks' },
-          { label: isEditMode ? 'Modifica Task' : 'Nuovo Task' },
-        ]}
+    <div className="space-y-4">
+      {/* Page Header */}
+      <DetailPageHeader
+        title={isEditMode ? `Modifica ${typeLabel}` : getCreateLabel(selectedTaskType)}
+        subtitle={isEditMode && currentTask?.code ? currentTask.code : undefined}
+        backTo="/tasks"
       />
 
-      {/* Header */}
-      <div className="flex items-center mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="mr-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
-        </button>
-        <div className="flex items-center">
-          {selectedTaskType === 'milestone' ? (
-            <Target className="w-6 h-6 text-amber-500 mr-3" />
-          ) : selectedTaskType === 'subtask' ? (
-            <ListTodo className="w-6 h-6 text-gray-500 mr-3" />
-          ) : (
-            <CheckSquare className="w-6 h-6 text-primary-500 mr-3" />
-          )}
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {isEditMode
-              ? `Modifica ${selectedTaskType === 'milestone' ? 'Milestone' : selectedTaskType === 'subtask' ? 'Subtask' : 'Task'}`
-              : `${selectedTaskType === 'milestone' ? 'Nuova Milestone' : selectedTaskType === 'subtask' ? 'Nuovo Subtask' : 'Nuovo Task'}`
-            }
-          </h1>
-        </div>
-      </div>
-
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="card p-6 space-y-6">
-        {/* Submit Error */}
-        {submitError && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start">
-            <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-            <p className="text-red-700 dark:text-red-400">{submitError}</p>
-          </div>
-        )}
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Title */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Titolo <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="title"
-            type="text"
-            {...register('title')}
-            className={`input ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
-            placeholder="Inserisci il titolo del task"
-          />
-          {errors.title && (
-            <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>
-          )}
-        </div>
-
-        {/* Task Type */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Tipo <span className="text-red-500">*</span>
-          </label>
-          <div className="flex flex-wrap gap-3">
-            {TASK_TYPE_OPTIONS.map((option) => {
-              const isSelected = selectedTaskType === option.value
-              const isDisabled = option.value === 'milestone' && Boolean(selectedParentTaskId)
-              return (
-                <label
-                  key={option.value}
-                  className={`
-                    flex-1 min-w-[140px] p-3 rounded-lg border-2 cursor-pointer transition-all
-                    ${isSelected
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }
-                    ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
-                  `}
-                >
-                  <input
-                    type="radio"
-                    {...register('taskType')}
-                    value={option.value}
-                    disabled={isDisabled}
-                    className="sr-only"
-                  />
-                  <span className={`block font-medium ${isSelected ? 'text-primary-700 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>
-                    {option.label}
-                  </span>
-                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {option.description}
-                  </span>
-                </label>
-              )
-            })}
-          </div>
-          {selectedTaskType === 'milestone' && (
-            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-              ⚠️ Le milestone non possono avere time entries diretti. Il tempo è calcolato dalle task figlie.
-            </p>
-          )}
-        </div>
-
-        {/* Standalone Toggle */}
-        <div className="flex items-center gap-3">
-          <input
-            id="isStandalone"
-            type="checkbox"
-            {...register('isStandalone')}
-            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-          />
-          <label htmlFor="isStandalone" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Task standalone (senza progetto)
-          </label>
-        </div>
-
-        {/* Project */}
-        {!isStandalone && (
-          <div>
-            <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Progetto
-            </label>
-            <select
-              id="projectId"
-              {...register('projectId')}
-              className={`input ${errors.projectId ? 'border-red-500 focus:ring-red-500' : ''}`}
-            >
-              <option value="">Seleziona progetto</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.code} - {p.name}
-                </option>
-              ))}
-            </select>
-            {errors.projectId && (
-              <p className="mt-1 text-sm text-red-500">{errors.projectId.message}</p>
-            )}
-          </div>
-        )}
-
-        {/* Parent Task - hidden for milestones */}
-        {!isStandalone && selectedTaskType !== 'milestone' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Task/Milestone Padre
-            </label>
-            <TaskSearchSelect
-              value={watch('parentTaskId') || ''}
-              onChange={(taskId) => setValue('parentTaskId', taskId, { shouldDirty: true })}
-              placeholder={selectedProjectId ? 'Cerca task o milestone nel progetto...' : 'Seleziona prima un progetto...'}
-              projectId={selectedProjectId || undefined}
-              disabled={!selectedProjectId}
-              excludeTaskId={isEditMode ? id : undefined}
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {selectedProjectId
-                ? 'Lascia vuoto per un elemento root del progetto. Seleziona una milestone per raggruppare.'
-                : 'Seleziona un progetto per vedere i task disponibili'}
-            </p>
-          </div>
-        )}
-
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Descrizione
-          </label>
-          <textarea
-            id="description"
-            {...register('description')}
-            rows={4}
-            className={`input resize-none ${errors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
-            placeholder="Descrizione del task (opzionale)"
-          />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>
-          )}
-        </div>
-
-        {/* Status and Priority */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Stato <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="status"
-              {...register('status')}
-              className={`input ${errors.status ? 'border-red-500 focus:ring-red-500' : ''}`}
-            >
-              {TASK_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors.status && (
-              <p className="mt-1 text-sm text-red-500">{errors.status.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Priorità <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="priority"
-              {...register('priority')}
-              className={`input ${errors.priority ? 'border-red-500 focus:ring-red-500' : ''}`}
-            >
-              {TASK_PRIORITY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors.priority && (
-              <p className="mt-1 text-sm text-red-500">{errors.priority.message}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Dates and Estimated Hours */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Data Inizio
-            </label>
-            <input
-              id="startDate"
-              type="date"
-              {...register('startDate')}
-              className={`input ${errors.startDate ? 'border-red-500 focus:ring-red-500' : ''}`}
-            />
-            {errors.startDate && (
-              <p className="mt-1 text-sm text-red-500">{errors.startDate.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Data Fine
-            </label>
-            <input
-              id="dueDate"
-              type="date"
-              {...register('dueDate')}
-              className={`input ${errors.dueDate ? 'border-red-500 focus:ring-red-500' : ''}`}
-            />
-            {errors.dueDate && (
-              <p className="mt-1 text-sm text-red-500">{errors.dueDate.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="estimatedHours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Ore Stimate
-            </label>
-            <input
-              id="estimatedHours"
-              type="number"
-              step="0.5"
-              min="0"
-              {...register('estimatedHours')}
-              className={`input ${errors.estimatedHours ? 'border-red-500 focus:ring-red-500' : ''}`}
-              placeholder="es. 8"
-            />
-            {errors.estimatedHours && (
-              <p className="mt-1 text-sm text-red-500">{errors.estimatedHours.message}</p>
-            )}
-          </div>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-          Le date determinano la posizione del task nel Gantt chart
-        </p>
-
-        {/* Assignee */}
-        <div>
-          <label htmlFor="assigneeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Assegnato a
-          </label>
-          <select
-            id="assigneeId"
-            {...register('assigneeId')}
-            className={`input ${errors.assigneeId ? 'border-red-500 focus:ring-red-500' : ''}`}
-          >
-            <option value="">Non assegnato</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.firstName} {u.lastName} ({u.email})
-              </option>
-            ))}
-          </select>
-          {errors.assigneeId && (
-            <p className="mt-1 text-sm text-red-500">{errors.assigneeId.message}</p>
-          )}
-          {/* Show checkbox to assign to subtasks only in edit mode with subtasks */}
-          {isEditMode && currentTask && currentTask._count && currentTask._count.subtasks > 0 && (
-            <div className="flex items-center gap-2 mt-3">
-              <input
-                id="assignToSubtasks"
-                type="checkbox"
-                {...register('assignToSubtasks')}
-                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              <label htmlFor="assignToSubtasks" className="text-sm text-gray-600 dark:text-gray-400">
-                Assegna anche alle subtask ({currentTask._count.subtasks} subtask dirette, include tutti i livelli)
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Tag
-          </label>
-          <TagInput
-            entityType="task"
-            entityId={isEditMode ? id ?? null : null}
-            value={taskTags}
-            onChange={setTaskTags}
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-          {isEditMode ? (
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Elimina
-            </button>
-          ) : (
-            <div />
-          )}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              Annulla
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || (!isDirty && isEditMode)}
-              className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvataggio...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  {isEditMode
-                    ? 'Salva Modifiche'
-                    : `Crea ${selectedTaskType === 'milestone' ? 'Milestone' : selectedTaskType === 'subtask' ? 'Subtask' : 'Task'}`
-                  }
-                </>
+          {/* ── Left column: Content ── */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="card p-6 space-y-5">
+              {/* Error banner */}
+              {submitError && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-700 dark:text-red-400">{submitError}</p>
+                </div>
               )}
-            </button>
+
+              {/* Parent inheritance banner */}
+              {inheritedFromParent && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
+                  <Info className="w-4 h-4 flex-shrink-0" />
+                  <span>Alcuni campi sono stati pre-compilati dal task padre. Puoi modificarli liberamente.</span>
+                </div>
+              )}
+
+              {/* Title */}
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Titolo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="title"
+                  type="text"
+                  {...register('title')}
+                  className={`input ${errors.title ? 'input-error' : ''}`}
+                  placeholder="Inserisci il titolo del task"
+                />
+                {errors.title && (
+                  <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Descrizione{' '}
+                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                </label>
+                <textarea
+                  id="description"
+                  {...register('description')}
+                  rows={10}
+                  className={`input resize-none ${errors.description ? 'input-error' : ''}`}
+                  placeholder="Descrizione del task (opzionale)"
+                />
+                {errors.description && (
+                  <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Custom Fields - only in edit mode */}
+            {isEditMode && currentTask?.id && (
+              <CustomFieldsSection
+                taskId={currentTask.id}
+                projectId={selectedProjectId || null}
+                readOnly={false}
+              />
+            )}
+          </div>
+
+          {/* ── Right column: Configuration ── */}
+          <div className="lg:col-span-1">
+            <div className="card p-5 space-y-5">
+
+              {/* Task Type — horizontal selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tipo <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {TASK_TYPE_OPTIONS.map((option) => {
+                    const isSelected = selectedTaskType === option.value
+                    const isDisabled = option.value === 'milestone' && Boolean(selectedParentTaskId)
+                    return (
+                      <label
+                        key={option.value}
+                        title={option.description}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 cursor-pointer transition-all
+                          ${isSelected
+                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-500/30'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }
+                          ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                        `}
+                      >
+                        <input
+                          type="radio"
+                          {...register('taskType')}
+                          value={option.value}
+                          disabled={isDisabled}
+                          className="sr-only"
+                        />
+                        {option.value === 'milestone' && (
+                          <Target
+                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
+                          />
+                        )}
+                        {option.value === 'task' && (
+                          <CheckSquare
+                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
+                          />
+                        )}
+                        {option.value === 'subtask' && (
+                          <ListTodo
+                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
+                          />
+                        )}
+                        <span
+                          className={`text-xs font-medium ${isSelected ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}
+                        >
+                          {option.label}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+                {selectedTaskType === 'milestone' && (
+                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                    Le milestone non possono avere time entries diretti. Il tempo è calcolato dalle task figlie.
+                  </p>
+                )}
+              </div>
+
+              {/* ── Section: Stato e Priorità ── */}
+              <div className="form-section-header">
+                <Settings2 className="w-3.5 h-3.5" />
+                Stato e Priorità
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Stato <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="status"
+                    {...register('status')}
+                    className={`input ${errors.status ? 'input-error' : ''}`}
+                  >
+                    {TASK_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.status && (
+                    <p className="mt-1 text-sm text-red-500">{errors.status.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Priorità <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="priority"
+                    {...register('priority')}
+                    className={`input ${errors.priority ? 'input-error' : ''}`}
+                  >
+                    {TASK_PRIORITY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.priority && (
+                    <p className="mt-1 text-sm text-red-500">{errors.priority.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Section: Organizzazione ── */}
+              <div className="form-section-header">
+                <FolderTree className="w-3.5 h-3.5" />
+                Organizzazione
+              </div>
+
+              {/* Standalone Toggle */}
+              <div className="flex items-center gap-3">
+                <input
+                  id="isStandalone"
+                  type="checkbox"
+                  {...register('isStandalone')}
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="isStandalone" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Task standalone (senza progetto)
+                </label>
+              </div>
+
+              {/* Project */}
+              {!isStandalone && (
+                <div>
+                  <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Progetto{' '}
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                  </label>
+                  <select
+                    id="projectId"
+                    value={selectedProjectId || ''}
+                    onChange={(e) => {
+                      setValue('projectId', e.target.value, { shouldDirty: true })
+                      setValue('parentTaskId', '')
+                    }}
+                    className={`input ${errors.projectId ? 'input-error' : ''}`}
+                  >
+                    <option value="">Seleziona progetto</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.projectId && (
+                    <p className="mt-1 text-sm text-red-500">{errors.projectId.message}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Parent Task - hidden for milestones */}
+              {selectedTaskType !== 'milestone' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Task/Milestone Padre{' '}
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                  </label>
+                  <TaskSearchSelect
+                    value={watch('parentTaskId') || ''}
+                    onChange={(taskId) => setValue('parentTaskId', taskId, { shouldDirty: true })}
+                    placeholder="Cerca task o milestone padre..."
+                    projectId={selectedProjectId || undefined}
+                    excludeTaskId={isEditMode ? id : undefined}
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {selectedProjectId
+                      ? 'Lascia vuoto per un elemento root del progetto. Seleziona una milestone per raggruppare.'
+                      : 'Lascia vuoto per un task root. Seleziona un task padre per creare un subtask.'}
+                  </p>
+                </div>
+              )}
+
+              {/* ── Section: Assegnazione ── */}
+              <div className="form-section-header">
+                <Users className="w-3.5 h-3.5" />
+                Assegnazione
+              </div>
+
+              {/* Assignee */}
+              <div>
+                <label htmlFor="assigneeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Assegnato a{' '}
+                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                </label>
+                <select
+                  id="assigneeId"
+                  {...register('assigneeId')}
+                  className={`input ${errors.assigneeId ? 'input-error' : ''}`}
+                >
+                  <option value="">Non assegnato</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.firstName} {u.lastName} ({u.email})
+                    </option>
+                  ))}
+                </select>
+                {errors.assigneeId && (
+                  <p className="mt-1 text-sm text-red-500">{errors.assigneeId.message}</p>
+                )}
+                {/* Assign to subtasks checkbox — edit mode only when subtasks exist */}
+                {isEditMode && currentTask && currentTask._count && currentTask._count.subtasks > 0 && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <input
+                      id="assignToSubtasks"
+                      type="checkbox"
+                      {...register('assignToSubtasks')}
+                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                    />
+                    <label htmlFor="assignToSubtasks" className="text-sm text-gray-600 dark:text-gray-400">
+                      Assegna anche alle subtask ({currentTask._count.subtasks} subtask dirette, include tutti i livelli)
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Department */}
+              <div>
+                <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Reparto Esecutore{' '}
+                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                </label>
+                <select
+                  id="departmentId"
+                  {...register('departmentId')}
+                  className="input"
+                >
+                  <option value="">Nessun reparto</option>
+                  {departments
+                    .filter((d) => d.isActive)
+                    .map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Il reparto che eseguirà questo task
+                </p>
+              </div>
+
+              {/* ── Section: Tempistiche ── */}
+              <div className="form-section-header">
+                <Calendar className="w-3.5 h-3.5" />
+                Tempistiche
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Data Inizio{' '}
+                      <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                    </label>
+                    <input
+                      id="startDate"
+                      type="date"
+                      {...register('startDate')}
+                      className={`input ${errors.startDate ? 'input-error' : ''}`}
+                    />
+                    {errors.startDate && (
+                      <p className="mt-1 text-sm text-red-500">{errors.startDate.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Data Fine{' '}
+                      <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                    </label>
+                    <input
+                      id="dueDate"
+                      type="date"
+                      {...register('dueDate')}
+                      className={`input ${errors.dueDate ? 'input-error' : ''}`}
+                    />
+                    {errors.dueDate && (
+                      <p className="mt-1 text-sm text-red-500">{errors.dueDate.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="estimatedHours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Ore Stimate{' '}
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                  </label>
+                  <input
+                    id="estimatedHours"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    {...register('estimatedHours')}
+                    className={`input ${errors.estimatedHours ? 'input-error' : ''}`}
+                    placeholder="es. 8"
+                  />
+                  {errors.estimatedHours && (
+                    <p className="mt-1 text-sm text-red-500">{errors.estimatedHours.message}</p>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Le date determinano la posizione del task nel Gantt chart
+                </p>
+              </div>
+
+              {/* ── Section: Tag ── */}
+              <div className="form-section-header">
+                <Tag className="w-3.5 h-3.5" />
+                Tag
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tag{' '}
+                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                </label>
+                <TagInput
+                  entityType="task"
+                  entityId={isEditMode ? id ?? null : null}
+                  value={taskTags}
+                  onChange={setTaskTags}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Sticky Action Bar ── */}
+        <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-3 bg-white/90 dark:bg-surface-800/90 backdrop-blur-md border-t border-gray-200/50 dark:border-white/10 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
+          <div className="flex items-center justify-between">
+            {/* Left: Delete (edit mode only) */}
+            {isEditMode ? (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                Elimina
+              </button>
+            ) : (
+              <div />
+            )}
+
+            {/* Right: Cancel + Save */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || (!isDirty && isEditMode)}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Salvataggio...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {isEditMode
+                      ? 'Salva Modifiche'
+                      : `Crea ${typeLabel}`
+                    }
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </form>

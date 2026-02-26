@@ -25,6 +25,8 @@ import {
   ExternalLink,
   StickyNote,
   Paperclip,
+  History,
+  Zap,
 } from 'lucide-react'
 import { Note, Attachment } from '@/types'
 import { NoteSection } from '@/components/common/NoteSection'
@@ -37,29 +39,14 @@ import { TabSection } from '@/components/common/TabSection'
 import { QuickLinksGrid } from '@/components/common/QuickLinksGrid'
 import { Breadcrumb } from '@/components/common/Breadcrumb'
 import { TaskTreeView } from '@/components/reports/TaskTreeView'
+import { ProjectMembersSection } from '@/components/projects/ProjectMembersSection'
+import { BudgetCard } from '@/components/projects/BudgetCard'
+import ActivityFeed from '@components/common/ActivityFeed'
+import QuickAutomationsPanel from '@components/features/QuickAutomationsPanel'
 import { StatusIcon } from '@/components/ui/StatusIcon'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { PROJECT_PRIORITY_LABELS } from '@/constants'
-
-function formatDateShort(dateString: string | null | undefined): string {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function formatDateRelative(dateString: string | null | undefined): string {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diff < 0) return `${Math.abs(diff)}g fa`
-  if (diff === 0) return 'Oggi'
-  if (diff === 1) return 'Domani'
-  if (diff < 7) return `tra ${diff}g`
-
-  return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
-}
+import { formatDateShort, formatDateRelative } from '@utils/dateFormatters'
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -142,6 +129,8 @@ export default function ProjectDetailPage() {
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
   const inProgressCount = projectStats?.inProgress ?? 0
   const blockedCount = projectStats?.blocked ?? 0
+  const totalHoursLogged = projectStats?.totalHours ?? 0
+  const estimatedHours = projectStats?.estimatedHours ?? 0
 
   const daysUntilDeadline = currentProject?.targetEndDate
     ? Math.ceil(
@@ -189,7 +178,7 @@ export default function ProjectDetailPage() {
       />
 
       {/* Page Header */}
-      <DetailPageHeader title="Dettagli Progetto" subtitle={currentProject.code}>
+      <DetailPageHeader title={currentProject.name} subtitle="Dettagli Progetto">
         {canEdit && (
           <button
             onClick={() => navigate(`/projects/${id}/edit`)}
@@ -258,6 +247,32 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
+        {/* Hours summary */}
+        {(totalHoursLogged > 0 || estimatedHours > 0) && (
+          <div className="mt-3 flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+              <Clock className="w-4 h-4" />
+              <span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {Math.round(totalHoursLogged * 10) / 10}h
+                </span>
+                {estimatedHours > 0 && (
+                  <span> / {Math.round(estimatedHours * 10) / 10}h stimate</span>
+                )}
+              </span>
+            </div>
+            {estimatedHours > 0 && (
+              <div className="flex-1 max-w-32">
+                <ProgressBar
+                  value={Math.min(100, Math.round((totalHoursLogged / estimatedHours) * 100))}
+                  size="sm"
+                  color={totalHoursLogged > estimatedHours ? 'red' : undefined}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Description (collapsible) */}
         {currentProject.description && (
           <CollapsibleSection
@@ -272,6 +287,13 @@ export default function ProjectDetailPage() {
           </CollapsibleSection>
         )}
       </InfoCard>
+
+      {/* Budget & Hours Card */}
+      <BudgetCard
+        budget={currentProject.budget !== null ? parseFloat(currentProject.budget) : null}
+        totalHoursLogged={totalHoursLogged}
+        estimatedHours={estimatedHours}
+      />
 
       {/* Tabs: Tasks / Notes / Attachments */}
       <TabSection
@@ -349,6 +371,30 @@ export default function ProjectDetailPage() {
                 onAttachmentAdded={handleAttachmentAdded}
                 onAttachmentDeleted={handleAttachmentDeleted}
               />
+            ),
+          },
+          {
+            id: 'members',
+            label: 'Membri',
+            icon: Users,
+            content: (
+              <ProjectMembersSection projectId={id!} />
+            ),
+          },
+          {
+            id: 'automations',
+            label: 'Automazioni',
+            icon: Zap,
+            content: (
+              <QuickAutomationsPanel projectId={id!} />
+            ),
+          },
+          {
+            id: 'activity',
+            label: 'Attivita\'',
+            icon: History,
+            content: (
+              <ActivityFeed entityType="project" entityId={id!} projectId={id!} />
             ),
           },
         ]}

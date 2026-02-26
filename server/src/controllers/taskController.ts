@@ -3,107 +3,27 @@
  * @module controllers/taskController
  */
 
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { taskService } from '../services/taskService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { assertTaskOwnership } from '../utils/taskOwnership.js'
 import { TaskStatus, TaskPriority } from '../types/index.js'
-import { datePreprocess, numberPreprocess } from '../utils/validation.js'
 import { logger } from '../utils/logger.js'
-
-// ============================================================
-// VALIDATION SCHEMAS (Rule 6: Input Validation)
-// ============================================================
-
-// Helper to convert empty strings to undefined for UUIDs
-const emptyStringToUndefined = z.preprocess((val) => {
-  if (val === '') return undefined
-  return val
-}, z.string().uuid('Invalid ID'))
-
-const createTaskSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(255),
-  description: z.string().nullable().optional(),
-  projectId: emptyStringToUndefined.nullable().optional(),
-  parentTaskId: emptyStringToUndefined.nullable().optional(),
-  assigneeId: emptyStringToUndefined.nullable().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
-  taskType: z.enum(['milestone', 'task', 'subtask']).default('task'),
-  startDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
-  dueDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
-  estimatedHours: z.preprocess(numberPreprocess, z.number().positive('Estimated hours must be positive').nullable().optional()),
-  isRecurring: z.boolean().optional(),
-  blockedReason: z.string().max(1000).nullable().optional(),
-  recurrencePattern: z.string().nullable().optional(),
-  position: z.preprocess(numberPreprocess, z.number().int().nonnegative().nullable().optional()),
-})
-
-const updateTaskSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  description: z.string().nullable().optional(),
-  projectId: emptyStringToUndefined.nullable().optional(),
-  parentTaskId: emptyStringToUndefined.nullable().optional(),
-  assigneeId: emptyStringToUndefined.nullable().optional(),
-  assignToSubtasks: z.boolean().optional(),
-  status: z.enum(['todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  taskType: z.enum(['milestone', 'task', 'subtask']).optional(),
-  startDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
-  dueDate: z.preprocess(datePreprocess, z.string().datetime().nullable().optional()),
-  estimatedHours: z.preprocess(numberPreprocess, z.number().positive().nullable().optional()),
-  actualHours: z.preprocess(numberPreprocess, z.number().positive().nullable().optional()),
-  isRecurring: z.boolean().optional(),
-  blockedReason: z.string().max(1000).nullable().optional(),
-  recurrencePattern: z.string().nullable().optional(),
-  position: z.number().int().nonnegative().optional(),
-})
-
-const querySchema = z.object({
-  projectId: z.string().uuid().optional(),
-  status: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  assigneeId: z.string().uuid().optional(),
-  search: z.string().optional(),
-  standalone: z.string().transform((v) => v === 'true').optional(),
-  parentTaskId: z.string().uuid().optional(),
-  includeSubtasks: z.string().transform((v) => v === 'true').optional(),
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('20'),
-})
-
-const statusChangeSchema = z
-  .object({
-    status: z.enum(['todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled']),
-    blockedReason: z.string().min(1).max(1000).optional(),
-  })
-  .refine(
-    (data) => {
-      // If status is 'blocked', blockedReason is required
-      if (data.status === 'blocked') {
-        return !!data.blockedReason?.trim()
-      }
-      return true
-    },
-    {
-      message: 'Blocked reason is required when setting status to blocked',
-      path: ['blockedReason'],
-    }
-  )
-
-const ganttQuerySchema = z.object({
-  projectId: z.string().uuid().optional(),
-  assigneeId: z.string().uuid().optional(),
-  startDateFrom: z.preprocess(datePreprocess, z.string().datetime().optional()),
-  startDateTo: z.preprocess(datePreprocess, z.string().datetime().optional()),
-})
-
-const createDependencySchema = z.object({
-  predecessorId: z.string().uuid('Invalid predecessor task ID'),
-  successorId: z.string().uuid('Invalid successor task ID'),
-  dependencyType: z.enum(['finish_to_start', 'start_to_start', 'finish_to_finish', 'start_to_finish']).default('finish_to_start'),
-  lagDays: z.number().int().default(0),
-})
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import {
+  createTaskSchema,
+  updateTaskSchema,
+  taskQuerySchema as querySchema,
+  taskStatusChangeSchema as statusChangeSchema,
+  ganttQuerySchema,
+  createTaskDependencySchema as createDependencySchema,
+  bulkUpdateTaskSchema,
+  bulkDeleteTaskSchema,
+  reorderTaskSchema,
+  cloneTaskSchema,
+  calendarQuerySchema,
+} from '../schemas/taskSchemas.js'
 
 // ============================================================
 // CONTROLLER FUNCTIONS
@@ -130,11 +50,7 @@ export async function getTasks(req: Request, res: Response, next: NextFunction):
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -150,7 +66,7 @@ export async function getTasksKanban(req: Request, res: Response, next: NextFunc
 
     const tasks = await taskService.getTasksKanban(projectId)
 
-    res.json({ success: true, data: tasks })
+    sendSuccess(res, tasks)
   } catch (error) {
     next(error)
   }
@@ -170,7 +86,7 @@ export async function getTask(req: Request, res: Response, next: NextFunction): 
       throw new AppError('Task not found', 404)
     }
 
-    res.json({ success: true, data: task })
+    sendSuccess(res, task)
   } catch (error) {
     next(error)
   }
@@ -222,7 +138,7 @@ export async function createTask(req: Request, res: Response, next: NextFunction
       userId
     )
 
-    res.status(201).json({ success: true, data: task })
+    sendCreated(res, task)
   } catch (error) {
     if (error instanceof Error && (error.message === 'Project not found' || error.message === 'Parent task not found')) {
       next(new AppError(error.message, 404))
@@ -295,6 +211,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
 /**
  * Changes task status
  * @route PATCH /api/tasks/:id/status
+ * NOTE: updateTask keeps its custom response (subtasksUpdated field) so sendSuccess is not used there.
  */
 export async function changeStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -314,7 +231,7 @@ export async function changeStatus(req: Request, res: Response, next: NextFuncti
       throw new AppError('Task not found', 404)
     }
 
-    res.json({ success: true, data: task })
+    sendSuccess(res, task)
   } catch (error) {
     if (error instanceof Error && error.message.includes('Blocked reason is required')) {
       next(new AppError(error.message, 400))
@@ -352,6 +269,7 @@ export async function deleteTask(req: Request, res: Response, next: NextFunction
   }
 }
 
+
 /**
  * Gets tasks assigned to current user
  * @route GET /api/tasks/my
@@ -376,11 +294,7 @@ export async function getMyTasks(req: Request, res: Response, next: NextFunction
       includeSubtasks: params.includeSubtasks,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -400,32 +314,15 @@ export async function getMyTaskStats(req: Request, res: Response, next: NextFunc
 
     const stats = await taskService.getUserTaskStats(userId)
 
-    res.json({ success: true, data: stats })
+    sendSuccess(res, stats)
   } catch (error) {
     next(error)
   }
 }
 
 // ============================================================
-// BULK OPERATION SCHEMAS
+// BULK OPERATION FUNCTIONS
 // ============================================================
-
-const bulkUpdateSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1, 'At least one task ID required').max(100, 'Maximum 100 tasks per bulk operation'),
-  update: z
-    .object({
-      status: z.enum(['todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled']).optional(),
-      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-      assigneeId: z.string().uuid().optional(),
-    })
-    .refine((obj) => Object.keys(obj).length > 0, {
-      message: 'At least one field to update is required',
-    }),
-})
-
-const bulkDeleteSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1, 'At least one task ID required').max(100, 'Maximum 100 tasks per bulk operation'),
-})
 
 /**
  * Bulk updates multiple tasks (status, priority, or assignee)
@@ -439,11 +336,11 @@ export async function bulkUpdate(req: Request, res: Response, next: NextFunction
       throw new AppError('User not authenticated', 401)
     }
 
-    const { ids, update } = bulkUpdateSchema.parse(req.body)
+    const { ids, update } = bulkUpdateTaskSchema.parse(req.body)
 
     const count = await taskService.bulkUpdateTasks(ids, update, userId)
 
-    res.json({ success: true, data: { updated: count } })
+    sendSuccess(res, { updated: count })
   } catch (error) {
     next(error)
   }
@@ -461,24 +358,15 @@ export async function bulkDelete(req: Request, res: Response, next: NextFunction
       throw new AppError('User not authenticated', 401)
     }
 
-    const { ids } = bulkDeleteSchema.parse(req.body)
+    const { ids } = bulkDeleteTaskSchema.parse(req.body)
 
     const count = await taskService.bulkDeleteTasks(ids, userId)
 
-    res.json({ success: true, data: { deleted: count } })
+    sendSuccess(res, { deleted: count })
   } catch (error) {
     next(error)
   }
 }
-
-const reorderSchema = z.object({
-  tasks: z.array(
-    z.object({
-      taskId: z.string().uuid(),
-      position: z.number().int().min(0),
-    })
-  ),
-})
 
 /**
  * Reorder user's tasks by updating position field
@@ -492,7 +380,7 @@ export async function reorderTasks(req: Request, res: Response, next: NextFuncti
       throw new AppError('User not authenticated', 401)
     }
 
-    const { tasks } = reorderSchema.parse(req.body)
+    const { tasks } = reorderTaskSchema.parse(req.body)
 
     await taskService.reorderTasks(tasks, userId)
 
@@ -510,7 +398,7 @@ export async function getSubtasks(req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params
     const subtasks = await taskService.getSubtasks(id)
-    res.json({ success: true, data: subtasks })
+    sendSuccess(res, subtasks)
   } catch (error) {
     next(error)
   }
@@ -533,11 +421,7 @@ export async function getStandaloneTasks(req: Request, res: Response, next: Next
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -562,7 +446,7 @@ export async function getTasksForGantt(req: Request, res: Response, next: NextFu
       startDateTo: params.startDateTo ? new Date(params.startDateTo) : undefined,
     })
 
-    res.json({ success: true, data: tasks })
+    sendSuccess(res, tasks)
   } catch (error) {
     next(error)
   }
@@ -597,13 +481,13 @@ export async function createDependency(req: Request, res: Response, next: NextFu
       const ownsPred = pred.createdById === userId || pred.assigneeId === userId
       const ownsSucc = succ.createdById === userId || succ.assigneeId === userId
       if (!ownsPred && !ownsSucc) {
-        throw new AppError('Non hai i permessi per creare questa dipendenza', 403)
+        throw new AppError('You do not have permission to create this dependency', 403)
       }
     }
 
     const dependency = await taskService.createTaskDependency(data, userId)
 
-    res.status(201).json({ success: true, data: dependency })
+    sendCreated(res, dependency)
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('not found') || error.message.includes('Circular') || error.message.includes('cannot depend')) {
@@ -625,9 +509,41 @@ export async function getTaskDependencies(req: Request, res: Response, next: Nex
 
     const dependencies = await taskService.getTaskDependencies(id)
 
-    res.json({ success: true, data: dependencies })
+    sendSuccess(res, dependencies)
   } catch (error) {
     next(error)
+  }
+}
+
+// ============================================================
+// CALENDAR CONTROLLER FUNCTIONS
+// ============================================================
+
+/**
+ * Gets tasks for calendar view filtered by date range
+ * @route GET /api/tasks/calendar
+ */
+export async function getTasksForCalendar(req: Request, res: Response): Promise<void> {
+  try {
+    const parsed = calendarQuerySchema.parse(req.query)
+
+    const tasks = await taskService.getTasksForCalendar({
+      start: new Date(parsed.start),
+      end: new Date(parsed.end),
+      projectId: parsed.projectId,
+      assigneeId: parsed.assigneeId,
+      userId: req.user?.userId,
+      role: req.user?.role,
+    })
+
+    sendSuccess(res, tasks)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ success: false, error: 'Invalid parameters', details: error.errors })
+      return
+    }
+    logger.error('Error fetching calendar tasks', { error })
+    res.status(500).json({ success: false, error: 'Server error' })
   }
 }
 
@@ -657,7 +573,7 @@ export async function deleteDependency(req: Request, res: Response, next: NextFu
       const ownsPred = pred && (pred.createdById === userId || pred.assigneeId === userId)
       const ownsSucc = succ && (succ.createdById === userId || succ.assigneeId === userId)
       if (!ownsPred && !ownsSucc) {
-        throw new AppError('Non hai i permessi per eliminare questa dipendenza', 403)
+        throw new AppError('You do not have permission to delete this dependency', 403)
       }
     }
 
@@ -669,6 +585,29 @@ export async function deleteDependency(req: Request, res: Response, next: NextFu
 
     res.json({ success: true, message: 'Dependency deleted successfully' })
   } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Clones a task
+ * @route POST /api/tasks/:id/clone
+ */
+export async function cloneTask(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user?.userId
+    if (!userId) throw new AppError('User not authenticated', 401)
+
+    const { id } = req.params
+    const { includeSubtasks } = cloneTaskSchema.parse(req.body)
+
+    const cloned = await taskService.cloneTask(id, userId, { includeSubtasks })
+
+    sendCreated(res, cloned)
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Task not found') {
+      return next(new AppError('Task not found', 404))
+    }
     next(error)
   }
 }

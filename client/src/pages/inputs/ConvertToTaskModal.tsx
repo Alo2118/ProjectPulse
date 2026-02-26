@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, CheckCircle2 } from 'lucide-react'
 import { useUserInputStore } from '@stores/userInputStore'
 import { useProjectStore } from '@stores/projectStore'
 import { TaskPriority } from '@/types'
@@ -39,6 +39,8 @@ export default function ConvertToTaskModal({
   const { projects, fetchProjects } = useProjectStore()
 
   const [users, setUsers] = useState<UserOption[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [createdTaskId, setCreatedTaskId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     projectId: '',
     assigneeId: '',
@@ -68,25 +70,21 @@ export default function ConvertToTaskModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
 
     try {
       const result = await convertToTask(inputId, {
         projectId: formData.isStandalone ? undefined : formData.projectId || undefined,
         assigneeId: formData.assigneeId || undefined,
         priority: formData.priority,
-        dueDate: formData.dueDate || undefined,
+        dueDate: formData.dueDate ? new Date(formData.dueDate + 'T00:00:00.000Z').toISOString() : undefined,
         estimatedHours: formData.estimatedHours ? parseFloat(formData.estimatedHours) : undefined,
       })
 
-      // task created
+      setCreatedTaskId(result.task.id)
       onSuccess?.()
-
-      // Navigate to new task
-      if (window.confirm('Vuoi visualizzare il task creato?')) {
-        navigate(`/tasks/${result.task.id}`)
-      }
-    } catch {
-      // error
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore durante la conversione')
     }
   }
 
@@ -97,7 +95,7 @@ export default function ConvertToTaskModal({
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
 
-        <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+        <div className="relative w-full max-w-lg modal-panel">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -111,7 +109,39 @@ export default function ConvertToTaskModal({
             </button>
           </div>
 
-          {/* Form */}
+          {/* Success state */}
+          {createdTaskId ? (
+            <div className="p-6 flex flex-col items-center gap-4 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-base font-medium text-gray-900 dark:text-white">
+                  Task creato con successo!
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  La segnalazione è stata convertita in task.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2 w-full">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 btn-secondary"
+                >
+                  Chiudi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/tasks/${createdTaskId}`)}
+                  className="flex-1 btn-primary"
+                >
+                  Visualizza Task
+                </button>
+              </div>
+            </div>
+          ) : (
+          /* Form */
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p className="text-sm text-gray-500 dark:text-gray-400">Segnalazione:</p>
@@ -146,7 +176,7 @@ export default function ConvertToTaskModal({
                   <option value="">Seleziona progetto (opzionale)</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
-                      {project.code} - {project.name}
+                      {project.name}
                     </option>
                   ))}
                 </select>
@@ -219,6 +249,13 @@ export default function ConvertToTaskModal({
               />
             </div>
 
+            {/* Inline error */}
+            {error && (
+              <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
+                {error}
+              </p>
+            )}
+
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button type="button" onClick={onClose} className="btn-secondary">
@@ -236,6 +273,7 @@ export default function ConvertToTaskModal({
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>

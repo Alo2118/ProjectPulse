@@ -148,7 +148,7 @@ export default function GanttPage() {
                 <option value="">Tutti i progetti</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
-                    {project.code} - {project.name}
+                    {project.name}
                   </option>
                 ))}
               </select>
@@ -200,7 +200,7 @@ export default function GanttPage() {
       )}
 
       {/* Gantt chart */}
-      <div className="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-surface-800" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
+      <div style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
         {isLoading && tasks.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">

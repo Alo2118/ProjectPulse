@@ -8,6 +8,9 @@ import { useState } from 'react'
 import { Loader2, Send, Trash2, StickyNote, Lock } from 'lucide-react'
 import { Note, User, NoteableEntityType } from '@/types'
 import api from '@services/api'
+import { MentionTextarea } from '@components/common/MentionTextarea'
+import { toast } from '@stores/toastStore'
+import { formatDateTime } from '@utils/dateFormatters'
 
 interface NoteSectionProps {
   entityType: NoteableEntityType
@@ -19,16 +22,6 @@ interface NoteSectionProps {
   onNoteDeleted: (noteId: string) => void
   showInternalToggle?: boolean // Only for direzione/admin
   title?: string
-}
-
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 export function NoteSection({
@@ -65,10 +58,10 @@ export function NoteSection({
         setNewNote('')
         setIsInternal(false)
       } else {
-        alert('Errore durante la creazione della nota')
+        toast.error('Errore', 'Errore durante la creazione della nota')
       }
     } catch {
-      alert('Errore durante la creazione della nota. Riprova.')
+      toast.error('Errore', 'Errore durante la creazione della nota. Riprova.')
     } finally {
       setIsSubmitting(false)
     }
@@ -98,12 +91,12 @@ export function NoteSection({
             {currentUser?.lastName?.charAt(0)}
           </div>
           <div className="flex-1">
-            <textarea
+            <MentionTextarea
               value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Scrivi una nota..."
-              rows={3}
-              className="input w-full resize-none"
+              onChange={setNewNote}
+              placeholder="Scrivi una nota... digita @ per menzionare"
+              minRows={3}
+              className="input w-full"
             />
             <div className="mt-2 flex justify-between items-center">
               {showInternalToggle && (

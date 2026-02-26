@@ -193,7 +193,7 @@ export default function RiskListPage() {
               <option value="">Tutti i progetti</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.code} - {project.name}
+                  {project.name}
                 </option>
               ))}
             </select>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, BellOff, CheckCheck, Monitor } from 'lucide-react'
+import { Bell, BellOff, CheckCheck, Monitor, Volume2, VolumeX } from 'lucide-react'
 import { useNotificationStore } from '@stores/notificationStore'
 import NotificationItem from './NotificationItem'
 import { useNavigate } from 'react-router-dom'
@@ -22,6 +22,8 @@ export default function NotificationBell() {
     deleteNotification,
     desktopEnabled,
     setDesktopEnabled,
+    soundEnabled,
+    setSoundEnabled,
   } = useNotificationStore()
 
   const { permission, isSupported, requestPermission } = useDesktopNotifications()
@@ -70,6 +72,15 @@ export default function NotificationBell() {
     } else if (data?.projectId) {
       navigate(`/projects/${data.projectId}`)
       setIsOpen(false)
+    } else if (data?.inputId) {
+      navigate(`/inputs/${data.inputId}`)
+      setIsOpen(false)
+    } else if (data?.riskId) {
+      navigate(`/risks/${data.riskId}`)
+      setIsOpen(false)
+    } else if (data?.documentId) {
+      navigate(`/documents/${data.documentId}`)
+      setIsOpen(false)
     }
   }
 
@@ -92,7 +103,24 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-surface-700">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifiche</h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {/* Sound toggle */}
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={`flex items-center gap-1 text-xs rounded-md px-2 py-1 transition-colors ${
+                  soundEnabled
+                    ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                }`}
+                title={soundEnabled ? 'Disattiva suono' : 'Attiva suono'}
+              >
+                {soundEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5" />
+                )}
+              </button>
+
               {/* Desktop notification toggle */}
               {isSupported && permission !== 'denied' && (
                 <button
@@ -109,16 +137,16 @@ export default function NotificationBell() {
                   ) : (
                     <BellOff className="w-3.5 h-3.5" />
                   )}
-                  <span className="hidden sm:inline">{desktopEnabled && permission === 'granted' ? 'PC: on' : 'PC: off'}</span>
                 </button>
               )}
+
               {unreadCount > 0 && (
                 <button
                   onClick={() => markAllAsRead()}
                   className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
-                  Segna tutte lette
+                  Lette
                 </button>
               )}
             </div>
@@ -143,6 +171,19 @@ export default function NotificationBell() {
                 />
               ))
             )}
+          </div>
+
+          {/* Footer: link to notification center */}
+          <div className="border-t border-gray-100 dark:border-surface-700">
+            <button
+              onClick={() => {
+                navigate('/notifications')
+                setIsOpen(false)
+              }}
+              className="w-full px-4 py-2.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 dark:hover:bg-surface-700 transition-colors text-center"
+            >
+              Vedi tutte le notifiche
+            </button>
           </div>
         </div>
       )}

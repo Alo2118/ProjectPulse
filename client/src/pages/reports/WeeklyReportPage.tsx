@@ -3,7 +3,7 @@
  * @module pages/reports/WeeklyReportPage
  */
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, type ElementType } from 'react'
 import { Link } from 'react-router-dom'
 import { useWeeklyReportStore } from '@stores/weeklyReportStore'
 import { useAuthStore } from '@stores/authStore'
@@ -12,32 +12,31 @@ import {
   Loader2,
   Clock,
   CheckCircle,
+  CheckCircle2,
   AlertTriangle,
-  MessageSquare,
   FileText,
   Download,
   RefreshCw,
   Users,
   User,
   Calendar,
-  ArrowRight,
   FolderTree,
   Repeat2,
-  BarChart3,
   TrendingUp,
-  Target,
+  TrendingDown,
   Activity,
-  Zap,
   ShieldAlert,
-  Gauge,
+  Flag,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  Hourglass,
+  Ban,
 } from 'lucide-react'
-import type { WeeklyReportData, WeeklyReport } from '@/types'
+import type { WeeklyReportData, WeeklyReport, MilestoneRow } from '@/types'
 import { TaskTreeView } from '@components/reports/TaskTreeView'
-import { AdvancedStatCard } from '@components/reports/AdvancedStatCard'
-import { CircularProgress } from '@components/reports/CircularProgress'
-import { ProgressBar } from '@components/reports/ProgressBar'
-import { DonutChart } from '@components/reports/DonutChart'
 import { ProjectHealthCard } from '@/components/reports/ProjectHealthCard'
+import { formatDuration, formatHoursFromDecimal } from '@utils/dateFormatters'
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('it-IT', {
@@ -46,11 +45,42 @@ function formatDate(dateStr: string): string {
   })
 }
 
-// Preview Section Component
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+function getMilestoneStatusBadge(ms: MilestoneRow) {
+  if (ms.status === 'done')
+    return { label: 'Completata', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
+  if (ms.status === 'cancelled')
+    return { label: 'Annullata', cls: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' }
+  if (ms.isOverdue)
+    return { label: 'Scaduta', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
+  if (ms.daysLeft !== null && ms.daysLeft <= 7)
+    return { label: 'In scadenza', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' }
+  return { label: 'In corso', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' }
+}
+
+function SectionHeader({ icon: Icon, label, count }: { icon: ElementType; label: string; count?: number }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <Icon className="w-5 h-5 text-primary-500 flex-shrink-0" />
+      <h2 className="text-base font-semibold text-gray-900 dark:text-white">{label}</h2>
+      {count !== undefined && (
+        <span className="ml-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-400">
+          {count}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ─── ReportPreview ─────────────────────────────────────────────────────────────
+
 function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selectedUserId?: string | null }) {
+  const [milestoneFilter, setMilestoneFilter] = useState<'all' | 'active' | 'overdue'>('all')
+  const [timeEntriesOpen, setTimeEntriesOpen] = useState(false)
   const [activityUserTab, setActivityUserTab] = useState<string | null>(null)
 
-  // Filter tasks based on selected user and separate recurring tasks
+  // ── Filtered data (by selectedUserId) ────────────────────────────────────
   const allCompleted = selectedUserId
     ? data.tasks.completed.filter(t => t.assigneeId === selectedUserId)
     : data.tasks.completed
@@ -59,596 +89,749 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
     ? data.tasks.inProgress.filter(t => t.assigneeId === selectedUserId)
     : data.tasks.inProgress
 
-  const allCreated = selectedUserId
-    ? data.tasks.created.filter(t => t.assigneeId === selectedUserId)
-    : data.tasks.created
+  const blockedTasksFiltered = selectedUserId
+    ? data.blockedTasks.filter(t => t.assigneeId === selectedUserId)
+    : data.blockedTasks
 
-  // Separate recurring tasks (non-completed ones)
-  const recurringTasks = allInProgress.filter(t => t.isRecurring)
-  const recurringCreated = allCreated.filter(t => t.isRecurring && t.status !== 'done')
-  const allRecurringTasks = [...recurringTasks, ...recurringCreated.filter(t => !recurringTasks.find(rt => rt.id === t.id))]
+  const plannedFiltered = selectedUserId
+    ? (data.plannedNextWeek ?? []).filter(t => t.assigneeId === selectedUserId)
+    : (data.plannedNextWeek ?? [])
 
-  const filteredData = {
-    ...data,
-    tasks: {
-      completed: allCompleted,
-      inProgress: allInProgress.filter(t => !t.isRecurring),
-      created: allCreated.filter(t => !t.isRecurring),
-      recurring: allRecurringTasks,
-    },
-    blockedTasks: selectedUserId
-      ? data.blockedTasks.filter(t => t.assigneeId === selectedUserId)
-      : data.blockedTasks,
-  }
+  // ── Global RAG status ────────────────────────────────────────────────────
+  const hasOffTrack = data.projectHealth?.some(p => p.status === 'off-track') ?? false
+  const hasAtRisk = data.projectHealth?.some(p => p.status === 'at-risk') ?? false
+  const hasBlockers = blockedTasksFiltered.length > 0
+  const hasOverdueMilestones = (data.milestonesTable ?? []).some(m => m.isOverdue)
+  const globalRag: 'green' | 'amber' | 'red' =
+    hasOffTrack || hasOverdueMilestones ? 'red' : hasAtRisk || hasBlockers ? 'amber' : 'green'
 
-  // Calculate advanced metrics
-  const totalTasks = allCompleted.length + allInProgress.length + allCreated.length
-  const completionRate = totalTasks > 0 ? (allCompleted.length / totalTasks) * 100 : 0
-  const avgHoursPerTask = allCompleted.length > 0 ? data.timeTracking.totalHours / allCompleted.length : 0
-  const productivity = data.timeTracking.totalHours > 0 ? (allCompleted.length / data.timeTracking.totalHours) * 100 : 0
+  const ragConfig = {
+    green: { bg: 'bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-700', text: 'text-green-800 dark:text-green-300', badge: 'ON TRACK', icon: CheckCircle2 },
+    amber: { bg: 'bg-amber-50 dark:bg-amber-900/10 border-amber-300 dark:border-amber-700', text: 'text-amber-800 dark:text-amber-300', badge: 'A RISCHIO', icon: AlertCircle },
+    red:   { bg: 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-700',     text: 'text-red-800 dark:text-red-300',     badge: 'CRITICO',   icon: ShieldAlert },
+  }[globalRag]
+  const RagIcon = ragConfig.icon
 
-  // Get unique users from time entries for activity tabs
+  // ── Executive bullets ────────────────────────────────────────────────────
+  const execBullets: string[] = []
+  execBullets.push(`${allCompleted.length} task completati questa settimana`)
+  execBullets.push(`${formatHoursFromDecimal(data.timeTracking.totalHours)} registrate`)
+  if (blockedTasksFiltered.length > 0)
+    execBullets.push(`${blockedTasksFiltered.length} task bloccati richiedono attenzione`)
+  const imminentMs = (data.milestonesTable ?? []).find(
+    m => m.status !== 'done' && m.status !== 'cancelled' && m.daysLeft !== null && m.daysLeft >= 0 && m.daysLeft <= 7
+  )
+  if (imminentMs)
+    execBullets.push(`Milestone "${imminentMs.title}" scade tra ${imminentMs.daysLeft} giorni`)
+  if (hasOffTrack)
+    execBullets.push(`${data.projectHealth!.filter(p => p.status === 'off-track').length} progett${data.projectHealth!.filter(p => p.status === 'off-track').length === 1 ? 'o' : 'i'} in ritardo`)
+
+  // ── Accomplished grouped by project ──────────────────────────────────────
+  const accomplishedByProject = useMemo(() => {
+    // Use ProjectHealthData.completedThisWeek when available (more precise)
+    const map = new Map<string, { projectName: string; tasks: { id: string; title: string; assigneeName: string | null }[] }>()
+    if (data.projectHealth) {
+      for (const ph of data.projectHealth) {
+        if (ph.completedThisWeek && ph.completedThisWeek.length > 0) {
+          const filtered = selectedUserId
+            ? ph.completedThisWeek.filter(t => {
+                const allComp = allCompleted.find(c => c.id === t.id)
+                return allComp !== undefined
+              })
+            : ph.completedThisWeek
+          if (filtered.length > 0) {
+            map.set(ph.projectId, { projectName: ph.projectName, tasks: filtered })
+          }
+        }
+      }
+    }
+    // Fallback: use tasks.completed grouped by projectName
+    if (map.size === 0 && allCompleted.length > 0) {
+      for (const t of allCompleted) {
+        const key = t.projectName ?? 'Nessun progetto'
+        const entry = map.get(key) ?? { projectName: key, tasks: [] }
+        entry.tasks.push({ id: t.id, title: t.title, assigneeName: t.assigneeName ?? null })
+        map.set(key, entry)
+      }
+    }
+    return Array.from(map.values())
+  }, [data.projectHealth, allCompleted, selectedUserId])
+
+  // ── Planned grouped by project ───────────────────────────────────────────
+  const plannedByProject = useMemo(() => {
+    const map = new Map<string, { projectName: string; tasks: typeof plannedFiltered }>()
+    for (const t of plannedFiltered) {
+      const key = t.projectId || t.projectName || 'Altro'
+      const entry = map.get(key) ?? { projectName: t.projectName ?? 'Nessun progetto', tasks: [] }
+      entry.tasks.push(t)
+      map.set(key, entry)
+    }
+    return Array.from(map.values())
+  }, [plannedFiltered])
+
+  // ── Milestones filtered ───────────────────────────────────────────────────
+  const milestones = data.milestonesTable ?? []
+  const filteredMilestones = milestones.filter(ms => {
+    if (milestoneFilter === 'active') return ms.status !== 'done' && ms.status !== 'cancelled'
+    if (milestoneFilter === 'overdue') return ms.isOverdue
+    return true
+  })
+
+  // ── Blocker analysis items ────────────────────────────────────────────────
+  const blockerItems = data.blockerAnalysis?.items ?? []
+  const filteredBlockers = selectedUserId
+    ? blockerItems.filter(b => b.assigneeId === selectedUserId)
+    : blockerItems
+
+  // ── Time entries grouped (for detail section) ─────────────────────────────
   const entryUsers = useMemo(() => {
-    const entries = data.timeTracking.entries || []
+    const entries = data.timeTracking.entries ?? []
     const userMap = new Map<string, string>()
     entries.forEach(e => userMap.set(e.userId, e.userName))
     return Array.from(userMap, ([userId, userName]) => ({ userId, userName }))
       .sort((a, b) => a.userName.localeCompare(b.userName))
   }, [data.timeTracking.entries])
 
-  // Group time entries hierarchically: Project → Task → Entries
   const groupedByProject = useMemo(() => {
-    let entries = data.timeTracking.entries || []
-    // Apply global user filter
+    let entries = data.timeTracking.entries ?? []
     if (selectedUserId) entries = entries.filter(e => e.userId === selectedUserId)
-    // Apply local activity tab filter
     if (activityUserTab) entries = entries.filter(e => e.userId === activityUserTab)
 
     const projectMap = new Map<string, {
-      projectId: string
-      projectCode: string
-      projectName: string
-      tasks: Map<string, {
-        taskId: string
-        taskCode: string
-        taskTitle: string
-        isRecurring: boolean
-        entries: Array<{ id: string; description: string | null; userName: string; duration: number | null; startTime: string }>
-      }>
+      projectId: string; projectName: string
+      tasks: Map<string, { taskId: string; taskTitle: string; isRecurring: boolean; entries: Array<{ id: string; description: string | null; userName: string; duration: number | null }> }>
     }>()
-
     entries.forEach(entry => {
       if (!projectMap.has(entry.projectId)) {
-        projectMap.set(entry.projectId, {
-          projectId: entry.projectId,
-          projectCode: entry.projectCode,
-          projectName: entry.projectName,
-          tasks: new Map(),
-        })
+        projectMap.set(entry.projectId, { projectId: entry.projectId, projectName: entry.projectName, tasks: new Map() })
       }
-      const project = projectMap.get(entry.projectId)!
-      if (!project.tasks.has(entry.taskId)) {
-        project.tasks.set(entry.taskId, {
-          taskId: entry.taskId,
-          taskCode: entry.taskCode,
-          taskTitle: entry.taskTitle,
-          isRecurring: entry.isRecurring,
-          entries: [],
-        })
+      const proj = projectMap.get(entry.projectId)!
+      if (!proj.tasks.has(entry.taskId)) {
+        proj.tasks.set(entry.taskId, { taskId: entry.taskId, taskTitle: entry.taskTitle, isRecurring: entry.isRecurring, entries: [] })
       }
-      project.tasks.get(entry.taskId)!.entries.push({
-        id: entry.id,
-        description: entry.description,
-        userName: entry.userName,
-        duration: entry.duration,
-        startTime: entry.startTime,
-      })
+      proj.tasks.get(entry.taskId)!.entries.push({ id: entry.id, description: entry.description, userName: entry.userName, duration: entry.duration })
     })
-
-    return Array.from(projectMap.values()).map(p => ({
-      ...p,
-      tasks: Array.from(p.tasks.values()),
-    }))
+    return Array.from(projectMap.values()).map(p => ({ ...p, tasks: Array.from(p.tasks.values()) }))
   }, [data.timeTracking.entries, selectedUserId, activityUserTab])
 
-  // Compute trends from previousWeek data
-  const hoursTrend = data.previousWeek ? {
-    value: Math.round(Math.abs(((data.timeTracking.totalHours - data.previousWeek.totalHours) / Math.max(data.previousWeek.totalHours, 1)) * 100)),
-    direction: (data.timeTracking.totalHours >= data.previousWeek.totalHours ? 'up' : 'down') as 'up' | 'down',
-    label: 'vs settimana scorsa',
-  } : undefined
-
-  const tasksCompletedTrend = data.previousWeek ? {
-    value: Math.round(Math.abs(((allCompleted.length - data.previousWeek.completedTasksCount) / Math.max(data.previousWeek.completedTasksCount, 1)) * 100)),
-    direction: (allCompleted.length >= data.previousWeek.completedTasksCount ? 'up' : 'down') as 'up' | 'down',
-    label: 'vs settimana scorsa',
-  } : undefined
-
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
-      {/* Main KPI Cards con gradients */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AdvancedStatCard
-          label="Ore Lavorate"
-          value={data.timeTracking.totalHours.toFixed(1)}
-          icon={Clock}
-          color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-          gradient="from-blue-500 to-blue-600"
-          subtitle={`${(data.timeTracking.totalHours / 5).toFixed(1)}h/giorno medio`}
-          trend={hoursTrend}
-        />
-        <AdvancedStatCard
-          label="Task Completati"
-          value={filteredData.tasks.completed.length}
-          icon={CheckCircle}
-          color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-          gradient="from-green-500 to-emerald-600"
-          subtitle={`${completionRate.toFixed(0)}% completamento`}
-          trend={tasksCompletedTrend}
-        />
-        <AdvancedStatCard
-          label="Task in Corso"
-          value={filteredData.tasks.inProgress.length}
-          icon={Activity}
-          color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
-          gradient="from-purple-500 to-violet-600"
-          subtitle={`${filteredData.tasks.created.length} nuovi task`}
-        />
-        <AdvancedStatCard
-          label="Produttività"
-          value={`${productivity.toFixed(1)}%`}
-          icon={Zap}
-          color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-          gradient="from-amber-500 to-orange-600"
-          subtitle={`${avgHoursPerTask.toFixed(1)}h media/task`}
-        />
-      </div>
+    <div className="space-y-5">
 
-      {/* Productivity Metrics */}
-      {data.productivity && (
-        <div className="bg-white dark:bg-surface-800 rounded-xl border border-gray-200 dark:border-surface-700 p-5">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Gauge className="w-5 h-5 text-purple-500" />
-            Metriche Produttività
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{data.productivity.tasksPerDay}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Task/giorno</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{data.productivity.daysWorked}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Giorni lavorati</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{data.productivity.avgHoursPerDay}h</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Media ore/giorno</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{data.productivity.onTimeDeliveryRate}%</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Consegne puntuali</div>
+      {/* ── SEZIONE 1: Sintesi Esecutiva ────────────────────────────────────── */}
+      <section aria-label="Sintesi esecutiva">
+        <div className={`rounded-xl border p-4 ${ragConfig.bg}`}>
+          <div className="flex items-center gap-3 mb-3">
+            <RagIcon className={`w-6 h-6 flex-shrink-0 ${ragConfig.text}`} />
+            <div>
+              <span className={`text-xs font-bold uppercase tracking-widest ${ragConfig.text}`}>{ragConfig.badge}</span>
+              <p className={`text-sm font-medium ${ragConfig.text}`}>
+                Stato generale della settimana
+              </p>
             </div>
           </div>
+          <ul className="space-y-1 ml-9">
+            {execBullets.map((b, i) => (
+              <li key={i} className={`text-sm flex items-start gap-1.5 ${ragConfig.text}`}>
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />
+                {b}
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
+      </section>
 
-      {/* Performance Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Completion Rate */}
-        <div className="card p-6 flex flex-col items-center justify-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Target className="w-5 h-5 text-gray-400" />
-            Tasso Completamento
-          </h3>
-          <CircularProgress
-            percentage={completionRate}
-            size={140}
-            strokeWidth={10}
-            color="#10b981"
-          />
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-            {filteredData.tasks.completed.length} su {totalTasks} task
-          </p>
-        </div>
-
-        {/* Task Status Distribution */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-gray-400" />
-            Distribuzione Task
-          </h3>
-          <DonutChart
-            data={[
-              { label: 'Completati', value: filteredData.tasks.completed.length, color: '#10b981' },
-              { label: 'In Corso', value: filteredData.tasks.inProgress.length, color: '#8b5cf6' },
-              { label: 'Nuovi', value: filteredData.tasks.created.length, color: '#3b82f6' },
-              { label: 'Bloccati', value: filteredData.blockedTasks.length, color: '#ef4444' },
-            ]}
-            size={160}
-            strokeWidth={25}
-          />
-        </div>
-
-        {/* Quick Stats */}
-        <div className="card p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-gray-400" />
-            Metriche Rapide
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Task Bloccati</span>
-              <span className="text-lg font-bold text-red-600 dark:text-red-400">{filteredData.blockedTasks.length}</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Commenti</span>
-              <span className="text-lg font-bold text-purple-600 dark:text-purple-400">{data.comments.total}</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Task Ricorrenti</span>
-              <span className="text-lg font-bold text-cyan-600 dark:text-cyan-400">{filteredData.tasks.recurring.length}</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Ore/Task</span>
-              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{avgHoursPerTask.toFixed(1)}h</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Time by Project - Enhanced */}
-      {data.timeTracking.byProject.length > 0 && (
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <FolderTree className="w-5 h-5 text-gray-400" />
-            Tempo per Progetto
-          </h3>
-          <div className="space-y-4">
-            {data.timeTracking.byProject.map((project, index) => {
-              const hours = project.totalMinutes / 60
-              const totalHours = data.timeTracking.byProject.reduce((sum, p) => sum + p.totalMinutes / 60, 0)
-              const colors = [
-                'bg-blue-500',
-                'bg-green-500',
-                'bg-purple-500',
-                'bg-amber-500',
-                'bg-pink-500',
-                'bg-cyan-500',
-              ]
-              return (
-                <ProgressBar
-                  key={project.projectId}
-                  label={`${project.projectCode} - ${project.projectName}`}
-                  value={hours}
-                  max={totalHours}
-                  color={colors[index % colors.length]}
-                  showValue={false}
-                  showPercentage
-                  size="md"
-                />
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Project Status Overview */}
+      {/* ── SEZIONE 2: Dashboard Progetti ────────────────────────────────────── */}
       {data.projectHealth && data.projectHealth.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Activity className="w-5 h-5 text-blue-500" />
-            Stato Progetti
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data.projectHealth.map((project) => (
+        <section aria-label="Dashboard progetti" className="card p-5">
+          <SectionHeader icon={Activity} label="Dashboard Progetti" count={data.projectHealth.length} />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase">Progetto</th>
+                  <th className="text-left py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase">Avanzamento</th>
+                  <th className="text-center py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase">Schedule</th>
+                  <th className="text-center py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase hidden md:table-cell">Task</th>
+                  <th className="text-center py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase hidden md:table-cell">Bloccati</th>
+                  <th className="text-right py-2 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase hidden md:table-cell">Ore sett.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {data.projectHealth.map(p => {
+                  const ragBadge = p.status === 'on-track'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : p.status === 'at-risk'
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  const ragLabel = p.status === 'on-track' ? 'On Track' : p.status === 'at-risk' ? 'A Rischio' : 'In Ritardo'
+                  return (
+                    <tr key={p.projectId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td className="py-3 pr-4">
+                        <Link to={`/projects/${p.projectId}`} className="font-medium text-gray-900 dark:text-white hover:text-primary-500 transition-colors">
+                          {p.projectName}
+                        </Link>
+                      </td>
+                      <td className="py-3 pr-4 min-w-[120px]">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${p.status === 'on-track' ? 'bg-green-500' : p.status === 'at-risk' ? 'bg-amber-500' : 'bg-red-500'}`}
+                              style={{ width: `${p.completionPercent}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-8 text-right">{p.completionPercent}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4 text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ragBadge}`}>
+                          {ragLabel}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-center text-xs text-gray-600 dark:text-gray-400 hidden md:table-cell">
+                        <span className="text-green-600 dark:text-green-400 font-medium">{p.tasksCompleted}</span>
+                        <span className="text-gray-400">/{p.tasksTotal}</span>
+                      </td>
+                      <td className="py-3 pr-4 text-center hidden md:table-cell">
+                        {p.tasksBlocked > 0
+                          ? <span className="text-red-600 dark:text-red-400 font-semibold text-xs">{p.tasksBlocked}</span>
+                          : <span className="text-gray-400 text-xs">—</span>}
+                      </td>
+                      <td className="py-3 text-right text-xs text-gray-600 dark:text-gray-400 hidden md:table-cell">
+                        {formatHoursFromDecimal(p.actualHours)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {/* Cards for mobile — already handled by ProjectHealthCard */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data.projectHealth.map(p => (
               <ProjectHealthCard
-                key={project.projectId}
-                name={project.projectName}
-                status={project.status}
-                completion={project.completionPercent}
-                tasks={{ total: project.tasksTotal, completed: project.tasksCompleted, blocked: project.tasksBlocked }}
-                hours={project.actualHours}
+                key={p.projectId}
+                projectId={p.projectId}
+                name={p.projectName}
+                code={p.projectCode}
+                status={p.status}
+                completion={p.completionPercent}
+                tasks={{ total: p.tasksTotal, completed: p.tasksCompleted, blocked: p.tasksBlocked, inProgress: p.tasksInProgress }}
+                hours={p.actualHours}
+                nearestMilestone={p.nearestMilestone}
+                completedThisWeek={p.completedThisWeek}
+                inProgressTasks={p.inProgressTasks}
+                blockedTasksList={p.blockedTasksList}
               />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Time by User (team mode only) - Enhanced */}
-      {data.timeTracking.byUser && data.timeTracking.byUser.length > 0 && (
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-gray-400" />
-            Performance per Dipendente
-          </h3>
+      {/* ── SEZIONE 3: Fatto questa settimana ───────────────────────────────── */}
+      <section aria-label="Fatto questa settimana" className="card p-5">
+        <SectionHeader icon={CheckCircle2} label="Fatto questa settimana" count={allCompleted.length} />
+        {accomplishedByProject.length > 0 ? (
           <div className="space-y-4">
-            {data.timeTracking.byUser
-              .sort((a, b) => b.totalMinutes - a.totalMinutes)
-              .map((u) => {
-                const hours = u.totalMinutes / 60
-                const totalHours = data.timeTracking.byUser!.reduce((sum, x) => sum + x.totalMinutes / 60, 0)
-                return (
-                  <ProgressBar
-                    key={u.userId}
-                    label={u.userName}
-                    value={hours}
-                    max={totalHours}
-                    color="bg-gradient-to-r from-purple-500 to-pink-500"
-                    showValue={false}
-                    showPercentage
-                    size="md"
-                  />
-                )
-              })}
-          </div>
-        </div>
-      )}
-
-      {/* Time by Day - Enhanced */}
-      {data.timeTracking.byDay.length > 0 && (
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-gray-400" />
-            Distribuzione Giornaliera
-          </h3>
-          <div className="flex items-end gap-2 h-40">
-            {data.timeTracking.byDay.map((day) => {
-              const maxMinutes = Math.max(...data.timeTracking.byDay.map(d => d.totalMinutes), 1)
-              const pct = (day.totalMinutes / maxMinutes) * 100
-              const hours = day.totalMinutes / 60
-              const barHeight = Math.max(pct, 5)
-              const isWeekend = new Date(day.date).getDay() === 0 || new Date(day.date).getDay() === 6
-              return (
-                <div key={day.date} className="flex-1 flex flex-col items-center gap-2 group" title={`${formatDate(day.date)}: ${hours.toFixed(1)}h`}>
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 group-hover:text-primary-500 transition-colors">
-                    {hours.toFixed(1)}h
-                  </span>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-t-lg h-28 flex flex-col justify-end overflow-hidden relative">
-                    <div
-                      className={`w-full rounded-t-lg transition-all duration-700 ease-out shadow-lg group-hover:shadow-xl ${
-                        isWeekend
-                          ? 'bg-gradient-to-t from-amber-400 to-amber-500'
-                          : 'bg-gradient-to-t from-green-400 to-green-500'
-                      }`}
-                      style={{ height: `${barHeight}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                    {formatDate(day.date)}
-                  </span>
+            {accomplishedByProject.map(({ projectName, tasks }) => (
+              <div key={projectName}>
+                <div className="flex items-center gap-2 mb-2">
+                  <FolderTree className="w-3.5 h-3.5 text-primary-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{projectName}</span>
+                  <span className="ml-1 text-xs text-gray-400">({tasks.length})</span>
                 </div>
-              )
-            })}
-          </div>
-          <div className="mt-4 flex items-center justify-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-gradient-to-t from-green-400 to-green-500"></div>
-              <span className="text-gray-600 dark:text-gray-400">Giorni lavorativi</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-gradient-to-t from-amber-400 to-amber-500"></div>
-              <span className="text-gray-600 dark:text-gray-400">Weekend</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Task Activity - Hierarchical View */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-gray-400" />
-          Attività Task
-        </h3>
-
-        {/* User Tabs */}
-        {entryUsers.length > 1 && (
-          <div className="flex flex-wrap gap-1.5 mb-5 pb-4 border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setActivityUserTab(null)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                activityUserTab === null
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              Tutti
-            </button>
-            {entryUsers.map((u) => (
-              <button
-                key={u.userId}
-                onClick={() => setActivityUserTab(u.userId)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  activityUserTab === u.userId
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                <User className="w-3 h-3" />
-                {u.userName}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Hierarchical: Project → Task → Entry (Note + User) */}
-        {groupedByProject.length > 0 ? (
-          <div className="space-y-5">
-            {groupedByProject.map((project) => (
-              <div key={project.projectId}>
-                {/* Project Level */}
-                <div className="flex items-center gap-2 mb-3">
-                  <FolderTree className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {project.projectCode} - {project.projectName}
-                  </span>
-                </div>
-
-                {/* Task Level */}
-                <div className="ml-5 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
-                  {project.tasks.map((task) => (
-                    <div key={task.taskId}>
-                      <Link
-                        to={`/tasks/${task.taskId}`}
-                        className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200 hover:text-primary-500 transition-colors mb-1.5"
-                      >
-                        {task.isRecurring ? (
-                          <Repeat2 className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                        ) : (
-                          <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <ul className="space-y-1.5 ml-5">
+                  {tasks.map(t => (
+                    <li key={t.id} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <Link to={`/tasks/${t.id}`} className="text-gray-800 dark:text-gray-200 hover:text-primary-500 transition-colors">
+                          {t.title}
+                        </Link>
+                        {t.assigneeName && (
+                          <span className="text-xs text-gray-400 ml-1.5">— {t.assigneeName}</span>
                         )}
-                        <span>{task.taskCode} - {task.taskTitle}</span>
-                        {task.isRecurring && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-[10px] font-medium flex-shrink-0">
-                            Ricorrente
-                          </span>
-                        )}
-                      </Link>
-
-                      {/* Entry Level: Note + User */}
-                      <div className="ml-5 space-y-1">
-                        {task.entries.map((entry) => (
-                          <div key={entry.id} className="flex items-start gap-2 py-1 text-xs">
-                            <Clock className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                {entry.description || <span className="italic text-gray-400">Nessuna nota</span>}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                              <span className="text-gray-500 dark:text-gray-400">
-                                {entry.duration ? `${(entry.duration / 60).toFixed(1)}h` : '—'}
-                              </span>
-                              <span className="text-primary-500 dark:text-primary-400 font-medium hidden sm:inline">
-                                {entry.userName}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-400 text-center py-4">Nessuna registrazione di tempo questa settimana</p>
-        )}
-      </div>
-
-      {/* Blocker Analysis */}
-      {data.blockerAnalysis && data.blockerAnalysis.activeCount > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-red-500" />
-            Analisi Blocchi
-          </h3>
-          <div className="bg-white dark:bg-surface-800 rounded-xl border border-gray-200 dark:border-surface-700 p-5 space-y-4">
-            {/* Summary row */}
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-red-600 dark:text-red-400">{data.blockerAnalysis.activeCount}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">attivi</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-green-600 dark:text-green-400">{data.blockerAnalysis.resolvedThisWeek}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">risolti questa settimana</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{data.blockerAnalysis.overdueCount}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">in ritardo (&gt;5gg)</span>
-              </div>
-              <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                data.blockerAnalysis.riskScore === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                data.blockerAnalysis.riskScore === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              }`}>
-                Rischio: {data.blockerAnalysis.riskScore}
-              </div>
-            </div>
-            {/* Category breakdown */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {(Object.entries(data.blockerAnalysis.byCategory) as [string, number][]).filter(([, count]) => count > 0).map(([cat, count]) => (
-                <div key={cat} className="text-center p-2 rounded-lg bg-gray-50 dark:bg-surface-700/50">
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{count}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{cat}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Blocked Tasks */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-            Task Bloccati
-          </h3>
-          {filteredData.blockedTasks.length > 0 ? (
-            <div className="space-y-3">
-              {filteredData.blockedTasks.map((task) => (
-                <div key={task.id} className="p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
-                  <p className="font-medium text-gray-900 dark:text-white text-sm">
-                    {task.code} - {task.title}
-                    {task.assigneeName && (
-                      <span className="text-xs font-normal text-primary-500 dark:text-primary-400 ml-2">— {task.assigneeName}</span>
-                    )}
-                  </p>
-                  {task.projectName && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Progetto: {task.projectName}
-                    </p>
-                  )}
-                  {task.lastComment && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 italic">
-                      "{task.lastComment.substring(0, 100)}{task.lastComment.length > 100 ? '...' : ''}"
-                    </p>
-                  )}
-                  {task.blockedSince && (
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                      Bloccato dal {formatDate(task.blockedSince)}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-              <CheckCircle className="w-12 h-12 mb-2" />
-              <p className="text-sm">Nessun task bloccato!</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Comments Summary */}
-      {data.comments.byProject.length > 0 && (
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-gray-400" />
-            Commenti per Progetto
-          </h3>
-          <div className="space-y-4">
-            {data.comments.byProject.map((project) => (
-              <div key={project.projectId}>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {project.projectCode} - {project.projectName} ({project.commentCount} commenti)
-                </h4>
-                <ul className="space-y-2 ml-4">
-                  {project.comments.map((comment) => (
-                    <li key={comment.id} className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="text-xs text-gray-400">[{comment.taskCode}]</span>{' '}
-                      {comment.content}
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-6">Nessuna attività completata questa settimana</p>
+        )}
+      </section>
+
+      {/* ── SEZIONE 4: Da fare la prossima settimana ────────────────────────── */}
+      <section aria-label="Pianificazione prossima settimana" className="card p-5">
+        <SectionHeader icon={Hourglass} label="Da fare la prossima settimana" count={plannedFiltered.length} />
+        {plannedByProject.length > 0 ? (
+          <div className="space-y-4">
+            {plannedByProject.map(({ projectName, tasks }) => (
+              <div key={projectName}>
+                <div className="flex items-center gap-2 mb-2">
+                  <FolderTree className="w-3.5 h-3.5 text-primary-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{projectName}</span>
+                </div>
+                <ul className="space-y-1.5 ml-5">
+                  {tasks.map(t => (
+                    <li key={t.id} className="flex items-start gap-2 text-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0 mt-1.5" />
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/tasks/${t.id}`} className="text-gray-800 dark:text-gray-200 hover:text-primary-500 transition-colors">
+                          {t.title}
+                        </Link>
+                        {t.assigneeName && <span className="text-xs text-gray-400 ml-1.5">— {t.assigneeName}</span>}
+                        {t.dueDate && (
+                          <span className={`ml-1.5 text-xs ${t.isOverdue ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                            · {formatDate(t.dueDate)}{t.isOverdue ? ' (scaduta)' : ''}
+                          </span>
+                        )}
+                      </div>
+                      {t.isOverdue && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
+                          SCADUTO
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-6">
+            Nessun task con scadenza nella prossima settimana
+          </p>
+        )}
+      </section>
+
+      {/* ── SEZIONE 5: Milestone e Deliverable ──────────────────────────────── */}
+      <section aria-label="Milestone e deliverable" className="card p-5">
+        <SectionHeader icon={Flag} label="Milestone e Deliverable" count={milestones.length} />
+
+        {/* Filter tabs */}
+        {milestones.length > 0 && (
+          <div className="flex gap-1 mb-4">
+            {(['all', 'active', 'overdue'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setMilestoneFilter(f)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  milestoneFilter === f
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                {f === 'all' ? 'Tutte' : f === 'active' ? 'In corso' : 'In ritardo'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filteredMilestones.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Milestone</th>
+                  <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Progetto</th>
+                  <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Scadenza</th>
+                  <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Stato</th>
+                  <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">Delta</th>
+                  <th className="text-center py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">Avanz.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {filteredMilestones.map(ms => {
+                  const badge = getMilestoneStatusBadge(ms)
+                  const dateColor = ms.isOverdue
+                    ? 'text-red-600 dark:text-red-400 font-semibold'
+                    : ms.daysLeft !== null && ms.daysLeft <= 7
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                  const delta = ms.daysLeft !== null
+                    ? ms.daysLeft < 0
+                      ? <span className="text-red-500 text-xs font-medium">-{Math.abs(ms.daysLeft)}gg</span>
+                      : ms.daysLeft === 0
+                      ? <span className="text-amber-500 text-xs font-medium">oggi</span>
+                      : <span className="text-gray-500 text-xs">+{ms.daysLeft}gg</span>
+                    : <span className="text-gray-400 text-xs">—</span>
+                  return (
+                    <tr key={ms.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="py-2.5 pr-3">
+                        <Link to={`/tasks/${ms.id}`} className="font-medium text-gray-900 dark:text-white hover:text-primary-500 transition-colors text-sm">
+                          {ms.title}
+                        </Link>
+                        <div className="text-xs text-gray-400">{ms.code}</div>
+                      </td>
+                      <td className="py-2.5 pr-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                        {ms.projectName}
+                      </td>
+                      <td className={`py-2.5 pr-3 text-center text-xs ${dateColor}`}>
+                        {ms.baselineDate ? formatDate(ms.baselineDate) : '—'}
+                      </td>
+                      <td className="py-2.5 pr-3 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-3 text-center hidden md:table-cell">{delta}</td>
+                      <td className="py-2.5 text-center hidden md:table-cell">
+                        <div className="flex items-center gap-1 justify-center">
+                          <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full bg-primary-500" style={{ width: `${ms.completionPercent}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-500">{ms.completionPercent}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-6">Nessuna milestone{milestoneFilter !== 'all' ? ' con questo filtro' : ' nei progetti attivi'}</p>
+        )}
+      </section>
+
+      {/* ── SEZIONE 6: Rischi e Blocchi ──────────────────────────────────────── */}
+      <section aria-label="Rischi e blocchi" className="card p-5">
+        <SectionHeader icon={ShieldAlert} label="Rischi e Blocchi" />
+
+        {filteredBlockers.length === 0 && (!(data.risks) || data.risks.length === 0) ? (
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
+            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+            <p className="text-sm text-green-700 dark:text-green-400">Nessun blocco o rischio attivo — settimana verde!</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {/* Blocchi attivi */}
+            {filteredBlockers.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <Ban className="w-3.5 h-3.5" />
+                  Task bloccati ({filteredBlockers.length})
+                  {data.blockerAnalysis && (
+                    <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      data.blockerAnalysis.riskScore === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                      data.blockerAnalysis.riskScore === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    }`}>
+                      Rischio {data.blockerAnalysis.riskScore}
+                    </span>
+                  )}
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Task</th>
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Progetto</th>
+                        <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bloccato da</th>
+                        <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {filteredBlockers.map(b => (
+                        <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                          <td className="py-2.5 pr-3">
+                            <Link to={`/tasks/${b.id}`} className="font-medium text-gray-900 dark:text-white hover:text-primary-500 text-sm">
+                              {b.title}
+                            </Link>
+                            {b.assigneeName && <div className="text-xs text-gray-400">{b.assigneeName}</div>}
+                          </td>
+                          <td className="py-2.5 pr-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                            {b.projectName ?? '—'}
+                          </td>
+                          <td className="py-2.5 pr-3 text-center">
+                            <span className={`text-xs font-semibold ${b.daysBlocked > 5 ? 'text-red-600 dark:text-red-400' : b.daysBlocked > 2 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                              {b.daysBlocked}gg
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell max-w-[200px] truncate">
+                            {b.blockedReason ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {data.blockerAnalysis && data.blockerAnalysis.resolvedThisWeek > 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {data.blockerAnalysis.resolvedThisWeek} blocchi risolti questa settimana
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Rischi aperti */}
+            {data.risks && data.risks.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Rischi aperti ({data.risks.length})
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rischio</th>
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Progetto</th>
+                        <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Prob.</th>
+                        <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Impatto</th>
+                        <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden lg:table-cell">Mitigazione</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {data.risks.map(r => {
+                        const probCls = r.probability === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.probability === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        const impCls = r.impact === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.impact === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        return (
+                          <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="py-2.5 pr-3">
+                              <span className="font-medium text-gray-900 dark:text-white">{r.title}</span>
+                              <div className="text-xs text-gray-400">{r.code}</div>
+                            </td>
+                            <td className="py-2.5 pr-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">{r.projectName}</td>
+                            <td className="py-2.5 pr-3 text-center">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${probCls}`}>{r.probability}</span>
+                            </td>
+                            <td className="py-2.5 pr-3 text-center">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${impCls}`}>{r.impact}</span>
+                            </td>
+                            <td className="py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell max-w-[200px] truncate">
+                              {r.mitigationPlan ?? '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ── SEZIONE 7: Metriche Operative ────────────────────────────────────── */}
+      <section aria-label="Metriche operative" className="card p-5">
+        <SectionHeader icon={TrendingUp} label="Metriche Operative" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Ore totali', value: formatHoursFromDecimal(data.timeTracking.totalHours), icon: Clock, color: 'text-blue-600 dark:text-blue-400' },
+            { label: 'Giorni lavorati', value: data.productivity?.daysWorked ?? '—', icon: Calendar, color: 'text-gray-700 dark:text-gray-300' },
+            { label: 'Media ore/giorno', value: data.productivity ? formatHoursFromDecimal(data.productivity.avgHoursPerDay) : '—', icon: Clock, color: 'text-gray-700 dark:text-gray-300' },
+            { label: 'Task completati', value: allCompleted.length, icon: CheckCircle2, color: 'text-green-600 dark:text-green-400' },
+            { label: 'Task in corso', value: allInProgress.length, icon: Hourglass, color: 'text-purple-600 dark:text-purple-400' },
+            { label: 'Bloccati', value: blockedTasksFiltered.length, icon: Ban, color: blockedTasksFiltered.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500' },
+            { label: 'Commenti', value: data.comments.total, icon: Users, color: 'text-gray-600 dark:text-gray-400' },
+            { label: 'Consegne puntuali', value: data.productivity ? data.productivity.onTimeDeliveryRate + '%' : '—', icon: CheckCircle, color: 'text-green-600 dark:text-green-400' },
+          ].map(({ label, value, icon: Icon, color }) => (
+            <div key={label} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-start gap-3">
+              <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${color}`} />
+              <div>
+                <div className={`text-xl font-bold ${color}`}>{value}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+              </div>
+            </div>
+          ))}
         </div>
+
+        {/* Trend vs previous week */}
+        {data.previousWeek && (
+          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-1">
+              {data.timeTracking.totalHours >= data.previousWeek.totalHours
+                ? <TrendingUp className="w-3.5 h-3.5 text-green-500" />
+                : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
+              Ore vs sett. scorsa: {formatHoursFromDecimal(data.previousWeek.totalHours)}
+            </span>
+            <span className="flex items-center gap-1">
+              {allCompleted.length >= data.previousWeek.completedTasksCount
+                ? <TrendingUp className="w-3.5 h-3.5 text-green-500" />
+                : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
+              Task completati vs sett. scorsa: {data.previousWeek.completedTasksCount}
+            </span>
+          </div>
+        )}
+      </section>
+
+      {/* ── SEZIONE 8: Distribuzione Ore ──────────────────────────────────────── */}
+      {(data.timeTracking.byDay.length > 0 || data.timeTracking.byProject.length > 0) && (
+        <section aria-label="Distribuzione ore" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Bar chart giornaliero */}
+          {data.timeTracking.byDay.length > 0 && (
+            <div className="card p-5">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                Ore per giorno
+              </h3>
+              <div className="flex items-end gap-1.5 h-32">
+                {data.timeTracking.byDay.map(day => {
+                  const maxMin = Math.max(...data.timeTracking.byDay.map(d => d.totalMinutes), 1)
+                  const pct = (day.totalMinutes / maxMin) * 100
+                  const hoursLabel = formatDuration(day.totalMinutes)
+                  const isWeekend = [0, 6].includes(new Date(day.date).getDay())
+                  return (
+                    <div key={day.date} title={`${formatDate(day.date)}: ${hoursLabel}`}
+                      className="flex-1 flex flex-col items-center gap-1 group">
+                      <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">{hoursLabel}</span>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-t h-24 flex flex-col justify-end overflow-hidden">
+                        <div
+                          className={`w-full rounded-t transition-all ${isWeekend ? 'bg-amber-400' : 'bg-green-500'}`}
+                          style={{ height: `${Math.max(pct, 4)}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] text-gray-400">{formatDate(day.date)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Per progetto */}
+          {data.timeTracking.byProject.length > 0 && (
+            <div className="card p-5">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <FolderTree className="w-4 h-4 text-gray-400" />
+                Ore per progetto
+              </h3>
+              <div className="space-y-3">
+                {data.timeTracking.byProject.map((p, i) => {
+                  const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500']
+                  const totalMin = data.timeTracking.byProject.reduce((s, x) => s + x.totalMinutes, 0)
+                  const pct = totalMin > 0 ? (p.totalMinutes / totalMin) * 100 : 0
+                  return (
+                    <div key={p.projectId}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]">{p.projectName}</span>
+                        <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">{formatDuration(p.totalMinutes)} · {pct.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className={`h-2 rounded-full ${colors[i % colors.length]}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </section>
       )}
+
+      {/* Team mode: ore per utente */}
+      {data.timeTracking.byUser && data.timeTracking.byUser.length > 0 && (
+        <section aria-label="Performance team" className="card p-5">
+          <SectionHeader icon={Users} label="Performance per Dipendente" />
+          <div className="space-y-3">
+            {[...data.timeTracking.byUser].sort((a, b) => b.totalMinutes - a.totalMinutes).map(u => {
+              const totalMin = data.timeTracking.byUser!.reduce((s, x) => s + x.totalMinutes, 0)
+              const pct = totalMin > 0 ? (u.totalMinutes / totalMin) * 100 : 0
+              return (
+                <div key={u.userId}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-700 dark:text-gray-300">{u.userName}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{formatDuration(u.totalMinutes)} · {pct.toFixed(0)}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── SEZIONE 9: Dettaglio registrazioni (collassabile) ─────────────────── */}
+      <section aria-label="Dettaglio registrazioni ore">
+        <button
+          onClick={() => setTimeEntriesOpen(o => !o)}
+          className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-gray-400" />
+            Dettaglio registrazioni ore
+          </span>
+          {timeEntriesOpen
+            ? <ChevronUp className="w-4 h-4 text-gray-400" />
+            : <ChevronDown className="w-4 h-4 text-gray-400" />}
+        </button>
+
+        {timeEntriesOpen && (
+          <div className="mt-2 card p-5">
+            {/* User filter tabs */}
+            {entryUsers.length > 1 && (
+              <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setActivityUserTab(null)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activityUserTab === null ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                >
+                  Tutti
+                </button>
+                {entryUsers.map(u => (
+                  <button
+                    key={u.userId}
+                    onClick={() => setActivityUserTab(u.userId)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${activityUserTab === u.userId ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                  >
+                    <User className="w-3 h-3" />
+                    {u.userName}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {groupedByProject.length > 0 ? (
+              <div className="space-y-4">
+                {groupedByProject.map(project => (
+                  <div key={project.projectId}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FolderTree className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{project.projectName}</span>
+                    </div>
+                    <div className="ml-5 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                      {project.tasks.map(task => (
+                        <div key={task.taskId}>
+                          <Link to={`/tasks/${task.taskId}`} className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200 hover:text-primary-500 mb-1">
+                            {task.isRecurring
+                              ? <Repeat2 className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+                              : <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />}
+                            <span>{task.taskTitle}</span>
+                            {task.isRecurring && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 font-medium">Ricorrente</span>
+                            )}
+                          </Link>
+                          <div className="ml-5 space-y-0.5">
+                            {task.entries.map(entry => (
+                              <div key={entry.id} className="flex items-start gap-2 py-0.5 text-xs">
+                                <Clock className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" />
+                                <span className="flex-1 text-gray-600 dark:text-gray-400">
+                                  {entry.description ?? <span className="italic text-gray-400">Nessuna nota</span>}
+                                </span>
+                                <span className="text-gray-500 flex-shrink-0">{entry.duration ? formatDuration(entry.duration) : '—'}</span>
+                                <span className="text-primary-500 font-medium hidden sm:inline flex-shrink-0">{entry.userName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-4">Nessuna registrazione di tempo questa settimana</p>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
@@ -1079,7 +1262,7 @@ export default function WeeklyReportPage() {
                       <div className="flex items-center gap-2">
                         <User className="w-3.5 h-3.5" />
                         <span>{u.userName}</span>
-                        <span className="text-xs opacity-75">({(u.totalMinutes / 60).toFixed(1)}h)</span>
+                        <span className="text-xs opacity-75">({formatDuration(u.totalMinutes)})</span>
                       </div>
                     </button>
                   ))}
@@ -1127,7 +1310,7 @@ export default function WeeklyReportPage() {
                     <div className="flex items-center gap-2">
                       <User className="w-3.5 h-3.5" />
                       <span>{u.userName}</span>
-                      <span className="text-xs opacity-75">({(u.totalMinutes / 60).toFixed(1)}h)</span>
+                      <span className="text-xs opacity-75">({formatDuration(u.totalMinutes)})</span>
                     </div>
                   </button>
                 ))}

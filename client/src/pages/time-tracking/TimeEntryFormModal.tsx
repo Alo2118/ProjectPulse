@@ -151,7 +151,7 @@ export default function TimeEntryFormModal({
               </label>
               {isEdit ? (
                 <p className="text-sm text-gray-900 dark:text-white">
-                  {entry?.task?.project?.code || '—'} - {entry?.task?.title}
+                  {entry?.task?.project?.name || '—'} - {entry?.task?.title}
                 </p>
               ) : (
                 <TaskSearchSelect

@@ -3,53 +3,18 @@
  * @module controllers/projectController
  */
 
-import { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
+import type { Request, Response, NextFunction } from 'express'
 import { projectService } from '../services/projectService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { ProjectStatus, ProjectPriority } from '../types/index.js'
-import { datePreprocess, numberPreprocess } from '../utils/validation.js'
 import { assertProjectOwnership } from '../utils/projectOwnership.js'
-
-// ============================================================
-// VALIDATION SCHEMAS (Rule 6: Input Validation)
-// ============================================================
-
-const createProjectSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255),
-  description: z.string().nullish(),
-  ownerId: z.string().uuid('Invalid owner ID'),
-  templateId: z.string().uuid('Invalid template ID').nullish(),
-  startDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
-  targetEndDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
-  budget: z.preprocess(numberPreprocess, z.number().positive('Budget must be positive').nullish()),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
-})
-
-const updateProjectSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  description: z.string().nullish(),
-  ownerId: z.string().uuid().optional(),
-  status: z.enum(['planning', 'design', 'verification', 'validation', 'transfer', 'maintenance', 'completed', 'on_hold', 'cancelled']).optional(),
-  startDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
-  targetEndDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
-  actualEndDate: z.preprocess(datePreprocess, z.string().datetime().nullish()),
-  budget: z.preprocess(numberPreprocess, z.number().positive().nullish()),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional()
-})
-
-const querySchema = z.object({
-  status: z.enum(['planning', 'design', 'verification', 'validation', 'transfer', 'maintenance', 'completed', 'on_hold', 'cancelled']).optional(),
-  priority: z.enum(['low', 'medium', 'high']).optional(),
-  ownerId: z.string().uuid().optional(),
-  search: z.string().optional(),
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('10'),
-})
-
-const statusChangeSchema = z.object({
-  status: z.enum(['planning', 'design', 'verification', 'validation', 'transfer', 'maintenance', 'completed', 'on_hold', 'cancelled']),
-})
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import {
+  createProjectSchema,
+  updateProjectSchema,
+  projectQuerySchema as querySchema,
+  projectStatusChangeSchema as statusChangeSchema,
+} from '../schemas/projectSchemas.js'
 
 // ============================================================
 // CONTROLLER FUNCTIONS
@@ -72,11 +37,7 @@ export async function getProjects(req: Request, res: Response, next: NextFunctio
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -96,7 +57,7 @@ export async function getProject(req: Request, res: Response, next: NextFunction
       throw new AppError('Project not found', 404)
     }
 
-    res.json({ success: true, data: project })
+    sendSuccess(res, project)
   } catch (error) {
     next(error)
   }
@@ -132,7 +93,7 @@ export async function createProject(req: Request, res: Response, next: NextFunct
       userId
     )
 
-    res.status(201).json({ success: true, data: project })
+    sendCreated(res, project)
   } catch (error) {
     next(error)
   }
@@ -177,7 +138,7 @@ export async function updateProject(req: Request, res: Response, next: NextFunct
       throw new AppError('Project not found', 404)
     }
 
-    res.json({ success: true, data: project })
+    sendSuccess(res, project)
   } catch (error) {
     next(error)
   }
@@ -232,7 +193,7 @@ export async function changeStatus(req: Request, res: Response, next: NextFuncti
       throw new AppError('Project not found', 404)
     }
 
-    res.json({ success: true, data: project })
+    sendSuccess(res, project)
   } catch (error) {
     next(error)
   }
@@ -254,7 +215,7 @@ export async function getProjectStats(req: Request, res: Response, next: NextFun
 
     const stats = await projectService.getProjectStats(id)
 
-    res.json({ success: true, data: stats })
+    sendSuccess(res, stats)
   } catch (error) {
     next(error)
   }

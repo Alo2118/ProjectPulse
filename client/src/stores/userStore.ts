@@ -78,7 +78,7 @@ export const useUserStore = create<UserState>((set) => ({
         `/users?${params.toString()}`
       )
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         set({
           users: response.data.data,
           pagination: response.data.pagination,

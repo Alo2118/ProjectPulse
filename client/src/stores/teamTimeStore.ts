@@ -64,7 +64,7 @@ export const useTeamTimeStore = create<TeamTimeState>((set, get) => ({
 
       const response = await api.get(`/time-entries/team?${params.toString()}`)
 
-      if (response.data.success !== false) {
+      if (response.data.success) {
         const data = response.data.data as TeamTimeReport
         set({
           byUser: data.byUser,

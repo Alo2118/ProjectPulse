@@ -7,18 +7,14 @@ import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProjectStore } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
-import { Plus, Search, Calendar, Users } from 'lucide-react'
+import { Plus, Search, Calendar, Users, Clock, Target, FolderKanban } from 'lucide-react'
 import { PROJECT_PRIORITY_BORDER_COLORS } from '@/constants'
 import { StatusIcon } from '@/components/ui/StatusIcon'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Tooltip } from '@/components/ui/Tooltip'
-
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+import { EmptyState } from '@components/common/EmptyState'
+import { formatDate } from '@utils/dateFormatters'
 
 export default function ProjectListPage() {
   const navigate = useNavigate()
@@ -160,24 +156,17 @@ export default function ProjectListPage() {
 
       {/* Projects Grid */}
       {filteredProjects.length === 0 ? (
-        <div className="card p-8 text-center">
-          <span className="text-5xl block mb-4">{searchTerm || statusFilter || priorityFilter ? '\u{1F50D}' : '\u{1F680}'}</span>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {searchTerm || statusFilter || priorityFilter
-              ? 'Nessun progetto trovato'
-              : 'Nessun progetto'}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            {searchTerm || statusFilter || priorityFilter
-              ? 'Prova a modificare i filtri di ricerca'
-              : 'Lancia il primo progetto!'}
-          </p>
-          {canCreateProject && !searchTerm && !statusFilter && !priorityFilter && (
-            <button onClick={() => navigate('/projects/new')} className="btn-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Crea Progetto
-            </button>
-          )}
+        <div className="card">
+          <EmptyState
+            icon={FolderKanban}
+            title={searchTerm || statusFilter || priorityFilter ? 'Nessun progetto trovato' : 'Nessun progetto'}
+            description={searchTerm || statusFilter || priorityFilter ? 'Prova a modificare i filtri' : 'Lancia il primo progetto!'}
+            action={
+              canCreateProject && !searchTerm && !statusFilter && !priorityFilter
+                ? { label: 'Crea Progetto', onClick: () => navigate('/projects/new') }
+                : undefined
+            }
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -230,7 +219,6 @@ export default function ProjectListPage() {
                       {project.name}
                     </h3>
                   </Tooltip>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{project.code}</p>
                 </div>
               </div>
               {project.description && (
@@ -274,12 +262,56 @@ export default function ProjectListPage() {
                 </div>
               )}
 
+              {/* Hours + Next Milestone */}
+              <div className="mt-3 space-y-1.5">
+                {typeof project.totalHoursLogged === 'number' && project.totalHoursLogged > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <Clock className="w-3 h-3" />
+                    <span>{Math.round(project.totalHoursLogged * 10) / 10}h registrate</span>
+                  </div>
+                )}
+                {project.nextMilestone && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <Target className="w-3 h-3 text-amber-500" />
+                    <span className="truncate">{project.nextMilestone.title}</span>
+                    {project.nextMilestone.daysRemaining !== null && (
+                      <span className={`ml-auto flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                        project.nextMilestone.daysRemaining < 0
+                          ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                          : project.nextMilestone.daysRemaining <= 7
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {project.nextMilestone.daysRemaining < 0
+                          ? `${Math.abs(project.nextMilestone.daysRemaining)}g ritardo`
+                          : `${project.nextMilestone.daysRemaining}g`}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Footer */}
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  <span>{formatDate(project.targetEndDate)}</span>
-                </div>
+              <div className="mt-3 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                {project.targetEndDate ? (
+                  <div className={`flex items-center ${
+                    (() => {
+                      if (!project.targetEndDate || project.status === 'completed') return ''
+                      const days = Math.ceil((new Date(project.targetEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                      if (days < 0) return 'text-red-500 dark:text-red-400 font-medium'
+                      if (days <= 7) return 'text-amber-500 dark:text-amber-400'
+                      return ''
+                    })()
+                  }`}>
+                    <Calendar className="w-4 h-4 mr-1" />
+                    <span>{formatDate(project.targetEndDate)}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    <span>-</span>
+                  </div>
+                )}
                 {project.owner && (
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-1" />

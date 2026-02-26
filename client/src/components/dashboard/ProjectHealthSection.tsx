@@ -1,11 +1,11 @@
 /**
- * Project Health Section - Overview of all active projects health
+ * Project Health Section - Sortable table of all active projects health
  */
 
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { FolderKanban, AlertTriangle, Calendar, ArrowRight } from 'lucide-react'
+import { FolderKanban, ArrowRight, ArrowUpDown, Calendar, AlertTriangle } from 'lucide-react'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { StatusIcon } from '@/components/ui/StatusIcon'
 
 interface ProjectHealth {
   projectId: string
@@ -30,6 +30,9 @@ interface ProjectHealthSectionProps {
   isLoading?: boolean
 }
 
+type SortKey = 'name' | 'progress' | 'blocked' | 'risks' | 'deadline' | 'health'
+type SortDir = 'asc' | 'desc'
+
 function getHealthColor(health: ProjectHealth['healthStatus']) {
   switch (health) {
     case 'healthy':
@@ -41,39 +44,68 @@ function getHealthColor(health: ProjectHealth['healthStatus']) {
   }
 }
 
-function getHealthBorder(health: ProjectHealth['healthStatus']) {
-  switch (health) {
-    case 'healthy':
-      return ''
-    case 'at_risk':
-      return 'border-l-2 border-l-amber-500'
-    case 'critical':
-      return 'border-l-2 border-l-red-500'
-  }
-}
-
-function formatDaysRemaining(days: number | null): string {
-  if (days === null) return 'No deadline'
-  if (days < 0) return `${Math.abs(days)}g in ritardo`
-  if (days === 0) return 'Scade oggi'
-  if (days === 1) return 'Scade domani'
-  return `${days}g rimanenti`
+function getDeadlineBadge(days: number | null): { label: string; className: string } {
+  if (days === null) return { label: '-', className: 'text-gray-400 dark:text-gray-500' }
+  if (days < 0) return { label: `${Math.abs(days)}g ritardo`, className: 'bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full' }
+  if (days === 0) return { label: 'Oggi', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full' }
+  if (days <= 7) return { label: `${days}g`, className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full' }
+  if (days <= 30) return { label: `${days}g`, className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full' }
+  return { label: `${days}g`, className: 'text-gray-500 dark:text-gray-400' }
 }
 
 export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSectionProps) {
+  const [sortKey, setSortKey] = useState<SortKey>('health')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const sortedProjects = useMemo(() => {
+    const healthOrder = { critical: 0, at_risk: 1, healthy: 2 }
+    return [...projects].sort((a, b) => {
+      let cmp = 0
+      switch (sortKey) {
+        case 'name':
+          cmp = a.projectName.localeCompare(b.projectName)
+          break
+        case 'progress':
+          cmp = a.progress - b.progress
+          break
+        case 'blocked':
+          cmp = a.tasksBlocked - b.tasksBlocked
+          break
+        case 'risks':
+          cmp = a.openRisks - b.openRisks
+          break
+        case 'deadline':
+          cmp = (a.daysRemaining ?? 9999) - (b.daysRemaining ?? 9999)
+          break
+        case 'health':
+          cmp = healthOrder[a.healthStatus] - healthOrder[b.healthStatus]
+          break
+      }
+      return sortDir === 'desc' ? -cmp : cmp
+    })
+  }, [projects, sortKey, sortDir])
+
   if (isLoading) {
     return (
       <div className="card">
         <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
           <div className="skeleton h-6 w-48" />
         </div>
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="p-4 space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="p-4 rounded-lg bg-gray-50 dark:bg-white/5">
-              <div className="skeleton h-4 w-32 mb-2" />
-              <div className="skeleton h-3 w-20 mb-3" />
-              <div className="skeleton h-2 w-full mb-2" />
-              <div className="skeleton h-3 w-24" />
+            <div key={i} className="flex items-center gap-4">
+              <div className="skeleton h-4 w-40" />
+              <div className="skeleton h-3 w-24 flex-1" />
+              <div className="skeleton h-4 w-16" />
             </div>
           ))}
         </div>
@@ -91,18 +123,22 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
           </h2>
         </div>
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-          <span className="text-3xl block mb-2">{'\u{1F4C2}'}</span>
-          Nessun progetto attivo
+          <FolderKanban className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p>Nessun progetto attivo</p>
         </div>
       </div>
     )
   }
 
-  // Sort: critical first, then at_risk, then healthy
-  const sortedProjects = [...projects].sort((a, b) => {
-    const order = { critical: 0, at_risk: 1, healthy: 2 }
-    return order[a.healthStatus] - order[b.healthStatus]
-  })
+  const SortHeader = ({ label, sortKeyVal, className = '' }: { label: string; sortKeyVal: SortKey; className?: string }) => (
+    <button
+      onClick={() => handleSort(sortKeyVal)}
+      className={`flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide hover:text-gray-700 dark:hover:text-gray-300 transition-colors ${className}`}
+    >
+      {label}
+      <ArrowUpDown className={`w-3 h-3 ${sortKey === sortKeyVal ? 'text-primary-500' : 'opacity-40'}`} />
+    </button>
+  )
 
   return (
     <div className="card">
@@ -122,68 +158,106 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
           <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {sortedProjects.slice(0, 8).map((project) => (
-          <Link
-            key={project.projectId}
-            to={`/projects/${project.projectId}`}
-            className={`p-4 rounded-lg bg-gray-50/50 dark:bg-white/5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${getHealthBorder(
-              project.healthStatus
-            )}`}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+
+      {/* Table header */}
+      <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
+        <div className="col-span-3">
+          <SortHeader label="Progetto" sortKeyVal="name" />
+        </div>
+        <div className="col-span-3">
+          <SortHeader label="Progresso" sortKeyVal="progress" />
+        </div>
+        <div className="col-span-1 text-center">
+          <SortHeader label="Blocc." sortKeyVal="blocked" className="justify-center" />
+        </div>
+        <div className="col-span-1 text-center">
+          <SortHeader label="Rischi" sortKeyVal="risks" className="justify-center" />
+        </div>
+        <div className="col-span-2">
+          <SortHeader label="Scadenza" sortKeyVal="deadline" />
+        </div>
+        <div className="col-span-2 text-right">
+          <SortHeader label="Salute" sortKeyVal="health" className="justify-end" />
+        </div>
+      </div>
+
+      {/* Rows */}
+      <div className="divide-y divide-gray-100 dark:divide-white/5">
+        {sortedProjects.map((project) => {
+          const badge = getDeadlineBadge(project.daysRemaining)
+          return (
+            <Link
+              key={project.projectId}
+              to={`/projects/${project.projectId}`}
+              className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors items-center"
+            >
+              {/* Name */}
+              <div className="md:col-span-3 flex items-center gap-2 min-w-0">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getHealthColor(project.healthStatus)}`} />
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {project.projectName}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {project.projectCode}
-                </p>
+                </span>
               </div>
-              <div className={`w-2.5 h-2.5 rounded-full ${getHealthColor(project.healthStatus)}`} />
-            </div>
 
-            <div className="mb-3">
-              <ProgressBar
-                value={project.progress}
-                size="sm"
-                color={project.healthStatus === 'critical' ? 'red' : project.healthStatus === 'at_risk' ? 'amber' : 'auto'}
-                showLabel
-              />
-            </div>
+              {/* Progress */}
+              <div className="md:col-span-3">
+                <ProgressBar
+                  value={project.progress}
+                  size="sm"
+                  color={project.healthStatus === 'critical' ? 'red' : project.healthStatus === 'at_risk' ? 'amber' : 'auto'}
+                  showLabel
+                />
+              </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <StatusIcon type="projectStatus" value={project.status} size="sm" />
-                {project.openRisks > 0 && (
-                  <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+              {/* Blocked */}
+              <div className="md:col-span-1 text-center">
+                {project.tasksBlocked > 0 ? (
+                  <span className="text-sm font-medium text-red-500">{project.tasksBlocked}</span>
+                ) : (
+                  <span className="text-sm text-gray-300 dark:text-gray-600">0</span>
+                )}
+              </div>
+
+              {/* Risks */}
+              <div className="md:col-span-1 text-center">
+                {project.openRisks > 0 ? (
+                  <span className="flex items-center justify-center gap-0.5 text-sm text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="w-3 h-3" />
                     {project.openRisks}
                   </span>
-                )}
-                {project.tasksBlocked > 0 && (
-                  <span className="text-red-500 font-medium">
-                    {project.tasksBlocked} bloccati
-                  </span>
+                ) : (
+                  <span className="text-sm text-gray-300 dark:text-gray-600">0</span>
                 )}
               </div>
-              {project.targetEndDate && (
-                <span
-                  className={`flex items-center gap-1 ${
-                    project.daysRemaining !== null && project.daysRemaining < 0
-                      ? 'text-red-500 font-medium'
-                      : project.daysRemaining !== null && project.daysRemaining < 7
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  <Calendar className="w-3 h-3" />
-                  {formatDaysRemaining(project.daysRemaining)}
+
+              {/* Deadline */}
+              <div className="md:col-span-2 flex items-center gap-1">
+                {project.targetEndDate && (
+                  <>
+                    <Calendar className="w-3 h-3 text-gray-400 hidden md:block" />
+                    <span className={`text-xs font-medium ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Health */}
+              <div className="md:col-span-2 text-right">
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+                  project.healthStatus === 'critical'
+                    ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                    : project.healthStatus === 'at_risk'
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      : 'bg-green-500/10 text-green-600 dark:text-green-400'
+                }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${getHealthColor(project.healthStatus)}`} />
+                  {project.healthStatus === 'critical' ? 'Critico' : project.healthStatus === 'at_risk' ? 'A rischio' : 'Sano'}
                 </span>
-              )}
-            </div>
-          </Link>
-        ))}
+              </div>
+            </Link>
+          )
+        })}
       </div>
     </div>
   )

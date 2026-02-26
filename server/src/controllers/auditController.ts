@@ -3,11 +3,12 @@
  * @module controllers/auditController
  */
 
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
-import { getAuditLogs } from '../services/auditService.js'
+import { getAuditLogs, getEntityHistory, getStatusChangeTimeline, getProjectActivity } from '../services/auditService.js'
 import { AuditAction, EntityType } from '../types/index.js'
 import { datePreprocess } from '../utils/validation.js'
+import { sendSuccess, sendPaginated, sendError } from '../utils/responseHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -74,11 +75,69 @@ export async function getAuditLogsHandler(
       endDate: params.endDate ? new Date(params.endDate) : undefined,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Gets audit history for a specific entity
+ * @route GET /api/audit/entity/:entityType/:entityId
+ */
+export async function getEntityHistoryHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const entityType = req.params.entityType as EntityType
+    const { entityId } = req.params
+
+    if (!Object.values(EntityType).includes(entityType)) {
+      sendError(res, 'Invalid entity type', 400)
+      return
+    }
+
+    const data = await getEntityHistory(entityType, entityId)
+    sendSuccess(res, data)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Gets status change timeline for a specific entity
+ * @route GET /api/audit/timeline/:entityId
+ */
+export async function getStatusTimelineHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { entityId } = req.params
+    const data = await getStatusChangeTimeline(entityId)
+    sendSuccess(res, data)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Gets recent activity for all entities in a project
+ * @route GET /api/audit/project/:projectId
+ */
+export async function getProjectActivityHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { projectId } = req.params
+    const limit = req.query.limit ? Number(req.query.limit) : 20
+    const data = await getProjectActivity(projectId, limit)
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }

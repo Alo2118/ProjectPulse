@@ -7,6 +7,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { notificationService } from './notificationService.js'
+import { parseMentionedUserIds } from '../utils/mentions.js'
 import { PaginatedResponse, EntityType, PaginationParams, InputCategory, InputStatus, TaskPriority } from '../types/index.js'
 import {
   generateInputCode,
@@ -57,6 +59,26 @@ export interface ConvertToProjectData {
   ownerId: string
   templateId?: string
   priority?: string
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+/**
+ * Parses the JSON-string attachments field back to a string array.
+ * The DB stores attachments as NVarChar(Max) JSON (e.g. "[]"), so we must
+ * deserialize before returning to callers.
+ */
+function parseAttachments<T extends { attachments: unknown }>(input: T): T & { attachments: string[] } {
+  return {
+    ...input,
+    attachments: JSON.parse((input.attachments as string) || '[]') as string[],
+  }
+}
+
+function parseAttachmentsMany<T extends { attachments: unknown }>(inputs: T[]): (T & { attachments: string[] })[] {
+  return inputs.map(parseAttachments)
 }
 
 // Select fields for user input queries
@@ -133,19 +155,35 @@ export async function createUserInput(data: CreateUserInputData, userId: string)
 
     for (const admin of admins) {
       if (admin.id !== userId) {
-        await tx.notification.create({
-          data: {
-            userId: admin.id,
-            type: 'input_received',
-            title: 'New User Input',
-            message: `New input received: ${newInput.title}`,
-            data: JSON.stringify({ inputId: newInput.id, inputCode: newInput.code }),
-          },
-        })
+        await notificationService.createNotification({
+          userId: admin.id,
+          type: 'input_received',
+          title: 'New User Input',
+          message: `New input received: ${newInput.title}`,
+          data: { inputId: newInput.id, inputCode: newInput.code },
+        }, tx)
       }
     }
 
-    return newInput
+    // Notify users mentioned in the description
+    if (newInput.description) {
+      const mentionedIds = await parseMentionedUserIds(newInput.description, userId, tx)
+      for (const mentionedId of mentionedIds) {
+        // Skip if already notified as admin
+        const alreadyNotified = admins.some((a) => a.id === mentionedId)
+        if (!alreadyNotified) {
+          await notificationService.createNotification({
+            userId: mentionedId,
+            type: 'input_mention',
+            title: 'Sei stato menzionato in una segnalazione',
+            message: `Sei stato menzionato nella segnalazione "${newInput.title}" (${newInput.code})`,
+            data: { inputId: newInput.id, inputCode: newInput.code },
+          }, tx)
+        }
+      }
+    }
+
+    return parseAttachments(newInput)
   })
 
   logger.info(`User input created: ${userInput.code}`, { inputId: userInput.id, userId })
@@ -191,7 +229,7 @@ export async function getUserInputs(
   ])
 
   return {
-    data: inputs,
+    data: parseAttachmentsMany(inputs),
     pagination: {
       page,
       limit,
@@ -220,7 +258,7 @@ export async function getUserInputById(inputId: string) {
     select: userInputWithRelationsSelect,
   })
 
-  return input
+  return input ? parseAttachments(input) : null
 }
 
 /**
@@ -265,7 +303,7 @@ export async function updateUserInput(
 
     await auditService.logUpdate(EntityType.USER_INPUT, inputId, userId, { ...existing }, { ...updated }, tx)
 
-    return updated
+    return parseAttachments(updated)
   })
 
   logger.info(`User input updated: ${userInput.code}`, { inputId, userId })
@@ -304,18 +342,16 @@ export async function startProcessing(inputId: string, userId: string) {
 
     // Notify creator
     if (existing.createdById !== userId) {
-      await tx.notification.create({
-        data: {
-          userId: existing.createdById,
-          type: 'input_processed',
-          title: 'Input Being Processed',
-          message: `Your input "${existing.title}" is now being processed`,
-          data: JSON.stringify({ inputId: updated.id, inputCode: updated.code }),
-        },
-      })
+      await notificationService.createNotification({
+        userId: existing.createdById,
+        type: 'input_processed',
+        title: 'Input Being Processed',
+        message: `Your input "${existing.title}" is now being processed`,
+        data: { inputId: updated.id, inputCode: updated.code },
+      }, tx)
     }
 
-    return updated
+    return parseAttachments(updated)
   })
 
   logger.info(`User input processing started: ${userInput.code}`, { inputId, userId })
@@ -361,7 +397,7 @@ export async function convertToTask(inputId: string, data: ConvertToTaskData, us
         code: taskCode,
         title: existing.title,
         description: existing.description,
-        projectId: data.projectId || '', // Will be handled below
+        projectId: data.projectId || null,
         assigneeId: data.assigneeId,
         createdById: userId,
         priority: data.priority || existing.priority,
@@ -397,18 +433,16 @@ export async function convertToTask(inputId: string, data: ConvertToTaskData, us
 
     // Notify creator
     if (existing.createdById !== userId) {
-      await tx.notification.create({
-        data: {
-          userId: existing.createdById,
-          type: 'input_converted',
-          title: 'Input Converted to Task',
-          message: `Your input "${existing.title}" has been converted to task ${task.code}`,
-          data: JSON.stringify({ inputId: updated.id, taskId: task.id, taskCode: task.code }),
-        },
-      })
+      await notificationService.createNotification({
+        userId: existing.createdById,
+        type: 'input_converted',
+        title: 'Input Converted to Task',
+        message: `Your input "${existing.title}" has been converted to task ${task.code}`,
+        data: { inputId: updated.id, taskId: task.id, taskCode: task.code },
+      }, tx)
     }
 
-    return { userInput: updated, task }
+    return { userInput: parseAttachments(updated), task }
   })
 
   logger.info(`User input converted to task: ${existing.code} -> ${result.task.code}`, {
@@ -480,18 +514,16 @@ export async function convertToProject(inputId: string, data: ConvertToProjectDa
 
     // Notify creator
     if (existing.createdById !== userId) {
-      await tx.notification.create({
-        data: {
-          userId: existing.createdById,
-          type: 'input_converted',
-          title: 'Input Converted to Project',
-          message: `Your input "${existing.title}" has been converted to project ${project.code}`,
-          data: JSON.stringify({ inputId: updated.id, projectId: project.id, projectCode: project.code }),
-        },
-      })
+      await notificationService.createNotification({
+        userId: existing.createdById,
+        type: 'input_converted',
+        title: 'Input Converted to Project',
+        message: `Your input "${existing.title}" has been converted to project ${project.code}`,
+        data: { inputId: updated.id, projectId: project.id, projectCode: project.code },
+      }, tx)
     }
 
-    return { userInput: updated, project }
+    return { userInput: parseAttachments(updated), project }
   })
 
   logger.info(`User input converted to project: ${existing.code} -> ${result.project.code}`, {
@@ -544,18 +576,16 @@ export async function acknowledgeInput(inputId: string, notes: string | undefine
 
     // Notify creator
     if (existing.createdById !== userId) {
-      await tx.notification.create({
-        data: {
-          userId: existing.createdById,
-          type: 'input_processed',
-          title: 'Input Acknowledged',
-          message: `Your input "${existing.title}" has been acknowledged`,
-          data: JSON.stringify({ inputId: updated.id, inputCode: updated.code }),
-        },
-      })
+      await notificationService.createNotification({
+        userId: existing.createdById,
+        type: 'input_processed',
+        title: 'Input Acknowledged',
+        message: `Your input "${existing.title}" has been acknowledged`,
+        data: { inputId: updated.id, inputCode: updated.code },
+      }, tx)
     }
 
-    return updated
+    return parseAttachments(updated)
   })
 
   logger.info(`User input acknowledged: ${userInput.code}`, { inputId, userId })
@@ -604,18 +634,16 @@ export async function rejectInput(inputId: string, reason: string, userId: strin
 
     // Notify creator
     if (existing.createdById !== userId) {
-      await tx.notification.create({
-        data: {
-          userId: existing.createdById,
-          type: 'input_processed',
-          title: 'Input Rejected',
-          message: `Your input "${existing.title}" has been rejected: ${reason}`,
-          data: JSON.stringify({ inputId: updated.id, inputCode: updated.code, reason }),
-        },
-      })
+      await notificationService.createNotification({
+        userId: existing.createdById,
+        type: 'input_processed',
+        title: 'Input Rejected',
+        message: `Your input "${existing.title}" has been rejected: ${reason}`,
+        data: { inputId: updated.id, inputCode: updated.code, reason },
+      }, tx)
     }
 
-    return updated
+    return parseAttachments(updated)
   })
 
   logger.info(`User input rejected: ${userInput.code}`, { inputId, userId, reason })

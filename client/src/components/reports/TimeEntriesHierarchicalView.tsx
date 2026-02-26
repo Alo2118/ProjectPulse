@@ -7,6 +7,7 @@
 import { useState, useMemo } from 'react'
 import { Clock, ChevronDown, ChevronRight, FolderKanban, CheckSquare, User } from 'lucide-react'
 import type { DetailedTimeEntry } from '@/types'
+import { formatDuration as formatDur } from '@utils/dateFormatters'
 
 interface TimeEntriesHierarchicalViewProps {
   entries: DetailedTimeEntry[]
@@ -116,15 +117,7 @@ export function TimeEntriesHierarchicalView({ entries, selectedUserId }: TimeEnt
     })
   }
 
-  const formatDuration = (minutes: number | null) => {
-    if (!minutes) return '0m'
-    const hours = Math.floor(minutes / 60)
-    const mins = Math.round(minutes % 60)
-    if (hours > 0) {
-      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
-    }
-    return `${mins}m`
-  }
+  const formatDuration = formatDur
 
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -165,7 +158,7 @@ export function TimeEntriesHierarchicalView({ entries, selectedUserId }: TimeEnt
                 <FolderKanban className="w-5 h-5 text-blue-500 flex-shrink-0" />
                 <div className="text-left">
                   <div className="font-semibold text-gray-900 dark:text-white">
-                    {project.projectCode} - {project.projectName}
+                    {project.projectName}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     {project.tasks.length} {project.tasks.length === 1 ? 'task' : 'task'}

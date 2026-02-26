@@ -10,15 +10,7 @@ import { LiveTimer } from '@/components/ui/LiveTimer'
 import { useDashboardStore } from '@stores/dashboardStore'
 import api from '@services/api'
 import { TimeEntry } from '@/types'
-
-function formatDuration(minutes: number): string {
-  if (minutes <= 0) return '0m'
-  const h = Math.floor(minutes / 60)
-  const m = Math.round(minutes % 60)
-  if (h === 0) return `${m}m`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
-}
+import { formatDuration } from '@utils/dateFormatters'
 
 /** Live total that updates every second when a timer is running */
 function LiveTotal({ baseMinutes, runningStartTime }: { baseMinutes: number; runningStartTime: string | null }) {
@@ -63,7 +55,7 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
       const response = await api.get<{ success: boolean; data: TimeEntry[] }>(
         `/time-entries?fromDate=${today}&limit=50`
       )
-      if (response.data.success !== false) {
+      if (response.data.success) {
         const todayStart = new Date(today).getTime()
         const entries = (response.data.data || []).filter(
           (e) => new Date(e.startTime).getTime() >= todayStart && !e.isRunning

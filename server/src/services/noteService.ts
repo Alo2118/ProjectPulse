@@ -8,6 +8,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { notificationService } from './notificationService.js'
+import { parseMentionedUserIds } from '../utils/mentions.js'
 import {
   CreateNoteInput,
   UpdateNoteInput,
@@ -123,7 +125,55 @@ export async function createNote(data: CreateNoteInput, userId: string) {
     userId,
   })
 
+  // Send @mention notifications (outside transaction so Socket.io works)
+  try {
+    const mentionedIds = await parseMentionedUserIds(data.content, userId)
+    if (mentionedIds.length > 0) {
+      const [author, entityLabel] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true },
+        }),
+        resolveEntityLabel(data.entityType, data.entityId),
+      ])
+      const authorName = author ? `${author.firstName} ${author.lastName}` : 'Qualcuno'
+      const truncated = data.content.substring(0, 100) + (data.content.length > 100 ? '...' : '')
+      const notifData = { noteId: note.id, entityType: data.entityType, entityId: data.entityId }
+
+      for (const mentionedId of mentionedIds) {
+        await notificationService.createNotification({
+          userId: mentionedId,
+          type: 'note_mention',
+          title: 'Sei stato menzionato in una nota',
+          message: `${authorName} ti ha menzionato in una nota su ${entityLabel}: ${truncated}`,
+          data: notifData,
+        })
+      }
+    }
+  } catch (err) {
+    logger.error('Failed to send note mention notifications', { error: err, noteId: note.id })
+  }
+
   return note
+}
+
+/**
+ * Resolves a human-readable label for the entity (used in mention notifications)
+ */
+async function resolveEntityLabel(entityType: NoteableEntityType, entityId: string): Promise<string> {
+  try {
+    if (entityType === 'task') {
+      const task = await prisma.task.findUnique({ where: { id: entityId }, select: { code: true, title: true } })
+      return task ? `${task.code} – ${task.title}` : 'un task'
+    }
+    if (entityType === 'project') {
+      const project = await prisma.project.findUnique({ where: { id: entityId }, select: { code: true, name: true } })
+      return project ? `${project.code} – ${project.name}` : 'un progetto'
+    }
+    return 'una voce di tempo'
+  } catch {
+    return 'un elemento'
+  }
 }
 
 /**

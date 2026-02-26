@@ -5,6 +5,7 @@
 
 import { create } from 'zustand'
 import api from '@services/api'
+import type { DeliveryForecast, ProjectBudgetData } from '@/types'
 
 interface OverviewStats {
   totalProjects: number
@@ -13,6 +14,7 @@ interface OverviewStats {
   completedTasks: number
   inProgressTasks: number
   blockedTasks: number
+  overdueTasks: number
   totalMinutesLogged: number
   openRisks: number
   activeUsers: number
@@ -62,6 +64,22 @@ interface ProjectHealth {
   healthStatus: 'healthy' | 'at_risk' | 'critical'
 }
 
+interface PreviousWeekOverview {
+  totalMinutesLogged: number
+  completedTasks: number
+  blockedTasks: number
+  activeProjects: number
+}
+
+interface TeamWorkloadEntry {
+  userId: string
+  firstName: string
+  lastName: string
+  minutesLogged: number
+  weeklyHoursTarget: number
+  utilizationPercent: number
+}
+
 interface AnalyticsState {
   overview: OverviewStats | null
   tasksByStatus: TasksByStatus[]
@@ -69,15 +87,25 @@ interface AnalyticsState {
   completionTrend: TaskCompletionTrend[]
   topContributors: TopContributor[]
   projectHealth: ProjectHealth[]
+  previousWeekOverview: PreviousWeekOverview | null
+  teamWorkload: TeamWorkloadEntry[]
+  deliveryForecast: DeliveryForecast[]
+  budgetOverview: ProjectBudgetData[]
+  trendPeriodDays: number
   isLoading: boolean
   error: string | null
 
   fetchOverview: () => Promise<void>
+  fetchOverviewWithDelta: () => Promise<void>
   fetchTasksByStatus: () => Promise<void>
   fetchHoursByProject: () => Promise<void>
-  fetchCompletionTrend: () => Promise<void>
+  fetchCompletionTrend: (days?: number) => Promise<void>
   fetchTopContributors: () => Promise<void>
   fetchProjectHealth: () => Promise<void>
+  fetchTeamWorkload: () => Promise<void>
+  fetchDeliveryForecast: () => Promise<void>
+  fetchBudgetOverview: () => Promise<void>
+  setTrendPeriodDays: (days: number) => void
   fetchAll: () => Promise<void>
 }
 
@@ -88,6 +116,11 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   completionTrend: [],
   topContributors: [],
   projectHealth: [],
+  previousWeekOverview: null,
+  teamWorkload: [],
+  deliveryForecast: [],
+  budgetOverview: [],
+  trendPeriodDays: 30,
   isLoading: false,
   error: null,
 
@@ -97,6 +130,18 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       if (res.data.success) set({ overview: res.data.data })
     } catch {
       // Fetch failed silently overview:', error)
+    }
+  },
+
+  fetchOverviewWithDelta: async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: OverviewStats & { previousWeek: PreviousWeekOverview } }>('/analytics/overview-with-delta')
+      if (res.data.success) {
+        const { previousWeek, ...overview } = res.data.data
+        set({ overview, previousWeekOverview: previousWeek })
+      }
+    } catch {
+      // Fetch failed silently
     }
   },
 
@@ -118,9 +163,10 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     }
   },
 
-  fetchCompletionTrend: async () => {
+  fetchCompletionTrend: async (days?: number) => {
     try {
-      const res = await api.get<{ success: boolean; data: TaskCompletionTrend[] }>('/analytics/task-completion-trend')
+      const effectiveDays = days ?? get().trendPeriodDays ?? 28
+      const res = await api.get<{ success: boolean; data: TaskCompletionTrend[] }>(`/analytics/task-completion-trend?days=${effectiveDays}`)
       if (res.data.success) set({ completionTrend: res.data.data })
     } catch {
       // Fetch failed silently completion trend:', error)
@@ -145,17 +191,52 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     }
   },
 
+  fetchTeamWorkload: async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: TeamWorkloadEntry[] }>('/analytics/team-workload')
+      if (res.data.success) set({ teamWorkload: res.data.data })
+    } catch {
+      // Fetch failed silently
+    }
+  },
+
+  fetchDeliveryForecast: async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: DeliveryForecast[] }>('/analytics/delivery-forecast')
+      set({ deliveryForecast: res.data.data })
+    } catch {
+      // Non-critical, don't block dashboard
+    }
+  },
+
+  fetchBudgetOverview: async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: ProjectBudgetData[] }>('/analytics/budget-overview')
+      if (res.data.success) set({ budgetOverview: res.data.data })
+    } catch {
+      // Non-critical, don't block dashboard
+    }
+  },
+
+  setTrendPeriodDays: (days: number) => {
+    set({ trendPeriodDays: days })
+    get().fetchCompletionTrend(days)
+  },
+
   fetchAll: async () => {
     set({ isLoading: true, error: null })
     try {
       const store = get()
       await Promise.all([
-        store.fetchOverview(),
+        store.fetchOverviewWithDelta(),
         store.fetchTasksByStatus(),
         store.fetchHoursByProject(),
         store.fetchCompletionTrend(),
         store.fetchTopContributors(),
         store.fetchProjectHealth(),
+        store.fetchTeamWorkload(),
+        store.fetchDeliveryForecast(),
+        store.fetchBudgetOverview(),
       ])
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore nel caricamento analytics'

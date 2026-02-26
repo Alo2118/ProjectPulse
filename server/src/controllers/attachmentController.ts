@@ -3,11 +3,13 @@
  * @module controllers/attachmentController
  */
 
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import fs from 'fs'
 import { attachmentService } from '../services/attachmentService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { logger } from '../utils/logger.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -64,7 +66,7 @@ export async function createAttachment(req: Request, res: Response, next: NextFu
       userId
     )
 
-    res.status(201).json({ success: true, data: attachment })
+    sendCreated(res, attachment)
   } catch (error) {
     // Clean up uploaded file on error
     if (req.file) {
@@ -76,7 +78,7 @@ export async function createAttachment(req: Request, res: Response, next: NextFu
     } else if (error instanceof Error && error.message.includes('not found')) {
       next(new AppError(error.message, 404))
     } else {
-      console.error('Attachment creation error:', error)
+      logger.error('Attachment creation error', { error })
       next(error)
     }
   }
@@ -101,11 +103,7 @@ export async function getEntityAttachments(req: Request, res: Response, next: Ne
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -125,7 +123,7 @@ export async function getAttachmentById(req: Request, res: Response, next: NextF
       throw new AppError('Attachment not found', 404)
     }
 
-    res.json({ success: true, data: attachment })
+    sendSuccess(res, attachment)
   } catch (error) {
     next(error)
   }
@@ -208,7 +206,7 @@ export async function getAttachmentCount(req: Request, res: Response, next: Next
 
     const count = await attachmentService.getAttachmentCount(validatedEntityType, entityId)
 
-    res.json({ success: true, data: { count } })
+    sendSuccess(res, { count })
   } catch (error) {
     next(error)
   }
@@ -242,7 +240,7 @@ export async function convertToDocument(req: Request, res: Response, next: NextF
       description: data.description,
     })
 
-    res.status(201).json({ success: true, data: document })
+    sendCreated(res, document)
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       next(new AppError(error.message, 404))

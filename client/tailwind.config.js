@@ -45,6 +45,7 @@ export default {
         'glow-red': 'glowRed 2s ease-in-out infinite alternate',
         'glow-amber': 'glowAmber 2s ease-in-out infinite alternate',
         'progress-fill': 'progressFill 0.8s ease-out forwards',
+        'slide-up-in': 'slideUpIn 0.25s ease-out',
         'expand': 'expand 0.3s ease-out forwards',
         'collapse': 'collapse 0.2s ease-in forwards',
       },
@@ -88,6 +89,10 @@ export default {
         progressFill: {
           '0%': { width: '0%' },
           '100%': { width: 'var(--progress-value)' },
+        },
+        slideUpIn: {
+          '0%': { opacity: '0', transform: 'translateY(100%) translateX(-50%)' },
+          '100%': { opacity: '1', transform: 'translateY(0) translateX(-50%)' },
         },
         expand: {
           '0%': { opacity: '0', maxHeight: '0' },

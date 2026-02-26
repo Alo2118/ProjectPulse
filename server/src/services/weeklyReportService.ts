@@ -8,6 +8,7 @@ import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { PaginatedResponse, EntityType, ReportStatus } from '../types/index.js'
 import { auditService } from './auditService.js'
+import { countTasksFromArray } from './statsService.js'
 
 // ============================================================
 // TYPES
@@ -89,6 +90,23 @@ interface BlockedTask {
 
 type BlockerCategory = 'dependency' | 'resource' | 'bug' | 'approval' | 'other'
 
+interface RiskSummary {
+  id: string
+  code: string
+  title: string
+  description: string | null
+  category: string
+  probability: string
+  impact: string
+  riskLevel: number
+  status: string
+  mitigationPlan: string | null
+  projectId: string
+  projectName: string
+  projectCode: string
+  ownerName: string | null
+}
+
 interface EnrichedBlockedTask extends BlockedTask {
   daysBlocked: number
   category: BlockerCategory
@@ -105,7 +123,42 @@ interface BlockerAnalysis {
   items: EnrichedBlockedTask[]
 }
 
+interface PlannedTask {
+  id: string
+  code: string
+  title: string
+  projectId: string
+  projectName: string | null
+  assigneeId: string | null
+  assigneeName: string | null
+  dueDate: string | null
+  status: string
+  isOverdue: boolean
+}
+
+interface MilestoneRow {
+  id: string
+  code: string
+  title: string
+  projectId: string | null
+  projectName: string | null
+  projectCode: string | null
+  baselineDate: string | null
+  currentDate: string | null
+  status: string
+  daysLeft: number | null
+  completionPercent: number
+  isOverdue: boolean
+}
+
 type ProjectHealthStatus = 'on-track' | 'at-risk' | 'off-track'
+
+interface TaskBrief {
+  id: string
+  code: string
+  title: string
+  assigneeName: string | null
+}
 
 interface ProjectHealthData {
   projectId: string
@@ -127,6 +180,10 @@ interface ProjectHealthData {
     daysLeft: number | null
     completionPercent: number
   } | null
+  // Detailed task lists
+  completedThisWeek: (TaskBrief & { completedAt: string })[]
+  inProgressTasks: (TaskBrief & { dueDate: string | null; isOverdue: boolean })[]
+  blockedTasksList: (TaskBrief & { blockedReason: string | null; daysBlocked: number })[]
 }
 
 interface ProductivityMetrics {
@@ -195,6 +252,9 @@ export interface WeeklyReportData {
   blockerAnalysis?: BlockerAnalysis
   productivity?: ProductivityMetrics
   previousWeek?: PreviousWeekMetrics
+  risks?: RiskSummary[]
+  plannedNextWeek?: PlannedTask[]
+  milestonesTable?: MilestoneRow[]
 }
 
 export interface WeeklyReportQueryParams {
@@ -220,18 +280,27 @@ function getWeekNumber(date: Date): { weekNumber: number; year: number } {
 }
 
 /**
- * Gets Monday and Sunday of the week containing the given date
+ * Returns Monday 00:00:00.000 of the ISO week (Mon–Sun) that contains `date`.
+ * Works correctly regardless of locale, timezone offset, or month rollover.
+ */
+function getMonday(date: Date): Date {
+  const d = new Date(date)
+  // getDay(): 0=Sun, 1=Mon, ..., 6=Sat
+  // Days to subtract to reach the previous (or same) Monday:
+  const daysToMonday = (d.getDay() + 6) % 7  // Sun→6, Mon→0, Tue→1, …, Sat→5
+  d.setDate(d.getDate() - daysToMonday)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+/**
+ * Gets Monday 00:00:00 and Sunday 23:59:59 of the ISO week containing `date`.
  */
 function getWeekBounds(date: Date): { weekStart: Date; weekEnd: Date } {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Monday
-
-  const weekStart = new Date(d.setDate(diff))
-  weekStart.setHours(0, 0, 0, 0)
+  const weekStart = getMonday(date)
 
   const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekEnd.getDate() + 6)
+  weekEnd.setDate(weekEnd.getDate() + 6)   // Mon + 6 = Sun
   weekEnd.setHours(23, 59, 59, 999)
 
   return { weekStart, weekEnd }
@@ -799,11 +868,15 @@ async function getProjectHealthData(
         where: { isDeleted: false },
         select: {
           id: true,
+          code: true,
+          title: true,
           status: true,
           taskType: true,
           estimatedHours: true,
           dueDate: true,
-          title: true,
+          updatedAt: true,
+          blockedReason: true,
+          assignee: { select: { firstName: true, lastName: true } },
         },
       },
     },
@@ -833,13 +906,12 @@ async function getProjectHealthData(
       ? Math.round(((actualHours - derivedWeeklyTargetHours) / derivedWeeklyTargetHours) * 100)
       : 0
 
-    // Task counts (exclude milestones for counting)
-    const nonMilestoneTasks = project.tasks.filter((t) => t.taskType !== 'milestone')
-    const tasksCompleted = nonMilestoneTasks.filter((t) => t.status === 'done').length
-    const tasksInProgress = nonMilestoneTasks.filter((t) => t.status === 'in_progress').length
-    const tasksBlocked = nonMilestoneTasks.filter((t) => t.status === 'blocked').length
-    const tasksTotal = nonMilestoneTasks.length
+    // Task counts (exclude milestones for counting) — delegated to statsService
+    const taskCounts = countTasksFromArray(project.tasks)
+    const { total: tasksTotal, completed: tasksCompleted, blocked: tasksBlocked, inProgress: tasksInProgress } = taskCounts
     const completionPercent = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0
+    // nonMilestoneTasks still needed for detail lists below
+    const nonMilestoneTasks = project.tasks.filter((t) => t.taskType !== 'milestone')
 
     // Nearest open milestone
     const openMilestones = project.tasks
@@ -856,7 +928,6 @@ async function getProjectHealthData(
       const daysLeft = ms.dueDate
         ? Math.ceil((ms.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
         : null
-      // Milestone completion = % of child tasks done (approximation: all non-milestone tasks)
       nearestMilestone = {
         id: ms.id,
         title: ms.title,
@@ -873,6 +944,51 @@ async function getProjectHealthData(
     if (hoursRatio < 0.5 || completionRatio < 0.3) status = 'off-track'
     else if (hoursRatio < 0.8 || completionRatio < 0.6) status = 'at-risk'
 
+    const formatName = (a: { firstName: string; lastName: string } | null) =>
+      a ? `${a.firstName} ${a.lastName}` : null
+
+    // Completed tasks this week (updatedAt within the week and status=done)
+    const completedThisWeek = nonMilestoneTasks
+      .filter((t) => t.status === 'done' && t.updatedAt >= weekStart && t.updatedAt <= weekEnd)
+      .map((t) => ({
+        id: t.id,
+        code: t.code,
+        title: t.title,
+        assigneeName: formatName(t.assignee),
+        completedAt: t.updatedAt.toISOString(),
+      }))
+
+    // In progress tasks with overdue flag
+    const inProgressTasks = nonMilestoneTasks
+      .filter((t) => t.status === 'in_progress')
+      .map((t) => ({
+        id: t.id,
+        code: t.code,
+        title: t.title,
+        assigneeName: formatName(t.assignee),
+        dueDate: t.dueDate?.toISOString() ?? null,
+        isOverdue: t.dueDate ? t.dueDate < now && t.status !== 'cancelled' : false,
+      }))
+      .sort((a, b) => {
+        // Overdue first, then by dueDate
+        if (a.isOverdue && !b.isOverdue) return -1
+        if (!a.isOverdue && b.isOverdue) return 1
+        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+        return 0
+      })
+
+    // Blocked tasks with days blocked
+    const blockedTasksList = nonMilestoneTasks
+      .filter((t) => t.status === 'blocked')
+      .map((t) => ({
+        id: t.id,
+        code: t.code,
+        title: t.title,
+        assigneeName: formatName(t.assignee),
+        blockedReason: t.blockedReason,
+        daysBlocked: Math.floor((now.getTime() - t.updatedAt.getTime()) / (1000 * 60 * 60 * 24)),
+      }))
+
     result.push({
       projectId: project.id,
       projectCode: project.code,
@@ -887,6 +1003,9 @@ async function getProjectHealthData(
       tasksTotal,
       completionPercent,
       nearestMilestone,
+      completedThisWeek,
+      inProgressTasks,
+      blockedTasksList,
     })
   }
 
@@ -971,6 +1090,179 @@ function computeProductivityMetrics(
 }
 
 /**
+ * Gets open/identified risks for projects active this week
+ */
+async function getProjectRisks(projectIds: string[]): Promise<RiskSummary[]> {
+  if (projectIds.length === 0) return []
+
+  const probValue: Record<string, number> = { low: 1, medium: 2, high: 3 }
+  const impactValue: Record<string, number> = { low: 1, medium: 2, high: 3 }
+
+  const risks = await prisma.risk.findMany({
+    where: {
+      projectId: { in: projectIds },
+      isDeleted: false,
+      status: { not: 'closed' },
+    },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      description: true,
+      category: true,
+      probability: true,
+      impact: true,
+      status: true,
+      mitigationPlan: true,
+      projectId: true,
+      project: { select: { id: true, code: true, name: true } },
+      owner: { select: { id: true, firstName: true, lastName: true } },
+    },
+    orderBy: [{ probability: 'desc' }, { impact: 'desc' }],
+  })
+
+  return risks.map((r) => ({
+    id: r.id,
+    code: r.code,
+    title: r.title,
+    description: r.description,
+    category: r.category,
+    probability: r.probability,
+    impact: r.impact,
+    riskLevel: (probValue[r.probability] ?? 1) * (impactValue[r.impact] ?? 1),
+    status: r.status,
+    mitigationPlan: r.mitigationPlan,
+    projectId: r.project.id,
+    projectName: r.project.name,
+    projectCode: r.project.code,
+    ownerName: r.owner ? `${r.owner.firstName} ${r.owner.lastName}` : null,
+  }))
+}
+
+/**
+ * Gets tasks planned for next week (due date in next week range).
+ * @param currentWeekStart - Monday 00:00:00 of the current week (from getWeekBounds)
+ */
+async function getPlannedNextWeek(
+  userId: string | null,
+  currentWeekStart: Date
+): Promise<PlannedTask[]> {
+  // Next week = current Monday + 7 days → next Monday 00:00:00
+  const nextWeekStart = new Date(currentWeekStart)
+  nextWeekStart.setDate(nextWeekStart.getDate() + 7)
+
+  const nextWeekEnd = new Date(nextWeekStart)
+  nextWeekEnd.setDate(nextWeekEnd.getDate() + 6)   // next Monday + 6 = next Sunday
+  nextWeekEnd.setHours(23, 59, 59, 999)
+
+  const now = new Date()
+
+  const where: Prisma.TaskWhereInput = {
+    isDeleted: false,
+    taskType: { not: 'milestone' },
+    status: { notIn: ['done', 'cancelled'] },
+    dueDate: { gte: nextWeekStart, lte: nextWeekEnd },
+  }
+  if (userId) where.assigneeId = userId
+
+  const tasks = await prisma.task.findMany({
+    where,
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      status: true,
+      dueDate: true,
+      assigneeId: true,
+      project: { select: { id: true, name: true } },
+      assignee: { select: { firstName: true, lastName: true } },
+    },
+    orderBy: { dueDate: 'asc' },
+  })
+
+  return tasks.map((t) => ({
+    id: t.id,
+    code: t.code,
+    title: t.title,
+    projectId: t.project?.id ?? '',
+    projectName: t.project?.name ?? null,
+    assigneeId: t.assigneeId,
+    assigneeName: t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : null,
+    dueDate: t.dueDate?.toISOString() ?? null,
+    status: t.status,
+    isOverdue: t.dueDate ? t.dueDate < now && t.status !== 'cancelled' : false,
+  }))
+}
+
+/**
+ * Gets all milestones for the given projects, with completion data
+ */
+async function getMilestonesTable(projectIds: string[]): Promise<MilestoneRow[]> {
+  if (projectIds.length === 0) return []
+
+  const now = new Date()
+
+  const milestones = await prisma.task.findMany({
+    where: {
+      projectId: { in: projectIds },
+      isDeleted: false,
+      taskType: 'milestone',
+    },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      status: true,
+      dueDate: true,
+      projectId: true,
+      project: { select: { id: true, code: true, name: true } },
+      subtasks: {
+        where: { isDeleted: false, taskType: { not: 'milestone' } },
+        select: { status: true },
+      },
+    },
+    orderBy: [{ dueDate: 'asc' }],
+    take: 25,
+  })
+
+  const result: MilestoneRow[] = milestones.map((ms) => {
+    const daysLeft = ms.dueDate
+      ? Math.ceil((ms.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      : null
+    const isOverdue = ms.dueDate ? ms.dueDate < now && ms.status !== 'done' && ms.status !== 'cancelled' : false
+
+    const subtaskTotal = ms.subtasks.length
+    const subtaskDone = ms.subtasks.filter((s) => s.status === 'done').length
+    const completionPercent = subtaskTotal > 0 ? Math.round((subtaskDone / subtaskTotal) * 100) : 0
+
+    return {
+      id: ms.id,
+      code: ms.code,
+      title: ms.title,
+      projectId: ms.project?.id ?? null,
+      projectName: ms.project?.name ?? null,
+      projectCode: ms.project?.code ?? null,
+      baselineDate: ms.dueDate?.toISOString() ?? null,
+      currentDate: ms.dueDate?.toISOString() ?? null,
+      status: ms.status,
+      daysLeft,
+      completionPercent,
+      isOverdue,
+    }
+  })
+
+  // Sort: non-done/non-cancelled by dueDate first, then done
+  return result.sort((a, b) => {
+    const aActive = a.status !== 'done' && a.status !== 'cancelled'
+    const bActive = b.status !== 'done' && b.status !== 'cancelled'
+    if (aActive && !bActive) return -1
+    if (!aActive && bActive) return 1
+    if (a.baselineDate && b.baselineDate) return a.baselineDate.localeCompare(b.baselineDate)
+    return 0
+  })
+}
+
+/**
  * Generates a weekly report preview (not saved) for the current user
  */
 export async function generateReportPreview(
@@ -1001,10 +1293,14 @@ export async function generateReportPreview(
     getPreviousWeekMetrics(userId, weekNumber, year),
   ])
 
-  // Get project health using already-fetched time data
-  const projectHealth = await getProjectHealthData(
-    timeTracking.byProject, bounds.weekStart, bounds.weekEnd
-  )
+  // Get project health, risks, planned next week and milestones in parallel
+  const projectIds = timeTracking.byProject.map((p) => p.projectId)
+  const [projectHealth, risks, plannedNextWeek, milestonesTable] = await Promise.all([
+    getProjectHealthData(timeTracking.byProject, bounds.weekStart, bounds.weekEnd),
+    getProjectRisks(projectIds),
+    getPlannedNextWeek(userId, bounds.weekStart),
+    getMilestonesTable(projectIds),
+  ])
 
   // Compute derived metrics
   const blockerAnalysis = computeBlockerAnalysis(enrichedBlocked, previousWeek)
@@ -1032,6 +1328,9 @@ export async function generateReportPreview(
     blockerAnalysis,
     productivity,
     previousWeek: previousWeek ?? undefined,
+    risks,
+    plannedNextWeek,
+    milestonesTable,
   }
 
   return report
@@ -1056,9 +1355,13 @@ export async function generateTeamReportPreview(
     getWeeklyComments(null, bounds.weekStart, bounds.weekEnd),
   ])
 
-  const projectHealth = await getProjectHealthData(
-    timeTracking.byProject, bounds.weekStart, bounds.weekEnd
-  )
+  const projectIds = timeTracking.byProject.map((p) => p.projectId)
+  const [projectHealth, risks, plannedNextWeek, milestonesTable] = await Promise.all([
+    getProjectHealthData(timeTracking.byProject, bounds.weekStart, bounds.weekEnd),
+    getProjectRisks(projectIds),
+    getPlannedNextWeek(null, bounds.weekStart),
+    getMilestonesTable(projectIds),
+  ])
 
   const blockerAnalysis = computeBlockerAnalysis(enrichedBlocked, null)
   const productivity = computeProductivityMetrics(timeTracking, tasks)
@@ -1083,6 +1386,9 @@ export async function generateTeamReportPreview(
     projectHealth,
     blockerAnalysis,
     productivity,
+    risks,
+    plannedNextWeek,
+    milestonesTable,
   }
 
   return report

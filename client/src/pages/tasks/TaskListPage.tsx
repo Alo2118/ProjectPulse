@@ -3,79 +3,110 @@
  * @module pages/tasks/TaskListPage
  */
 
-import { useEffect, useState, useCallback } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from '@stores/toastStore'
 import { useTaskStore } from '@stores/taskStore'
 import { useProjectStore } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
 import { useDashboardStore } from '@stores/dashboardStore'
+import { useDepartmentStore } from '@stores/departmentStore'
+import { useUserStore } from '@stores/userStore'
+import { QuickAddTask } from '@components/tasks/QuickAddTask'
+import { BlockedReasonModal } from '@/components/tasks/BlockedReasonModal'
+import { TaskListViewFilters } from '@components/tasks/TaskListViewFilters'
+import { TaskListViewItem } from '@components/tasks/TaskListViewItem'
+import { TaskBulkActionBar } from '@components/tasks/TaskBulkActionBar'
+import { AdvancedFilterBuilder } from '@components/features/AdvancedFilterBuilder'
 import {
   Plus,
-  Search,
   Clock,
-  List,
-  FolderTree,
   CheckCircle,
   ArrowRight,
   AlertTriangle,
   CheckSquare,
-  Play,
-  Square,
-  Repeat2,
-  X,
   ChevronDown,
 } from 'lucide-react'
 import { TaskTreeView } from '@/components/reports/TaskTreeView'
+import TaskTableView from '@pages/tasks/TaskTableView'
+import { SavedViewsBar } from '@components/features/SavedViewsBar'
+import { ExportButton } from '@components/features/ExportButton'
+import { EmptyState } from '@components/common/EmptyState'
+import { DeleteConfirmModal } from '@components/ui/DeleteConfirmModal'
 import { useDebounce } from '@hooks/useDebounce'
-import type { Task } from '@/types'
+import { applyAdvancedFilter, describeAdvancedFilter } from '@utils/advancedFilterUtils'
+import type { Task, TaskStatus, AdvancedFilter } from '@/types'
 
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+/** Empty advanced filter sentinel — used for reset and initial state */
+const EMPTY_ADVANCED_FILTER: AdvancedFilter = { logic: 'and', rules: [] }
 
-  if (diff < 0) return `${Math.abs(diff)}g fa`
-  if (diff === 0) return 'Oggi'
-  if (diff === 1) return 'Domani'
-  if (diff < 7) return `${diff}g`
 
-  return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+/** Section status dot color */
+function statusDotClass(sectionKey: string): string {
+  switch (sectionKey) {
+    case 'in_progress': return 'bg-blue-500'
+    case 'todo': return 'bg-gray-400'
+    case 'review': return 'bg-violet-500'
+    case 'blocked': return 'bg-red-500'
+    case 'done': return 'bg-green-500'
+    case 'recurring': return 'bg-cyan-500'
+    default: return 'bg-gray-400'
+  }
 }
+
 
 export default function TaskListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuthStore()
-  const { tasks, myTasks, isLoading, fetchTasks, fetchMyTasks, changeTaskStatus, updateTask } = useTaskStore()
+  const { tasks, myTasks, isLoading, fetchTasks, fetchMyTasks, changeTaskStatus, updateTask, bulkDeleteTasks } = useTaskStore()
   const { projects, fetchProjects } = useProjectStore()
   const { runningTimer, startTimer, stopTimer } = useDashboardStore()
+  const { departments, fetchDepartments } = useDepartmentStore()
+  const { users, fetchUsers } = useUserStore()
 
-  const canTrackTime = user?.role !== 'direzione' // Direzione non può tracciare tempo
+  const canTrackTime = user?.role !== 'direzione'
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || '')
   const [projectFilter, setProjectFilter] = useState(searchParams.get('projectId') || '')
+  const [departmentFilter, setDepartmentFilter] = useState(searchParams.get('departmentId') || '')
+
+  // Advanced filter state
+  const [advancedFilter, setAdvancedFilter] = useState<AdvancedFilter>(EMPTY_ADVANCED_FILTER)
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
+
   // Bulk selection state
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
-  const [isBulkApplying, setIsBulkApplying] = useState(false)
-  const [bulkStatusValue, setBulkStatusValue] = useState('')
-  const [bulkPriorityValue, setBulkPriorityValue] = useState('')
-  // Admin e direzione possono vedere tutti i task, gli altri vedono solo i propri
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+
+  // Blocked reason modal state
+  const [showBlockedModal, setShowBlockedModal] = useState(false)
+  const [pendingBlockedTaskId, setPendingBlockedTaskId] = useState<string | null>(null)
+  const [pendingBlockedTaskTitle, setPendingBlockedTaskTitle] = useState('')
+  const [isChangingStatus, setIsChangingStatus] = useState(false)
+
+  // Collapsible sections — "done" collapsed by default
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['done']))
+
   const canSeeAllTasks = user?.role === 'admin' || user?.role === 'direzione'
   const [showAllTasks, setShowAllTasks] = useState(
     canSeeAllTasks ? searchParams.get('all') === 'true' : false
   )
-  const [viewMode, setViewMode] = useState<'list' | 'tree'>(
-    (searchParams.get('view') as 'list' | 'tree') || 'list'
+  const [viewMode, setViewMode] = useState<'list' | 'tree' | 'table'>(
+    (searchParams.get('view') as 'list' | 'tree' | 'table') || 'list'
   )
 
   const debouncedSearch = useDebounce(searchTerm, 300)
 
   useEffect(() => {
     fetchProjects()
-  }, [fetchProjects])
+    fetchDepartments()
+    fetchUsers({ limit: 200 })
+  }, [fetchProjects, fetchDepartments, fetchUsers])
 
   useEffect(() => {
     const filters: Record<string, string> = {}
@@ -83,19 +114,18 @@ export default function TaskListPage() {
     if (statusFilter) filters.status = statusFilter
     if (priorityFilter) filters.priority = priorityFilter
     if (projectFilter) filters.projectId = projectFilter
+    if (departmentFilter) filters.departmentId = departmentFilter
     if (showAllTasks && canSeeAllTasks) filters.all = 'true'
 
     const params = new URLSearchParams(filters)
     setSearchParams(params)
 
-    // Fetch my tasks for the list view
     fetchMyTasks({
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       limit: 100,
     })
 
-    // Fetch all tasks when "Mostra tutti" is checked (for admin/direzione)
     if (showAllTasks && canSeeAllTasks) {
       fetchTasks({
         search: debouncedSearch || undefined,
@@ -103,11 +133,68 @@ export default function TaskListPage() {
         priority: priorityFilter || undefined,
         projectId: projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined,
         standalone: projectFilter === 'standalone' ? true : undefined,
+        departmentId: departmentFilter || undefined,
         page: 1,
-        limit: 200, // Higher limit to fetch all tasks
+        limit: 200,
       })
     }
-  }, [debouncedSearch, statusFilter, priorityFilter, projectFilter, showAllTasks, canSeeAllTasks, user?.id])
+  }, [debouncedSearch, statusFilter, priorityFilter, projectFilter, departmentFilter, showAllTasks, canSeeAllTasks, user?.id])
+
+  // -------------------------
+  // Memoised derived data
+  // -------------------------
+
+  /** Raw task list (before advanced filter) based on basic filters + showAll */
+  const rawTaskList = useMemo(
+    () => (showAllTasks && canSeeAllTasks ? tasks : myTasks),
+    [tasks, myTasks, showAllTasks, canSeeAllTasks]
+  )
+
+  /** Task list after applying advanced filter rules */
+  const taskList = useMemo(
+    () => applyAdvancedFilter(rawTaskList, advancedFilter),
+    [rawTaskList, advancedFilter]
+  )
+
+  const taskCounts = useMemo(() => ({
+    total: taskList.length,
+    todo: taskList.filter((t) => t.status === 'todo').length,
+    inProgress: taskList.filter((t) => t.status === 'in_progress').length,
+    blocked: taskList.filter((t) => t.status === 'blocked').length,
+    completed: taskList.filter((t) => t.status === 'done').length,
+  }), [taskList])
+
+  const activeFilterCount = useMemo(
+    () =>
+      [searchTerm, statusFilter, priorityFilter, projectFilter, departmentFilter].filter(Boolean).length,
+    [searchTerm, statusFilter, priorityFilter, projectFilter, departmentFilter]
+  )
+
+  const advancedFilterRuleCount = advancedFilter.rules.length
+
+  const advancedFilterDescription = useMemo(
+    () => describeAdvancedFilter(advancedFilter),
+    [advancedFilter]
+  )
+
+  const currentFilters = useMemo<Record<string, unknown>>(() => {
+    const filters: Record<string, unknown> = {}
+    if (searchTerm) filters.search = searchTerm
+    if (statusFilter) filters.status = statusFilter
+    if (priorityFilter) filters.priority = priorityFilter
+    if (projectFilter) filters.projectId = projectFilter
+    if (departmentFilter) filters.departmentId = departmentFilter
+    if (showAllTasks && canSeeAllTasks) filters.all = true
+    // Persist advanced filter rules in the saved view
+    if (advancedFilter.rules.length > 0) {
+      filters.advancedFilter = advancedFilter
+    }
+    return filters
+  }, [searchTerm, statusFilter, priorityFilter, projectFilter, departmentFilter, showAllTasks, canSeeAllTasks, advancedFilter])
+
+  // -------------------------
+  // Callbacks
+  // -------------------------
 
   const handleTimerToggle = useCallback(
     async (taskId: string) => {
@@ -124,7 +211,7 @@ export default function TaskListPage() {
     [runningTimer?.taskId, startTimer, stopTimer]
   )
 
-  const canCreateTask = !!user // Tutti gli utenti autenticati possono creare task
+  const canCreateTask = !!user
 
   const handleToggleTaskSelection = useCallback((taskId: string) => {
     setSelectedTaskIds((prev) => {
@@ -138,46 +225,167 @@ export default function TaskListPage() {
     })
   }, [])
 
-  const handleSelectAll = useCallback(
-    (taskList: Task[]) => {
-      if (selectedTaskIds.size === taskList.length) {
-        setSelectedTaskIds(new Set())
-      } else {
-        setSelectedTaskIds(new Set(taskList.map((t) => t.id)))
+  /** Called by TaskBulkActionBar when the user picks a new status and clicks Apply */
+  const handleBulkStatusChange = useCallback(async (status: string) => {
+    const ids = Array.from(selectedTaskIds)
+    await Promise.all(ids.map((id) => changeTaskStatus(id, status as Task['status'])))
+    setSelectedTaskIds(new Set())
+  }, [selectedTaskIds, changeTaskStatus])
+
+  /** Called by TaskBulkActionBar when the user picks a new priority and clicks Apply */
+  const handleBulkPriorityChange = useCallback(async (priority: string) => {
+    const ids = Array.from(selectedTaskIds)
+    try {
+      await Promise.all(ids.map((id) => updateTask(id, { priority: priority as Task['priority'] })))
+      setSelectedTaskIds(new Set())
+    } catch {
+      toast.error('Errore', 'Impossibile applicare le modifiche')
+    }
+  }, [selectedTaskIds, updateTask])
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedTaskIds.size === 0) return
+    setIsBulkDeleting(true)
+    try {
+      await bulkDeleteTasks(Array.from(selectedTaskIds))
+      setSelectedTaskIds(new Set())
+      setShowBulkDeleteConfirm(false)
+    } catch {
+      // Error toast shown by store
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }, [selectedTaskIds, bulkDeleteTasks])
+
+  const handleBlockedConfirm = useCallback(
+    async (reason: string) => {
+      if (!pendingBlockedTaskId) return
+      setIsChangingStatus(true)
+      try {
+        await changeTaskStatus(pendingBlockedTaskId, 'blocked', reason)
+        setShowBlockedModal(false)
+        setPendingBlockedTaskId(null)
+        setPendingBlockedTaskTitle('')
+      } catch {
+        // silently ignore
+      } finally {
+        setIsChangingStatus(false)
       }
     },
-    [selectedTaskIds.size]
+    [pendingBlockedTaskId, changeTaskStatus]
   )
 
-  const handleBulkApply = useCallback(async () => {
-    if (selectedTaskIds.size === 0 || (!bulkStatusValue && !bulkPriorityValue)) return
-    setIsBulkApplying(true)
-    try {
-      const ids = Array.from(selectedTaskIds)
-      await Promise.all(
-        ids.map((id) => {
-          if (bulkStatusValue) {
-            return changeTaskStatus(id, bulkStatusValue as Task['status'])
-          }
-          if (bulkPriorityValue) {
-            return updateTask(id, { priority: bulkPriorityValue as Task['priority'] })
-          }
-          return Promise.resolve()
-        })
-      )
-      setSelectedTaskIds(new Set())
-      setBulkStatusValue('')
-      setBulkPriorityValue('')
-    } catch {
-      // silently ignore
-    } finally {
-      setIsBulkApplying(false)
+  const handleBlockedCancel = useCallback(() => {
+    setShowBlockedModal(false)
+    setPendingBlockedTaskId(null)
+    setPendingBlockedTaskTitle('')
+  }, [])
+
+  const handleRequestBlockedModal = useCallback((taskId: string, taskTitle: string) => {
+    setPendingBlockedTaskId(taskId)
+    setPendingBlockedTaskTitle(taskTitle)
+    setShowBlockedModal(true)
+  }, [])
+
+  const handleApplyView = useCallback(
+    (filters: Record<string, unknown>) => {
+      setSearchTerm((filters.search as string) ?? '')
+      setStatusFilter((filters.status as string) ?? '')
+      setPriorityFilter((filters.priority as string) ?? '')
+      setProjectFilter((filters.projectId as string) ?? '')
+      setDepartmentFilter((filters.departmentId as string) ?? '')
+      if (canSeeAllTasks) {
+        setShowAllTasks(!!filters.all)
+      }
+      // Restore advanced filter from saved view
+      if (filters.advancedFilter && typeof filters.advancedFilter === 'object') {
+        const af = filters.advancedFilter as AdvancedFilter
+        setAdvancedFilter(af)
+        if (af.rules.length > 0) setShowAdvancedFilter(true)
+      } else {
+        setAdvancedFilter(EMPTY_ADVANCED_FILTER)
+      }
+    },
+    [canSeeAllTasks]
+  )
+
+  const handleResetFilters = useCallback(() => {
+    setSearchTerm('')
+    setStatusFilter('')
+    setPriorityFilter('')
+    setProjectFilter('')
+    setDepartmentFilter('')
+    setAdvancedFilter(EMPTY_ADVANCED_FILTER)
+  }, [])
+
+  const toggleSection = useCallback((key: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }, [])
+
+  /** Shared refetch helper used by QuickAddTask */
+  const handleQuickAddCreated = useCallback(() => {
+    fetchMyTasks({ status: statusFilter || undefined, priority: priorityFilter || undefined, limit: 100 })
+    if (showAllTasks && canSeeAllTasks) {
+      fetchTasks({
+        search: debouncedSearch || undefined,
+        status: statusFilter || undefined,
+        priority: priorityFilter || undefined,
+        projectId: projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined,
+        standalone: projectFilter === 'standalone' ? true : undefined,
+        departmentId: departmentFilter || undefined,
+        page: 1,
+        limit: 200,
+      })
     }
-  }, [selectedTaskIds, bulkStatusValue, bulkPriorityValue, changeTaskStatus, updateTask])
+  }, [fetchMyTasks, fetchTasks, statusFilter, priorityFilter, showAllTasks, canSeeAllTasks, debouncedSearch, projectFilter, departmentFilter])
+
+  // -------------------------
+  // Per-item change handlers (passed to TaskListViewItem)
+  // -------------------------
+
+  const handleStatusChange = useCallback(
+    async (taskId: string, status: string) => {
+      await changeTaskStatus(taskId, status as TaskStatus)
+    },
+    [changeTaskStatus]
+  )
+
+  const handlePriorityChange = useCallback(
+    async (taskId: string, priority: string) => {
+      await updateTask(taskId, { priority: priority as Task['priority'] })
+    },
+    [updateTask]
+  )
+
+  const handleDueDateChange = useCallback(
+    async (taskId: string, date: string | null) => {
+      await updateTask(taskId, { dueDate: date })
+    },
+    [updateTask]
+  )
+
+  const handleAssigneeChange = useCallback(
+    async (taskId: string, userId: string | null) => {
+      await updateTask(taskId, { assigneeId: userId })
+    },
+    [updateTask]
+  )
+
+  // -------------------------
+  // Loading skeleton
+  // -------------------------
 
   if (isLoading && tasks.length === 0) {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-4 animate-fade-in">
         {/* Header skeleton */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -187,31 +395,19 @@ export default function TaskListPage() {
           <div className="skeleton h-10 w-32" />
         </div>
 
-        {/* Filters skeleton */}
-        <div className="card p-3 sm:p-4">
-          <div className="space-y-3">
-            <div className="skeleton h-10 w-full" />
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              <div className="skeleton h-10 w-full sm:w-48" />
-              <div className="skeleton h-10 flex-1 sm:flex-none sm:w-32" />
-              <div className="skeleton h-10 flex-1 sm:flex-none sm:w-32" />
-            </div>
-          </div>
+        {/* Stat pills skeleton */}
+        <div className="flex flex-wrap items-center gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="skeleton h-8 w-24 rounded-full" />
+          ))}
         </div>
 
-        {/* Stats skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="card-hover p-4">
-              <div className="flex items-center gap-3">
-                <div className="skeleton w-10 h-10 rounded-xl" />
-                <div className="space-y-2">
-                  <div className="skeleton h-3 w-16" />
-                  <div className="skeleton h-6 w-8" />
-                </div>
-              </div>
-            </div>
-          ))}
+        {/* Filter bar skeleton */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="skeleton h-9 w-56 rounded-lg" />
+          <div className="skeleton h-9 w-36 rounded-lg" />
+          <div className="skeleton h-9 w-28 rounded-lg" />
+          <div className="skeleton h-9 w-28 rounded-lg" />
         </div>
 
         {/* Task list skeleton */}
@@ -219,13 +415,15 @@ export default function TaskListPage() {
           <div className="space-y-6">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i}>
-                <div className="skeleton h-5 w-32 mb-3" />
+                <div className="skeleton h-5 w-32 mb-3 rounded-lg" />
                 <div className="space-y-2">
                   {Array.from({ length: 4 }).map((_, j) => (
-                    <div key={j} className="flex items-center gap-2 py-1.5">
-                      <div className="skeleton w-4 h-4 rounded" />
-                      <div className="skeleton h-4 flex-1" />
-                      <div className="skeleton h-4 w-16" />
+                    <div key={j} className="flex items-center gap-3 px-4 py-3 rounded-lg border-l-4 border-l-gray-200 dark:border-l-gray-700">
+                      <div className="skeleton w-3.5 h-3.5 rounded" />
+                      <div className="skeleton h-4 w-20 rounded-full" />
+                      <div className="skeleton h-4 flex-1 rounded" />
+                      <div className="skeleton h-4 w-16 rounded" />
+                      <div className="skeleton h-4 w-20 rounded" />
                     </div>
                   ))}
                 </div>
@@ -237,9 +435,84 @@ export default function TaskListPage() {
     )
   }
 
+  // -------------------------
+  // Render helpers
+  // -------------------------
+
+  /** Collapsible section wrapper */
+  const renderSection = (
+    key: string,
+    label: string,
+    items: Task[],
+    showWhenEmpty = false
+  ) => {
+    if (items.length === 0 && !showWhenEmpty) return null
+    const collapsed = collapsedSections.has(key)
+    return (
+      <div key={key}>
+        <button
+          type="button"
+          onClick={() => toggleSection(key)}
+          className="flex items-center justify-between w-full py-2 select-none group/header"
+          aria-expanded={!collapsed}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDotClass(key)}`}
+              aria-hidden="true"
+            />
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</span>
+            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+              {items.length}
+            </span>
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${
+              collapsed ? '' : 'rotate-180'
+            }`}
+            aria-hidden="true"
+          />
+        </button>
+        <div
+          className={`overflow-hidden transition-all duration-200 ${
+            collapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'
+          }`}
+        >
+          <div className="space-y-1 pb-2">
+            {items.map((task) => (
+              <TaskListViewItem
+                key={task.id}
+                task={task}
+                isSelected={selectedTaskIds.has(task.id)}
+                onSelect={handleToggleTaskSelection}
+                onStatusChange={(id, status) => void handleStatusChange(id, status)}
+                onPriorityChange={(id, priority) => void handlePriorityChange(id, priority)}
+                onDueDateChange={(id, date) => void handleDueDateChange(id, date)}
+                onAssigneeChange={(id, userId) => void handleAssigneeChange(id, userId)}
+                onTimerToggle={(id) => void handleTimerToggle(id)}
+                runningTimerId={runningTimer?.taskId ?? null}
+                canTrackTime={canTrackTime}
+                onRequestBlockedModal={handleRequestBlockedModal}
+              />
+            ))}
+            {items.length === 0 && (
+              <p className="text-sm text-gray-400 dark:text-gray-500 px-4 py-2">
+                Nessun task in questa sezione
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // -------------------------
+  // Main render
+  // -------------------------
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* ---- Header ---- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Task</h1>
@@ -247,189 +520,183 @@ export default function TaskListPage() {
             Gestisci e traccia i tuoi task
           </p>
         </div>
-        {canCreateTask && (
-          <button onClick={() => navigate('/tasks/new')} className="btn-primary flex items-center self-start">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuovo Task
-          </button>
-        )}
-      </div>
-
-      {/* Filters */}
-      <div className="card p-3 sm:p-4">
-        <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-3">
-          {/* Search - full width on mobile */}
-          <div className="w-full sm:flex-1 sm:min-w-64">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="search"
-                placeholder="Cerca task..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Filters row - stack on mobile */}
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="input w-full sm:w-auto"
-            >
-              <option value="">Tutti i progetti</option>
-              <option value="standalone">Standalone</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.code} - {project.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input flex-1 sm:flex-none sm:w-auto"
-            >
-              <option value="">Tutti gli stati</option>
-              <option value="todo">Da fare</option>
-              <option value="in_progress">In corso</option>
-              <option value="review">In revisione</option>
-              <option value="blocked">Bloccato</option>
-              <option value="done">Completato</option>
-            </select>
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="input flex-1 sm:flex-none sm:w-auto"
-            >
-              <option value="">Tutte le priorità</option>
-              <option value="critical">Critica</option>
-              <option value="high">Alta</option>
-              <option value="medium">Media</option>
-              <option value="low">Bassa</option>
-            </select>
-          </div>
-
-          {/* Bottom row - checkbox + view toggle */}
-          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-            {canSeeAllTasks && (
-              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showAllTasks}
-                  onChange={(e) => setShowAllTasks(e.target.checked)}
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                Mostra tutti
-              </label>
-            )}
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-                title="Vista Lista"
-              >
-                <List className="w-4 h-4" />
-                <span className="hidden sm:inline">Lista</span>
-              </button>
-              <button
-                onClick={() => setViewMode('tree')}
-                className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
-                  viewMode === 'tree'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-                title="Vista Albero"
-              >
-                <FolderTree className="w-4 h-4" />
-                <span className="hidden sm:inline">Albero</span>
-              </button>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 self-start flex-wrap">
+          {canSeeAllTasks && (
+            <ExportButton
+              entity="tasks"
+              filters={{
+                ...(projectFilter && projectFilter !== 'standalone' ? { projectId: projectFilter } : {}),
+                ...(statusFilter ? { status: statusFilter } : {}),
+                ...(departmentFilter ? { departmentId: departmentFilter } : {}),
+              }}
+            />
+          )}
+          {canCreateTask && (
+            <button onClick={() => navigate('/tasks/new')} className="btn-primary flex items-center">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuovo Task
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Task Statistics */}
-      {(() => {
-          const taskList = showAllTasks && canSeeAllTasks ? tasks : myTasks
-          const totalTasks = taskList.length
-          const inProgressCount = taskList.filter((t) => t.status === 'in_progress').length
-          const completedCount = taskList.filter((t) => t.status === 'done').length
-          const blockedCount = taskList.filter((t) => t.status === 'blocked').length
-          const todoCount = taskList.filter((t) => t.status === 'todo').length
+      {/* ---- Saved Views Bar ---- */}
+      <SavedViewsBar
+        entity="task"
+        currentFilters={currentFilters}
+        onApplyView={handleApplyView}
+      />
 
-          return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
-              <div className="card-hover p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                    <CheckSquare className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Totale</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{totalTasks}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="card-hover p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 shadow-lg">
-                    <Clock className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Da Fare</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{todoCount}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="card-hover p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg">
-                    <ArrowRight className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">In Corso</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{inProgressCount}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="card-hover p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                    <AlertTriangle className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bloccati</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{blockedCount}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="card-hover p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Completati</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{completedCount}</p>
-                  </div>
-                </div>
-              </div>
+      {/* ---- Compact Stat Pills ---- */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtra per stato">
+        {/* Totale */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter('')}
+          className={[
+            'stat-pill bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+            statusFilter === ''
+              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
+              : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600',
+          ].join(' ')}
+          aria-pressed={statusFilter === ''}
+          title="Mostra tutti i task"
+        >
+          <CheckSquare className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{taskCounts.total}</span>
+          <span>Totale</span>
+        </button>
+
+        {/* Da Fare */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}
+          className={[
+            'stat-pill bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
+            statusFilter === 'todo'
+              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
+              : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600',
+          ].join(' ')}
+          aria-pressed={statusFilter === 'todo'}
+          title="Filtra: Da fare"
+        >
+          <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{taskCounts.todo}</span>
+          <span>Da Fare</span>
+        </button>
+
+        {/* In Corso */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'in_progress' ? '' : 'in_progress')}
+          className={[
+            'stat-pill bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+            statusFilter === 'in_progress'
+              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
+              : 'hover:ring-1 hover:ring-blue-300 dark:hover:ring-blue-700',
+          ].join(' ')}
+          aria-pressed={statusFilter === 'in_progress'}
+          title="Filtra: In corso"
+        >
+          <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{taskCounts.inProgress}</span>
+          <span>In Corso</span>
+        </button>
+
+        {/* Bloccati */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'blocked' ? '' : 'blocked')}
+          className={[
+            'stat-pill bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+            statusFilter === 'blocked'
+              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
+              : 'hover:ring-1 hover:ring-red-300 dark:hover:ring-red-700',
+          ].join(' ')}
+          aria-pressed={statusFilter === 'blocked'}
+          title="Filtra: Bloccati"
+        >
+          <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{taskCounts.blocked}</span>
+          <span>Bloccati</span>
+        </button>
+
+        {/* Completati */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
+          className={[
+            'stat-pill bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+            statusFilter === 'done'
+              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
+              : 'hover:ring-1 hover:ring-green-300 dark:hover:ring-green-700',
+          ].join(' ')}
+          aria-pressed={statusFilter === 'done'}
+          title="Filtra: Completati"
+        >
+          <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{taskCounts.completed}</span>
+          <span>Completati</span>
+        </button>
+      </div>
+
+      {/* ---- Filter Bar ---- */}
+      <TaskListViewFilters
+        search={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        priorityFilter={priorityFilter}
+        onPriorityFilterChange={setPriorityFilter}
+        projectFilter={projectFilter}
+        onProjectFilterChange={setProjectFilter}
+        departmentFilter={departmentFilter}
+        onDepartmentFilterChange={setDepartmentFilter}
+        showAll={showAllTasks}
+        onShowAllChange={setShowAllTasks}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        isAdmin={canSeeAllTasks}
+        projects={projects}
+        departments={departments}
+        activeFilterCount={activeFilterCount}
+        onResetFilters={handleResetFilters}
+        showAdvancedFilter={showAdvancedFilter}
+        onToggleAdvancedFilter={() => setShowAdvancedFilter((v) => !v)}
+        advancedFilterRuleCount={advancedFilterRuleCount}
+      />
+
+      {/* ---- Advanced Filter Panel (animated slide-down) ---- */}
+      <AnimatePresence>
+        {showAdvancedFilter && (
+          <motion.div
+            key="advanced-filter-panel"
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: 0 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ duration: 0.22, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="pt-0.5">
+              <AdvancedFilterBuilder
+                filter={advancedFilter}
+                onChange={setAdvancedFilter}
+                users={users}
+                projects={projects}
+                departments={departments}
+              />
+              {advancedFilterDescription && (
+                <p className="mt-2 text-xs text-primary-600 dark:text-primary-400 font-medium pl-1">
+                  {advancedFilterDescription} — i risultati visualizzati sono già filtrati.
+                </p>
+              )}
             </div>
-          )
-        })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Tasks Content */}
+      {/* ---- Tasks Content ---- */}
       {viewMode === 'tree' ? (
-        // Tree View
         <TaskTreeView
           mode="full"
           myTasksOnly={!showAllTasks}
@@ -438,36 +705,61 @@ export default function TaskListPage() {
           showSummary={true}
           showControls={true}
           showFilters={false}
+          editable={true}
           onTimerToggle={handleTimerToggle}
           runningTimerId={runningTimer?.taskId ?? null}
           canTrackTime={canTrackTime}
         />
-      ) : (
+      ) : viewMode === 'table' ? (
         (() => {
-          const taskList = showAllTasks && canSeeAllTasks ? tasks : myTasks
-
+          const handleRefetch = () => {
+            fetchMyTasks({ status: statusFilter || undefined, priority: priorityFilter || undefined, limit: 100 })
+            if (showAllTasks && canSeeAllTasks) {
+              fetchTasks({
+                search: debouncedSearch || undefined,
+                status: statusFilter || undefined,
+                priority: priorityFilter || undefined,
+                projectId: projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined,
+                standalone: projectFilter === 'standalone' ? true : undefined,
+                departmentId: departmentFilter || undefined,
+                page: 1,
+                limit: 200,
+              })
+            }
+          }
+          return (
+            <TaskTableView
+              tasks={taskList}
+              selectedTasks={selectedTaskIds}
+              onToggleSelect={handleToggleTaskSelection}
+              onSelectAll={() => {
+                if (taskList.every((t) => selectedTaskIds.has(t.id))) {
+                  setSelectedTaskIds(new Set())
+                } else {
+                  setSelectedTaskIds(new Set(taskList.map((t) => t.id)))
+                }
+              }}
+              onRefresh={handleRefetch}
+            />
+          )
+        })()
+      ) : (
+        /* ---- List View ---- */
+        (() => {
           if (taskList.length === 0) {
+            const hasFilters = !!(searchTerm || statusFilter || priorityFilter || projectFilter)
             return (
-              <div className="card p-8 text-center">
-                <span className="text-5xl block mb-4">
-                  {searchTerm || statusFilter || priorityFilter || projectFilter ? '\u{1F50D}' : '\u{1F3AF}'}
-                </span>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  {searchTerm || statusFilter || priorityFilter || projectFilter
-                    ? 'Nessun task trovato'
-                    : 'Nessun task'}
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  {searchTerm || statusFilter || priorityFilter || projectFilter
-                    ? 'Prova a modificare i filtri di ricerca'
-                    : 'Crea il primo task per iniziare!'}
-                </p>
-                {canCreateTask && !searchTerm && !statusFilter && !priorityFilter && (
-                  <button onClick={() => navigate('/tasks/new')} className="btn-primary">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Crea Task
-                  </button>
-                )}
+              <div className="card">
+                <EmptyState
+                  icon={CheckSquare}
+                  title={hasFilters ? 'Nessun task trovato' : 'Nessun task'}
+                  description={hasFilters ? 'Prova a modificare i filtri' : 'Crea il primo task per iniziare!'}
+                  action={
+                    canCreateTask && !hasFilters
+                      ? { label: 'Crea Task', onClick: () => navigate('/tasks/new') }
+                      : undefined
+                  }
+                />
               </div>
             )
           }
@@ -479,222 +771,71 @@ export default function TaskListPage() {
           const reviewTasks = taskList.filter((t) => t.status === 'review' && !t.isRecurring)
           const completedTasks = taskList.filter((t) => t.status === 'done')
 
-          const renderTaskItem = (task: Task) => {
-            const isRunning = runningTimer?.taskId === task.id
-            const isCompleted = task.status === 'done'
-            const isBlocked = task.status === 'blocked'
-            const isSelected = selectedTaskIds.has(task.id)
-
-            return (
-              <li key={task.id} className={`flex items-center gap-2 group py-1.5 rounded px-1 transition-colors ${isSelected ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}>
-                {/* Checkbox for bulk selection */}
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => handleToggleTaskSelection(task.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 flex-shrink-0 cursor-pointer"
-                />
-                {isCompleted ? (
-                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                ) : isBlocked ? (
-                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                ) : task.status === 'in_progress' ? (
-                  <ArrowRight className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                ) : task.status === 'review' ? (
-                  <Search className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                ) : (
-                  <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                )}
-                <Link
-                  to={`/tasks/${task.id}`}
-                  className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary-500 flex items-center gap-2"
-                >
-                  {task.title}
-                  {task.isRecurring && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium whitespace-nowrap flex-shrink-0">
-                      <Repeat2 className="w-3 h-3" />
-                      Ricorrente
-                    </span>
-                  )}
-                  {task.project && (
-                    <span className="text-xs text-gray-400 ml-auto flex-shrink-0">({task.project.name})</span>
-                  )}
-                </Link>
-                {task.dueDate && (
-                  <span className={`text-xs ${
-                    new Date(task.dueDate) < new Date() && !isCompleted
-                      ? 'text-red-500 font-medium'
-                      : 'text-gray-400'
-                  }`}>
-                    {formatDate(task.dueDate)}
-                  </span>
-                )}
-                {canTrackTime && !isCompleted && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      handleTimerToggle(task.id)
-                    }}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      isRunning
-                        ? 'bg-red-500 text-white hover:bg-red-600'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-500 hover:bg-primary-500 hover:text-white opacity-0 group-hover:opacity-100'
-                    }`}
-                    title={isRunning ? 'Stop timer' : 'Avvia timer'}
-                  >
-                    {isRunning ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                  </button>
-                )}
-              </li>
-            )
-          }
-
           return (
             <div className="card p-6">
-              {/* Bulk Action Bar */}
-              <div className={`mb-4 transition-all duration-200 overflow-hidden ${selectedTaskIds.size > 0 ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="flex flex-wrap items-center gap-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/50 rounded-lg">
-                  <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-                    {selectedTaskIds.size} selezionat{selectedTaskIds.size === 1 ? 'o' : 'i'}
-                  </span>
-                  <div className="flex items-center gap-2 flex-1 flex-wrap">
-                    <div className="relative">
-                      <select
-                        value={bulkStatusValue}
-                        onChange={(e) => { setBulkStatusValue(e.target.value); setBulkPriorityValue('') }}
-                        className="input py-1.5 pr-8 text-sm"
-                      >
-                        <option value="">Cambia stato...</option>
-                        <option value="todo">Da fare</option>
-                        <option value="in_progress">In corso</option>
-                        <option value="review">In revisione</option>
-                        <option value="blocked">Bloccato</option>
-                        <option value="done">Completato</option>
-                      </select>
-                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-gray-400" />
-                    </div>
-                    <div className="relative">
-                      <select
-                        value={bulkPriorityValue}
-                        onChange={(e) => { setBulkPriorityValue(e.target.value); setBulkStatusValue('') }}
-                        className="input py-1.5 pr-8 text-sm"
-                      >
-                        <option value="">Cambia priorità...</option>
-                        <option value="critical">Critica</option>
-                        <option value="high">Alta</option>
-                        <option value="medium">Media</option>
-                        <option value="low">Bassa</option>
-                      </select>
-                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-gray-400" />
-                    </div>
-                    <button
-                      onClick={handleBulkApply}
-                      disabled={isBulkApplying || (!bulkStatusValue && !bulkPriorityValue)}
-                      className="btn-primary py-1.5 px-4 text-sm disabled:opacity-50"
-                    >
-                      {isBulkApplying ? 'Applicando...' : 'Applica'}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setSelectedTaskIds(new Set())}
-                    className="p-1.5 rounded hover:bg-primary-100 dark:hover:bg-primary-800/50 text-primary-600 dark:text-primary-400"
-                    title="Deseleziona tutto"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+              {/* Single QuickAddTask at the top */}
+              <div className="mb-5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-white/[0.02]">
+                <QuickAddTask
+                  defaultStatus={
+                    (statusFilter as TaskStatus) ||
+                    (inProgressTasks.length > 0 ? 'in_progress' : 'todo')
+                  }
+                  placeholder="Aggiungi nuovo task..."
+                  onCreated={handleQuickAddCreated}
+                />
               </div>
 
-              <div className="space-y-6">
-                {/* Recurring Tasks */}
-                {recurringTasks.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-cyan-600 dark:text-cyan-400 mb-3 flex items-center gap-2">
-                      <Repeat2 className="w-4 h-4" />
-                      Ricorrenti ({recurringTasks.length})
-                    </h4>
-                    <ul className="space-y-1">
-                      {recurringTasks.map(renderTaskItem)}
-                    </ul>
-                  </div>
-                )}
+              <div className="space-y-4">
+                {recurringTasks.length > 0 &&
+                  renderSection('recurring', 'Ricorrenti', recurringTasks)}
 
-                {/* In Progress */}
-                <div>
-                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
-                    <ArrowRight className="w-4 h-4" />
-                    In Corso ({inProgressTasks.length})
-                  </h4>
-                  {inProgressTasks.length > 0 ? (
-                    <ul className="space-y-1">
-                      {inProgressTasks.map(renderTaskItem)}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-gray-400">Nessun task in corso</p>
-                  )}
-                </div>
+                {renderSection('in_progress', 'In Corso', inProgressTasks, true)}
 
-                {/* Todo */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3 flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Da Fare ({todoTasks.length})
-                  </h4>
-                  {todoTasks.length > 0 ? (
-                    <ul className="space-y-1">
-                      {todoTasks.map(renderTaskItem)}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-gray-400">Nessun task da fare</p>
-                  )}
-                </div>
+                {renderSection('todo', 'Da Fare', todoTasks, true)}
 
-                {/* Review */}
-                {reviewTasks.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
-                      <Search className="w-4 h-4" />
-                      In Revisione ({reviewTasks.length})
-                    </h4>
-                    <ul className="space-y-1">
-                      {reviewTasks.map(renderTaskItem)}
-                    </ul>
-                  </div>
-                )}
+                {reviewTasks.length > 0 &&
+                  renderSection('review', 'In Revisione', reviewTasks)}
 
-                {/* Blocked */}
-                {blockedTasks.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4" />
-                      Bloccati ({blockedTasks.length})
-                    </h4>
-                    <ul className="space-y-1">
-                      {blockedTasks.map(renderTaskItem)}
-                    </ul>
-                  </div>
-                )}
+                {blockedTasks.length > 0 &&
+                  renderSection('blocked', 'Bloccati', blockedTasks)}
 
-                {/* Completed */}
-                <div>
-                  <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    Completati ({completedTasks.length})
-                  </h4>
-                  {completedTasks.length > 0 ? (
-                    <ul className="space-y-1">
-                      {completedTasks.map(renderTaskItem)}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-gray-400">Nessun task completato</p>
-                  )}
-                </div>
+                {renderSection('done', 'Completati', completedTasks)}
               </div>
             </div>
           )
         })()
       )}
+
+      {/* ---- Floating Bulk Action Bar ---- */}
+      {selectedTaskIds.size > 0 && (
+        <TaskBulkActionBar
+          selectedIds={Array.from(selectedTaskIds)}
+          onClearSelection={() => setSelectedTaskIds(new Set())}
+          onBulkStatusChange={handleBulkStatusChange}
+          onBulkPriorityChange={handleBulkPriorityChange}
+          onBulkDelete={() => setShowBulkDeleteConfirm(true)}
+          isAdmin={user?.role === 'admin' || user?.role === 'direzione'}
+        />
+      )}
+
+      {/* ---- Blocked Reason Modal ---- */}
+      <BlockedReasonModal
+        isOpen={showBlockedModal}
+        taskTitle={pendingBlockedTaskTitle}
+        isSubmitting={isChangingStatus}
+        onCancel={handleBlockedCancel}
+        onConfirm={handleBlockedConfirm}
+      />
+
+      {/* ---- Bulk Delete Confirmation Modal ---- */}
+      <DeleteConfirmModal
+        isOpen={showBulkDeleteConfirm}
+        title={`Eliminare ${selectedTaskIds.size} task?`}
+        message={`Stai per eliminare ${selectedTaskIds.size} task selezionat${selectedTaskIds.size === 1 ? 'o' : 'i'}. Questa azione non può essere annullata.`}
+        isDeleting={isBulkDeleting}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+      />
     </div>
   )
 }
