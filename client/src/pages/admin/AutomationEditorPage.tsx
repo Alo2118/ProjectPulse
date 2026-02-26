@@ -1835,7 +1835,7 @@ export default function AutomationEditorPage() {
         </button>
         <div className="flex items-center gap-2">
           <Zap className="w-6 h-6 text-cyan-500" />
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="page-title">
             {isEditMode ? 'Modifica Regola' : 'Nuova Regola'}
           </h1>
         </div>

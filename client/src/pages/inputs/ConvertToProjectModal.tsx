@@ -113,17 +113,17 @@ export default function ConvertToProjectModal({
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
 
-        <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+        <div className="relative w-full max-w-lg modal-panel">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
               Converti in Progetto
             </h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5 text-slate-500" />
             </button>
           </div>
 
@@ -131,7 +131,7 @@ export default function ConvertToProjectModal({
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Nome Progetto *
               </label>
               <input
@@ -146,7 +146,7 @@ export default function ConvertToProjectModal({
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Descrizione
               </label>
               <textarea
@@ -160,7 +160,7 @@ export default function ConvertToProjectModal({
 
             {/* Owner */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Responsabile *
               </label>
               <select
@@ -180,7 +180,7 @@ export default function ConvertToProjectModal({
 
             {/* Priority */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Priorità
               </label>
               <select
@@ -197,7 +197,7 @@ export default function ConvertToProjectModal({
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
               <button type="button" onClick={onClose} className="btn-secondary">
                 Annulla
               </button>

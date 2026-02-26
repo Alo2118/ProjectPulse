@@ -165,8 +165,8 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Analytics</h1>
-        <p className="mt-1 text-slate-600 dark:text-slate-400">
+        <h1 className="page-title">Analytics</h1>
+        <p className="mt-1 page-subtitle">
           Panoramica delle metriche di progetto
         </p>
       </div>
@@ -210,7 +210,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Tasks by Status - Horizontal Bar Chart */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <h2 className="section-heading text-base mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-slate-400" />
             Task per Stato
           </h2>
@@ -249,7 +249,7 @@ export default function AnalyticsPage() {
 
         {/* Hours by Project - Pie Chart */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <h2 className="section-heading text-base mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-slate-400" />
             Ore per Progetto
           </h2>
@@ -292,7 +292,7 @@ export default function AnalyticsPage() {
 
         {/* Task Completion Trend - Line Chart */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <h2 className="section-heading text-base mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-slate-400" />
             Trend Ultimi 14 Giorni
           </h2>
@@ -341,7 +341,7 @@ export default function AnalyticsPage() {
 
         {/* Top Contributors */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <h2 className="section-heading text-base mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-slate-400" />
             Top Contributori
           </h2>

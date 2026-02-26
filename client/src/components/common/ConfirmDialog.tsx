@@ -79,7 +79,7 @@ export function ConfirmDialog({
           <div className="flex-1 min-w-0">
             <h3
               id="confirm-dialog-title"
-              className="text-lg font-semibold text-gray-900 dark:text-white"
+              className="text-lg font-semibold text-slate-900 dark:text-white"
             >
               {title}
             </h3>
@@ -89,7 +89,7 @@ export function ConfirmDialog({
         {/* Message */}
         <p
           id="confirm-dialog-message"
-          className="text-sm text-gray-600 dark:text-gray-400 mb-6 pl-14"
+          className="text-sm text-slate-600 dark:text-slate-400 mb-6 pl-14"
         >
           {message}
         </p>
@@ -108,7 +108,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`px-4 py-2 rounded-lg font-medium flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 active:scale-[0.98] ${config.confirmClass}`}
+            className={`px-4 py-2 rounded-lg font-medium flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 transition-all duration-200 active:scale-[0.98] ${config.confirmClass}`}
           >
             {isLoading && (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />

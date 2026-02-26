@@ -1080,7 +1080,7 @@ export default function WeeklyReportPage() {
             >
               ← Torna alla lista
             </button>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+            <h1 className="page-title">
               {selectedReport.code}
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
@@ -1119,7 +1119,7 @@ export default function WeeklyReportPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Report Settimanale</h1>
+          <h1 className="page-title">Report Settimanale</h1>
           {currentWeekInfo && (
             <p className="mt-1 text-slate-600 dark:text-slate-400">
               Settimana {currentWeekInfo.weekNumber}/{currentWeekInfo.year} ({formatDate(currentWeekInfo.weekStartDate)} - {formatDate(currentWeekInfo.weekEndDate)})

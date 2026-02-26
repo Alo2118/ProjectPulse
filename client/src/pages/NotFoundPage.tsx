@@ -6,7 +6,7 @@ export default function NotFoundPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
       <div className="text-center">
         <h1 className="text-9xl font-bold text-slate-200 dark:text-slate-700">404</h1>
-        <h2 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">
+        <h2 className="mt-4 page-title">
           Pagina non trovata
         </h2>
         <p className="mt-2 text-slate-600 dark:text-slate-400">

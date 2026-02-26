@@ -275,12 +275,12 @@ export default function GanttDependencyLines({
               strokeWidth={1.5}
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="stroke-cyan-500/50 dark:stroke-cyan-500/50 not-dark:stroke-slate-400"
+              className="stroke-slate-400 dark:stroke-cyan-500/50"
               strokeDasharray={seg.isDashed ? '5 3' : undefined}
             />
             <polygon
               points={arrowPoints}
-              className="fill-cyan-500/60 dark:fill-cyan-500/60 not-dark:fill-slate-400"
+              className="fill-slate-400 dark:fill-cyan-500/60"
             />
           </g>
         )

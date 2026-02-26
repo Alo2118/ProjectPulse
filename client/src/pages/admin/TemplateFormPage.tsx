@@ -162,7 +162,7 @@ export default function TemplateFormPage() {
         </button>
         <div className="flex items-center">
           <LayoutTemplate className="w-6 h-6 text-cyan-500 mr-3" />
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="page-title">
             {isEditMode ? 'Modifica Template' : 'Nuovo Template'}
           </h1>
         </div>

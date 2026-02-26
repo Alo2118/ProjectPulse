@@ -13,59 +13,58 @@ interface CalendarTaskChipProps {
   onClick: () => void
 }
 
-// Dark-mode classes are declared first, light-mode overrides via not-dark:
-// border-l accent | bg dark | bg light | text dark | text light
-const STATUS_STYLES: Record<string, { border: string; bg: string; lightBg: string; text: string; lightText: string }> = {
+// border-l accent | bg (light) | darkBg | text (light) | darkText
+const STATUS_STYLES: Record<string, { border: string; bg: string; darkBg: string; text: string; darkText: string }> = {
   todo: {
     border: 'border-l-slate-500',
-    bg: 'dark:bg-slate-700/50',
-    lightBg: 'not-dark:bg-slate-100',
-    text: 'dark:text-slate-300',
-    lightText: 'not-dark:text-slate-700',
+    bg: 'bg-slate-100',
+    darkBg: 'dark:bg-slate-700/50',
+    text: 'text-slate-700',
+    darkText: 'dark:text-slate-300',
   },
   in_progress: {
     border: 'border-l-cyan-500',
-    bg: 'dark:bg-cyan-500/15',
-    lightBg: 'not-dark:bg-cyan-50',
-    text: 'dark:text-cyan-300',
-    lightText: 'not-dark:text-cyan-800',
+    bg: 'bg-cyan-50',
+    darkBg: 'dark:bg-cyan-500/15',
+    text: 'text-cyan-800',
+    darkText: 'dark:text-cyan-300',
   },
   review: {
     border: 'border-l-amber-500',
-    bg: 'dark:bg-amber-500/15',
-    lightBg: 'not-dark:bg-amber-50',
-    text: 'dark:text-amber-300',
-    lightText: 'not-dark:text-amber-800',
+    bg: 'bg-amber-50',
+    darkBg: 'dark:bg-amber-500/15',
+    text: 'text-amber-800',
+    darkText: 'dark:text-amber-300',
   },
   blocked: {
     border: 'border-l-red-500',
-    bg: 'dark:bg-red-500/15',
-    lightBg: 'not-dark:bg-red-50',
-    text: 'dark:text-red-300',
-    lightText: 'not-dark:text-red-800',
+    bg: 'bg-red-50',
+    darkBg: 'dark:bg-red-500/15',
+    text: 'text-red-800',
+    darkText: 'dark:text-red-300',
   },
   done: {
     border: 'border-l-emerald-500',
-    bg: 'dark:bg-emerald-500/15',
-    lightBg: 'not-dark:bg-emerald-50',
-    text: 'dark:text-emerald-300',
-    lightText: 'not-dark:text-emerald-800',
+    bg: 'bg-emerald-50',
+    darkBg: 'dark:bg-emerald-500/15',
+    text: 'text-emerald-800',
+    darkText: 'dark:text-emerald-300',
   },
   cancelled: {
     border: 'border-l-slate-400',
-    bg: 'dark:bg-slate-700/30',
-    lightBg: 'not-dark:bg-slate-100',
-    text: 'dark:text-slate-400',
-    lightText: 'not-dark:text-slate-500',
+    bg: 'bg-slate-100',
+    darkBg: 'dark:bg-slate-700/30',
+    text: 'text-slate-500',
+    darkText: 'dark:text-slate-400',
   },
 }
 
 const OVERDUE_STYLE = {
   border: 'border-l-red-600',
-  bg: 'dark:bg-red-500/20',
-  lightBg: 'not-dark:bg-red-50',
-  text: 'dark:text-red-300',
-  lightText: 'not-dark:text-red-700',
+  bg: 'bg-red-50',
+  darkBg: 'dark:bg-red-500/20',
+  text: 'text-red-700',
+  darkText: 'dark:text-red-300',
 }
 
 const CalendarTaskChip = React.memo(function CalendarTaskChip({
@@ -82,9 +81,9 @@ const CalendarTaskChip = React.memo(function CalendarTaskChip({
       className={`
         w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs truncate cursor-pointer
         border-l-2 text-left
-        ${style.border} ${style.bg} ${style.lightBg} ${style.text} ${style.lightText}
+        ${style.border} ${style.bg} ${style.darkBg} ${style.text} ${style.darkText}
         ${taskIsOverdue ? 'ring-1 ring-red-500/40 dark:ring-red-500/40' : ''}
-        hover:brightness-110 dark:hover:brightness-110 not-dark:hover:brightness-95
+        hover:brightness-95 dark:hover:brightness-110
         transition-all duration-100
         focus:outline-none focus:ring-1 focus:ring-cyan-500/40
       `}

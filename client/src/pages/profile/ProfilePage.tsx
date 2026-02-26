@@ -87,7 +87,7 @@ export default function ProfilePage() {
           </span>
         </div>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="page-title">
             Il mio profilo
           </h1>
           <div className="flex items-center gap-2 mt-0.5">

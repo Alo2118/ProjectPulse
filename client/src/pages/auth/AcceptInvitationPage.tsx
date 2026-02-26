@@ -248,7 +248,7 @@ export default function AcceptInvitationPage() {
         <StepIndicator step={step} />
 
         {/* Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8">
+        <div className="card p-8">
           {/* ----------------------------------------------------------------
               LOADING
           ---------------------------------------------------------------- */}

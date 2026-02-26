@@ -361,7 +361,7 @@ function LogsModal({ ruleId, ruleName, onClose }: LogsModalProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="section-heading text-base flex items-center gap-2">
                 <ScrollText className="w-5 h-5 text-cyan-500" />
                 Log Esecuzioni
               </h2>
@@ -621,7 +621,7 @@ export default function AutomationListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="page-title flex items-center gap-2">
             <Zap className="w-6 h-6 text-cyan-500" />
             Automazioni
           </h1>
@@ -705,7 +705,7 @@ export default function AutomationListPage() {
       {recommendations.length > 0 && isAdmin && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="section-heading text-base flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-amber-500" />
               Suggerimenti ({recommendations.length})
             </h2>

@@ -118,7 +118,7 @@ export default function RiskListPage() {
           <div className="skeleton h-10 w-40" />
         </div>
         <div className="card overflow-hidden">
-          <div className="divide-y divide-gray-100 dark:divide-white/5">
+          <div className="divide-y divide-slate-100 dark:divide-white/5">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex items-center px-4 py-3 gap-4">
                 <div className="skeleton w-2 h-2 rounded-full" />
@@ -159,7 +159,7 @@ export default function RiskListPage() {
         <div className="flex flex-wrap gap-3">
           <div className="flex-1 min-w-52">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Cerca rischi..."
@@ -216,7 +216,7 @@ export default function RiskListPage() {
           <button
             type="button"
             onClick={() => setShowMatrix(!showMatrix)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-cyan-500/5 transition-colors rounded-lg"
+            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-cyan-500/5 transition-colors rounded-lg"
           >
             <div className="flex items-center gap-2">
               <Grid3X3 className="w-4 h-4 text-cyan-500" />
@@ -241,8 +241,8 @@ export default function RiskListPage() {
       {/* Risks Table */}
       {risks.length === 0 ? (
         <div className="card p-8 text-center">
-          <ShieldAlert className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+          <ShieldAlert className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
             {searchTerm || statusFilter || categoryFilter || projectFilter
               ? 'Nessun rischio trovato'
               : 'Nessun rischio'}
@@ -273,7 +273,7 @@ export default function RiskListPage() {
             </div>
 
             {/* Table rows */}
-            <div className="divide-y divide-gray-100 dark:divide-white/5">
+            <div className="divide-y divide-slate-100 dark:divide-white/5">
               {risks.map((risk, idx) => {
                 const riskLevel = calculateRiskLevel(risk.probability, risk.impact)
                 return (
@@ -317,7 +317,7 @@ export default function RiskListPage() {
 
                     {/* Title + project */}
                     <div className="min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                      <span className="text-sm font-medium text-slate-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
                         {risk.title}
                       </span>
                       {risk.project && (
@@ -366,7 +366,7 @@ export default function RiskListPage() {
             </div>
 
             {/* Footer count */}
-            <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5 text-xs text-slate-400">
+            <div className="px-4 py-2 border-t border-slate-100 dark:border-white/5 text-xs text-slate-400">
               {pagination.total} {pagination.total === 1 ? 'rischio' : 'rischi'}
             </div>
           </div>

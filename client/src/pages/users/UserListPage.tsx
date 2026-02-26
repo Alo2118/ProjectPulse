@@ -126,8 +126,8 @@ export default function UserListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Utenti</h1>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">
+          <h1 className="page-title">Utenti</h1>
+          <p className="mt-1 page-subtitle">
             Gestisci gli utenti della piattaforma
           </p>
         </div>
@@ -275,7 +275,7 @@ export default function UserListPage() {
       {/* Hard Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+          <div className="modal-panel max-w-md w-full mx-4 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
                 <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />

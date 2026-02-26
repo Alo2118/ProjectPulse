@@ -41,7 +41,7 @@ function categoryIconClass(category: string): string {
     case 'feature_request': return 'bg-purple-500/10 text-purple-500'
     case 'improvement': return 'bg-blue-500/10 text-blue-500'
     case 'question': return 'bg-amber-500/10 text-amber-500'
-    default: return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+    default: return 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
   }
 }
 
@@ -147,7 +147,7 @@ export default function UserInputListPage() {
         <div className="flex flex-wrap gap-3">
           <div className="flex-1 min-w-52">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Cerca segnalazioni..."
@@ -212,8 +212,8 @@ export default function UserInputListPage() {
       {/* Inputs Table */}
       {inputs.length === 0 ? (
         <div className="card p-8 text-center">
-          <MessageSquarePlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+          <MessageSquarePlus className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
             {searchTerm || statusFilter || categoryFilter || priorityFilter
               ? 'Nessuna segnalazione trovata'
               : 'Nessuna segnalazione'}
@@ -267,7 +267,7 @@ export default function UserInputListPage() {
 
                   {/* Title + code + author */}
                   <div className="min-w-0">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                    <span className="text-sm font-medium text-slate-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
                       {input.title}
                     </span>
                     <div className="flex items-center gap-2">
@@ -306,7 +306,7 @@ export default function UserInputListPage() {
             </div>
 
             {/* Footer count */}
-            <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5 text-xs text-slate-400">
+            <div className="px-4 py-2 border-t border-slate-100 dark:border-white/5 text-xs text-slate-400">
               {pagination.total} {pagination.total === 1 ? 'segnalazione' : 'segnalazioni'}
             </div>
           </div>

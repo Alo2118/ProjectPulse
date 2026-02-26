@@ -133,7 +133,7 @@ export function NoteSection({
       {/* Notes List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : notes.length === 0 ? (
         <div className="text-center py-8 text-slate-500 dark:text-slate-500">

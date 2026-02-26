@@ -497,7 +497,7 @@ export default function AuditTrailPage() {
             <Shield className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+            <h1 className="page-title">
               Registro Audit
             </h1>
             {pagination.total > 0 && (

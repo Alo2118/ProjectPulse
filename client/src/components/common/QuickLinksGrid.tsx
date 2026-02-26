@@ -40,15 +40,15 @@ export function QuickLinksGrid({ links, columns = 3, className = '' }: QuickLink
           <Link
             key={index}
             to={link.to}
-            className="card p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            className="card p-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
           >
             <div className={`p-2 rounded-lg ${link.iconBgClass}`}>
               <Icon className={`w-5 h-5 ${link.iconColorClass}`} />
             </div>
             <div className="min-w-0">
-              <p className="font-medium text-gray-900 dark:text-white truncate">{link.title}</p>
+              <p className="font-medium text-slate-900 dark:text-white truncate">{link.title}</p>
               {link.subtitle && (
-                <p className="text-xs text-gray-500 truncate">{link.subtitle}</p>
+                <p className="text-xs text-slate-500 truncate">{link.subtitle}</p>
               )}
             </div>
           </Link>

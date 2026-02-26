@@ -171,7 +171,7 @@ export default function ProjectListPage() {
         <div className="flex flex-wrap gap-3">
           <div className="flex-1 min-w-52">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Cerca progetti..."
@@ -287,7 +287,7 @@ export default function ProjectListPage() {
                       />
                     )}
                     <div className="min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                      <span className="text-sm font-medium text-slate-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
                         {project.name}
                       </span>
                       {project.owner && (
@@ -354,7 +354,7 @@ export default function ProjectListPage() {
           </div>
 
           {/* Footer count */}
-          <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5 text-xs text-slate-400">
+          <div className="px-4 py-2 border-t border-slate-100 dark:border-white/5 text-xs text-slate-400">
             {filteredProjects.length} {filteredProjects.length === 1 ? 'progetto' : 'progetti'}
           </div>
         </div>

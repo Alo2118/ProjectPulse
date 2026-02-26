@@ -71,7 +71,7 @@ function getFileIcon(mimeType: string) {
   if (mimeType.includes('word') || mimeType.includes('document')) {
     return <FileText className="w-5 h-5 text-blue-500" />
   }
-  return <File className="w-5 h-5 text-gray-500" />
+  return <File className="w-5 h-5 text-slate-500" />
 }
 
 export function AttachmentSection({
@@ -277,7 +277,7 @@ export function AttachmentSection({
       {/* Attachments List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : attachments.length === 0 ? (
         <div className="text-center py-8 text-slate-500 dark:text-slate-500">

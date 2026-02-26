@@ -64,7 +64,7 @@ export default function GanttZoomControls({
       </div>
 
       {/* Date range label */}
-      <span className="text-xs text-slate-400 dark:text-slate-400 not-dark:text-slate-500 tabular-nums">
+      <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
         {format(viewStart, 'd MMM', { locale: it })} &ndash; {format(viewEnd, 'd MMM yyyy', { locale: it })}
       </span>
 

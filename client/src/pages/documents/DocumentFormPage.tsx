@@ -172,7 +172,7 @@ export default function DocumentFormPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+        <h1 className="page-title">
           {isEditing ? 'Modifica Documento' : 'Nuovo Documento'}
         </h1>
       </div>
@@ -180,7 +180,7 @@ export default function DocumentFormPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Project Selection */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Progetto</h2>
+          <h2 className="section-heading text-base mb-4">Progetto</h2>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Seleziona progetto *
@@ -204,7 +204,7 @@ export default function DocumentFormPage() {
 
         {/* Document Details */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Dettagli Documento</h2>
+          <h2 className="section-heading text-base mb-4">Dettagli Documento</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -291,7 +291,7 @@ export default function DocumentFormPage() {
         {/* File Upload (only on create) */}
         {!isEditing && (
           <div className="card p-6">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">File</h2>
+            <h2 className="section-heading text-base mb-4">File</h2>
 
             {/* Drop Zone */}
             <div

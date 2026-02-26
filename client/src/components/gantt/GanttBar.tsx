@@ -49,13 +49,13 @@ export default function GanttBar({ task, left, width, height, onClick }: GanttBa
   const tooltipContent = (
     <div className="space-y-1 text-xs">
       {isSubtask && (
-        <div className="text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wide">Subtask</div>
+        <div className="text-slate-400 dark:text-slate-500 text-[10px] uppercase tracking-wide">Subtask</div>
       )}
       <div className="font-medium">{task.title}</div>
-      <div className="text-gray-500 dark:text-gray-400">{task.code}</div>
+      <div className="text-slate-500 dark:text-slate-400">{task.code}</div>
       <div className="flex items-center gap-2">
         <span className="capitalize">{task.status.replace('_', ' ')}</span>
-        <span className="text-gray-400 dark:text-gray-500">|</span>
+        <span className="text-slate-400 dark:text-slate-500">|</span>
         <span className="capitalize">{task.priority}</span>
       </div>
       {task.startDate && (

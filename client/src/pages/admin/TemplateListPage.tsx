@@ -68,11 +68,11 @@ export default function TemplateListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="page-title flex items-center gap-2">
             <LayoutTemplate className="w-6 h-6 text-cyan-500" />
             Template Progetto
           </h1>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">
+          <p className="mt-1 page-subtitle">
             Gestisci i template riutilizzabili per la creazione di nuovi progetti
           </p>
         </div>

@@ -489,7 +489,7 @@ export default function UserInputDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={() => setIsRejectModalOpen(false)} />
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6">
+            <div className="relative w-full max-w-md modal-panel p-6">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
                 Rifiuta Segnalazione
               </h3>

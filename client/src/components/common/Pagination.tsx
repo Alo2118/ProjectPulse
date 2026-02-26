@@ -34,7 +34,7 @@ export function Pagination({
       aria-label="Paginazione"
     >
       {/* Range summary */}
-      <p className="text-sm text-gray-500 dark:text-gray-400">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         {rangeStart}&nbsp;–&nbsp;{rangeEnd} di {total}
       </p>
 
@@ -45,12 +45,12 @@ export function Pagination({
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
           aria-label="Pagina precedente"
-          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
-          <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" aria-hidden="true" />
+          <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-slate-300" aria-hidden="true" />
         </button>
 
-        <span className="text-sm text-gray-700 dark:text-gray-300 min-w-[5rem] text-center">
+        <span className="text-sm text-slate-700 dark:text-slate-300 min-w-[5rem] text-center">
           Pagina {page} di {pages}
         </span>
 
@@ -59,9 +59,9 @@ export function Pagination({
           onClick={() => onPageChange(page + 1)}
           disabled={page === pages}
           aria-label="Pagina successiva"
-          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
-          <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" aria-hidden="true" />
+          <ChevronRight className="w-5 h-5 text-slate-700 dark:text-slate-300" aria-hidden="true" />
         </button>
       </div>
     </div>

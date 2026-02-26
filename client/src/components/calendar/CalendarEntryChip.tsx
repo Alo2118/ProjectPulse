@@ -28,9 +28,9 @@ const CalendarEntryChip = React.memo(function CalendarEntryChip({
         w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs truncate cursor-pointer
         border-l-2 text-left
         border-l-cyan-500
-        dark:bg-cyan-500/15 dark:text-cyan-300
-        not-dark:bg-cyan-50 not-dark:text-cyan-800
-        hover:brightness-110 dark:hover:brightness-110 not-dark:hover:brightness-95
+        bg-cyan-50 dark:bg-cyan-500/15
+        text-cyan-800 dark:text-cyan-300
+        hover:brightness-95 dark:hover:brightness-110
         transition-all duration-100
         focus:outline-none focus:ring-1 focus:ring-cyan-500/40
       "

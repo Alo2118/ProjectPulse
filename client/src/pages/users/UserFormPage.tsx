@@ -132,7 +132,7 @@ export default function UserFormPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+        <h1 className="page-title">
           {isEditing ? 'Modifica Utente' : 'Nuovo Utente'}
         </h1>
       </div>

@@ -71,7 +71,7 @@ const WeekView = React.memo(function WeekView({
   return (
     <div className="flex flex-col h-full">
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-cyan-500/10 dark:border-cyan-500/10 not-dark:border-slate-200">
+      <div className="grid grid-cols-7 border-b border-slate-200 dark:border-cyan-500/10">
         {days.map((day) => {
           const isTodayDate = isToday(day)
           return (
@@ -79,11 +79,11 @@ const WeekView = React.memo(function WeekView({
               key={day.toISOString()}
               className={`py-3 text-center transition-colors ${
                 isTodayDate
-                  ? 'bg-cyan-500/8 dark:bg-cyan-500/8 not-dark:bg-cyan-50/60'
+                  ? 'bg-cyan-50/60 dark:bg-cyan-500/8'
                   : ''
               }`}
             >
-              <span className="text-xs font-semibold uppercase tracking-wide block text-slate-400 dark:text-slate-400 not-dark:text-slate-500">
+              <span className="text-xs font-semibold uppercase tracking-wide block text-slate-500 dark:text-slate-400">
                 {format(day, 'EEE', { locale: it })}
               </span>
               <span
@@ -91,7 +91,7 @@ const WeekView = React.memo(function WeekView({
                   inline-flex items-center justify-center w-8 h-8 mt-1 text-sm font-semibold rounded-full transition-colors
                   ${isTodayDate
                     ? 'bg-cyan-500 text-white shadow-[0_0_8px_rgba(6,182,212,0.5)]'
-                    : 'text-slate-200 dark:text-slate-200 not-dark:text-slate-700'}
+                    : 'text-slate-700 dark:text-slate-200'}
                 `}
               >
                 {format(day, 'd')}
@@ -102,7 +102,7 @@ const WeekView = React.memo(function WeekView({
       </div>
 
       {/* Day columns */}
-      <div className="grid grid-cols-7 flex-1 divide-x divide-cyan-500/10 dark:divide-cyan-500/10 not-dark:divide-slate-200">
+      <div className="grid grid-cols-7 flex-1 divide-x divide-slate-200 dark:divide-cyan-500/10">
         {days.map((day) => {
           const isTodayDate = isToday(day)
 
@@ -121,19 +121,19 @@ const WeekView = React.memo(function WeekView({
               className={`
                 p-2 flex flex-col gap-1.5 min-h-[200px] transition-colors
                 ${isTodayDate
-                  ? 'bg-cyan-500/8 dark:bg-cyan-500/8 not-dark:bg-cyan-50/40'
-                  : 'bg-slate-900/40 dark:bg-slate-900/40 not-dark:bg-white'}
+                  ? 'bg-cyan-50/40 dark:bg-cyan-500/8'
+                  : 'bg-white dark:bg-slate-900/40'}
               `}
             >
               {/* Daily total badge for entries */}
               {dataMode === 'entries' && totalMinutes > 0 && (
-                <div className="text-xs font-semibold text-cyan-400 dark:text-cyan-400 not-dark:text-cyan-600 bg-cyan-500/10 dark:bg-cyan-500/10 not-dark:bg-cyan-50 rounded px-1.5 py-0.5 text-center mb-1">
+                <div className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 rounded px-1.5 py-0.5 text-center mb-1">
                   {formatTotalDuration(totalMinutes)}
                 </div>
               )}
 
               {isEmpty ? (
-                <p className="text-xs text-slate-500 dark:text-slate-500 not-dark:text-slate-400 text-center mt-4">
+                <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-4">
                   {dataMode === 'tasks' ? 'Nessun task' : 'Nessuna registrazione'}
                 </p>
               ) : dataMode === 'tasks' ? (
