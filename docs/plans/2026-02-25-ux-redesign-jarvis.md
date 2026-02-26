@@ -346,6 +346,205 @@ body {
 
 ---
 
+## Phase 1B: HUD Component Library
+
+### Task 3B: Upgrade neon glow system and add HUD CSS classes
+
+**Files:**
+- Modify: `client/tailwind.config.js`
+- Modify: `client/src/styles/index.css`
+
+**Step 1:** In tailwind.config.js, replace single-layer glow shadows with multi-layer neon:
+
+```js
+boxShadow: {
+  'neon-cyan': '0 0 5px rgba(6,182,212,0.4), 0 0 15px rgba(6,182,212,0.25), 0 0 40px rgba(6,182,212,0.15), inset 0 0 15px rgba(6,182,212,0.05)',
+  'neon-cyan-strong': '0 0 5px rgba(6,182,212,0.5), 0 0 20px rgba(6,182,212,0.35), 0 0 60px rgba(6,182,212,0.2), inset 0 0 20px rgba(6,182,212,0.08)',
+  'neon-red': '0 0 5px rgba(239,68,68,0.4), 0 0 15px rgba(239,68,68,0.25), 0 0 40px rgba(239,68,68,0.15)',
+  'neon-amber': '0 0 5px rgba(251,191,36,0.4), 0 0 15px rgba(251,191,36,0.25), 0 0 40px rgba(251,191,36,0.15)',
+  'neon-btn': '0 0 5px rgba(6,182,212,0.3), 0 0 15px rgba(6,182,212,0.2), 0 0 30px rgba(6,182,212,0.1)',
+  'neon-input': '0 0 5px rgba(6,182,212,0.3), 0 0 15px rgba(6,182,212,0.2), inset 0 0 10px rgba(6,182,212,0.05)',
+  // Keep old names as aliases for backward compat during migration
+  'glow-cyan': '0 0 5px rgba(6,182,212,0.4), 0 0 15px rgba(6,182,212,0.25), 0 0 40px rgba(6,182,212,0.15), inset 0 0 15px rgba(6,182,212,0.05)',
+  'glow-cyan-lg': '0 0 5px rgba(6,182,212,0.5), 0 0 20px rgba(6,182,212,0.35), 0 0 60px rgba(6,182,212,0.2), inset 0 0 20px rgba(6,182,212,0.08)',
+  'glow-red': '0 0 5px rgba(239,68,68,0.4), 0 0 15px rgba(239,68,68,0.25), 0 0 40px rgba(239,68,68,0.15)',
+  'glow-amber': '0 0 5px rgba(251,191,36,0.4), 0 0 15px rgba(251,191,36,0.25), 0 0 40px rgba(251,191,36,0.15)',
+  'glow-cyan-btn': '0 0 5px rgba(6,182,212,0.3), 0 0 15px rgba(6,182,212,0.2), 0 0 30px rgba(6,182,212,0.1)',
+  'glow-cyan-input': '0 0 5px rgba(6,182,212,0.3), 0 0 15px rgba(6,182,212,0.2), inset 0 0 10px rgba(6,182,212,0.05)',
+},
+```
+
+**Step 2:** Add new keyframe `ring-spin` for HudStatusRing:
+```js
+'ring-spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
+```
+And animation: `'ring-spin': 'ring-spin 8s linear infinite'`
+
+**Step 3:** In index.css, add all HUD CSS classes from design doc §2.5 (clip-path frames, brackets, panel headers, dividers, scan overlay, targeting, neon-text):
+
+Add after the existing `.hud-corners` block:
+- `.hud-frame`, `.hud-frame-lg`, `.hud-frame-accent` (clip-path octagonal frames with inner border pseudo)
+- `.hud-brackets`, `.hud-brackets-inner` (4-corner L-brackets)
+- `.hud-panel-header` (angular header bar with extending line: ■ TITLE ─────)
+- `.hud-divider`, `.hud-divider-label` (tick-mark separators)
+- `.hud-scan` (ambient scan line overlay, 4s loop)
+- `.hud-target` (targeting crosshair overlay on hover)
+- `.neon-text` (multi-layer text-shadow)
+
+See design doc §2.5 for exact CSS.
+
+**Step 4:** Update `.btn-primary` to use `shadow-neon-btn` instead of `shadow-glow-cyan-btn`. Update `.card-hover:hover` to use `shadow-neon-cyan`. Update `.input:focus` to use `shadow-neon-input`.
+
+**Step 5:** Verify dev server compiles, no CSS errors.
+
+**Step 6:** Commit: `feat: add HUD frame system — clip-paths, neon glow, brackets, panel headers, dividers`
+
+---
+
+### Task 3C: Create HudGauge component (circular SVG gauge)
+
+**Files:**
+- Create: `client/src/components/ui/HudGauge.tsx`
+
+**Step 1:** Build SVG circular gauge component:
+
+```tsx
+interface HudGaugeProps {
+  value: number;        // 0-100
+  size?: number;        // px, default 80
+  strokeWidth?: number; // default 4
+  color?: 'cyan' | 'amber' | 'red' | 'emerald';
+  label?: string;
+  showValue?: boolean;  // show number in center, default true
+}
+```
+
+SVG structure:
+- Background circle: dashed stroke (`stroke-dasharray: 4 2`), `rgba(6,182,212,0.1)`
+- 12 tick marks: radial lines at 30° intervals around the circle
+- Value arc: solid stroke with `stroke-dashoffset` calculated from value, cyan gradient via `<linearGradient>`, `filter: drop-shadow(0 0 6px rgba(6,182,212,0.4))`
+- Center text: value in `font-mono font-bold` with neon-text shadow
+- Label below: `text-xs uppercase tracking-widest`
+- Animation: arc reveals via CSS transition on `stroke-dashoffset` (0.8s ease-out)
+
+Color map: cyan=`#06b6d4`, amber=`#fbbf24`, red=`#f87171`, emerald=`#34d399`
+
+**Step 2:** Verify renders correctly with various values (0, 50, 78, 100).
+
+**Step 3:** Commit: `feat: add HudGauge circular SVG component`
+
+---
+
+### Task 3D: Create HudProgressBar component (segmented bar)
+
+**Files:**
+- Create: `client/src/components/ui/HudProgressBar.tsx`
+
+**Step 1:** Build segmented progress bar:
+
+```tsx
+interface HudProgressBarProps {
+  value: number;        // 0-100
+  segments?: number;    // default 10
+  color?: 'cyan' | 'amber' | 'red' | 'emerald';
+  showLabel?: boolean;  // show % text, default false
+  size?: 'sm' | 'md';  // sm=h-1.5, md=h-3
+  animate?: boolean;    // stagger reveal on mount, default true
+}
+```
+
+Renders N `<div>` segments in a flex row with `gap-[2px]`:
+- Active segments: `bg-{color}-400` + individual `box-shadow: 0 0 6px rgba(color, 0.4)` glow
+- Inactive segments: `bg-slate-700/30`
+- Each segment: `rounded-sm flex-1 transition-all duration-200`
+- Animation: if `animate`, each active segment fades in with stagger delay (50ms each) using inline `animationDelay`
+- Label: optional `font-mono text-xs text-{color}-400` to the right
+
+**Step 2:** Verify with values 0, 30, 65, 100.
+
+**Step 3:** Commit: `feat: add HudProgressBar segmented component`
+
+---
+
+### Task 3E: Create HudStatusRing component (pulsing SVG ring)
+
+**Files:**
+- Create: `client/src/components/ui/HudStatusRing.tsx`
+
+**Step 1:** Build SVG status ring:
+
+```tsx
+interface HudStatusRingProps {
+  status: 'active' | 'warning' | 'danger' | 'idle';
+  size?: number;  // default 14
+  pulse?: boolean; // default true for active/danger
+}
+```
+
+SVG structure:
+- Center dot: `r=2`, filled with status color
+- Outer ring: `r=5`, `stroke-dasharray="8 4"`, rotates via `animate-ring-spin` (8s)
+- Pulse effect: ring opacity oscillates via `animate-glow-pulse` (2s)
+- Glow filter: `drop-shadow` matching status color
+- Status colors: active=cyan, warning=amber, danger=red, idle=slate
+
+**Step 2:** Verify all 4 status states render correctly.
+
+**Step 3:** Commit: `feat: add HudStatusRing pulsing SVG component`
+
+---
+
+### Task 3F: Create HudPanelHeader and HudDivider wrapper components
+
+**Files:**
+- Create: `client/src/components/ui/HudPanelHeader.tsx`
+- Create: `client/src/components/ui/HudDivider.tsx`
+
+**Step 1:** HudPanelHeader — thin React wrapper for the `.hud-panel-header` CSS class:
+
+```tsx
+interface HudPanelHeaderProps {
+  title: string;
+  action?: React.ReactNode; // optional right-side action (button, link)
+}
+// Renders: <div className="hud-panel-header"><span>{title}</span>{action}</div>
+```
+
+**Step 2:** HudDivider — wrapper for `.hud-divider` / `.hud-divider-label`:
+
+```tsx
+interface HudDividerProps {
+  label?: string;
+}
+// If label: renders div.hud-divider-label with label text
+// If no label: renders div.hud-divider
+```
+
+**Step 3:** Commit: `feat: add HudPanelHeader and HudDivider wrapper components`
+
+---
+
+### Task 3G: Create barrel export for HUD components
+
+**Files:**
+- Create: `client/src/components/ui/hud/index.ts`
+
+**Step 1:** Re-export all HUD components from a single entry point:
+
+```tsx
+export { HudGauge } from '../HudGauge';
+export { HudProgressBar } from '../HudProgressBar';
+export { HudStatusRing } from '../HudStatusRing';
+export { HudPanelHeader } from '../HudPanelHeader';
+export { HudDivider } from '../HudDivider';
+```
+
+(Or move the HUD components into `client/src/components/ui/hud/` subfolder if preferred.)
+
+**Step 2:** Commit: `feat: add HUD components barrel export`
+
+---
+
 ## Phase 2: Layout Shell (Sidebar, Header, DashboardLayout)
 
 ### Task 4: Rewrite Sidebar — compact with collapsible groups
@@ -1116,24 +1315,34 @@ const panelVariants = {
 ## Dependency Graph
 
 ```
-Phase 1 (Tasks 1-3): Foundation
-  └─→ Phase 2 (Tasks 4-7): Layout Shell
-       └─→ Phase 3 (Tasks 8-11): Dashboard
-       └─→ Phase 4 (Tasks 12-15): List Pages
-       └─→ Phase 5 (Tasks 16-18): Detail Pages
-       └─→ Phase 6 (Tasks 19-21): Forms & Modals
-            └─→ Phase 7 (Tasks 22-28): Component Updates
-                 └─→ Phase 8 (Tasks 29-30): Cleanup
+Phase 1 (Tasks 1-3): Design System Foundation
+  └─→ Phase 1B (Tasks 3B-3G): HUD Component Library
+       └─→ Phase 2 (Tasks 4-7): Layout Shell
+            └─→ Phase 3 (Tasks 8-11): Dashboard (uses HUD components)
+            └─→ Phase 4 (Tasks 12-15): List Pages
+            └─→ Phase 5 (Tasks 16-18): Detail Pages (uses HUD components)
+            └─→ Phase 6 (Tasks 19-21): Forms & Modals
+                 └─→ Phase 7 (Tasks 22-28): Component Updates
+                      └─→ Phase 8 (Tasks 29-30): Cleanup
 ```
 
-Phase 1 must complete first. Phases 2-6 depend on Phase 1 but are largely independent of each other (can be parallelized). Phase 7 depends on all earlier phases. Phase 8 is final.
+Phase 1 → Phase 1B must complete first (HUD components needed by dashboard and detail pages).
+Phases 2-6 depend on Phase 1+1B but are largely independent of each other.
+Phase 7 depends on all earlier phases. Phase 8 is final.
+
+**HUD intensity per object type** (see design doc §13):
+- Tasks 8-9 (Dashboard KPI): Level 1 — `hud-frame-lg` + `HudGauge` + `neon-cyan-strong` + `hud-scan` + `hud-brackets`
+- Tasks 14 (Project list): Level 2 — `HudProgressBar` segmented + `hud-panel-header`
+- Tasks 16-17 (Detail pages): Level 2/3 — `hud-frame` on sidebar cards + `HudProgressBar` + `HudStatusRing` + `hud-panel-header` + `hud-divider`
+- Tasks 22 (Task list items): Level 4 — standard `rounded-lg` + glow on hover only
 
 ---
 
 ## Estimated scope
 
-- **30 tasks** across 8 phases
-- **~20 files** with major changes
+- **36 tasks** across 9 phases (8 original + 1B HUD library)
+- **~25 files** with major changes
+- **5 new HUD components** (HudGauge, HudProgressBar, HudStatusRing, HudPanelHeader, HudDivider)
 - **~30 files** with styling updates
 - **0 backend changes** required
 - **0 database changes** required

@@ -82,41 +82,355 @@
 
 Griglia tech quasi invisibile sullo sfondo pagina.
 
-### 2.4 Glow effects
+### 2.4 Neon Glow Effects (multi-layer, stile reference)
+
+Glow potenziato a 3 strati per effetto neon realistico (ispirato alle reference HUD):
 
 ```css
-.glow-cyan    { box-shadow: 0 0 30px rgba(6,182,212,0.15); }
-.glow-cyan-lg { box-shadow: 0 0 40px rgba(6,182,212,0.2); }
-.glow-red     { box-shadow: 0 0 20px rgba(239,68,68,0.3); }
-.glow-text    { text-shadow: 0 0 20px rgba(6,182,212,0.4); }
-.glow-btn     { box-shadow: 0 0 20px rgba(6,182,212,0.25); }
-.glow-input   { box-shadow: 0 0 15px rgba(6,182,212,0.2); }
+/* Neon multi-layer — molto più visibile del glow singolo */
+.neon-cyan {
+  box-shadow:
+    0 0 5px rgba(6,182,212,0.4),
+    0 0 15px rgba(6,182,212,0.25),
+    0 0 40px rgba(6,182,212,0.15),
+    inset 0 0 15px rgba(6,182,212,0.05);
+}
+.neon-cyan-strong {
+  box-shadow:
+    0 0 5px rgba(6,182,212,0.5),
+    0 0 20px rgba(6,182,212,0.35),
+    0 0 60px rgba(6,182,212,0.2),
+    inset 0 0 20px rgba(6,182,212,0.08);
+}
+.neon-red {
+  box-shadow:
+    0 0 5px rgba(239,68,68,0.4),
+    0 0 15px rgba(239,68,68,0.25),
+    0 0 40px rgba(239,68,68,0.15);
+}
+.neon-amber {
+  box-shadow:
+    0 0 5px rgba(251,191,36,0.4),
+    0 0 15px rgba(251,191,36,0.25),
+    0 0 40px rgba(251,191,36,0.15);
+}
+.neon-text {
+  text-shadow:
+    0 0 7px rgba(6,182,212,0.5),
+    0 0 20px rgba(6,182,212,0.3),
+    0 0 40px rgba(6,182,212,0.15);
+}
+.neon-btn {
+  box-shadow:
+    0 0 5px rgba(6,182,212,0.3),
+    0 0 15px rgba(6,182,212,0.2),
+    0 0 30px rgba(6,182,212,0.1);
+}
+.neon-input:focus {
+  box-shadow:
+    0 0 5px rgba(6,182,212,0.3),
+    0 0 15px rgba(6,182,212,0.2),
+    inset 0 0 10px rgba(6,182,212,0.05);
+}
 ```
 
-### 2.5 HUD corner decorations (solo card KPI e alert)
+### 2.5 HUD Frame System
+
+#### 2.5.1 Clip-path frames (angoli bevelati)
+
+Card importanti usano angoli tagliati stile pannello HUD, non `rounded-xl`:
 
 ```css
-.hud-corners::before,
-.hud-corners::after {
+/* Frame ottagonale — angoli tagliati a 45° */
+.hud-frame {
+  clip-path: polygon(
+    12px 0, calc(100% - 12px) 0,
+    100% 12px, 100% calc(100% - 12px),
+    calc(100% - 12px) 100%, 12px 100%,
+    0 calc(100% - 12px), 0 12px
+  );
+  position: relative;
+}
+/* Variante grande (per KPI cards) */
+.hud-frame-lg {
+  clip-path: polygon(
+    16px 0, calc(100% - 16px) 0,
+    100% 16px, 100% calc(100% - 16px),
+    calc(100% - 16px) 100%, 16px 100%,
+    0 calc(100% - 16px), 0 16px
+  );
+}
+/* Inner border visibile (pseudo-element che replica il clip-path) */
+.hud-frame::before {
   content: '';
   position: absolute;
-  width: 12px;
-  height: 12px;
-  border-color: rgba(6,182,212,0.3);
+  inset: 1px;
+  clip-path: inherit;
+  border: 1px solid rgba(6,182,212,0.3);
+  pointer-events: none;
 }
-.hud-corners::before {
-  top: -1px; left: -1px;
-  border-top: 2px solid;
-  border-left: 2px solid;
-}
-.hud-corners::after {
-  bottom: -1px; right: -1px;
-  border-bottom: 2px solid;
-  border-right: 2px solid;
+.hud-frame-accent::before {
+  border-color: rgba(6,182,212,0.5);
 }
 ```
 
-### 2.6 Spacing
+Applicazione: KPI cards, panel principali, card progetto, alert. Le card secondarie (commenti, righe lista) restano `rounded-lg`.
+
+#### 2.5.2 Corner brackets decorativi (4 angoli con tick marks)
+
+```css
+/* L-brackets su tutti e 4 gli angoli con tacche */
+.hud-brackets {
+  position: relative;
+}
+/* Top-left bracket */
+.hud-brackets::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 20px; height: 20px;
+  border-top: 2px solid rgba(6,182,212,0.4);
+  border-left: 2px solid rgba(6,182,212,0.4);
+  pointer-events: none;
+}
+/* Bottom-right bracket */
+.hud-brackets::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 20px; height: 20px;
+  border-bottom: 2px solid rgba(6,182,212,0.4);
+  border-right: 2px solid rgba(6,182,212,0.4);
+  pointer-events: none;
+}
+/* Inner wrapper for top-right + bottom-left brackets */
+.hud-brackets > .hud-brackets-inner::before {
+  content: '';
+  position: absolute;
+  top: -1px; right: -1px;
+  width: 20px; height: 20px;
+  border-top: 2px solid rgba(6,182,212,0.4);
+  border-right: 2px solid rgba(6,182,212,0.4);
+  pointer-events: none;
+}
+.hud-brackets > .hud-brackets-inner::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: -1px;
+  width: 20px; height: 20px;
+  border-bottom: 2px solid rgba(6,182,212,0.4);
+  border-left: 2px solid rgba(6,182,212,0.4);
+  pointer-events: none;
+}
+```
+
+#### 2.5.3 Panel header angolare
+
+```css
+/* Header bar stile HUD con linee estese */
+.hud-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(6,182,212,0.15);
+  position: relative;
+}
+.hud-panel-header::before {
+  content: '■';
+  font-size: 6px;
+  color: rgba(6,182,212,0.5);
+}
+.hud-panel-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(6,182,212,0.3), transparent);
+}
+.hud-panel-header span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(6,182,212,0.6);
+  white-space: nowrap;
+}
+```
+
+Produce: `■ STATO PROGETTI ─────────────────────────`
+
+#### 2.5.4 Separatori con tick marks
+
+```css
+.hud-divider {
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(6,182,212,0.3) 0px,
+    rgba(6,182,212,0.3) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  margin: 12px 0;
+}
+/* Variante con label centrale */
+.hud-divider-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(6,182,212,0.4);
+}
+.hud-divider-label::before,
+.hud-divider-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(6,182,212,0.2) 0px,
+    rgba(6,182,212,0.2) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+```
+
+Produce: `──┤──┤──┤── SECTION ──┤──┤──┤──`
+
+#### 2.5.5 Targeting overlay su hover
+
+```css
+.hud-target {
+  position: relative;
+}
+.hud-target::before,
+.hud-target::after {
+  content: '';
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+/* Croce orizzontale */
+.hud-target::before {
+  top: 50%;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: rgba(6,182,212,0.1);
+}
+/* Croce verticale */
+.hud-target::after {
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(6,182,212,0.1);
+}
+.hud-target:hover::before,
+.hud-target:hover::after {
+  opacity: 1;
+}
+```
+
+### 2.6 HUD Components (React/SVG)
+
+#### 2.6.1 HudGauge — Indicatore circolare SVG
+
+Componente per KPI percentuali (utilizzo team, progresso progetto):
+
+```tsx
+interface HudGaugeProps {
+  value: number;        // 0-100
+  size?: number;        // px, default 80
+  strokeWidth?: number; // default 4
+  color?: 'cyan' | 'amber' | 'red' | 'emerald';
+  label?: string;
+  showValue?: boolean;
+}
+```
+
+SVG con:
+- Cerchio sfondo: `stroke: rgba(6,182,212,0.1)`, `stroke-dasharray: 4 2` (tratteggiato)
+- Arco valore: gradiente `cyan-400` → `indigo-400`, `stroke-dashoffset` animato
+- Tick marks: 12 lineette radiali attorno al cerchio (come i minuti di un orologio)
+- Glow: `filter: drop-shadow(0 0 6px rgba(6,182,212,0.4))`
+- Numero al centro: `font-mono font-bold` con `neon-text`
+
+Applicazione: KPI "Utilizzo team" nel dashboard, progresso nei dettagli progetto.
+
+#### 2.6.2 HudProgressBar — Barra segmentata
+
+```tsx
+interface HudProgressBarProps {
+  value: number;        // 0-100
+  segments?: number;    // default 10
+  color?: 'cyan' | 'amber' | 'red' | 'emerald';
+  showLabel?: boolean;
+  size?: 'sm' | 'md';  // sm=h-1.5, md=h-3
+}
+```
+
+Rende N blocchi (segmenti), quelli attivi hanno glow:
+```
+█ █ █ █ █ █ ░ ░ ░ ░  65%
+^--- glow cyan ----^  ^--- opaco ---^
+```
+
+Ogni segmento è un `<div>` con `rounded-sm`, gap `2px`. Segmenti attivi: `bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.4)]`. Segmenti inattivi: `bg-slate-700/30`.
+
+Animazione `data-reveal`: segmenti si accendono uno a uno (stagger 50ms) al primo render.
+
+#### 2.6.3 HudStatusRing — Anello pulsante SVG
+
+```tsx
+interface HudStatusRingProps {
+  status: 'active' | 'warning' | 'danger' | 'idle';
+  size?: number;  // default 12
+  pulse?: boolean;
+}
+```
+
+SVG con:
+- Dot centrale colorato (4px)
+- Anello esterno (8-12px) con `stroke-dasharray` parziale
+- Animazione: anello ruota lentamente (8s loop) + pulsa in opacità (2s loop)
+- Glow: `filter: drop-shadow` colorato per status
+
+Sostituisce i semplici `.status-dot` per gli stati importanti.
+
+#### 2.6.4 HudScanOverlay — Scan line ambientale
+
+```css
+.hud-scan {
+  position: relative;
+  overflow: hidden;
+}
+.hud-scan::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(6,182,212,0.02) 45%,
+    rgba(6,182,212,0.05) 50%,
+    rgba(6,182,212,0.02) 55%,
+    transparent 100%
+  );
+  animation: scan-line 4s ease-in-out infinite;
+  pointer-events: none;
+}
+```
+
+Effetto sottile: una riga luminosa che scorre lentamente dall'alto in basso (4s). Applicazione: card KPI, panel sidebar, timer attivo.
+
+### 2.7 Spacing
 
 - Tra sezioni pagina: `space-y-6` (più respiro del `space-y-4` attuale)
 - Tra righe lista: `space-y-1`
@@ -484,7 +798,43 @@ Sottotitolo (es. "Crea il primo task...")
 
 ---
 
-## 13. Vincoli non modificati
+## 13. Mappa HUD Elements → Oggetti di dominio
+
+Ogni tipo di oggetto nell'app ha un **set specifico di elementi HUD** assegnati, creando un linguaggio visivo dove l'utente riconosce istantaneamente il tipo di dato che sta guardando:
+
+| Oggetto | Frame | Progress | Status | Glow | Header | Extras |
+|---------|-------|----------|--------|------|--------|--------|
+| **KPI Card** | `hud-frame-lg` (clip-path) | `HudGauge` circolare | `HudStatusRing` | `neon-cyan-strong` | — | `hud-scan`, `hud-brackets`, `card-power-on` |
+| **Progetto** | `hud-frame` (clip-path) | `HudProgressBar` segmentata | Semaforo (dot + testo) | `neon-cyan` | `hud-panel-header` | `hud-brackets`, `hud-divider` tra sezioni |
+| **Task** | `rounded-lg` (standard) | Barra lineare semplice (ore) | Inline badge colorato | Glow solo su hover | — | `fade-in-stagger`, priorità come `border-left` |
+| **Milestone** | `hud-frame` (clip-path) | `HudProgressBar` segmentata | `HudStatusRing` | `neon-cyan` | `hud-panel-header` | — |
+| **Rischio** | `hud-frame` (clip-path) | — | `HudStatusRing` (warning/danger) | `neon-red` o `neon-amber` | `hud-panel-header` | `alert-border-pulse` |
+| **Timer attivo** | `rounded-xl` con `neon-red` | Barra lineare (ore oggi) | `HudStatusRing` (active, pulse) | `neon-red` multi-layer | — | `hud-scan`, `timer-tick` |
+| **Alert/Attenzione** | `rounded-lg` con border-left | — | Icona semantica | `neon-red`/`neon-amber` su hover | — | `alert-border-pulse` |
+| **Dashboard Section** | Card con `hud-brackets` | Varia (gauge/barre) | — | Glow su hover | `hud-panel-header` | `section-reveal` stagger, `hud-divider` |
+| **Tabella** | Nessun frame | — | — | — | `hud-panel-header` + colonne `uppercase tracking-widest` | `hud-divider` come separatore, `fade-in-stagger` righe |
+| **Form/Input** | Nessun frame | — | — | `neon-input` su focus | — | `tooltip-origin` su dropdown |
+| **Modale** | `hud-frame` (clip-path) | — | — | `neon-cyan` | `hud-panel-header` | `tooltip-origin`, `hud-divider` tra header/footer |
+| **Sidebar** | Nessun frame | — | — | `sidebar-glow` su active | — | `hud-divider` tra gruppi |
+| **Notifica/Toast** | `rounded-lg` | Barra countdown (undo) | Icona semantica | Flash `neon-cyan` su arrivo | — | `badge-bounce` |
+| **Documento** | `hud-frame` | — | Badge stato (bozza/approvato) | `neon-cyan` | `hud-panel-header` | — |
+| **Weekly Report** | `hud-frame-lg` | Gauge + barre per sezione | — | `neon-cyan-strong` | `hud-panel-header` | `hud-scan`, `hud-brackets` |
+
+### Gerarchia visiva per intensità HUD
+
+```
+Più HUD ←──────────────────────────────────→ Meno HUD
+KPI Card > Report > Progetto > Milestone > Rischio > Task > Form > Lista riga
+```
+
+- **Livello 1 (massimo HUD)**: KPI cards, Report, Timer — clip-path + gauge + neon-strong + scan + brackets
+- **Livello 2 (HUD medio)**: Progetti, Milestone, Modali — clip-path + barre segmentate + neon + panel-header
+- **Livello 3 (HUD leggero)**: Rischi, Documenti, Alert — clip-path + neon su hover + divider
+- **Livello 4 (minimale)**: Task righe, Form, Sidebar — rounded standard + glow su focus/hover
+
+---
+
+## 14. Vincoli non modificati
 
 - Backend: nessuna modifica richiesta (tranne eventuale endpoint per "nomi progetto" nei breadcrumb)
 - Routing: aggiungere `/tasks?view=kanban`, `/tasks?view=gantt`; rimuovere `/kanban`, `/gantt` come rotte separate (redirect)
