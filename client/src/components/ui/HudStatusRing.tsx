@@ -1,4 +1,5 @@
 import React from 'react';
+import { useThemeStore } from '@stores/themeStore';
 
 interface HudStatusRingProps {
   status: 'active' | 'warning' | 'danger' | 'idle';
@@ -13,15 +14,40 @@ const STATUS_COLORS: Record<string, { fill: string; stroke: string; glow: string
   idle: { fill: '#64748b', stroke: '#64748b', glow: 'rgba(100,116,139,0.2)' },
 };
 
+/** Tailwind bg classes for the simple dot in non-HUD themes */
+const SIMPLE_DOT_MAP: Record<string, string> = {
+  active: 'bg-sky-500 dark:bg-sky-400',
+  warning: 'bg-amber-500 dark:bg-amber-400',
+  danger: 'bg-red-500 dark:bg-red-400',
+  idle: 'bg-slate-400 dark:bg-slate-500',
+};
+
 export const HudStatusRing: React.FC<HudStatusRingProps> = ({
   status,
   size = 14,
   pulse,
 }) => {
+  const { themeStyle } = useThemeStore();
+  const isHud = themeStyle === 'tech-hud';
+
   const colors = STATUS_COLORS[status];
   const shouldPulse = pulse ?? (status === 'active' || status === 'danger');
   const filterId = `status-glow-${status}`;
 
+  /* ---------- Non-HUD: simple colored dot ---------- */
+  if (!isHud) {
+    return (
+      <span
+        className={`inline-block flex-shrink-0 w-2.5 h-2.5 rounded-full ${SIMPLE_DOT_MAP[status]}${
+          shouldPulse ? ' animate-pulse' : ''
+        }`}
+        role="img"
+        aria-label={`Status: ${status}`}
+      />
+    );
+  }
+
+  /* ---------- HUD: full SVG ring with rotation and glow ---------- */
   return (
     <svg
       width={size}

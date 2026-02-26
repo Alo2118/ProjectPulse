@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useThemeStore } from '@stores/themeStore';
 
 interface HudGaugeProps {
   value: number;
@@ -16,6 +17,14 @@ const COLOR_MAP: Record<string, { stroke: string; glow: string; text: string }> 
   emerald: { stroke: '#34d399', glow: 'rgba(52,211,153,0.4)', text: 'text-emerald-400' },
 };
 
+/** Tailwind text classes used in non-HUD mode (CSS-variable aware) */
+const SIMPLE_TEXT_MAP: Record<string, string> = {
+  cyan: 'text-sky-500 dark:text-sky-400',
+  amber: 'text-amber-500 dark:text-amber-400',
+  red: 'text-red-500 dark:text-red-400',
+  emerald: 'text-emerald-500 dark:text-emerald-400',
+};
+
 export const HudGauge: React.FC<HudGaugeProps> = ({
   value,
   size = 80,
@@ -24,6 +33,9 @@ export const HudGauge: React.FC<HudGaugeProps> = ({
   label,
   showValue = true,
 }) => {
+  const { themeStyle } = useThemeStore();
+  const isHud = themeStyle === 'tech-hud';
+
   const clampedValue = Math.max(0, Math.min(100, value));
   const colors = COLOR_MAP[color];
   const center = size / 2;
@@ -34,6 +46,7 @@ export const HudGauge: React.FC<HudGaugeProps> = ({
   const filterId = `gauge-glow-${color}`;
 
   const tickMarks = useMemo(() => {
+    if (!isHud) return null;
     const ticks: React.ReactNode[] = [];
     for (let i = 0; i < 12; i++) {
       const angle = (i * 30 * Math.PI) / 180;
@@ -52,33 +65,50 @@ export const HudGauge: React.FC<HudGaugeProps> = ({
       );
     }
     return ticks;
-  }, [center, radius]);
+  }, [center, radius, isHud]);
+
+  /** In non-HUD themes the arc uses the plain color stroke instead of a gradient with glow */
+  const arcStroke = isHud ? `url(#${gradientId})` : colors.stroke;
+  const arcFilter = isHud ? `url(#${filterId})` : undefined;
+  /** Background circle: subtle dashed in HUD, solid light ring in other themes */
+  const bgStroke = isHud ? 'rgba(6,182,212,0.1)' : 'rgba(148,163,184,0.18)';
+  const bgDasharray = isHud ? '4 2' : undefined;
+
+  const valueTextClass = isHud
+    ? `font-mono font-bold ${colors.text}`
+    : `font-semibold ${SIMPLE_TEXT_MAP[color]}`;
+
+  const labelClass = isHud
+    ? 'text-xs uppercase tracking-widest text-cyan-500/50 font-medium'
+    : 'text-xs text-slate-500 dark:text-slate-400 font-medium';
 
   return (
     <div className="flex flex-col items-center gap-1">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={colors.stroke} />
-            <stop offset="100%" stopColor="#818cf8" />
-          </linearGradient>
-          <filter id={filterId}>
-            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={colors.glow} />
-          </filter>
-        </defs>
+        {isHud && (
+          <defs>
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={colors.stroke} />
+              <stop offset="100%" stopColor="#818cf8" />
+            </linearGradient>
+            <filter id={filterId}>
+              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={colors.glow} />
+            </filter>
+          </defs>
+        )}
 
-        {/* Tick marks */}
+        {/* Tick marks (HUD only) */}
         {tickMarks}
 
-        {/* Background circle (dashed) */}
+        {/* Background circle */}
         <circle
           cx={center}
           cy={center}
           r={radius}
           fill="none"
-          stroke="rgba(6,182,212,0.1)"
+          stroke={bgStroke}
           strokeWidth={strokeWidth}
-          strokeDasharray="4 2"
+          strokeDasharray={bgDasharray}
         />
 
         {/* Value arc */}
@@ -87,13 +117,13 @@ export const HudGauge: React.FC<HudGaugeProps> = ({
           cy={center}
           r={radius}
           fill="none"
-          stroke={`url(#${gradientId})`}
+          stroke={arcStroke}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`}
-          filter={`url(#${filterId})`}
+          filter={arcFilter}
           style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
         />
 
@@ -104,7 +134,7 @@ export const HudGauge: React.FC<HudGaugeProps> = ({
             y={center}
             textAnchor="middle"
             dominantBaseline="central"
-            className={`font-mono font-bold ${colors.text}`}
+            className={valueTextClass}
             fontSize={size * 0.22}
             fill="currentColor"
           >
@@ -113,7 +143,7 @@ export const HudGauge: React.FC<HudGaugeProps> = ({
         )}
       </svg>
       {label && (
-        <span className="text-xs uppercase tracking-widest text-cyan-500/50 font-medium">
+        <span className={labelClass}>
           {label}
         </span>
       )}
