@@ -86,7 +86,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
+        <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: 'var(--bg-app)' }}>
           <div className="text-center max-w-md">
             <div className="mx-auto w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
               <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
@@ -149,7 +149,7 @@ function AuthInitializer({ children }: { children: ReactNode }) {
 
   if (!isInitialized || isValidating) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: 'var(--bg-app)' }}>
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
           <span className="text-sm text-slate-500 dark:text-slate-400">

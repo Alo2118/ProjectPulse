@@ -133,7 +133,7 @@ export default function DashboardLayout() {
   ])
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 dark:bg-grid-pattern dark:bg-vignette">
+    <div className="min-h-screen bg-grid-pattern bg-vignette" style={{ backgroundColor: 'var(--bg-app)' }}>
       <Sidebar />
       <div className="lg:pl-64 relative z-10">
         <Header />
