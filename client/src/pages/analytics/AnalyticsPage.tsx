@@ -32,6 +32,9 @@ import {
   Cell,
 } from 'recharts'
 import { BudgetOverviewSection } from '@/components/dashboard/BudgetOverviewSection'
+import DeliveryOutlookSection from '@/components/dashboard/DeliveryOutlookSection'
+import { TeamPerformanceSection } from '@/components/dashboard/TeamPerformanceSection'
+import { HudPanelHeader } from '@/components/ui/hud'
 import { formatDuration } from '@utils/dateFormatters'
 
 function StatCard({
@@ -49,8 +52,8 @@ function StatCard({
     <div className="card p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
         </div>
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
           <Icon className="w-6 h-6" />
@@ -78,6 +81,10 @@ export default function AnalyticsPage() {
     hoursByProject,
     completionTrend,
     topContributors,
+    teamWorkload,
+    deliveryForecast,
+    trendPeriodDays,
+    setTrendPeriodDays,
     budgetOverview,
     isLoading,
     fetchAll,
@@ -158,8 +165,8 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-        <p className="mt-1 text-gray-600 dark:text-gray-400">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Analytics</h1>
+        <p className="mt-1 text-slate-600 dark:text-slate-400">
           Panoramica delle metriche di progetto
         </p>
       </div>
@@ -203,8 +210,8 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Tasks by Status - Horizontal Bar Chart */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-slate-400" />
             Task per Stato
           </h2>
           {statusChartData.length > 0 ? (
@@ -236,14 +243,14 @@ export default function AnalyticsPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun dato disponibile</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Nessun dato disponibile</p>
           )}
         </div>
 
         {/* Hours by Project - Pie Chart */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-slate-400" />
             Ore per Progetto
           </h2>
           {hoursChartData.length > 0 ? (
@@ -279,14 +286,14 @@ export default function AnalyticsPage() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun dato disponibile</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Nessun dato disponibile</p>
           )}
         </div>
 
         {/* Task Completion Trend - Line Chart */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-slate-400" />
             Trend Ultimi 14 Giorni
           </h2>
           {trendData.length > 0 ? (
@@ -328,28 +335,28 @@ export default function AnalyticsPage() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun dato disponibile</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Nessun dato disponibile</p>
           )}
         </div>
 
         {/* Top Contributors */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-slate-400" />
             Top Contributori
           </h2>
           {topContributors.length > 0 ? (
             <div className="space-y-4">
               {topContributors.map((c, i) => (
                 <div key={c.userId} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-sm font-semibold text-primary-700 dark:text-primary-400">
+                  <div className="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-sm font-semibold text-cyan-700 dark:text-cyan-400">
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                       {c.firstName} {c.lastName}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {formatDuration(c.minutesLogged)} registrate &middot; {c.tasksCompleted} task completati
                     </p>
                   </div>
@@ -357,7 +364,7 @@ export default function AnalyticsPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun dato disponibile</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Nessun dato disponibile</p>
           )}
         </div>
       </div>
@@ -365,15 +372,41 @@ export default function AnalyticsPage() {
       {/* Budget Overview */}
       <BudgetOverviewSection data={budgetOverview} />
 
+      {/* Delivery Outlook — moved here from Dashboard */}
+      <div>
+        <div className="mb-3">
+          <HudPanelHeader title="PREVISIONI CONSEGNA" />
+        </div>
+        <DeliveryOutlookSection
+          forecasts={deliveryForecast}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Team Performance — moved here from Dashboard */}
+      <div>
+        <div className="mb-3">
+          <HudPanelHeader title="PERFORMANCE TEAM" />
+        </div>
+        <TeamPerformanceSection
+          topContributors={topContributors}
+          completionTrend={completionTrend}
+          teamWorkload={teamWorkload}
+          isLoading={isLoading}
+          trendPeriodDays={trendPeriodDays}
+          onTrendPeriodChange={setTrendPeriodDays}
+        />
+      </div>
+
       {/* Summary Footer */}
       {overview && (
-        <div className="card p-4 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+        <div className="card p-4 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
           <span>{overview.totalProjects} progetti totali</span>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
           <span>{overview.totalTasks} task totali</span>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
           <span>{overview.blockedTasks} bloccati</span>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
           <span>{overview.activeUsers} utenti attivi</span>
         </div>
       )}

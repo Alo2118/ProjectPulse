@@ -248,12 +248,12 @@ export function MentionTextarea({
       {/* Mention panel — above the textarea */}
       {showDropdown && (
         <div
-          className="absolute left-0 bottom-full mb-2 z-50 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden"
+          className="absolute left-0 bottom-full mb-2 z-50 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden"
           style={{ animation: 'mentionPanelIn 120ms ease-out' }}
         >
           {/* Header */}
-          <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               {mentionQuery ? `Risultati per "${mentionQuery}"` : 'Menziona qualcuno'}
             </p>
           </div>
@@ -276,8 +276,8 @@ export function MentionTextarea({
                     onMouseEnter={() => setMentionIndex(idx)}
                     className={`w-full px-4 py-2.5 flex items-center gap-3 text-sm text-left transition-colors ${
                       isActive
-                        ? 'bg-primary-50 dark:bg-primary-900/25'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        ? 'bg-cyan-50 dark:bg-cyan-900/25'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'
                     }`}
                   >
                     {/* Avatar */}
@@ -293,8 +293,8 @@ export function MentionTextarea({
                       <p
                         className={`font-semibold truncate ${
                           isActive
-                            ? 'text-primary-700 dark:text-primary-300'
-                            : 'text-gray-900 dark:text-white'
+                            ? 'text-cyan-700 dark:text-cyan-300'
+                            : 'text-slate-900 dark:text-white'
                         }`}
                       >
                         <HighlightMatch
@@ -302,23 +302,23 @@ export function MentionTextarea({
                           query={mentionQuery ?? ''}
                         />
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
                         {ROLE_LABEL[user.role] ?? user.role}
                       </p>
                     </div>
 
                     {/* Active dot */}
                     {isActive && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 flex-shrink-0" />
                     )}
                   </button>
                 )
               })}
             </div>
           ) : (
-            <div className="px-4 py-5 text-center text-sm text-gray-400 dark:text-gray-500">
+            <div className="px-4 py-5 text-center text-sm text-slate-400 dark:text-slate-500">
               Nessun utente trovato per{' '}
-              <span className="font-medium text-gray-600 dark:text-gray-300">
+              <span className="font-medium text-slate-600 dark:text-slate-300">
                 @{mentionQuery}
               </span>
             </div>
@@ -326,7 +326,7 @@ export function MentionTextarea({
 
           {/* Keyboard hint footer */}
           {hasResults && (
-            <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+            <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-750 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
               <span>
                 <kbd className="font-mono">↑↓</kbd> naviga
               </span>

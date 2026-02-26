@@ -42,7 +42,7 @@ export default function DocumentFormPage() {
     if (mimeType.includes('pdf')) return <FileText className="w-8 h-8 text-red-500" />
     if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return <FileSpreadsheet className="w-8 h-8 text-emerald-500" />
     if (mimeType.includes('word') || mimeType.includes('document')) return <FileText className="w-8 h-8 text-blue-500" />
-    return <File className="w-8 h-8 text-gray-500" />
+    return <File className="w-8 h-8 text-slate-500" />
   }
 
   const handleFileChange = useCallback((selectedFile: File | null) => {
@@ -149,7 +149,7 @@ export default function DocumentFormPage() {
   if (isLoading && isEditing) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -168,11 +168,11 @@ export default function DocumentFormPage() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
           {isEditing ? 'Modifica Documento' : 'Nuovo Documento'}
         </h1>
       </div>
@@ -180,9 +180,9 @@ export default function DocumentFormPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Project Selection */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Progetto</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Progetto</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Seleziona progetto *
             </label>
             <select
@@ -204,10 +204,10 @@ export default function DocumentFormPage() {
 
         {/* Document Details */}
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Dettagli Documento</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Dettagli Documento</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Titolo *
               </label>
               <input
@@ -221,7 +221,7 @@ export default function DocumentFormPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Descrizione
               </label>
               <textarea
@@ -234,7 +234,7 @@ export default function DocumentFormPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Tipo Documento
               </label>
               <select
@@ -253,7 +253,7 @@ export default function DocumentFormPage() {
             {/* Review fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Data prossima revisione
                 </label>
                 <input
@@ -262,13 +262,13 @@ export default function DocumentFormPage() {
                   onChange={(e) => setFormData({ ...formData, reviewDueDate: e.target.value })}
                   className="input"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Data entro cui il documento deve essere rivisto
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Frequenza revisione (giorni)
                 </label>
                 <input
@@ -280,7 +280,7 @@ export default function DocumentFormPage() {
                   className="input"
                   placeholder="es. 365"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Ogni quanti giorni il documento deve essere rivisto
                 </p>
               </div>
@@ -291,7 +291,7 @@ export default function DocumentFormPage() {
         {/* File Upload (only on create) */}
         {!isEditing && (
           <div className="card p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">File</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">File</h2>
 
             {/* Drop Zone */}
             <div
@@ -301,10 +301,10 @@ export default function DocumentFormPage() {
               onClick={() => !file && fileInputRef.current?.click()}
               className={`relative border-2 border-dashed rounded-lg transition-colors ${
                 isDragging
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
                   : file
                   ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/10'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 cursor-pointer'
+                  : 'border-slate-300 dark:border-slate-600 hover:border-cyan-400 cursor-pointer'
               }`}
             >
               <input
@@ -320,8 +320,8 @@ export default function DocumentFormPage() {
                 <div className="flex items-center gap-4 p-4">
                   <div className="flex-shrink-0">{getFileIcon(file.type)}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className="font-medium text-slate-900 dark:text-white truncate">{file.name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                       {(file.size / (1024 * 1024)).toFixed(2)} MB
                     </p>
                   </div>
@@ -332,7 +332,7 @@ export default function DocumentFormPage() {
                       setFile(null)
                       if (fileInputRef.current) fileInputRef.current.value = ''
                     }}
-                    className="btn-icon text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
+                    className="btn-icon text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
                     aria-label="Rimuovi file"
                   >
                     <X className="w-5 h-5" />
@@ -341,11 +341,11 @@ export default function DocumentFormPage() {
               ) : (
                 /* Empty state — invite to upload */
                 <div className="p-8 text-center">
-                  <Upload className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Upload className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     {isDragging ? 'Rilascia il file qui' : 'Trascina un file o clicca per sfogliare'}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
                     PDF, DOCX, XLSX, PNG, JPEG, TXT — Max 10MB
                   </p>
                 </div>

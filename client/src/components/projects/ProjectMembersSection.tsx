@@ -60,7 +60,7 @@ const ROLE_BADGE_CLASSES: Record<string, string> = {
   member:
     'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700/40',
   viewer:
-    'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-gray-700/50 dark:text-gray-400 dark:border-gray-600/40',
+    'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700/50 dark:text-slate-400 dark:border-slate-600/40',
   guest:
     'bg-orange-100 text-orange-700 border border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700/40',
 }
@@ -171,7 +171,7 @@ function RoleDropdown({ currentRole, memberId, disabled, onChangeRole }: RoleDro
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Cambia ruolo"
-        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
           <Loader2 className="w-3 h-3 animate-spin" />
@@ -187,7 +187,7 @@ function RoleDropdown({ currentRole, memberId, disabled, onChangeRole }: RoleDro
         <div
           role="listbox"
           aria-label="Scegli ruolo"
-          className="absolute right-0 mt-1 w-40 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-20 py-1 overflow-hidden"
+          className="absolute right-0 mt-1 w-40 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg z-20 py-1 overflow-hidden"
         >
           {MANAGEABLE_ROLES.map((role) => (
             <button
@@ -198,8 +198,8 @@ function RoleDropdown({ currentRole, memberId, disabled, onChangeRole }: RoleDro
               onClick={() => void handleSelect(role)}
               className={`w-full text-left px-3 py-1.5 text-sm transition-colors
                 ${role === currentRole
-                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 font-medium'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60'
+                  ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 font-medium'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60'
                 }`}
             >
               {ROLE_LABELS[role]}
@@ -312,17 +312,17 @@ function AddMemberForm({ projectId, existingUserIds, onMemberAdded, onClose }: A
   }
 
   return (
-    <div className="mt-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600/50">
+    <div className="mt-4 p-4 rounded-lg bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600/50">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-          <UserPlus className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" />
+        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+          <UserPlus className="w-4 h-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
           Aggiungi membro
         </h4>
         <button
           type="button"
           onClick={onClose}
           aria-label="Chiudi form"
-          className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-600/60 transition-colors"
+          className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-600/60 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -355,7 +355,7 @@ function AddMemberForm({ projectId, existingUserIds, onMemberAdded, onClose }: A
                 type="button"
                 onClick={handleClearUser}
                 aria-label="Rimuovi selezione"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -363,9 +363,9 @@ function AddMemberForm({ projectId, existingUserIds, onMemberAdded, onClose }: A
           </div>
 
           {showUserList && !loadingUsers && (
-            <div className="absolute top-full left-0 right-0 mt-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-30 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg z-30 max-h-48 overflow-y-auto">
               {availableUsers.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                <p className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
                   {userSearch.trim() ? 'Nessun risultato' : 'Tutti gli utenti sono gia membri'}
                 </p>
               ) : (
@@ -374,7 +374,7 @@ function AddMemberForm({ projectId, existingUserIds, onMemberAdded, onClose }: A
                     key={user.id}
                     type="button"
                     onClick={() => handleSelectUser(user)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors text-left"
                   >
                     <Avatar
                       firstName={user.firstName}
@@ -383,10 +383,10 @@ function AddMemberForm({ projectId, existingUserIds, onMemberAdded, onClose }: A
                       size="sm"
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                         {user.firstName} {user.lastName}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                         {user.email}
                       </p>
                     </div>
@@ -452,7 +452,7 @@ function MemberRow({ member, canManage, currentUserId, onChangeRole, onRemove }:
   const isSelf = member.userId === currentUserId
 
   return (
-    <tr className="group border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+    <tr className="group border-b border-slate-100 dark:border-slate-700/50 last:border-0">
       {/* Avatar + Name */}
       <td className="py-3 pr-3">
         <div className="flex items-center gap-3">
@@ -462,10 +462,10 @@ function MemberRow({ member, canManage, currentUserId, onChangeRole, onRemove }:
             avatarUrl={member.user.avatarUrl}
           />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
               {member.user.firstName} {member.user.lastName}
               {isSelf && (
-                <span className="ml-1.5 text-xs text-gray-400 dark:text-gray-500 font-normal">
+                <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500 font-normal">
                   (tu)
                 </span>
               )}
@@ -476,7 +476,7 @@ function MemberRow({ member, canManage, currentUserId, onChangeRole, onRemove }:
 
       {/* Email */}
       <td className="py-3 pr-3 hidden sm:table-cell">
-        <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
+        <p className="text-sm text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
           {member.user.email}
         </p>
       </td>
@@ -502,7 +502,7 @@ function MemberRow({ member, canManage, currentUserId, onChangeRole, onRemove }:
             <span
               aria-label="Il proprietario non puo essere rimosso"
               title="Il proprietario non puo essere rimosso"
-              className="inline-flex items-center p-1.5 rounded-md text-gray-300 dark:text-gray-600 cursor-not-allowed"
+              className="inline-flex items-center p-1.5 rounded-md text-slate-300 dark:text-slate-600 cursor-not-allowed"
             >
               <Trash2 className="w-4 h-4" />
             </span>
@@ -511,7 +511,7 @@ function MemberRow({ member, canManage, currentUserId, onChangeRole, onRemove }:
               type="button"
               onClick={() => onRemove(member)}
               aria-label={`Rimuovi ${member.user.firstName} ${member.user.lastName}`}
-              className="inline-flex items-center p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+              className="inline-flex items-center p-1.5 rounded-md text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -632,18 +632,18 @@ export function ProjectMembersSection({ projectId }: ProjectMembersSectionProps)
   return (
     <section
       aria-labelledby="members-section-heading"
-      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
+      className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/60">
         <h2
           id="members-section-heading"
-          className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+          className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2"
         >
-          <Shield className="w-4 h-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+          <Shield className="w-4 h-4 text-slate-400 dark:text-slate-500" aria-hidden="true" />
           Membri del progetto
           {!isLoading && members.length > 0 && (
-            <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
               ({members.length})
             </span>
           )}
@@ -653,7 +653,7 @@ export function ProjectMembersSection({ projectId }: ProjectMembersSectionProps)
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
             Aggiungi membro
@@ -676,8 +676,8 @@ export function ProjectMembersSection({ projectId }: ProjectMembersSectionProps)
         {/* Loading state */}
         {isLoading && (
           <div className="flex items-center justify-center py-10" aria-live="polite" aria-busy="true">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" aria-hidden="true" />
-            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+            <Loader2 className="w-5 h-5 animate-spin text-slate-400" aria-hidden="true" />
+            <span className="ml-2 text-sm text-slate-500 dark:text-slate-400">
               Caricamento membri...
             </span>
           </div>
@@ -720,22 +720,22 @@ export function ProjectMembersSection({ projectId }: ProjectMembersSectionProps)
           <div className="mt-2 overflow-x-auto -mx-5 px-5">
             <table className="w-full min-w-[400px]" aria-label="Lista membri progetto">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-700/50">
+                <tr className="border-b border-slate-100 dark:border-slate-700/50">
                   <th
                     scope="col"
-                    className="pb-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                    className="pb-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide"
                   >
                     Utente
                   </th>
                   <th
                     scope="col"
-                    className="pb-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden sm:table-cell"
+                    className="pb-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell"
                   >
                     Email
                   </th>
                   <th
                     scope="col"
-                    className="pb-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                    className="pb-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide"
                   >
                     Ruolo
                   </th>

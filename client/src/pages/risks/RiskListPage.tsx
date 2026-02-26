@@ -1,10 +1,11 @@
 /**
- * Risk List Page - Shows all risks with filters
+ * Risk List Page - Table layout with consistent styling
  * @module pages/risks/RiskListPage
  */
 
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useRiskStore } from '@stores/riskStore'
 import { useProjectStore } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
@@ -13,7 +14,6 @@ import {
   Search,
   AlertTriangle,
   ShieldAlert,
-  User,
   Grid3X3,
   ChevronDown,
 } from 'lucide-react'
@@ -27,7 +27,6 @@ import {
   RISK_CATEGORY_COLORS,
   RISK_PROBABILITY_LABELS,
   RISK_IMPACT_LABELS,
-  RISK_LEVEL_COLORS,
 } from '@/constants'
 import { RiskProbability, RiskImpact } from '@/types'
 
@@ -104,8 +103,7 @@ export default function RiskListPage() {
 
   if (isLoading && risks.length === 0) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        {/* Header skeleton */}
+      <div className="space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
             <div className="skeleton h-8 w-28" />
@@ -113,50 +111,37 @@ export default function RiskListPage() {
           </div>
           <div className="skeleton h-10 w-36" />
         </div>
-
-        {/* Filters skeleton */}
-        <div className="card p-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="skeleton h-10 flex-1 min-w-64" />
-            <div className="skeleton h-10 w-48" />
-            <div className="skeleton h-10 w-32" />
-            <div className="skeleton h-10 w-40" />
-          </div>
+        <div className="card p-4 flex flex-wrap gap-3">
+          <div className="skeleton h-10 flex-1 min-w-64" />
+          <div className="skeleton h-10 w-48" />
+          <div className="skeleton h-10 w-32" />
+          <div className="skeleton h-10 w-40" />
         </div>
-
-        {/* Risk list skeleton */}
-        <div className="card divide-y divide-gray-200 dark:divide-gray-700">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center p-4 gap-4">
-              <div className="skeleton w-10 h-10 rounded-lg" />
-              <div className="flex-1 space-y-2">
-                <div className="skeleton h-5 w-3/4" />
-                <div className="flex gap-4">
-                  <div className="skeleton h-4 w-20" />
-                  <div className="skeleton h-4 w-32" />
-                  <div className="skeleton h-4 w-24 rounded-full" />
-                </div>
+        <div className="card overflow-hidden">
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center px-4 py-3 gap-4">
+                <div className="skeleton w-2 h-2 rounded-full" />
+                <div className="skeleton h-5 flex-1" />
+                <div className="skeleton h-4 w-24 rounded-full" />
+                <div className="skeleton h-4 w-24 rounded-full" />
+                <div className="skeleton h-4 w-20 rounded-full" />
+                <div className="skeleton h-4 w-20 rounded-full" />
               </div>
-              <div className="hidden sm:flex items-center gap-4">
-                <div className="skeleton h-4 w-24" />
-                <div className="skeleton h-4 w-16" />
-                <div className="skeleton h-6 w-16 rounded-full" />
-                <div className="skeleton h-6 w-20 rounded-full" />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Rischi</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
+          <h1 className="page-title">Rischi</h1>
+          <p className="page-subtitle mt-1">
             Gestisci i rischi di progetto
           </p>
         </div>
@@ -172,81 +157,80 @@ export default function RiskListPage() {
       {/* Filters */}
       <div className="card p-4">
         <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-0 basis-full sm:basis-auto sm:min-w-64">
+          <div className="flex-1 min-w-52">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Cerca rischi..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="input pl-10 w-full"
+                aria-label="Cerca rischi"
               />
             </div>
           </div>
-          <div className="flex gap-3 flex-wrap sm:flex-nowrap">
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="input w-auto min-w-0"
-            >
-              <option value="">Tutti i progetti</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input w-auto"
-            >
-              <option value="">Tutti gli stati</option>
-              <option value="open">Aperto</option>
-              <option value="mitigated">Mitigato</option>
-              <option value="accepted">Accettato</option>
-              <option value="closed">Chiuso</option>
-            </select>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="input w-auto"
-            >
-              <option value="">Tutte le categorie</option>
-              <option value="technical">Tecnico</option>
-              <option value="regulatory">Normativo</option>
-              <option value="resource">Risorse</option>
-              <option value="schedule">Tempistiche</option>
-            </select>
-          </div>
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="input w-auto"
+            aria-label="Filtra per progetto"
+          >
+            <option value="">Tutti i progetti</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="input w-auto"
+            aria-label="Filtra per stato"
+          >
+            <option value="">Tutti gli stati</option>
+            <option value="open">Aperto</option>
+            <option value="mitigated">Mitigato</option>
+            <option value="accepted">Accettato</option>
+            <option value="closed">Chiuso</option>
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="input w-auto"
+            aria-label="Filtra per categoria"
+          >
+            <option value="">Tutte le categorie</option>
+            <option value="technical">Tecnico</option>
+            <option value="regulatory">Normativo</option>
+            <option value="resource">Risorse</option>
+            <option value="schedule">Tempistiche</option>
+          </select>
         </div>
       </div>
 
-      {/* Risk Matrix */}
+      {/* Risk Matrix (collapsible) */}
       {projectFilter && riskMatrix && (
         <div className="card">
           <button
             type="button"
             onClick={() => setShowMatrix(!showMatrix)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-cyan-500/5 transition-colors rounded-lg"
           >
             <div className="flex items-center gap-2">
-              <Grid3X3 className="w-5 h-5 text-primary-500" />
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                Matrice di Rischio
-              </h3>
+              <Grid3X3 className="w-4 h-4 text-cyan-500" />
+              <span className="section-heading">Matrice di Rischio</span>
             </div>
             <ChevronDown
-              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                showMatrix ? 'rotate-180' : ''
-              }`}
+              className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${showMatrix ? 'rotate-180' : ''}`}
+              aria-hidden="true"
             />
           </button>
           {showMatrix && (
             <div className="px-4 pb-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Impatto (verticale) × Probabilità (orizzontale)
+              <p className="text-xs text-slate-400 mb-3">
+                Impatto (verticale) x Probabilita (orizzontale)
               </p>
               <RiskMatrixView matrix={riskMatrix} />
             </div>
@@ -254,16 +238,16 @@ export default function RiskListPage() {
         </div>
       )}
 
-      {/* Risks List */}
+      {/* Risks Table */}
       {risks.length === 0 ? (
         <div className="card p-8 text-center">
           <ShieldAlert className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
             {searchTerm || statusFilter || categoryFilter || projectFilter
               ? 'Nessun rischio trovato'
               : 'Nessun rischio'}
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-sm text-slate-400 mb-4">
             {searchTerm || statusFilter || categoryFilter || projectFilter
               ? 'Prova a modificare i filtri di ricerca'
               : 'Inizia identificando i rischi di progetto'}
@@ -277,111 +261,116 @@ export default function RiskListPage() {
         </div>
       ) : (
         <>
-          <div className="card divide-y divide-gray-200 dark:divide-gray-700">
-            {risks.map((risk) => {
-              const riskLevel = calculateRiskLevel(risk.probability, risk.impact)
-              return (
-                <div
-                  key={risk.id}
-                  className="flex items-start sm:items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-                >
-                  {/* Risk Level Indicator */}
-                  <div className="mr-3 sm:mr-4 mt-0.5 sm:mt-0 shrink-0">
-                    <div
-                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${
-                        riskLevel.label === 'high'
-                          ? 'bg-red-100 dark:bg-red-900/30'
-                          : riskLevel.label === 'medium'
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                          : 'bg-green-100 dark:bg-green-900/30'
-                      }`}
-                    >
-                      <AlertTriangle
-                        className={`w-4 h-4 sm:w-5 sm:h-5 ${
+          <div className="card overflow-hidden">
+            {/* Table header */}
+            <div className="px-4 py-2.5 border-b border-cyan-500/5 grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 items-center">
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-medium">Livello</span>
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-medium">Rischio</span>
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-medium hidden md:block">Probabilita</span>
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-medium hidden md:block">Impatto</span>
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-medium">Categoria</span>
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-medium">Stato</span>
+            </div>
+
+            {/* Table rows */}
+            <div className="divide-y divide-gray-100 dark:divide-white/5">
+              {risks.map((risk, idx) => {
+                const riskLevel = calculateRiskLevel(risk.probability, risk.impact)
+                return (
+                  <motion.div
+                    key={risk.id}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, delay: idx * 0.03 }}
+                    onClick={() => navigate(`/risks/${risk.id}`)}
+                    className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 items-center px-4 py-3 border-t border-cyan-500/5 hover:bg-cyan-500/5 cursor-pointer transition-colors group"
+                    role="row"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') navigate(`/risks/${risk.id}`)
+                    }}
+                    aria-label={`Vai al rischio ${risk.title}`}
+                  >
+                    {/* Level indicator */}
+                    <div className="flex items-center justify-center">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                           riskLevel.label === 'high'
-                            ? 'text-red-600 dark:text-red-400'
+                            ? 'bg-red-500/10'
                             : riskLevel.label === 'medium'
-                            ? 'text-yellow-600 dark:text-yellow-400'
-                            : 'text-green-600 dark:text-green-400'
+                              ? 'bg-amber-500/10'
+                              : 'bg-green-500/10'
                         }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Risk Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Link
-                        to={`/risks/${risk.id}`}
-                        className="text-sm sm:text-base font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 truncate"
                       >
-                        {risk.title}
-                      </Link>
-                      {/* Status badge - always visible on mobile, duplicated from details on mobile */}
-                      <span className={`sm:hidden text-xs px-2 py-0.5 rounded-full shrink-0 ${RISK_STATUS_COLORS[risk.status]}`}>
-                        {RISK_STATUS_LABELS[risk.status]}
-                      </span>
+                        <AlertTriangle
+                          className={`w-4 h-4 ${
+                            riskLevel.label === 'high'
+                              ? 'text-red-500'
+                              : riskLevel.label === 'medium'
+                                ? 'text-amber-500'
+                                : 'text-green-500'
+                          }`}
+                          aria-hidden="true"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:gap-4 mt-1 flex-wrap">
-                      <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{risk.code}</span>
+                    {/* Title + project */}
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                        {risk.title}
+                      </span>
                       {risk.project && (
-                        <Link
-                          to={`/projects/${risk.project.id}`}
-                          className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:underline truncate"
+                        <span
+                          className="text-xs text-slate-400 truncate block"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/projects/${risk.project!.id}`)
+                          }}
+                          role="link"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.stopPropagation()
+                              navigate(`/projects/${risk.project!.id}`)
+                            }
+                          }}
                         >
                           {risk.project.name}
-                        </Link>
-                      )}
-                      {/* Category badge - hidden on mobile to save space */}
-                      <span className={`hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[risk.category]}`}>
-                        {RISK_CATEGORY_LABELS[risk.category]}
-                      </span>
-                    </div>
-
-                    {/* Mobile-only secondary info row */}
-                    <div className="flex items-center gap-2 mt-1.5 sm:hidden flex-wrap">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[risk.category]}`}>
-                        {RISK_CATEGORY_LABELS[risk.category]}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
-                        Livello {riskLevel.level}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Risk Details - desktop only */}
-                  <div className="hidden sm:flex items-center gap-4 ml-4 shrink-0">
-                    {risk.owner && (
-                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        <User className="w-4 h-4 mr-1 shrink-0" />
-                        <span className="max-w-24 truncate">
-                          {risk.owner.firstName} {risk.owner.lastName?.charAt(0)}.
                         </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">
-                        P: {RISK_PROBABILITY_LABELS[risk.probability]}
-                      </span>
-                      <span className="text-gray-400">|</span>
-                      <span className="text-gray-500 dark:text-gray-400">
-                        I: {RISK_IMPACT_LABELS[risk.impact]}
-                      </span>
+                      )}
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
-                      Livello {riskLevel.level}
+
+                    {/* Probability */}
+                    <span className="hidden md:block text-xs text-slate-400">
+                      {RISK_PROBABILITY_LABELS[risk.probability]}
                     </span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${RISK_STATUS_COLORS[risk.status]}`}>
+
+                    {/* Impact */}
+                    <span className="hidden md:block text-xs text-slate-400">
+                      {RISK_IMPACT_LABELS[risk.impact]}
+                    </span>
+
+                    {/* Category */}
+                    <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${RISK_CATEGORY_COLORS[risk.category]}`}>
+                      {RISK_CATEGORY_LABELS[risk.category]}
+                    </span>
+
+                    {/* Status */}
+                    <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${RISK_STATUS_COLORS[risk.status]}`}>
                       {RISK_STATUS_LABELS[risk.status]}
                     </span>
-                  </div>
-                </div>
-              )
-            })}
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            {/* Footer count */}
+            <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5 text-xs text-slate-400">
+              {pagination.total} {pagination.total === 1 ? 'rischio' : 'rischi'}
+            </div>
           </div>
 
-          {/* Pagination */}
           <Pagination
             page={pagination.page}
             pages={pagination.pages}

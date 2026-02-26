@@ -131,14 +131,14 @@ export default function CalendarPage() {
       {/* Page header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary-500/10 dark:bg-primary-500/20 flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 dark:bg-cyan-500/20 flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
               Calendario
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {dataMode === 'tasks' ? 'Task pianificati per data' : 'Ore registrate per giorno'}
             </p>
           </div>
@@ -147,14 +147,14 @@ export default function CalendarPage() {
         {/* Controls row */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Data mode toggle: Tasks / Entries */}
-          <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <button
               onClick={() => setDataMode('tasks')}
               title="Task pianificati"
               className={`px-2.5 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5 ${
                 dataMode === 'tasks'
-                  ? 'bg-primary-500 text-white'
-                  : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-cyan-500 text-white'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
               <ListChecks className="w-4 h-4" />
@@ -163,10 +163,10 @@ export default function CalendarPage() {
             <button
               onClick={() => setDataMode('entries')}
               title="Ore registrate"
-              className={`px-2.5 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5 border-l border-gray-200 dark:border-gray-700 ${
+              className={`px-2.5 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 ${
                 dataMode === 'entries'
                   ? 'bg-teal-500 text-white'
-                  : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
               <Clock className="w-4 h-4" />
@@ -175,47 +175,47 @@ export default function CalendarPage() {
           </div>
 
           {/* Prev / Today / Next */}
-          <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <button
               onClick={handlePrev}
               aria-label="Periodo precedente"
-              className="px-2.5 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={handleToday}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border-x border-gray-200 dark:border-gray-700 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-x border-slate-200 dark:border-slate-700 transition-colors"
             >
               Oggi
             </button>
             <button
               onClick={handleNext}
               aria-label="Periodo successivo"
-              className="px-2.5 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* View mode toggle */}
-          <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <button
               onClick={() => setViewMode('month')}
               className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                 viewMode === 'month'
-                  ? 'bg-primary-500 text-white'
-                  : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-cyan-500 text-white'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
               Mese
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
+              className={`px-3 py-1.5 text-sm font-medium transition-colors border-l border-slate-200 dark:border-slate-700 ${
                 viewMode === 'week'
-                  ? 'bg-primary-500 text-white'
-                  : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-cyan-500 text-white'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
               Settimana
@@ -225,12 +225,12 @@ export default function CalendarPage() {
           {/* Filters button */}
           <button
             onClick={() => setShowFilters((v) => !v)}
-            className={`btn-icon relative ${hasActiveFilters ? 'text-primary-600 dark:text-primary-400' : ''}`}
+            className={`btn-icon relative ${hasActiveFilters ? 'text-cyan-600 dark:text-cyan-400' : ''}`}
             aria-label="Filtri"
           >
             <Filter className="w-4 h-4" />
             {hasActiveFilters && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary-500" />
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-500" />
             )}
           </button>
 
@@ -258,7 +258,7 @@ export default function CalendarPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
             {/* Project filter */}
             <div className="flex-1 min-w-[160px]">
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                 Progetto
               </label>
               <select
@@ -278,7 +278,7 @@ export default function CalendarPage() {
             {/* Assignee/User filter — visible only to admin/direzione */}
             {userRole !== 'dipendente' && (
               <div className="flex-1 min-w-[160px]">
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                   {dataMode === 'tasks' ? 'Assegnato a' : 'Utente'}
                 </label>
                 <select
@@ -317,11 +317,11 @@ export default function CalendarPage() {
 
       {/* Date label */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 capitalize">
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 capitalize">
           {dateLabel}
         </h2>
         {isLoading && (
-          <span className="text-xs text-gray-400 dark:text-gray-500">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
             Caricamento...
           </span>
         )}
@@ -350,10 +350,10 @@ export default function CalendarPage() {
 
       {/* Legend */}
       {dataMode === 'tasks' ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
           <span className="font-medium">Stato:</span>
           {[
-            { label: 'Da fare', color: 'bg-gray-400' },
+            { label: 'Da fare', color: 'bg-slate-400' },
             { label: 'In corso', color: 'bg-blue-500' },
             { label: 'In revisione', color: 'bg-violet-500' },
             { label: 'Bloccato', color: 'bg-red-500' },
@@ -366,12 +366,12 @@ export default function CalendarPage() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 rounded-sm bg-teal-500" />
             Ore registrate
           </span>
-          <span className="text-gray-400 dark:text-gray-500">
+          <span className="text-slate-400 dark:text-slate-500">
             Clicca su una registrazione per vedere il dettaglio del task
           </span>
         </div>

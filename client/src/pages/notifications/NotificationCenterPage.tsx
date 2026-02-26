@@ -185,8 +185,8 @@ interface NotificationCardProps {
 
 function NotificationCard({ notification, onMarkAsRead, onDelete, onClick }: NotificationCardProps) {
   const Icon = iconMap[notification.type] ?? MessageSquare
-  const iconColor = colorMap[notification.type] ?? 'text-gray-500'
-  const iconBg = bgMap[notification.type] ?? 'bg-gray-50 dark:bg-gray-500/10'
+  const iconColor = colorMap[notification.type] ?? 'text-slate-500'
+  const iconBg = bgMap[notification.type] ?? 'bg-slate-50 dark:bg-slate-500/10'
 
   const handleCardClick = useCallback(() => {
     if (!notification.isRead) {
@@ -220,19 +220,19 @@ function NotificationCard({ notification, onMarkAsRead, onDelete, onClick }: Not
       onKeyDown={(e) => e.key === 'Enter' && handleCardClick()}
       className={`
         group relative flex items-start gap-4 p-4 rounded-xl border cursor-pointer
-        transition-all duration-200
+        transition-all duration-200 backdrop-blur-md
         ${notification.isRead
-          ? 'bg-white/80 dark:bg-surface-800/80 border-white/20 dark:border-white/5'
-          : 'bg-blue-50/60 dark:bg-blue-900/10 border-blue-100/60 dark:border-blue-500/20'
+          ? 'bg-white/80 dark:bg-slate-800/80 border-slate-200/60 dark:border-cyan-500/10'
+          : 'bg-cyan-50/40 dark:bg-cyan-900/5 border-cyan-200/60 dark:border-cyan-500/20'
         }
-        hover:shadow-md hover:-translate-y-0.5 backdrop-blur-md
+        hover:shadow-md hover:-translate-y-0.5
       `}
     >
       {/* Unread dot */}
       {!notification.isRead && (
         <span
           aria-label="Non letta"
-          className="absolute top-4 right-12 w-2 h-2 rounded-full bg-primary-500 flex-shrink-0"
+          className="absolute top-4 right-12 w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0 shadow-glow-cyan"
         />
       )}
 
@@ -247,23 +247,23 @@ function NotificationCard({ notification, onMarkAsRead, onDelete, onClick }: Not
           <p
             className={`text-sm leading-snug ${
               notification.isRead
-                ? 'text-gray-700 dark:text-gray-300'
-                : 'text-gray-900 dark:text-white font-semibold'
+                ? 'text-slate-700 dark:text-slate-300'
+                : 'text-slate-900 dark:text-white font-semibold'
             }`}
           >
             {notification.title}
           </p>
-          <span className="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 mt-0.5 whitespace-nowrap">
+          <span className="flex-shrink-0 text-xs text-slate-400 dark:text-slate-500 mt-0.5 whitespace-nowrap font-mono">
             {timeAgo(notification.createdAt)}
           </span>
         </div>
 
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
           {notification.message}
         </p>
 
         <div className="mt-2 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-surface-700 text-gray-600 dark:text-gray-400">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-600/50">
             {typeLabels[notification.type] ?? notification.type}
           </span>
         </div>
@@ -276,7 +276,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete, onClick }: Not
             onClick={handleMarkRead}
             title="Segna come letta"
             aria-label="Segna come letta"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-colors"
           >
             <CheckCircle className="w-4 h-4" />
           </button>
@@ -285,7 +285,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete, onClick }: Not
           onClick={handleDelete}
           title="Elimina notifica"
           aria-label="Elimina notifica"
-          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -339,8 +339,8 @@ function ReadFilterButton({ value, current, label, onClick }: ReadFilterButtonPr
       aria-pressed={active}
       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
         active
-          ? 'bg-primary-600 text-white shadow-sm'
-          : 'bg-white/60 dark:bg-surface-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-700 border border-gray-200/50 dark:border-white/10'
+          ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border border-cyan-500/40 shadow-sm'
+          : 'bg-transparent border border-slate-200 dark:border-slate-600/50 text-slate-600 dark:text-slate-400 hover:border-cyan-500/30 dark:hover:border-cyan-500/30'
       }`}
     >
       {label}
@@ -365,15 +365,15 @@ function PrefRow({ icon: OnIcon, offIcon: OffIcon, label, description, enabled, 
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="flex items-center gap-3">
-        <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${enabled ? 'bg-primary-100 dark:bg-primary-500/15' : 'bg-gray-100 dark:bg-surface-700'}`}>
+        <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border ${enabled ? 'bg-cyan-500/10 border-cyan-500/20' : 'bg-slate-100 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600/50'}`}>
           {enabled
-            ? <OnIcon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-            : <OffIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            ? <OnIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+            : <OffIcon className="w-4 h-4 text-slate-400 dark:text-slate-500" />
           }
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{description}</p>
+          <p className="text-sm font-medium text-slate-800 dark:text-white">{label}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{description}</p>
         </div>
       </div>
 
@@ -383,8 +383,8 @@ function PrefRow({ icon: OnIcon, offIcon: OffIcon, label, description, enabled, 
         role="switch"
         aria-checked={enabled}
         onClick={() => onToggle(!enabled)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-surface-900 ${
-          enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-surface-600'
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
+          enabled ? 'bg-cyan-600' : 'bg-slate-200 dark:bg-slate-600'
         }`}
       >
         <span
@@ -518,14 +518,14 @@ export default function NotificationCenterPage() {
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-500/15 flex items-center justify-center flex-shrink-0">
-            <Bell className="w-5 h-5 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
+            <Bell className="w-5 h-5 text-cyan-400" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+            <h1 className="page-title leading-tight">
               Centro Notifiche
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-sm page-subtitle mt-0.5">
               {unreadCount > 0
                 ? `${unreadCount} notifich${unreadCount === 1 ? 'a' : 'e'} non lett${unreadCount === 1 ? 'a' : 'e'}`
                 : 'Tutte le notifiche lette'}
@@ -534,7 +534,7 @@ export default function NotificationCenterPage() {
           {unreadCount > 0 && (
             <span
               aria-label={`${unreadCount} non lette`}
-              className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full bg-primary-600 text-white text-xs font-bold"
+              className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full bg-cyan-500 text-white text-xs font-bold shadow-glow-cyan"
             >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
@@ -572,7 +572,7 @@ export default function NotificationCenterPage() {
           {/* Text search */}
           <div className="relative flex-1 min-w-0">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none"
               aria-hidden="true"
             />
             <input
@@ -581,14 +581,14 @@ export default function NotificationCenterPage() {
               onChange={handleSearchChange}
               placeholder="Cerca notifiche..."
               aria-label="Cerca notifiche"
-              className="w-full pl-9 pr-9 py-2 rounded-lg border border-gray-200 dark:border-surface-600 bg-white dark:bg-surface-900 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-colors"
+              className="input pl-9 pr-9"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={clearSearch}
                 aria-label="Cancella ricerca"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -598,14 +598,14 @@ export default function NotificationCenterPage() {
           {/* Type filter dropdown */}
           <div className="relative">
             <Filter
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none"
               aria-hidden="true"
             />
             <select
               value={typeFilter}
               onChange={(e) => handleTypeFilterChange(e.target.value as NotificationType | '')}
               aria-label="Filtra per tipo"
-              className="appearance-none w-full sm:w-52 pl-9 pr-8 py-2 rounded-lg border border-gray-200 dark:border-surface-600 bg-white dark:bg-surface-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-colors cursor-pointer"
+              className="appearance-none w-full sm:w-52 pl-9 pr-8 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-colors cursor-pointer"
             >
               <option value="">Tutti i tipi</option>
               {availableTypes.map((type) => (
@@ -615,13 +615,13 @@ export default function NotificationCenterPage() {
               ))}
             </select>
             <ChevronDown
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none"
               aria-hidden="true"
             />
           </div>
 
           {/* Read/unread toggle */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-surface-700/60 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 rounded-lg p-1">
             <ReadFilterButton value="all" current={readFilter} label="Tutte" onClick={handleReadFilterChange} />
             <ReadFilterButton value="unread" current={readFilter} label="Non lette" onClick={handleReadFilterChange} />
             <ReadFilterButton value="read" current={readFilter} label="Lette" onClick={handleReadFilterChange} />
@@ -631,13 +631,13 @@ export default function NotificationCenterPage() {
         {/* Active filter summary */}
         {hasActiveFilters && (
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               {filtered.length} risultat{filtered.length === 1 ? 'o' : 'i'}
             </span>
             <button
               type="button"
               onClick={handleClearFilters}
-              className="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+              className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
             >
               <X className="w-3 h-3" />
               Azzera filtri
@@ -704,14 +704,14 @@ export default function NotificationCenterPage() {
       {/* Preferences Section                                                 */}
       {/* ------------------------------------------------------------------ */}
       <div className="card p-5">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
           Preferenze notifiche
         </h2>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Gestisci come ricevi le notifiche sul tuo dispositivo.
         </p>
 
-        <div className="divide-y divide-gray-100 dark:divide-surface-700">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700">
           <PrefRow
             icon={Monitor}
             offIcon={MonitorOff}

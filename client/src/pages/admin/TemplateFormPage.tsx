@@ -121,7 +121,7 @@ export default function TemplateFormPage() {
   if (isEditMode && isLoading && !currentTemplate) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -130,9 +130,9 @@ export default function TemplateFormPage() {
   if (isEditMode && !isLoading && !currentTemplate) {
     return (
       <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Template non trovato</h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Template non trovato</h3>
+        <p className="text-slate-500 dark:text-slate-400 mb-4">
           Il template richiesto non esiste o è stato eliminato.
         </p>
         <button onClick={() => navigate('/admin/templates')} className="btn-primary">
@@ -156,13 +156,13 @@ export default function TemplateFormPage() {
       <div className="flex items-center">
         <button
           onClick={() => navigate(-1)}
-          className="mr-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          className="mr-4 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
+          <ArrowLeft className="w-5 h-5 text-slate-500" />
         </button>
         <div className="flex items-center">
-          <LayoutTemplate className="w-6 h-6 text-primary-500 mr-3" />
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+          <LayoutTemplate className="w-6 h-6 text-cyan-500 mr-3" />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
             {isEditMode ? 'Modifica Template' : 'Nuovo Template'}
           </h1>
         </div>
@@ -181,7 +181,7 @@ export default function TemplateFormPage() {
 
           {/* Name */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Nome Template <span className="text-red-500">*</span>
             </label>
             <input
@@ -198,7 +198,7 @@ export default function TemplateFormPage() {
           <div>
             <label
               htmlFor="description"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
             >
               Descrizione
             </label>
@@ -221,9 +221,9 @@ export default function TemplateFormPage() {
                 id="isActive"
                 type="checkbox"
                 {...register('isActive')}
-                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
               />
-              <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Template attivo (visibile nella selezione)
               </label>
             </div>
@@ -234,10 +234,10 @@ export default function TemplateFormPage() {
         <div className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
                 Fasi del progetto
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Definisci le fasi standard per i progetti basati su questo template
               </p>
             </div>
@@ -252,8 +252,8 @@ export default function TemplateFormPage() {
           </div>
 
           {phaseFields.length === 0 && (
-            <div className="py-6 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="py-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Nessuna fase definita. Aggiungi le fasi del ciclo di vita del progetto.
               </p>
             </div>
@@ -262,10 +262,10 @@ export default function TemplateFormPage() {
           <div className="space-y-2">
             {phaseFields.map((field, index) => (
               <div key={field.id} className="flex items-center gap-2">
-                <div className="text-gray-400 dark:text-gray-600 cursor-grab">
+                <div className="text-slate-400 dark:text-gray-600 cursor-grab">
                   <GripVertical className="w-4 h-4" />
                 </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400 w-6 text-right shrink-0">
+                <span className="text-sm text-slate-500 dark:text-slate-400 w-6 text-right shrink-0">
                   {index + 1}.
                 </span>
                 <input
@@ -279,7 +279,7 @@ export default function TemplateFormPage() {
                 <button
                   type="button"
                   onClick={() => remove(index)}
-                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>

@@ -34,10 +34,10 @@
 | `--primary-hover` | `cyan-400` (#22d3ee) | Hover su primario |
 | `--secondary` | `indigo-500` (#6366f1) | Accento secondario, dati |
 | `--text-primary` | `slate-100` (#f1f5f9) | Testo principale |
-| `--text-secondary` | `cyan-300/60` | Testo secondario, label |
-| `--text-muted` | `slate-400` (#94a3b8) | Testo terziario |
-| `--border` | `cyan-500/10` | Bordi standard |
-| `--border-hover` | `cyan-500/20` | Bordi hover |
+| `--text-secondary` | `slate-400` (#94a3b8) | Testo secondario, label (NON cyan) |
+| `--text-muted` | `slate-500` (#64748b) | Testo terziario |
+| `--border` | `cyan-500/25` | Bordi standard (visibili) |
+| `--border-hover` | `cyan-500/40` | Bordi hover |
 | `--border-active` | `cyan-500/40` | Bordi focus/attivi |
 | `--success` | `emerald-400` (#34d399) | OK, completato |
 | `--warning` | `amber-400` (#fbbf24) | Attenzione, a rischio |
@@ -65,7 +65,7 @@
 | Sottotitolo | Inter | `text-base text-slate-400` |
 | Body liste | Inter | `text-sm` |
 | Body contenuti | Inter | `text-base` |
-| Label metadati | Inter | `text-xs uppercase tracking-widest text-cyan-500/50 font-medium` |
+| Label metadati | Inter | `text-xs uppercase tracking-widest text-slate-400 font-medium` (classe `.meta-row-label`) |
 | KPI numeri | JetBrains Mono | `font-mono text-3xl font-bold text-cyan-400` con text-shadow |
 | Timer | JetBrains Mono | `font-mono text-2xl tabular-nums` |
 
@@ -437,6 +437,73 @@ Effetto sottile: una riga luminosa che scorre lentamente dall'alto in basso (4s)
 - Padding card: `p-5`
 - Padding pagina: `p-6` (fornito da DashboardLayout, invariato)
 
+### 2.8 Color Distribution Rules (CRITICO)
+
+**Problema risolto**: troppo cyan ovunque rende l'interfaccia monotona e illeggibile.
+
+**Regola fondamentale**: il cyan (`primary`) si usa SOLO per elementi interattivi e dati chiave, MAI per testo strutturale.
+
+#### Dove usare cyan (primary)
+- Pulsanti primari (`btn-primary`)
+- Link e azioni cliccabili (hover state)
+- Bordi card (sottile, `/25`)
+- Bordi focus su input
+- Glow effects (shadows)
+- KPI numeri importanti (con `neon-text`)
+- Dot indicatore sidebar attivo
+- HUD decorative elements (brackets, dividers, scan)
+
+#### Dove NON usare cyan
+- Titoli pagina → `white` (dark) / `slate-900` (light)
+- Nomi utente nel saluto → `white` (dark) / `slate-900` (light)
+- Label metadati → `slate-400` (dark) / `slate-500` (light)
+- Sottotitoli → `gray-400` (dark) / `gray-500` (light)
+- Intestazioni sezione → `gray-300` (dark) / `gray-700` (light)
+- Testo sidebar group labels → `slate-500`
+- Testo sidebar item attivo → `white` (NON cyan)
+- Panel header HUD span → `slate-400/80` (NON cyan)
+- Logo sidebar → `white` (dark) / `slate-900` (light)
+
+#### Colori per metriche (varietà)
+- Ore/tempo → `amber-400` + `neon-text` (dark), `amber-600` (light)
+- Progresso % → semantic (emerald >80%, amber 50-80%, red <50%)
+- Conteggi task → `white font-mono` (dark)
+- Utilizzo team → `blue-400` (distinto da cyan)
+- Budget → `indigo-400`
+
+#### Card borders e glow
+- Border base: `border-cyan-500/25` (visibile, non `/10`)
+- Shadow ambient: `shadow-[0_0_15px_rgba(6,182,212,0.08)]` (sempre visibile)
+- Hover: `border-cyan-500/40` + `shadow-neon-cyan`
+- Modal: `border-cyan-500/25` + `shadow-cyan-500/10`
+
+### 2.9 CSS Classes centralizzate
+
+Tutti gli stili ripetuti sono definiti come classi CSS in `index.css` e non hardcoded nelle pagine:
+
+| Classe | Uso | Dark | Light |
+|--------|-----|------|-------|
+| `.card` | Card base | `bg-slate-900/70 border-cyan-500/25 shadow-ambient` | `bg-white border-slate-200` |
+| `.nav-item` | Nav sidebar inattivo | `text-slate-400 hover:text-slate-200` | `text-slate-600 hover:text-slate-900` |
+| `.nav-item-active` | Nav sidebar attivo | `text-white bg-cyan-500/10 border-l-cyan-500` | `text-cyan-700 bg-cyan-50` |
+| `.nav-group-label` | Label gruppo sidebar | `text-slate-500` | `text-slate-400` |
+| `.sidebar` | Container sidebar | `bg-slate-950/90 border-r-cyan-500/15` | `bg-white border-slate-200` |
+| `.sidebar-border` | Separatori sidebar | `border-cyan-500/15` | `border-slate-200` |
+| `.sidebar-search` | Search button sidebar | `bg-slate-800/50 border-cyan-500/15` | `bg-slate-100 border-slate-200` |
+| `.sidebar-logo` | Logo testo | `text-white` | `text-slate-900` |
+| `.page-title` | Titolo pagina | `text-white` | `text-gray-900` |
+| `.page-subtitle` | Sottotitolo pagina | `text-gray-400` | `text-gray-500` |
+| `.section-heading` | Heading card/sezione | `text-gray-300 uppercase tracking-wide` | `text-gray-700` |
+| `.meta-row-label` | Label metadati | `text-slate-400` | `text-slate-500` |
+| `.form-section-header` | Header sezione form | `text-slate-400` | `text-slate-500` |
+| `.notification-badge` | Badge conteggio | `bg-cyan-500 text-white` | `bg-cyan-600 text-white` |
+| `.modal-panel` | Pannello modale | `border-cyan-500/25 shadow-cyan-500/10` | `border-slate-200` |
+| `.btn-primary` | Pulsante primario | `bg-cyan-600 shadow-neon-btn` | uguale |
+| `.btn-secondary` | Pulsante secondario | `border-cyan-500/30 text-cyan-400` | `border-cyan-600/30 text-cyan-700` |
+| `.input` | Campo input | `border-cyan-500/20 focus:shadow-neon-input` | `border-slate-300` |
+
+**Regola per nuovi componenti**: NON hardcodare colori nelle pagine/componenti. Usare le classi CSS centralizzate. Se serve una variante nuova, aggiungerla a `index.css`.
+
 ---
 
 ## 3. Animazioni tech
@@ -515,10 +582,13 @@ Avatar + Nome + Ruolo  (link a profilo)
 
 **Comportamenti**:
 - Sezioni collassabili ricordano lo stato in localStorage
-- Voce attiva: `bg-cyan-500/10 border-l-2 border-cyan-500` + glow
-- Hover: `bg-cyan-500/5` + animazione glow sidebar
+- Voce attiva: classe `.nav-item-active` → testo **bianco** (NON cyan), `bg-cyan-500/10 border-l-2 border-cyan-500`
+- Voce inattiva: classe `.nav-item` → `text-slate-400`, hover → `text-slate-200`
+- Group labels: classe `.nav-group-label` → `text-slate-500` (NON cyan)
+- Logo: classe `.sidebar-logo` → `text-white` (dark), `text-slate-900` (light)
 - Mobile: drawer overlay con backdrop blur
-- Badge notifiche con animazione bounce-in al cambiamento
+- Badge notifiche: classe `.notification-badge` con animazione bounce-in
+- Tutti gli stili centralizzati in `index.css`, NON hardcoded nel componente
 
 ### 4.2 Header minimale
 

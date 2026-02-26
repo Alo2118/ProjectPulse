@@ -58,7 +58,7 @@ export default function TemplateListPage() {
   if (isLoading && templates.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -68,11 +68,11 @@ export default function TemplateListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <LayoutTemplate className="w-6 h-6 text-primary-500" />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <LayoutTemplate className="w-6 h-6 text-cyan-500" />
             Template Progetto
           </h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-slate-600 dark:text-slate-400">
             Gestisci i template riutilizzabili per la creazione di nuovi progetti
           </p>
         </div>
@@ -90,12 +90,12 @@ export default function TemplateListPage() {
       {/* Filter toggle */}
       {isAdmin && (
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
             <input
               type="checkbox"
               checked={showInactive}
               onChange={(e) => setShowInactive(e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
             />
             Mostra template disattivati
           </label>
@@ -105,11 +105,11 @@ export default function TemplateListPage() {
       {/* Template Grid */}
       {templates.length === 0 ? (
         <div className="card p-12 text-center">
-          <LayoutTemplate className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <LayoutTemplate className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
             Nessun template disponibile
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
             Crea il primo template per velocizzare la creazione di nuovi progetti
           </p>
           {isAdmin && (
@@ -134,8 +134,8 @@ export default function TemplateListPage() {
               {/* Header */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <LayoutTemplate className="w-5 h-5 text-primary-500 shrink-0" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                  <LayoutTemplate className="w-5 h-5 text-cyan-500 shrink-0" />
+                  <h3 className="font-semibold text-slate-900 dark:text-white truncate">
                     {template.name}
                   </h3>
                 </div>
@@ -143,7 +143,7 @@ export default function TemplateListPage() {
                   className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${
                     template.isActive
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                   }`}
                 >
                   {template.isActive ? 'Attivo' : 'Disattivo'}
@@ -152,7 +152,7 @@ export default function TemplateListPage() {
 
               {/* Description */}
               {template.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
                   {template.description}
                 </p>
               )}
@@ -160,20 +160,20 @@ export default function TemplateListPage() {
               {/* Phases */}
               {template.phases.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                     Fasi ({template.phases.length}):
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {template.phases.slice(0, 4).map((phase, i) => (
                       <span
                         key={i}
-                        className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                        className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded"
                       >
                         {phase}
                       </span>
                     ))}
                     {template.phases.length > 4 && (
-                      <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded">
+                      <span className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded">
                         +{template.phases.length - 4}
                       </span>
                     )}
@@ -182,8 +182,8 @@ export default function TemplateListPage() {
               )}
 
               {/* Footer */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 mt-auto">
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700 mt-auto">
+                <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
                   <FolderKanban className="w-4 h-4 mr-1" />
                   {template.projectCount} {template.projectCount === 1 ? 'progetto' : 'progetti'}
                 </div>
@@ -193,10 +193,10 @@ export default function TemplateListPage() {
                     <button
                       onClick={() => handleToggleActive(template)}
                       title={template.isActive ? 'Disattiva' : 'Attiva'}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                     >
                       {template.isActive ? (
-                        <XCircle className="w-4 h-4 text-gray-500" />
+                        <XCircle className="w-4 h-4 text-slate-500" />
                       ) : (
                         <CheckCircle className="w-4 h-4 text-green-500" />
                       )}
@@ -204,9 +204,9 @@ export default function TemplateListPage() {
                     <button
                       onClick={() => navigate(`/admin/templates/${template.id}/edit`)}
                       title="Modifica"
-                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                     >
-                      <Edit className="w-4 h-4 text-gray-500" />
+                      <Edit className="w-4 h-4 text-slate-500" />
                     </button>
                     <button
                       onClick={() => setDeleteConfirm({ id: template.id, name: template.name })}

@@ -34,9 +34,9 @@ const PRIORITY_OPTIONS: InlineSelectOption[] = [
 function priorityBorderClass(priority: Task['priority']): string {
   switch (priority) {
     case 'critical': return 'border-l-red-500'
-    case 'high': return 'border-l-orange-500'
+    case 'high': return 'border-l-orange-400'
     case 'medium': return 'border-l-amber-400'
-    default: return 'border-l-gray-300 dark:border-l-gray-600'
+    default: return 'border-l-slate-600/50 dark:border-l-slate-600/50'
   }
 }
 
@@ -92,13 +92,13 @@ export function TaskListViewItem({
   return (
     <div
       className={[
-        'flex items-start gap-3 px-4 py-3 rounded-lg border-l-[3px] transition-all group',
+        'flex items-start gap-3 px-4 py-3 rounded-lg border-l-[3px] transition-all duration-150 group',
         priorityBorderClass(task.priority),
         isCompleted ? 'opacity-50' : '',
         isSelected
-          ? 'bg-primary-50 dark:bg-primary-900/20'
-          : 'hover:bg-gray-50 dark:hover:bg-white/5',
-        overdue ? 'ring-1 ring-red-200 dark:ring-red-800/50' : '',
+          ? 'bg-cyan-500/10 dark:bg-cyan-500/10'
+          : 'hover:bg-slate-800/60 dark:hover:bg-slate-800/60 :root:not(.dark):hover:bg-slate-50',
+        overdue ? 'ring-1 ring-red-400/30' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -109,7 +109,7 @@ export function TaskListViewItem({
         checked={isSelected}
         onChange={() => onSelect(task.id)}
         onClick={(e) => e.stopPropagation()}
-        className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 cursor-pointer"
+        className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 rounded border-slate-600 dark:border-slate-600 text-cyan-500 focus:ring-cyan-500/30 cursor-pointer accent-cyan-500"
         aria-label={`Seleziona ${task.title}`}
       />
 
@@ -132,8 +132,8 @@ export function TaskListViewItem({
           <Link
             to={`/tasks/${task.id}`}
             className={[
-              'flex-1 text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary-500 dark:hover:text-primary-400',
-              isCompleted ? 'line-through' : '',
+              'flex-1 text-sm text-slate-200 dark:text-slate-200 truncate hover:text-cyan-400 dark:hover:text-cyan-400 transition-colors',
+              isCompleted ? 'line-through text-slate-500 dark:text-slate-500' : '',
             ].join(' ')}
           >
             {task.title}
@@ -145,7 +145,7 @@ export function TaskListViewItem({
             </span>
           )}
           {task.project && (
-            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0">
+            <span className="text-xs bg-cyan-500/10 dark:bg-cyan-500/10 text-cyan-400 dark:text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 :root:not(.dark):bg-cyan-50 :root:not(.dark):text-cyan-700 :root:not(.dark):border-cyan-200">
               {task.project.name}
             </span>
           )}
@@ -174,12 +174,12 @@ export function TaskListViewItem({
           />
           {estimatedPct !== null && (
             <div
-              className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex-shrink-0"
+              className="w-16 h-1.5 bg-slate-700/50 dark:bg-slate-700/50 rounded-full overflow-hidden flex-shrink-0"
               title={`${estimatedPct}% delle ore stimate`}
               aria-label={`Avanzamento ore: ${estimatedPct}%`}
             >
               <div
-                className="h-full bg-blue-500 dark:bg-blue-400 rounded-full"
+                className="h-full bg-cyan-500 dark:bg-cyan-500 rounded-full"
                 style={{ width: `${estimatedPct}%` }}
               />
             </div>
@@ -190,10 +190,10 @@ export function TaskListViewItem({
                 e.preventDefault()
                 onTimerToggle(task.id)
               }}
-              className={`ml-auto p-1.5 rounded-lg transition-all flex-shrink-0 ${
+              className={`ml-auto p-1.5 rounded-lg transition-all duration-150 flex-shrink-0 ${
                 isRunning
                   ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 hover:bg-primary-500 hover:text-white opacity-0 group-hover:opacity-100'
+                  : 'bg-slate-700/50 dark:bg-slate-700/50 text-slate-400 dark:text-slate-400 hover:bg-cyan-500 hover:text-white opacity-0 group-hover:opacity-100'
               }`}
               title={isRunning ? 'Stop timer' : 'Avvia timer'}
               aria-label={isRunning ? 'Ferma timer' : 'Avvia timer'}

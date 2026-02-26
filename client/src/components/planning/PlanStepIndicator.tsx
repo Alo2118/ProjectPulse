@@ -42,8 +42,8 @@ export function PlanStepIndicator({ currentStep }: PlanStepIndicatorProps) {
                     isCompleted
                       ? 'bg-emerald-500 dark:bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40'
                       : isActive
-                        ? 'bg-primary-500 dark:bg-primary-500 text-white shadow-md shadow-primary-200 dark:shadow-primary-900/40 ring-4 ring-primary-100 dark:ring-primary-900/30'
-                        : 'bg-white dark:bg-surface-800 border-2 border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500',
+                        ? 'bg-cyan-500 dark:bg-cyan-500 text-white shadow-md shadow-cyan-200 dark:shadow-cyan-900/40 ring-4 ring-cyan-100 dark:ring-cyan-900/30'
+                        : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500',
                   ].join(' ')}
                 >
                   {isCompleted ? (
@@ -56,10 +56,10 @@ export function PlanStepIndicator({ currentStep }: PlanStepIndicatorProps) {
                   className={[
                     'text-xs font-medium whitespace-nowrap transition-colors duration-200',
                     isActive
-                      ? 'text-primary-600 dark:text-primary-400'
+                      ? 'text-cyan-600 dark:text-cyan-400'
                       : isCompleted
                         ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-gray-400 dark:text-gray-500',
+                        : 'text-slate-400 dark:text-slate-500',
                   ].join(' ')}
                 >
                   {step.label}
@@ -74,7 +74,7 @@ export function PlanStepIndicator({ currentStep }: PlanStepIndicatorProps) {
                       'h-full rounded-full transition-all duration-500',
                       index < currentStep
                         ? 'bg-emerald-400 dark:bg-emerald-500'
-                        : 'bg-gray-200 dark:bg-gray-700',
+                        : 'bg-slate-200 dark:bg-slate-700',
                     ].join(' ')}
                   />
                 </div>
@@ -99,8 +99,8 @@ export function PlanStepIndicator({ currentStep }: PlanStepIndicatorProps) {
                     isCompleted
                       ? 'bg-emerald-500 text-white'
                       : isActive
-                        ? 'bg-primary-500 text-white ring-2 ring-primary-200 dark:ring-primary-800'
-                        : 'bg-white dark:bg-surface-800 border-2 border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500',
+                        ? 'bg-cyan-500 text-white ring-2 ring-cyan-200 dark:ring-cyan-800'
+                        : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500',
                   ].join(' ')}
                 >
                   {isCompleted ? (
@@ -113,10 +113,10 @@ export function PlanStepIndicator({ currentStep }: PlanStepIndicatorProps) {
                   className={[
                     'text-[10px] font-medium whitespace-nowrap',
                     isActive
-                      ? 'text-primary-600 dark:text-primary-400'
+                      ? 'text-cyan-600 dark:text-cyan-400'
                       : isCompleted
                         ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-gray-400 dark:text-gray-500',
+                        : 'text-slate-400 dark:text-slate-500',
                   ].join(' ')}
                 >
                   {step.label}
@@ -130,7 +130,7 @@ export function PlanStepIndicator({ currentStep }: PlanStepIndicatorProps) {
                       'h-full rounded-full transition-colors duration-300',
                       index < currentStep
                         ? 'bg-emerald-400 dark:bg-emerald-500'
-                        : 'bg-gray-200 dark:bg-gray-700',
+                        : 'bg-slate-200 dark:bg-slate-700',
                     ].join(' ')}
                   />
                 </div>

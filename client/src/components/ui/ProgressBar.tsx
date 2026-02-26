@@ -48,7 +48,7 @@ export function ProgressBar({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div
-        className={`flex-1 ${height} rounded-full bg-gray-200 dark:bg-surface-800 overflow-hidden ${
+        className={`flex-1 ${height} rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden ${
           glow && clamped < 20 ? getGlowColor(clamped) : ''
         }`}
       >
@@ -60,7 +60,7 @@ export function ProgressBar({
         />
       </div>
       {showLabel && (
-        <span className={`${LABEL_SIZE[size]} font-semibold text-gray-600 dark:text-gray-400 min-w-[2.5rem] text-right`}>
+        <span className={`${LABEL_SIZE[size]} font-semibold text-slate-600 dark:text-slate-400 min-w-[2.5rem] text-right`}>
           {Math.round(clamped)}%
         </span>
       )}

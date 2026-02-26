@@ -85,7 +85,7 @@ export default function TrafficLightSection({
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse h-24"
+            className="rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse h-24"
             aria-hidden="true"
           />
         ))}
@@ -229,7 +229,7 @@ export default function TrafficLightSection({
             </div>
 
             {/* Label row */}
-            <p className="mt-3 text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight">
+            <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-400 leading-tight">
               {card.label}
             </p>
           </div>

@@ -92,15 +92,15 @@ function Step0({
       {/* Project selector */}
       <div className="card p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <FolderOpen className="w-4 h-4 text-primary-500" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <FolderOpen className="w-4 h-4 text-cyan-500" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
             Seleziona Progetto
           </h2>
           <span className="text-xs text-red-500">*</span>
         </div>
 
         {activeProjects.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Nessun progetto attivo trovato.
           </p>
         ) : (
@@ -114,21 +114,21 @@ function Step0({
                 className={[
                   'flex items-start gap-3 p-3 rounded-lg border text-left transition-all',
                   selectedProjectId === project.id
-                    ? 'border-primary-400 dark:border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-300 dark:ring-primary-700'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-white/5',
+                    ? 'border-cyan-400 dark:border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20 ring-1 ring-cyan-300 dark:ring-cyan-700'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-white/5',
                 ].join(' ')}
               >
-                <div className="flex-shrink-0 w-8 h-8 rounded-md bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                <div className="flex-shrink-0 w-8 h-8 rounded-md bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
                   <span className="text-white text-xs font-bold">{project.name.slice(0, 2).toUpperCase()}</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                     {project.name}
                   </p>
                 </div>
                 {selectedProjectId === project.id && (
                   <CheckCircle2
-                    className="flex-shrink-0 ml-auto w-4 h-4 text-primary-500"
+                    className="flex-shrink-0 ml-auto w-4 h-4 text-cyan-500"
                     aria-hidden="true"
                   />
                 )}
@@ -142,14 +142,14 @@ function Step0({
       <div className="card p-5 space-y-3">
         <div className="flex items-center gap-2">
           <LayoutTemplate className="w-4 h-4 text-violet-500" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
             Template di Piano
           </h2>
-          <span className="text-xs text-gray-400 dark:text-gray-500">(opzionale)</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">(opzionale)</span>
         </div>
 
         {isLoadingTemplates ? (
-          <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-2">
+          <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 py-2">
             <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             Caricamento template...
           </div>
@@ -164,15 +164,15 @@ function Step0({
                 'flex items-start gap-3 p-3 rounded-lg border text-left transition-all',
                 selectedTemplateId === null
                   ? 'border-violet-400 dark:border-violet-500 bg-violet-50 dark:bg-violet-900/20 ring-1 ring-violet-300 dark:ring-violet-700'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-white/5',
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-white/5',
               ].join(' ')}
             >
-              <div className="flex-shrink-0 w-8 h-8 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" />
+              <div className="flex-shrink-0 w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Piano Vuoto</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Inizia da zero</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Piano Vuoto</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Inizia da zero</p>
               </div>
               {selectedTemplateId === null && (
                 <CheckCircle2
@@ -203,7 +203,7 @@ function Step0({
                     'flex items-start gap-3 p-3 rounded-lg border text-left transition-all',
                     selectedTemplateId === template.id
                       ? 'border-violet-400 dark:border-violet-500 bg-violet-50 dark:bg-violet-900/20 ring-1 ring-violet-300 dark:ring-violet-700'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-white/5',
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-white/5',
                   ].join(' ')}
                 >
                   <div className="flex-shrink-0 w-8 h-8 rounded-md bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
@@ -213,11 +213,11 @@ function Step0({
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                       {template.name}
                     </p>
                     {template.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
                         {template.description}
                       </p>
                     )}
@@ -309,8 +309,8 @@ function Step1({
       {/* Tree editor */}
       <div className="card p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Wand2 className="w-4 h-4 text-primary-500" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Wand2 className="w-4 h-4 text-cyan-500" aria-hidden="true" />
             Struttura del Piano
           </h2>
           <button
@@ -341,13 +341,13 @@ function Step1({
       {/* Timeline preview */}
       {(timelineSuggestion || isLoadingTimeline || timelineError) && (
         <div className="card p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
             <RefreshCw className="w-4 h-4 text-indigo-500" aria-hidden="true" />
             Anteprima Timeline
           </h2>
 
           {isLoadingTimeline && (
-            <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-4">
+            <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 py-4">
               <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
               Calcolo percorso critico...
             </div>
@@ -658,7 +658,7 @@ export default function PlanningWizardPage() {
             type="button"
             onClick={() => navigate('/planning')}
             aria-label="Torna alla pianificazione"
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -666,18 +666,18 @@ export default function PlanningWizardPage() {
             <Wand2 className="w-5 h-5 text-white" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
               Pianifica Progetto
             </h1>
             {selectedProjectName && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">{selectedProjectName}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{selectedProjectName}</p>
             )}
           </div>
         </div>
 
         {/* Team capacity quick stats (Step 1+) */}
         {wizardStep >= 1 && teamCapacity.length > 0 && (
-          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700">
             <Users className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
             <span>
               {teamCapacity.filter((u) => u.overloaded).length > 0 ? (

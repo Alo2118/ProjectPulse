@@ -257,10 +257,10 @@ function StepIndicator({ currentStep, onStepClick, completedUpTo }: StepIndicato
                     w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold
                     transition-colors duration-200
                     ${isActive
-                      ? 'bg-primary-600 text-white ring-4 ring-primary-100 dark:ring-primary-900/50'
+                      ? 'bg-cyan-600 text-white ring-4 ring-cyan-100 dark:ring-cyan-900/50'
                       : isCompleted
                       ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
+                      : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400'
                     }
                   `}
                 >
@@ -273,10 +273,10 @@ function StepIndicator({ currentStep, onStepClick, completedUpTo }: StepIndicato
                 <span
                   className={`text-xs hidden sm:block font-medium ${
                     isActive
-                      ? 'text-primary-600 dark:text-primary-400'
+                      ? 'text-cyan-600 dark:text-cyan-400'
                       : isCompleted
-                      ? 'text-gray-700 dark:text-gray-300'
-                      : 'text-gray-400 dark:text-gray-500'
+                      ? 'text-slate-700 dark:text-slate-300'
+                      : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >
                   {step.label}
@@ -288,8 +288,8 @@ function StepIndicator({ currentStep, onStepClick, completedUpTo }: StepIndicato
                 <div
                   className={`flex-1 h-0.5 mx-2 transition-colors duration-200 ${
                     step.number < currentStep
-                      ? 'bg-primary-600'
-                      : 'bg-gray-200 dark:bg-gray-600'
+                      ? 'bg-cyan-600'
+                      : 'bg-slate-200 dark:bg-slate-600'
                   }`}
                   aria-hidden="true"
                 />
@@ -315,8 +315,8 @@ function StepDomainForm({ data, onChange }: StepDomainProps) {
   return (
     <div className="card space-y-5">
       <div>
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white">Dominio</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Dominio</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Scegli su quale area agisce questa automazione
         </p>
       </div>
@@ -330,8 +330,8 @@ function StepDomainForm({ data, onChange }: StepDomainProps) {
               key={opt.value}
               className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all duration-150 ${
                 isSelected
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
               <input
@@ -340,14 +340,14 @@ function StepDomainForm({ data, onChange }: StepDomainProps) {
                 value={opt.value}
                 checked={isSelected}
                 onChange={() => onChange({ domain: opt.value })}
-                className="mt-0.5 text-primary-600 focus:ring-primary-500"
+                className="mt-0.5 text-cyan-600 focus:ring-cyan-500"
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <Icon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{opt.label}</p>
+                  <Icon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{opt.label}</p>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{opt.description}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{opt.description}</p>
               </div>
             </label>
           )
@@ -372,15 +372,15 @@ function Step1Form({ data, onChange, errors, projects }: Step1Props) {
   return (
     <div className="card space-y-5">
       <div>
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white">Informazioni Base</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Informazioni Base</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Dai un nome alla regola e specifica il suo ambito
         </p>
       </div>
 
       {/* Name */}
       <div>
-        <label htmlFor="rule-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label htmlFor="rule-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           Nome <span className="text-red-500">*</span>
         </label>
         <input
@@ -399,7 +399,7 @@ function Step1Form({ data, onChange, errors, projects }: Step1Props) {
 
       {/* Description */}
       <div>
-        <label htmlFor="rule-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label htmlFor="rule-description" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           Descrizione
         </label>
         <textarea
@@ -415,7 +415,7 @@ function Step1Form({ data, onChange, errors, projects }: Step1Props) {
 
       {/* Project scope */}
       <div>
-        <label htmlFor="rule-project" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label htmlFor="rule-project" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           Progetto
         </label>
         <select
@@ -431,7 +431,7 @@ function Step1Form({ data, onChange, errors, projects }: Step1Props) {
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Lascia vuoto per applicare la regola a tutti i progetti
         </p>
       </div>
@@ -464,8 +464,8 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
   return (
     <div className="card space-y-5">
       <div>
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white">Trigger</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Trigger</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Scegli quale evento avvia questa automazione
         </p>
       </div>
@@ -479,8 +479,8 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
               key={opt.value}
               className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all duration-150 ${
                 isSelected
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
               <input
@@ -489,11 +489,11 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
                 value={opt.value}
                 checked={isSelected}
                 onChange={() => handleTriggerTypeChange(opt.value)}
-                className="mt-0.5 text-primary-600 focus:ring-primary-500"
+                className="mt-0.5 text-cyan-600 focus:ring-cyan-500"
               />
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{opt.label}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{opt.description}</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{opt.label}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{opt.description}</p>
               </div>
             </label>
           )
@@ -506,9 +506,9 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
 
       {/* Trigger-specific params */}
       {data.triggerType === 'task_status_changed' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Da status (opzionale)</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Da status (opzionale)</label>
             <select
               value={data.triggerParams.fromStatus ?? ''}
               onChange={(e) => updateParam('fromStatus', e.target.value)}
@@ -521,7 +521,7 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">A status (opzionale)</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">A status (opzionale)</label>
             <select
               value={data.triggerParams.toStatus ?? ''}
               onChange={(e) => updateParam('toStatus', e.target.value)}
@@ -537,8 +537,8 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
       )}
 
       {data.triggerType === 'task_deadline_approaching' && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Giorni prima della scadenza <span className="text-red-500">*</span>
           </label>
           <input
@@ -549,15 +549,15 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
             onChange={(e) => updateParam('daysBeforeDeadline', e.target.value)}
             className="input"
           />
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             L'automazione si attivera' questo numero di giorni prima della scadenza del task
           </p>
         </div>
       )}
 
       {data.triggerType === 'task_created' && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo task (opzionale)</label>
+        <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo task (opzionale)</label>
           <select
             value={data.triggerParams.taskType ?? ''}
             onChange={(e) => updateParam('taskType', e.target.value)}
@@ -572,8 +572,8 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
       )}
 
       {data.triggerType === 'task_idle' && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Giorni di inattivita <span className="text-red-500">*</span>
           </label>
           <input
@@ -584,15 +584,15 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
             onChange={(e) => updateParam('idleDays', e.target.value)}
             className="input max-w-xs"
           />
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Il task viene considerato inattivo dopo questo numero di giorni senza aggiornamenti
           </p>
         </div>
       )}
 
       {data.triggerType === 'document_review_due' && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Giorni prima della scadenza revisione
           </label>
           <input
@@ -607,8 +607,8 @@ function Step2Form({ data, onChange, errors, domain }: Step2Props) {
       )}
 
       {data.triggerType === 'project_deadline_approaching' && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Giorni prima della scadenza progetto
           </label>
           <input
@@ -670,11 +670,11 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
     <div className="card space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
             Condizioni
-            <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-500">(opzionale)</span>
+            <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">(opzionale)</span>
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Aggiungi filtri per limitare quando la regola si attiva
           </p>
         </div>
@@ -691,15 +691,15 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
       {/* AND/OR toggle */}
       {data.conditions.length > 1 && (
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Logica:</span>
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <span className="text-sm text-slate-600 dark:text-slate-400">Logica:</span>
+          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <button
               type="button"
               onClick={() => onChange({ ...data, conditionLogic: 'AND' })}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                 data.conditionLogic === 'AND'
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
               AND
@@ -710,27 +710,27 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                 data.conditionLogic === 'OR'
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
               OR
             </button>
           </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {data.conditionLogic === 'AND' ? 'Tutte le condizioni devono essere vere' : 'Almeno una condizione deve essere vera'}
           </span>
         </div>
       )}
 
       {data.conditions.length === 0 ? (
-        <div className="py-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="py-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Nessuna condizione. La regola si attiva per qualsiasi evento del trigger selezionato.
           </p>
           <button
             type="button"
             onClick={addCondition}
-            className="mt-3 text-sm text-primary-600 dark:text-primary-400 hover:underline"
+            className="mt-3 text-sm text-cyan-600 dark:text-cyan-400 hover:underline"
           >
             Aggiungi una condizione
           </button>
@@ -740,12 +740,12 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
           {data.conditions.map((condition, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+              className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
             >
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Condition type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Condizione</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Condizione</label>
                   <select
                     value={condition.type}
                     onChange={(e) => updateConditionType(index, e.target.value as ConditionType)}
@@ -760,7 +760,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
                 {/* Condition params */}
                 {condition.type === 'task_priority_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priorità</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Priorità</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -776,7 +776,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
 
                 {condition.type === 'task_type_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo task</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo task</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -792,7 +792,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
 
                 {condition.type === 'task_in_project' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Progetto</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Progetto</label>
                     <select
                       value={(condition.params.projectId as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'projectId', e.target.value)}
@@ -810,7 +810,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
 
                 {condition.type === 'task_has_assignee' && (
                   <div className="flex items-end pb-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                       Nessun parametro richiesto
                     </p>
                   </div>
@@ -818,7 +818,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
 
                 {condition.type === 'task_has_subtasks' && (
                   <div className="flex items-end pb-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                       Nessun parametro richiesto
                     </p>
                   </div>
@@ -827,7 +827,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
                 {condition.type === 'task_field_equals' && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Campo</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Campo</label>
                       <select
                         value={(condition.params.field as string) ?? ''}
                         onChange={(e) => updateConditionParam(index, 'field', e.target.value)}
@@ -843,7 +843,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valore</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valore</label>
                       <input
                         type="text"
                         value={(condition.params.value as string) ?? ''}
@@ -858,7 +858,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
                 {/* Risk domain conditions */}
                 {condition.type === 'risk_probability_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Probabilita</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Probabilita</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -874,7 +874,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
 
                 {condition.type === 'risk_impact_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Impatto</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Impatto</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -890,7 +890,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
 
                 {condition.type === 'risk_category_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -908,7 +908,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
                 {/* Document domain conditions */}
                 {condition.type === 'document_type_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo documento</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo documento</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -927,7 +927,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
                 {/* Project domain conditions */}
                 {condition.type === 'project_status_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stato progetto</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Stato progetto</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -948,7 +948,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
 
                 {condition.type === 'project_priority_is' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priorita progetto</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Priorita progetto</label>
                     <select
                       value={(condition.params.value as string) ?? ''}
                       onChange={(e) => updateConditionParam(index, 'value', e.target.value)}
@@ -967,7 +967,7 @@ function Step3Form({ data, onChange, projects, domain }: Step3Props) {
                 type="button"
                 onClick={() => removeCondition(index)}
                 aria-label="Rimuovi condizione"
-                className="mt-6 btn-icon text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                className="mt-6 btn-icon text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -1021,11 +1021,11 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
     <div className="card space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
             Azioni
             <span className="ml-2 text-xs font-normal text-red-400">almeno 1 richiesta</span>
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Definisci cosa deve succedere quando la regola si attiva
           </p>
         </div>
@@ -1054,7 +1054,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
           <button
             type="button"
             onClick={addAction}
-            className="mt-3 text-sm text-primary-600 dark:text-primary-400 hover:underline"
+            className="mt-3 text-sm text-cyan-600 dark:text-cyan-400 hover:underline"
           >
             Aggiungi un'azione
           </button>
@@ -1064,12 +1064,12 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
           {data.actions.map((action, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+              className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
             >
               <div className="flex-1 space-y-3">
                 {/* Action type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo azione</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo azione</label>
                   <select
                     value={action.type}
                     onChange={(e) => updateActionType(index, e.target.value as ActionType)}
@@ -1085,7 +1085,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                 {action.type === 'notify_user' && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Utente <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -1102,7 +1102,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Messaggio</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Messaggio</label>
                       <input
                         type="text"
                         value={(action.params.message as string) ?? ''}
@@ -1116,7 +1116,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
 
                 {(action.type === 'notify_assignee' || action.type === 'notify_project_owner') && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Messaggio</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Messaggio</label>
                     <textarea
                       value={(action.params.message as string) ?? ''}
                       onChange={(e) => updateActionParam(index, 'message', e.target.value)}
@@ -1129,7 +1129,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
 
                 {action.type === 'update_parent_status' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Nuovo status <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -1148,7 +1148,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                 {action.type === 'set_task_field' && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Campo <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -1163,7 +1163,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Valore <span className="text-red-500">*</span>
                       </label>
                       {action.params.field === 'status' ? (
@@ -1203,7 +1203,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
 
                 {action.type === 'create_comment' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Testo commento <span className="text-red-500">*</span>
                     </label>
                     <textarea
@@ -1218,7 +1218,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
 
                 {action.type === 'assign_to_user' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Utente <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -1239,7 +1239,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                 {action.type === 'send_email' && (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Destinatario <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -1254,7 +1254,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                     </div>
                     {action.params.recipientType === 'specific_user' && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Utente</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Utente</label>
                         <select
                           value={(action.params.userId as string) ?? ''}
                           onChange={(e) => updateActionParam(index, 'userId', e.target.value)}
@@ -1268,7 +1268,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                       </div>
                     )}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Messaggio</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Messaggio</label>
                       <textarea
                         value={(action.params.message as string) ?? ''}
                         onChange={(e) => updateActionParam(index, 'message', e.target.value)}
@@ -1283,7 +1283,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                 {(action.type === 'set_risk_field' || action.type === 'set_document_field' || action.type === 'set_project_field') && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Campo <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1295,7 +1295,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Valore <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1312,7 +1312,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                 {action.type === 'create_task' && (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Titolo task <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1324,7 +1324,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assegnatario</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assegnatario</label>
                       <select
                         value={(action.params.assigneeId as string) ?? ''}
                         onChange={(e) => updateActionParam(index, 'assigneeId', e.target.value)}
@@ -1345,7 +1345,7 @@ function Step4Form({ data, onChange, errors, users, domain }: Step4Props) {
                 onClick={() => removeAction(index)}
                 aria-label="Rimuovi azione"
                 disabled={data.actions.length === 1}
-                className="mt-6 btn-icon text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="mt-6 btn-icon text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -1368,9 +1368,9 @@ interface SummaryRowProps {
 
 function SummaryRow({ label, value }: SummaryRowProps) {
   return (
-    <div className="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-      <span className="text-sm text-gray-500 dark:text-gray-400 w-28 shrink-0">{label}</span>
-      <span className="text-sm text-gray-900 dark:text-white font-medium flex-1">{value}</span>
+    <div className="flex items-start gap-3 py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+      <span className="text-sm text-slate-500 dark:text-slate-400 w-28 shrink-0">{label}</span>
+      <span className="text-sm text-slate-900 dark:text-white font-medium flex-1">{value}</span>
     </div>
   )
 }
@@ -1417,7 +1417,7 @@ function Step5Summary({
     <div className="space-y-4">
       {/* Rule summary */}
       <div className="card space-y-1">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
           Riepilogo Regola
         </h2>
         <SummaryRow label="Dominio" value={domainLabel} />
@@ -1449,13 +1449,13 @@ function Step5Summary({
 
       {/* Settings */}
       <div className="card space-y-4">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white">Impostazioni</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Impostazioni</h2>
 
         {/* Active toggle */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Attiva regola</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Attiva regola</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Le regole inattive non vengono eseguite
             </p>
           </div>
@@ -1466,9 +1466,9 @@ function Step5Summary({
             onClick={() => onChange({ ...data, isActive: !data.isActive })}
             className={`
               relative inline-flex h-6 w-11 items-center rounded-full
-              transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:ring-offset-2
-              dark:focus:ring-offset-gray-800
-              ${data.isActive ? 'bg-primary-600 dark:bg-primary-500' : 'bg-gray-200 dark:bg-gray-600'}
+              transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2
+              dark:focus:ring-offset-slate-800
+              ${data.isActive ? 'bg-cyan-600 dark:bg-cyan-500' : 'bg-slate-200 dark:bg-slate-600'}
             `}
           >
             <span
@@ -1483,7 +1483,7 @@ function Step5Summary({
 
         {/* Priority */}
         <div>
-          <label htmlFor="rule-priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="rule-priority" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Priorità di esecuzione
           </label>
           <input
@@ -1495,14 +1495,14 @@ function Step5Summary({
             onChange={(e) => onChange({ ...data, priority: parseInt(e.target.value, 10) || 0 })}
             className="input max-w-xs"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Regole con priorità più alta vengono eseguite prima (0 = default)
           </p>
         </div>
 
         {/* Cooldown */}
         <div>
-          <label htmlFor="rule-cooldown" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="rule-cooldown" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Cooldown (minuti)
           </label>
           <div className="flex items-center gap-3">
@@ -1523,8 +1523,8 @@ function Step5Summary({
                   onClick={() => onChange({ ...data, cooldownMinutes: preset.value })}
                   className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
                     data.cooldownMinutes === preset.value
-                      ? 'bg-primary-100 border-primary-300 text-primary-700 dark:bg-primary-900/40 dark:border-primary-700 dark:text-primary-400'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'bg-cyan-100 border-cyan-300 text-cyan-700 dark:bg-cyan-900/40 dark:border-cyan-700 dark:text-cyan-400'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   {preset.label}
@@ -1532,7 +1532,7 @@ function Step5Summary({
               ))}
             </div>
           </div>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Tempo minimo tra due esecuzioni consecutive (0 = nessun limite)
           </p>
         </div>
@@ -1785,7 +1785,7 @@ export default function AutomationEditorPage() {
   if (isEditMode && isLoading && !currentRule) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -1794,11 +1794,11 @@ export default function AutomationEditorPage() {
   if (isEditMode && !isLoading && !currentRule) {
     return (
       <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
           Regola non trovata
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-slate-500 dark:text-slate-400 mb-4">
           La regola richiesta non esiste o è stata eliminata.
         </p>
         <button onClick={() => navigate('/admin/automations')} className="btn-primary">
@@ -1814,12 +1814,12 @@ export default function AutomationEditorPage() {
       <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">
         <button
           onClick={() => navigate('/admin/automations')}
-          className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
         >
           Automazioni
         </button>
-        <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-        <span className="text-gray-900 dark:text-white font-medium">
+        <ChevronRight className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+        <span className="text-slate-900 dark:text-white font-medium">
           {isEditMode ? 'Modifica Regola' : 'Nuova Regola'}
         </span>
       </nav>
@@ -1831,11 +1831,11 @@ export default function AutomationEditorPage() {
           aria-label="Torna alle automazioni"
           className="btn-icon"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
+          <ArrowLeft className="w-5 h-5 text-slate-500" />
         </button>
         <div className="flex items-center gap-2">
-          <Zap className="w-6 h-6 text-primary-500" />
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+          <Zap className="w-6 h-6 text-cyan-500" />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
             {isEditMode ? 'Modifica Regola' : 'Nuova Regola'}
           </h1>
         </div>
@@ -1936,7 +1936,7 @@ export default function AutomationEditorPage() {
           Indietro
         </button>
 
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+        <span className="text-sm text-slate-500 dark:text-slate-400">
           Passo {currentStep} di {STEPS.length}
         </span>
 

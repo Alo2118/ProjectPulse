@@ -108,12 +108,12 @@ export default function InviteMemberModal({
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30">
-            <Mail className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-900/30">
+            <Mail className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
           </div>
           <h2
             id="invite-modal-title"
-            className="text-lg font-semibold text-gray-900 dark:text-white"
+            className="text-lg font-semibold text-slate-900 dark:text-white"
           >
             Invita Membro Esterno
           </h2>
@@ -130,7 +130,7 @@ export default function InviteMemberModal({
       </div>
 
       {/* Divider */}
-      <div className="border-t border-gray-200 dark:border-gray-700" />
+      <div className="border-t border-slate-200 dark:border-slate-700" />
 
       {/* Content */}
       <div className="p-6">
@@ -141,10 +141,10 @@ export default function InviteMemberModal({
               <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-base font-medium text-gray-900 dark:text-white">
+              <p className="text-base font-medium text-slate-900 dark:text-white">
                 Invito inviato con successo!
               </p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 L'utente ricevera un'email con le istruzioni per accedere al progetto.
               </p>
             </div>
@@ -180,7 +180,7 @@ export default function InviteMemberModal({
             <div>
               <label
                 htmlFor="invite-email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
               >
                 Email
               </label>
@@ -204,7 +204,7 @@ export default function InviteMemberModal({
             <div>
               <label
                 htmlFor="invite-role"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
               >
                 Ruolo nel progetto
               </label>
@@ -227,13 +227,13 @@ export default function InviteMemberModal({
                   {errors.projectRole.message}
                 </p>
               )}
-              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                 Gli ospiti hanno accesso limitato solo alle risorse condivise con loro.
               </p>
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
               <button
                 type="button"
                 onClick={handleClose}

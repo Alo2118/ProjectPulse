@@ -132,7 +132,7 @@ export default function AttentionSection({
       {/* Section header */}
       <div className="flex items-center gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" aria-hidden="true" />
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
           Richiede Attenzione
         </h3>
         <span
@@ -185,7 +185,7 @@ export default function AttentionSection({
 
                   {/* Detail text */}
                   {alert.detail && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
                       {alert.detail}
                     </p>
                   )}

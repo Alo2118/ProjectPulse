@@ -25,12 +25,12 @@ interface CommentSectionProps {
 function CommentText({ content }: { content: string }) {
   const parts = content.split(/(@\S+)/g)
   return (
-    <p className="mt-1 text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">
+    <p className="mt-1 text-slate-700 dark:text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
       {parts.map((part, i) =>
         part.startsWith('@') ? (
           <span
             key={i}
-            className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-semibold bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 mx-0.5"
+            className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-semibold bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 mx-0.5"
           >
             {part}
           </span>
@@ -70,10 +70,10 @@ function CommentBubble({ comment, currentUser, onReply, onDelete, isReply = fals
       <div className="flex-1 min-w-0">
         {/* Header */}
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="font-semibold text-gray-900 dark:text-white text-sm">
+          <span className="font-semibold text-slate-900 dark:text-white text-sm">
             {comment.user?.firstName} {comment.user?.lastName}
           </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
             {formatDateTime(comment.createdAt)}
           </span>
           {comment.isInternal && (
@@ -88,7 +88,7 @@ function CommentBubble({ comment, currentUser, onReply, onDelete, isReply = fals
           className={`mt-1.5 rounded-xl px-4 py-3 ${
             isReply
               ? 'bg-blue-50 dark:bg-blue-900/20 rounded-tl-sm'
-              : 'bg-gray-50 dark:bg-gray-700/50 rounded-tl-sm'
+              : 'bg-slate-50 dark:bg-slate-700/50 rounded-tl-sm'
           }`}
         >
           <CommentText content={comment.content} />
@@ -100,7 +100,7 @@ function CommentBubble({ comment, currentUser, onReply, onDelete, isReply = fals
           {!isReply && onReply && (
             <button
               onClick={onReply}
-              className="text-xs text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 flex items-center gap-1 transition-colors"
+              className="text-xs text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 flex items-center gap-1 transition-colors"
             >
               <CornerDownRight className="w-3 h-3" />
               Rispondi
@@ -111,7 +111,7 @@ function CommentBubble({ comment, currentUser, onReply, onDelete, isReply = fals
           {comment.user?.id === currentUser?.id && (
             <button
               onClick={() => onDelete(comment.id)}
-              className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 flex items-center gap-1 transition-colors"
+              className="text-xs text-slate-400 hover:text-red-500 dark:hover:text-red-400 flex items-center gap-1 transition-colors"
             >
               <Trash2 className="w-3 h-3" />
               Elimina
@@ -206,7 +206,7 @@ export function CommentSection({
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
         <MessageSquare className="w-5 h-5 mr-2" />
         Commenti ({comments.length})
       </h2>
@@ -236,7 +236,7 @@ export function CommentSection({
 
             {/* Textarea with mention support */}
             <div
-              className="rounded-xl border transition-colors bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100 dark:focus-within:ring-primary-900/30"
+              className="rounded-xl border transition-colors bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus-within:border-cyan-400 dark:focus-within:border-cyan-500 focus-within:ring-2 focus-within:ring-cyan-100 dark:focus-within:ring-cyan-900/30"
             >
               <MentionTextarea
                 value={newComment}
@@ -245,18 +245,18 @@ export function CommentSection({
                 disabled={isSubmitting}
                 minRows={3}
                 maxRows={10}
-                className="w-full bg-transparent px-4 pt-3 pb-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                className="w-full bg-transparent px-4 pt-3 pb-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
               />
 
               {/* Toolbar */}
               <div className="flex items-center justify-between px-3 pb-2.5">
-                <span className="text-xs text-gray-400 dark:text-gray-500 select-none">
+                <span className="text-xs text-slate-400 dark:text-slate-500 select-none">
                   @ per menzionare
                 </span>
                 <button
                   type="submit"
                   disabled={!newComment.trim() || isSubmitting}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium bg-primary-600 hover:bg-primary-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 text-white disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500 text-white disabled:cursor-not-allowed transition-colors"
                 >
                   {isSubmitting ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -274,10 +274,10 @@ export function CommentSection({
       {/* Comments List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : comments.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
           Nessun commento ancora. Scrivi il primo!
         </div>
       ) : (
@@ -294,7 +294,7 @@ export function CommentSection({
 
               {/* Threaded replies */}
               {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-8 space-y-2 mt-2 pl-4 border-l-2 border-gray-100 dark:border-gray-700/50">
+                <div className="ml-8 space-y-2 mt-2 pl-4 border-l-2 border-slate-100 dark:border-slate-700/50">
                   {(showAllReplies[comment.id]
                     ? comment.replies
                     : comment.replies.slice(0, 3)
@@ -312,7 +312,7 @@ export function CommentSection({
                   {comment.replies.length > 3 && !showAllReplies[comment.id] && (
                     <button
                       onClick={() => toggleShowAllReplies(comment.id)}
-                      className="flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors mt-1"
+                      className="flex items-center gap-1.5 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium transition-colors mt-1"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
                       Mostra altre {comment.replies.length - 3} risposte

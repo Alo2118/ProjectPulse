@@ -109,7 +109,7 @@ export default function UserFormPage() {
   if (isEditing && isLoading && !currentUser) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -128,11 +128,11 @@ export default function UserFormPage() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
           {isEditing ? 'Modifica Utente' : 'Nuovo Utente'}
         </h1>
       </div>
@@ -141,7 +141,7 @@ export default function UserFormPage() {
       <form onSubmit={handleSubmit} className="card p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Nome *
             </label>
             <input
@@ -157,7 +157,7 @@ export default function UserFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Cognome *
             </label>
             <input
@@ -174,7 +174,7 @@ export default function UserFormPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Email *
           </label>
           <input
@@ -188,7 +188,7 @@ export default function UserFormPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Password {isEditing ? '(lascia vuoto per non modificare)' : '*'}
           </label>
           <div className="relative">
@@ -202,7 +202,7 @@ export default function UserFormPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -211,7 +211,7 @@ export default function UserFormPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Ruolo *
           </label>
           <select
@@ -234,16 +234,16 @@ export default function UserFormPage() {
               id="isActive"
               checked={formData.isActive}
               onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
             />
-            <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Utente attivo
             </label>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <button type="button" onClick={() => navigate('/users')} className="btn-secondary">
             Annulla
           </button>

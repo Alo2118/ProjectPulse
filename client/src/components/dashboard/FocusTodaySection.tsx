@@ -33,7 +33,7 @@ const PRIORITY_DOT: Record<string, string> = {
   critical: 'bg-red-500',
   high: 'bg-orange-500',
   medium: 'bg-amber-400',
-  low: 'bg-gray-300 dark:bg-gray-600',
+  low: 'bg-slate-300 dark:bg-slate-600',
 }
 
 /** Italian abbreviated day labels Mon–Fri (ISO weekday 1–5, array index 0–4) */
@@ -79,7 +79,7 @@ function InlineLiveTimer({ startTime }: { startTime: string }) {
   }, [startTime])
 
   return (
-    <span className="font-mono font-bold text-3xl text-primary-600 dark:text-primary-400 tabular-nums">
+    <span className="font-mono font-bold text-3xl text-cyan-600 dark:text-cyan-400 tabular-nums">
       {formatElapsed(elapsed)}
     </span>
   )
@@ -91,7 +91,7 @@ function FocusSkeleton() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Status bar skeleton */}
-      <div className="rounded-xl p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent">
+      <div className="rounded-xl p-4 bg-gradient-to-r from-cyan-50 to-transparent dark:from-cyan-900/20 dark:to-transparent">
         <div className="skeleton h-6 w-96 max-w-full" />
       </div>
 
@@ -151,13 +151,13 @@ function HorizonHeader({ label, count, emphasis = false }: HorizonHeaderProps) {
       <span
         className={
           emphasis
-            ? 'text-sm font-semibold text-primary-600 dark:text-primary-400'
-            : 'text-sm font-medium text-gray-500 dark:text-gray-400'
+            ? 'text-sm font-semibold text-cyan-600 dark:text-cyan-400'
+            : 'text-sm font-medium text-slate-500 dark:text-slate-400'
         }
       >
         {label}
       </span>
-      <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+      <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400">
         {count}
       </span>
     </div>
@@ -175,7 +175,7 @@ interface TaskRowProps {
 
 function TaskRow({ task, isRunningTimer, canTrackTime, onTimerToggle }: TaskRowProps) {
   return (
-    <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+    <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
       {/* Priority dot */}
       <div
         className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.low}`}
@@ -185,11 +185,11 @@ function TaskRow({ task, isRunningTimer, canTrackTime, onTimerToggle }: TaskRowP
 
       {/* Title + project */}
       <Link to={`/tasks/${task.id}`} className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 truncate">
+        <p className="text-sm font-medium text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 truncate">
           {task.title}
         </p>
         {task.project && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
             {task.project.name}
           </p>
         )}
@@ -207,7 +207,7 @@ function TaskRow({ task, isRunningTimer, canTrackTime, onTimerToggle }: TaskRowP
           className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
             isRunningTimer
               ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'text-gray-400 hover:text-primary-500 opacity-0 group-hover:opacity-100 focus:opacity-100'
+              : 'text-slate-400 hover:text-cyan-500 opacity-0 group-hover:opacity-100 focus:opacity-100'
           }`}
         >
           {isRunningTimer ? (
@@ -346,26 +346,26 @@ export default function FocusTodaySection({
     <div className="space-y-6 animate-fade-in">
       {/* ── A. Status Bar ─────────────────────────────────────────────────── */}
       <div
-        className="rounded-xl p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent"
+        className="rounded-xl p-4 bg-gradient-to-r from-cyan-50 to-transparent dark:from-cyan-900/20 dark:to-transparent"
         role="banner"
         aria-label="Riepilogo giornaliero"
       >
-        <p className="text-lg text-gray-700 dark:text-gray-300 leading-snug">
+        <p className="text-lg text-slate-700 dark:text-slate-300 leading-snug">
           Buongiorno,{' '}
-          <span className="font-semibold text-gray-900 dark:text-white">
+          <span className="font-semibold text-slate-900 dark:text-white">
             {userName ?? 'utente'}
           </span>
           ! Oggi hai{' '}
-          <span className="font-semibold text-primary-600 dark:text-primary-400">
+          <span className="font-semibold text-cyan-600 dark:text-cyan-400">
             {todayTaskCount} {todayTaskCount === 1 ? 'task' : 'task'}
           </span>{' '}
           in scadenza{' '}
-          <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 text-base">
+          <span className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 text-base">
             <Clock className="w-4 h-4 opacity-70" aria-hidden />
-            <span className="font-medium text-gray-700 dark:text-gray-300">
+            <span className="font-medium text-slate-700 dark:text-slate-300">
               {formatDuration(todayMinutesLogged)}
             </span>
-            <span className="text-gray-400 dark:text-gray-500">
+            <span className="text-slate-400 dark:text-slate-500">
               / {formatHoursFromDecimal(dailyTarget)} loggate oggi
             </span>
           </span>
@@ -381,14 +381,14 @@ export default function FocusTodaySection({
           aria-label="Task per scadenza"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-4 h-4 text-primary-500" aria-hidden />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <Calendar className="w-4 h-4 text-cyan-500" aria-hidden />
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
               Focus della settimana
             </h2>
           </div>
 
           {!hasAnyTask ? (
-            <div className="text-center py-8 text-gray-400 dark:text-gray-500">
+            <div className="text-center py-8 text-slate-400 dark:text-slate-500">
               <Target className="w-8 h-8 mx-auto mb-2 opacity-40" aria-hidden />
               <p className="text-sm italic">
                 Nessun task con scadenza questa settimana
@@ -478,7 +478,7 @@ export default function FocusTodaySection({
           <div
             className={`card p-5 transition-all duration-300 ${
               runningTimer
-                ? 'border-primary-400/40 dark:border-primary-500/40 bg-gradient-to-br from-primary-50/60 to-transparent dark:from-primary-900/25 dark:to-transparent'
+                ? 'border-cyan-400/40 dark:border-cyan-500/40 bg-gradient-to-br from-cyan-50/60 to-transparent dark:from-cyan-900/25 dark:to-transparent'
                 : ''
             }`}
             aria-live="polite"
@@ -501,12 +501,12 @@ export default function FocusTodaySection({
                 <div className="min-w-0">
                   <Link
                     to={`/tasks/${runningTimer.taskId}`}
-                    className="text-sm font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 truncate block"
+                    className="text-sm font-semibold text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 truncate block"
                   >
                     {runningTimer.task?.title ?? 'Timer attivo'}
                   </Link>
                   {runningTimer.task?.project && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {runningTimer.task.project.name}
                     </p>
                   )}
@@ -529,7 +529,7 @@ export default function FocusTodaySection({
               </div>
             ) : (
               /* No timer active */
-              <div className="flex items-center gap-3 text-gray-400 dark:text-gray-500 py-1">
+              <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500 py-1">
                 <Clock className="w-4 h-4 flex-shrink-0 opacity-60" aria-hidden />
                 <span className="text-sm">Nessun timer attivo</span>
               </div>
@@ -540,8 +540,8 @@ export default function FocusTodaySection({
           <div className="card p-5" aria-label="Progresso settimanale">
             {/* Label */}
             <div className="flex items-center gap-2 mb-3">
-              <Target className="w-4 h-4 text-primary-500" aria-hidden />
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <Target className="w-4 h-4 text-cyan-500" aria-hidden />
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                 Progresso Settimana
               </span>
             </div>
@@ -551,7 +551,7 @@ export default function FocusTodaySection({
               <span className={`text-2xl font-bold ${getProgressTextColor(weeklyPercent)}`}>
                 {formatDuration(weeklyTotalMinutes)}
               </span>
-              <span className="text-base text-gray-400 dark:text-gray-500">
+              <span className="text-base text-slate-400 dark:text-slate-500">
                 / {formatHoursFromDecimal(weeklyTarget)}
               </span>
               <span className={`ml-auto text-sm font-semibold ${getProgressTextColor(weeklyPercent)}`}>
@@ -561,7 +561,7 @@ export default function FocusTodaySection({
 
             {/* Progress bar */}
             <div
-              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-4"
+              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-4"
               role="progressbar"
               aria-valuenow={weeklyPercent}
               aria-valuemin={0}
@@ -589,8 +589,8 @@ export default function FocusTodaySection({
                     <div
                       className={`w-full rounded-t-sm transition-all duration-500 ${
                         bar.isToday
-                          ? 'bg-primary-500 dark:bg-primary-400'
-                          : 'bg-gray-300 dark:bg-gray-600'
+                          ? 'bg-cyan-500 dark:bg-cyan-400'
+                          : 'bg-slate-300 dark:bg-slate-600'
                       }`}
                       style={{ height: `${Math.max(bar.heightPct, bar.minutes > 0 ? 8 : 2)}%` }}
                       title={`${bar.abbr}: ${formatDuration(bar.minutes)}`}
@@ -600,8 +600,8 @@ export default function FocusTodaySection({
                   <span
                     className={`text-xs leading-none ${
                       bar.isToday
-                        ? 'font-bold text-primary-600 dark:text-primary-400'
-                        : 'text-gray-400 dark:text-gray-500'
+                        ? 'font-bold text-cyan-600 dark:text-cyan-400'
+                        : 'text-slate-400 dark:text-slate-500'
                     }`}
                     aria-label={bar.abbr}
                   >

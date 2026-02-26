@@ -213,7 +213,7 @@ export default function TaskSearchSelect({
     <div ref={containerRef} className="relative">
       {/* Input field */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         {value && selectedTask && !isOpen ? (
           <button
             type="button"
@@ -225,7 +225,7 @@ export default function TaskSearchSelect({
             disabled={disabled}
             className="input w-full pl-9 pr-8 text-left truncate disabled:opacity-50"
           >
-            <span className="text-xs text-gray-500 mr-1.5">{selectedTask.project?.name || '—'}</span>
+            <span className="text-xs text-slate-500 mr-1.5">{selectedTask.project?.name || '—'}</span>
             {selectedTask.title}
           </button>
         ) : (
@@ -247,30 +247,30 @@ export default function TaskSearchSelect({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400"
           >
             <X className="w-4 h-4" />
           </button>
         ) : (
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         )}
       </div>
 
       {/* Dropdown */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg">
           {isLoading ? (
-            <div className="flex items-center gap-2 p-3 text-sm text-gray-500">
+            <div className="flex items-center gap-2 p-3 text-sm text-slate-500">
               <Loader2 className="w-4 h-4 animate-spin" /> Caricamento...
             </div>
           ) : grouped.length === 0 ? (
-            <div className="p-3 text-sm text-gray-500">
+            <div className="p-3 text-sm text-slate-500">
               {search ? 'Nessun task trovato' : 'Nessun task disponibile'}
             </div>
           ) : (
             grouped.map((group) => (
               <div key={group.label}>
-                <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 sticky top-0">
+                <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 sticky top-0">
                   {group.label}
                 </div>
                 {group.tasks.map((task) => (
@@ -278,17 +278,17 @@ export default function TaskSearchSelect({
                     key={task.id}
                     type="button"
                     onClick={() => handleSelect(task.id)}
-                    className={`w-full text-left py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors flex items-center ${
+                    className={`w-full text-left py-2 text-sm hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors flex items-center ${
                       task.id === value
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                        : 'text-gray-900 dark:text-white'
+                        ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300'
+                        : 'text-slate-900 dark:text-white'
                     }`}
                     style={{ paddingLeft: `${12 + task.depth * 16}px` }}
                   >
                     {task.depth > 0 && (
-                      <ChevronRight className="w-3 h-3 text-gray-400 mr-1 flex-shrink-0" />
+                      <ChevronRight className="w-3 h-3 text-slate-400 mr-1 flex-shrink-0" />
                     )}
-                    <span className="text-xs text-gray-400 mr-1.5 flex-shrink-0">{task.code}</span>
+                    <span className="text-xs text-slate-400 mr-1.5 flex-shrink-0">{task.code}</span>
                     <span className="truncate">{task.title}</span>
                   </button>
                 ))}

@@ -1,40 +1,165 @@
 /**
- * Dashboard Page - Main dashboard for all roles
- * Shows personalized overview based on user role
+ * Dashboard Page — JARVIS redesign (Phase 3, Tasks 9 & 10)
+ *
+ * Direzione layout  (admin / direzione roles)
+ *   Zone 1: Greeting header + 4 KPI cards
+ *   Zone 2: Attention alerts (auto-hides when empty)
+ *   Zone 3: Projects table
+ *
+ * Dipendente layout (dipendente role)
+ *   Zone 1: Greeting + today's hours inline
+ *   Zone 2: "Oggi" task list
+ *   Zone 3: "Prossimi giorni" task list
+ *   Zone 4: Active timer card (conditional)
+ *   Zone 5: Weekly summary mini-chart
  */
 
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { format } from 'date-fns'
+import { it } from 'date-fns/locale'
+import {
+  Clock,
+  Play,
+  Square,
+  RefreshCw,
+} from 'lucide-react'
+
 import { useAuthStore } from '@stores/authStore'
 import { useDashboardStore } from '@stores/dashboardStore'
 import { useAnalyticsStore } from '@stores/analyticsStore'
 import { useTimerToggle } from '@hooks/useTimerToggle'
-import { useDashboardLayoutStore } from '@stores/dashboardLayoutStore'
-import {
-  Clock,
-  ArrowRight,
-  FolderTree,
-  List,
-  Play,
-  Square,
-  CheckCircle,
-} from 'lucide-react'
-import { StatCardSkeleton, ListItemSkeleton } from '@/components/ui/SkeletonLoader'
-import { ProjectHealthSection } from '@/components/dashboard/ProjectHealthSection'
-import { TeamPerformanceSection } from '@/components/dashboard/TeamPerformanceSection'
-import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
-import { TaskTreeView } from '@/components/reports/TaskTreeView'
-import TrafficLightSection from '@/components/dashboard/TrafficLightSection'
+
+import { HudPanelHeader, HudProgressBar, HudStatusRing } from '@/components/ui/hud'
+import KPICard from '@/components/dashboard/KPICard'
 import AttentionSection from '@/components/dashboard/AttentionSection'
-import FocusTodaySection from '@/components/dashboard/FocusTodaySection'
-import DeliveryOutlookSection from '@/components/dashboard/DeliveryOutlookSection'
+import { StatCardSkeleton, ListItemSkeleton } from '@/components/ui/SkeletonLoader'
+import { formatDuration, formatHoursFromDecimal } from '@utils/dateFormatters'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/** Abbreviated Italian day labels Mon–Fri */
+const DAY_ABBR = ['L', 'M', 'M', 'G', 'V'] as const
+
+/** Priority dot colours */
+const PRIORITY_DOT: Record<string, string> = {
+  critical: 'bg-red-500',
+  high: 'bg-orange-500',
+  medium: 'bg-amber-400',
+  low: 'bg-slate-500',
+}
+
+// ─── Helper: task horizon grouping ──────────────────────────────────────────
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+// ─── Inline live timer ────────────────────────────────────────────────────────
+
+function LiveCounter({ startTime }: { startTime: string }) {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const start = new Date(startTime).getTime()
+    const update = () => setElapsed(Math.floor((Date.now() - start) / 1000))
+    update()
+    const id = setInterval(update, 1000)
+    return () => clearInterval(id)
+  }, [startTime])
+
+  // Split into parts for animated colon separators
+  const h = String(Math.floor(elapsed / 3600)).padStart(2, '0')
+  const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0')
+  const s = String(elapsed % 60).padStart(2, '0')
+
+  return (
+    <span className="font-mono text-2xl text-cyan-400 glow-text tabular-nums" aria-live="polite">
+      {h}
+      <span className="animate-timer-tick opacity-100">:</span>
+      {m}
+      <span className="animate-timer-tick opacity-100">:</span>
+      {s}
+    </span>
+  )
+}
+
+// ─── Health status → HudStatusRing status ───────────────────────────────────
+
+function healthToRingStatus(health: string): 'active' | 'warning' | 'danger' | 'idle' {
+  if (health === 'healthy') return 'active'
+  if (health === 'at_risk') return 'warning'
+  if (health === 'critical') return 'danger'
+  return 'idle'
+}
+
+// ─── Progress % → semantic color for HudProgressBar ─────────────────────────
+
+function progressColor(pct: number): 'emerald' | 'amber' | 'red' {
+  if (pct >= 80) return 'emerald'
+  if (pct >= 50) return 'amber'
+  return 'red'
+}
+
+// ─── Weekly progress fill colour ─────────────────────────────────────────────
+
+function weeklyProgressFill(pct: number): string {
+  if (pct >= 80) return 'bg-emerald-500'
+  if (pct >= 50) return 'bg-amber-500'
+  return 'bg-red-500'
+}
+
+function weeklyProgressText(pct: number): string {
+  if (pct >= 80) return 'text-emerald-400'
+  if (pct >= 50) return 'text-amber-400'
+  return 'text-red-400'
+}
+
+// ─── IT month abbreviations for date display ─────────────────────────────────
+
+const IT_MONTHS = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'] as const
+
+function formatITDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  return `${d.getDate()} ${IT_MONTHS[d.getMonth()]}`
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="space-y-1">
+        <div className="skeleton h-6 w-72" />
+        <div className="skeleton h-3 w-40 mt-1" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <StatCardSkeleton key={i} />
+        ))}
+      </div>
+      <div className="card p-4 space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <ListItemSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
+
   const {
     myTasks,
-    allTasks,
-    recentTimeEntries,
     weeklyHours,
     runningTimer,
     isLoading,
@@ -49,22 +174,14 @@ export default function DashboardPage() {
   const {
     overview,
     projectHealth,
-    topContributors,
-    completionTrend,
     teamWorkload,
     deliveryForecast,
-    trendPeriodDays,
-    setTrendPeriodDays,
     isLoading: isLoadingAnalytics,
     fetchAll: fetchAnalytics,
   } = useAnalyticsStore()
 
-  const isDirezione = user?.role === 'direzione'
-  const [taskViewMode, setTaskViewMode] = useState<'list' | 'tree'>('list')
-
-  const { getVisibleWidgets } = useDashboardLayoutStore()
-  const visibleWidgets = getVisibleWidgets((user?.role as 'admin' | 'direzione' | 'dipendente') ?? 'dipendente')
-  const isVisible = (id: string) => visibleWidgets.some((w) => w.id === id && w.visible)
+  const isDirezione = user?.role === 'admin' || user?.role === 'direzione'
+  const firstName = user?.firstName ?? ''
 
   useEffect(() => {
     fetchDashboardData()
@@ -74,346 +191,571 @@ export default function DashboardPage() {
     }
   }, [fetchDashboardData, fetchAnalytics, fetchAllTasks, isDirezione])
 
-  if (isLoading) {
+  // ── KPI calculations (direzione) ─────────────────────────────────────────
+
+  const activeProjects = useMemo(() => overview?.activeProjects ?? 0, [overview])
+  const atRiskCount = useMemo(
+    () => projectHealth.filter((p) => p.healthStatus === 'at_risk').length,
+    [projectHealth]
+  )
+  const criticalCount = useMemo(
+    () => projectHealth.filter((p) => p.healthStatus === 'critical').length,
+    [projectHealth]
+  )
+  const avgUtilization = useMemo(() => {
+    if (!teamWorkload.length) return 0
+    return Math.round(teamWorkload.reduce((s, w) => s + w.utilizationPercent, 0) / teamWorkload.length)
+  }, [teamWorkload])
+
+  // ── Task groupings (dipendente) ───────────────────────────────────────────
+
+  const today = useMemo(() => new Date(), [])
+
+  const { todayTasks, nextDaysTasks } = useMemo(() => {
+    const active = myTasks.filter((t) => !['done', 'cancelled'].includes(t.status))
+    const todayList = active.filter(
+      (t) => t.dueDate && isSameDay(new Date(t.dueDate), today)
+    )
+    // Also include overdue (past, not done/cancelled) as priority today items
+    const overdue = active.filter(
+      (t) =>
+        t.dueDate &&
+        new Date(t.dueDate) < today &&
+        !isSameDay(new Date(t.dueDate), today)
+    )
+    const combinedToday = [...todayList, ...overdue]
+
+    // Next 3-5 days: tomorrow through +5 days
+    const nextDays: Array<{ dateLabel: string; tasks: typeof active }> = []
+    for (let offset = 1; offset <= 5; offset++) {
+      const target = new Date(today)
+      target.setDate(today.getDate() + offset)
+      const dayTasks = active.filter(
+        (t) => t.dueDate && isSameDay(new Date(t.dueDate), target)
+      )
+      if (dayTasks.length > 0) {
+        nextDays.push({
+          dateLabel: format(target, 'EEEE d MMM', { locale: it }),
+          tasks: dayTasks,
+        })
+      }
+    }
+
+    return { todayTasks: combinedToday, nextDaysTasks: nextDays }
+  }, [myTasks, today])
+
+  // ── Weekly hours (dipendente) ─────────────────────────────────────────────
+
+  const { todayHours, dailyTarget, weeklyTotalMinutes, weeklyTarget, weeklyPercent, dailyBars } =
+    useMemo(() => {
+      const target = weeklyHours ? weeklyHours.weeklyTarget / 5 : 8
+      const todayDow = today.getDay()
+      const byDayIndex = todayDow === 0 ? -1 : todayDow - 1
+      let todayMins = 0
+      if (weeklyHours && byDayIndex >= 0 && weeklyHours.byDay[byDayIndex]) {
+        todayMins = weeklyHours.byDay[byDayIndex].totalMinutes
+      }
+      const wTarget = weeklyHours ? weeklyHours.weeklyTarget : 40
+      const wTotal = weeklyHours ? weeklyHours.totalMinutes : 0
+      const pct =
+        wTarget > 0 ? Math.min(Math.round(((wTotal / 60) / wTarget) * 100), 100) : 0
+
+      const bars = DAY_ABBR.map((abbr, idx) => {
+        const dayData = weeklyHours?.byDay[idx]
+        const minutes = dayData ? dayData.totalMinutes : 0
+        return { abbr, minutes }
+      })
+      const maxMins = Math.max(...bars.map((b) => b.minutes), 1)
+      const todayBarIndex = todayDow >= 1 && todayDow <= 5 ? todayDow - 1 : -1
+
+      return {
+        todayHours: formatDuration(todayMins),
+        dailyTarget: target,
+        weeklyTotalMinutes: wTotal,
+        weeklyTarget: wTarget,
+        weeklyPercent: pct,
+        dailyBars: bars.map((b, i) => ({
+          ...b,
+          heightPct: (b.minutes / maxMins) * 100,
+          isToday: i === todayBarIndex,
+        })),
+      }
+    }, [weeklyHours, today])
+
+  // ── Timer toggle callback ─────────────────────────────────────────────────
+
+  const onToggleTimer = useCallback(
+    (taskId: string) => {
+      void handleTimerToggle(taskId)
+    },
+    [handleTimerToggle]
+  )
+
+  // ── Loading ───────────────────────────────────────────────────────────────
+
+  if (isLoading) return <DashboardSkeleton />
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Render: direzione
+  // ─────────────────────────────────────────────────────────────────────────
+
+  if (isDirezione) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <div className="space-y-1">
-          <div className="skeleton h-8 w-64" />
-          <div className="skeleton h-4 w-48 mt-2" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <StatCardSkeleton key={i} />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="card p-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <ListItemSkeleton key={i} />
-            ))}
+
+        {/* ── Zone 1: Greeting + KPI row ───────────────────────────────── */}
+        <div>
+          {/* Greeting */}
+          <p className="text-lg text-slate-400">
+            Buongiorno,{' '}
+            <span className="text-white font-semibold">{firstName}</span>.
+          </p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {format(new Date(), 'EEEE d MMMM yyyy', { locale: it })}
+          </p>
+
+          {/* KPI grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+            {isLoadingAnalytics ? (
+              Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+            ) : (
+              <>
+                <KPICard
+                  value={activeProjects}
+                  label="Progetti attivi"
+                  color="cyan"
+                  delay={0}
+                />
+                <KPICard
+                  value={atRiskCount}
+                  label="A rischio"
+                  color="amber"
+                  delay={100}
+                  onClick={atRiskCount > 0 ? () => navigate('/projects?health=at_risk') : undefined}
+                />
+                <KPICard
+                  value={criticalCount}
+                  label="Critici"
+                  color="red"
+                  delay={200}
+                  onClick={criticalCount > 0 ? () => navigate('/projects?health=critical') : undefined}
+                />
+                <KPICard
+                  value={avgUtilization}
+                  label="Utilizzo team %"
+                  color="indigo"
+                  delay={300}
+                />
+              </>
+            )}
           </div>
-          <div className="card p-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <ListItemSkeleton key={i} />
-            ))}
+        </div>
+
+        {/* ── Zone 2: Attention section (auto-hides when empty) ─────────── */}
+        <AttentionSection
+          role="direzione"
+          projectHealth={projectHealth}
+          teamWorkload={teamWorkload}
+          overview={overview ?? undefined}
+        />
+
+        {/* ── Zone 3: Projects table ────────────────────────────────────── */}
+        <div className="card overflow-hidden">
+          <div className="p-4">
+            <HudPanelHeader title="PROGETTI" />
           </div>
+
+          {isLoadingAnalytics ? (
+            <div className="px-4 pb-4 space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <ListItemSkeleton key={i} />
+              ))}
+            </div>
+          ) : projectHealth.length === 0 ? (
+            <div className="px-4 pb-6 text-center text-slate-500 text-sm">
+              Nessun progetto attivo
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-cyan-500/10">
+                  <th className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                    Progetto
+                  </th>
+                  <th className="hidden sm:table-cell px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                    Stato
+                  </th>
+                  <th className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                    Progresso
+                  </th>
+                  <th className="hidden md:table-cell px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                    Scadenza
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {projectHealth.map((p, idx) => {
+                  const ringStatus = healthToRingStatus(p.healthStatus)
+                  const pColor = progressColor(p.progress)
+                  const forecast = deliveryForecast.find((f) => f.projectId === p.projectId)
+                  const deadlineStr = forecast?.targetEndDate
+                    ? formatITDate(forecast.targetEndDate)
+                    : p.daysRemaining !== null && p.daysRemaining !== undefined
+                      ? `${p.daysRemaining}g`
+                      : ''
+
+                  return (
+                    <tr
+                      key={p.projectId}
+                      className="border-t border-cyan-500/5 hover:bg-cyan-500/5 cursor-pointer animate-fade-in-stagger"
+                      style={{ animationDelay: `${idx * 30}ms`, animationFillMode: 'both' }}
+                      onClick={() => navigate(`/projects/${p.projectId}`)}
+                      role="row"
+                      aria-label={`Progetto ${p.projectName}`}
+                    >
+                      {/* Progetto */}
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-slate-200 truncate block max-w-[16rem]">
+                          {p.projectName}
+                        </span>
+                      </td>
+
+                      {/* Stato */}
+                      <td className="hidden sm:table-cell px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <HudStatusRing status={ringStatus} size={12} />
+                          <span className="text-xs text-slate-400 capitalize">
+                            {p.healthStatus === 'healthy'
+                              ? 'Salute'
+                              : p.healthStatus === 'at_risk'
+                                ? 'A rischio'
+                                : 'Critico'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Progresso */}
+                      <td className="px-4 py-3 w-40">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <HudProgressBar
+                              value={p.progress}
+                              segments={8}
+                              color={pColor}
+                              showLabel={false}
+                              size="sm"
+                              animate={false}
+                            />
+                          </div>
+                          <span className="font-mono text-xs text-slate-400 tabular-nums w-8 text-right">
+                            {p.progress}%
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Scadenza */}
+                      <td className="hidden md:table-cell px-4 py-3 text-xs text-slate-400">
+                        {deadlineStr || (
+                          <span className="text-slate-600">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     )
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Render: dipendente
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const isLoadingAll = isLoadingTasks || isLoadingWeeklyHours
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Welcome */}
-      <div className="flex items-start justify-between gap-4">
+
+      {/* ── Zone 1: Greeting + hours inline ─────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {/* Left: greeting */}
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            Benvenuto, <span className="text-gradient">{user?.firstName}!</span>
-          </h1>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">
-            {isDirezione
-              ? 'Panoramica dello stato dei lavori'
-              : 'Ecco una panoramica della tua attivita'}
+          <p className="text-lg text-slate-400">
+            Buongiorno,{' '}
+            <span className="text-white font-semibold">{firstName}</span>.
+          </p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {format(new Date(), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
         </div>
-        <div className="flex-shrink-0">
-          <DashboardCustomizer role={(user?.role as 'admin' | 'direzione' | 'dipendente') ?? 'dipendente'} />
-        </div>
+
+        {/* Right: today's hours */}
+        {canTrackTime && (
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" aria-hidden />
+            <span className="font-mono text-amber-400 font-semibold tabular-nums">
+              {todayHours}
+            </span>
+            <span className="text-slate-500">
+              / {formatHoursFromDecimal(dailyTarget)}h oggi
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* ============================================ */}
-      {/* Executive Dashboard for Direzione            */}
-      {/* ============================================ */}
-      {isDirezione && (
-        <>
-          {/* Level 1: Semaforo */}
-          {isVisible('traffic_light') && (
-            <TrafficLightSection
-              projectHealth={projectHealth}
-              teamWorkload={teamWorkload}
-              isLoading={isLoadingAnalytics}
-            />
-          )}
+      {/* ── Zone 2: "Oggi" ────────────────────────────────────────────────── */}
+      <section aria-label="Task di oggi">
+        <h2 className="section-heading mb-3">Oggi</h2>
 
-          {/* Level 2: Attenzione (auto-hides when no issues) */}
-          {isVisible('attention_direzione') && (
-            <AttentionSection
-              role="direzione"
-              projectHealth={projectHealth}
-              teamWorkload={teamWorkload}
-              overview={overview}
-            />
-          )}
-
-          {/* Level 3: Dettaglio */}
-          {isVisible('delivery_outlook') && (
-            <DeliveryOutlookSection
-              forecasts={deliveryForecast}
-              isLoading={isLoadingAnalytics}
-            />
-          )}
-
-          {isVisible('team_capacity') && (
-            <TeamPerformanceSection
-              topContributors={topContributors}
-              completionTrend={completionTrend}
-              teamWorkload={teamWorkload}
-              isLoading={isLoadingAnalytics}
-              trendPeriodDays={trendPeriodDays}
-              onTrendPeriodChange={setTrendPeriodDays}
-            />
-          )}
-
-          {isVisible('project_health') && (
-            <ProjectHealthSection
-              projects={projectHealth}
-              isLoading={isLoadingAnalytics}
-            />
-          )}
-        </>
-      )}
-
-      {/* ============================================ */}
-      {/* Dipendente Dashboard (New Layout)            */}
-      {/* ============================================ */}
-      {!isDirezione && (
-        <>
-          {/* Level 1+2: Focus del giorno with timer */}
-          {isVisible('focus_today') && (
-            <FocusTodaySection
-              tasks={myTasks}
-              weeklyHours={weeklyHours}
-              runningTimer={runningTimer}
-              canTrackTime={canTrackTime}
-              runningTimerTaskId={runningTimerTaskId}
-              onTimerToggle={handleTimerToggle}
-              isLoading={isLoadingTasks || isLoadingWeeklyHours}
-              userName={user?.firstName}
-            />
-          )}
-
-          {/* Level 2: Attenzione (auto-hides when no issues) */}
-          {isVisible('attention_dipendente') && (
-            <AttentionSection
-              role="dipendente"
-              myTasks={myTasks}
-            />
-          )}
-        </>
-      )}
-
-      {/* ============================================ */}
-      {/* Recent Activity - shown for all roles        */}
-      {/* ============================================ */}
-      {/* Recent Tasks */}
-      {isVisible('recent_tasks') && (
-        <div className="card">
-          <div className="p-3 sm:p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-              {isDirezione ? 'Task Recenti del Team' : 'Task Recenti'}
-            </h2>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center bg-gray-100 dark:bg-white/10 rounded-lg p-0.5">
-                <button
-                  onClick={() => setTaskViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all ${
-                    taskViewMode === 'list'
-                      ? 'bg-white dark:bg-white/20 shadow-sm text-primary-600 dark:text-primary-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                  title="Vista Lista"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setTaskViewMode('tree')}
-                  className={`p-1.5 rounded-md transition-all ${
-                    taskViewMode === 'tree'
-                      ? 'bg-white dark:bg-white/20 shadow-sm text-primary-600 dark:text-primary-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                  title="Vista Albero"
-                >
-                  <FolderTree className="w-4 h-4" />
-                </button>
-              </div>
-              <Link
-                to="/tasks"
-                className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 flex items-center group"
-              >
-                Vedi tutti
-                <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </div>
+        {isLoadingAll ? (
+          <div className="card p-4 space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => <ListItemSkeleton key={i} />)}
           </div>
-          <div className="p-4">
-            {(() => {
-              const recentTaskIds = new Set(recentTimeEntries.map((e) => e.taskId))
-              const tasksSource = isDirezione ? allTasks : myTasks
-              const recentTasks = tasksSource.filter((t) => recentTaskIds.has(t.id))
-
-              const latestTimeEntryPerTask = new Map<string, typeof recentTimeEntries[0]>()
-              recentTimeEntries.forEach((entry) => {
-                if (!entry.description) return
-                const existing = latestTimeEntryPerTask.get(entry.taskId)
-                if (!existing || new Date(entry.startTime) > new Date(existing.startTime)) {
-                  latestTimeEntryPerTask.set(entry.taskId, entry)
-                }
-              })
-
-              if (taskViewMode === 'tree') {
-                return (
-                  <TaskTreeView
-                    mode="compact"
-                    myTasksOnly={!isDirezione}
-                    excludeCompleted={false}
-                    showSummary={false}
-                    showControls={false}
-                    showFilters={false}
-                    maxDepth={2}
-                    canTrackTime={canTrackTime}
-                    runningTimerId={runningTimerTaskId}
-                    onTimerToggle={handleTimerToggle}
-                  />
-                )
-              }
-
-              if (isLoadingTasks) {
-                return (
-                  <div className="space-y-3">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <ListItemSkeleton key={i} />
-                    ))}
-                  </div>
-                )
-              }
-
-              if (recentTasks.length === 0) {
-                return (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>{isDirezione ? 'Nessuna attività del team negli ultimi 3 giorni' : 'Nessuna attività negli ultimi 3 giorni'}</p>
-                    <Link
-                      to="/tasks"
-                      className="text-sm text-primary-500 hover:text-primary-600 mt-2 inline-block"
-                    >
-                      {isDirezione ? 'Vedi tutti i task' : 'Vai ai tuoi task'}
-                    </Link>
-                  </div>
-                )
-              }
-
-              const completedTasks = recentTasks.filter((t) => t.status === 'done')
-              const inProgressTasks = recentTasks.filter((t) => t.status === 'in_progress')
-              const otherTasks = recentTasks.filter((t) => t.status !== 'done' && t.status !== 'in_progress')
-
-              const renderTaskItem = (task: typeof recentTasks[0], showTimer: boolean) => {
-                const isRunning = runningTimerTaskId === task.id
-                const isCompleted = task.status === 'done'
-                const latestEntry = latestTimeEntryPerTask.get(task.id)
-
-                return (
-                  <li key={task.id} className="flex items-start gap-2 group">
-                    <div className="mt-0.5 flex-shrink-0">
-                      {isCompleted ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : task.status === 'in_progress' ? (
-                        <ArrowRight className="w-4 h-4 text-blue-500" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-gray-400" />
-                      )}
-                    </div>
-                    <Link
-                      to={`/tasks/${task.id}`}
-                      className="flex-1 min-w-0 hover:text-primary-500"
-                    >
-                      {task.project && (
-                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                          {task.project.name}
-                          {isDirezione && task.assignee && (
-                            <span className="text-primary-500 dark:text-primary-400 ml-1 font-normal">
-                              · {task.assignee.firstName} {task.assignee.lastName}
-                            </span>
-                          )}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate leading-snug">
-                        {task.title}
-                      </p>
-                      {latestEntry?.description && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 italic truncate">
-                          &quot;{latestEntry.description}&quot;
-                          {latestEntry.user && (
-                            <span className="not-italic ml-1">
-                              ({latestEntry.user.firstName})
-                            </span>
-                          )}
-                        </p>
-                      )}
-                    </Link>
-                    {showTimer && canTrackTime && !isCompleted && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          handleTimerToggle(task.id)
-                        }}
-                        className={`p-1.5 rounded-lg transition-all ${
-                          isRunning
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : 'bg-gray-100 dark:bg-white/10 text-gray-500 hover:bg-primary-500 hover:text-white opacity-0 group-hover:opacity-100'
-                        }`}
-                        title={isRunning ? 'Stop timer' : 'Avvia timer'}
-                      >
-                        {isRunning ? (
-                          <Square className="w-3 h-3" />
-                        ) : (
-                          <Play className="w-3 h-3" />
-                        )}
-                      </button>
-                    )}
-                  </li>
-                )
-              }
-
+        ) : todayTasks.length === 0 ? (
+          <div className="card p-5 text-center text-slate-500 text-sm">
+            Nessun task in scadenza oggi
+          </div>
+        ) : (
+          <div className="card divide-y divide-cyan-500/5">
+            {todayTasks.map((task, idx) => {
+              const isRunning = runningTimerTaskId === task.id
               return (
-                <div className="space-y-4">
-                  {inProgressTasks.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wide">
-                        In Corso ({inProgressTasks.length})
-                      </h4>
-                      <ul className="space-y-1.5">
-                        {inProgressTasks.slice(0, 5).map((task) => renderTaskItem(task, true))}
-                      </ul>
-                    </div>
-                  )}
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-cyan-500/5 transition-colors group animate-fade-in-stagger"
+                  style={{ animationDelay: `${idx * 40}ms`, animationFillMode: 'both' }}
+                >
+                  {/* Priority dot */}
+                  <div
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.low}`}
+                    aria-label={`Priorita: ${task.priority}`}
+                  />
 
-                  {otherTasks.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                        Da Fare ({otherTasks.length})
-                      </h4>
-                      <ul className="space-y-1.5">
-                        {otherTasks.slice(0, 3).map((task) => renderTaskItem(task, true))}
-                      </ul>
-                    </div>
-                  )}
+                  {/* Title + project */}
+                  <Link to={`/tasks/${task.id}`} className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-200 truncate hover:text-cyan-400 transition-colors">
+                      {task.title}
+                      {task.isRecurring && (
+                        <RefreshCw
+                          className="inline-block w-3 h-3 ml-1.5 text-slate-500"
+                          aria-label="Task ricorrente"
+                        />
+                      )}
+                    </p>
+                    {task.project && (
+                      <p className="text-xs text-slate-400 truncate">{task.project.name}</p>
+                    )}
+                  </Link>
 
-                  {completedTasks.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium text-green-600 dark:text-green-400 mb-2 uppercase tracking-wide">
-                        Completati ({completedTasks.length})
-                      </h4>
-                      <ul className="space-y-1.5">
-                        {completedTasks.map((task) => renderTaskItem(task, false))}
-                      </ul>
-                    </div>
+                  {/* Timer button */}
+                  {canTrackTime && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        onToggleTimer(task.id)
+                      }}
+                      aria-label={isRunning ? 'Stop timer' : 'Avvia timer'}
+                      className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
+                        isRunning
+                          ? 'bg-red-500 text-white hover:bg-red-600'
+                          : 'text-slate-400 hover:text-cyan-400 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                      }`}
+                    >
+                      {isRunning ? (
+                        <Square className="w-3.5 h-3.5" aria-hidden />
+                      ) : (
+                        <Play className="w-3.5 h-3.5" aria-hidden />
+                      )}
+                    </button>
                   )}
                 </div>
               )
-            })()}
+            })}
           </div>
-        </div>
+        )}
+      </section>
+
+      {/* ── Zone 3: "Prossimi giorni" ────────────────────────────────────── */}
+      {!isLoadingAll && nextDaysTasks.length > 0 && (
+        <section aria-label="Task prossimi giorni">
+          <h2 className="section-heading mb-3">Prossimi giorni</h2>
+
+          <div className="space-y-3">
+            {nextDaysTasks.map(({ dateLabel, tasks }, groupIdx) => (
+              <div key={groupIdx}>
+                {/* Date subheader */}
+                <p className="text-xs text-slate-500 capitalize mb-1 px-1">
+                  {dateLabel}
+                </p>
+
+                <div className="card divide-y divide-cyan-500/5">
+                  {tasks.map((task, idx) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-cyan-500/5 transition-colors animate-fade-in-stagger"
+                      style={{
+                        animationDelay: `${(groupIdx * 5 + idx) * 30}ms`,
+                        animationFillMode: 'both',
+                      }}
+                    >
+                      {/* Priority dot */}
+                      <div
+                        className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.low}`}
+                        aria-label={`Priorita: ${task.priority}`}
+                      />
+
+                      {/* Title + project */}
+                      <Link to={`/tasks/${task.id}`} className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-200 truncate hover:text-cyan-400 transition-colors">
+                          {task.title}
+                          {task.isRecurring && (
+                            <RefreshCw
+                              className="inline-block w-3 h-3 ml-1.5 text-slate-500"
+                              aria-label="Task ricorrente"
+                            />
+                          )}
+                        </p>
+                        {task.project && (
+                          <p className="text-xs text-slate-400 truncate">{task.project.name}</p>
+                        )}
+                      </Link>
+
+                      {/* Date label (right-aligned) */}
+                      <span className="text-xs text-slate-500 flex-shrink-0 font-mono tabular-nums">
+                        {task.dueDate ? formatITDate(task.dueDate) : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Zone 4: Active timer (conditional) ───────────────────────────── */}
+      {runningTimer && (
+        <section aria-label="Timer attivo" aria-live="polite">
+          <div className="card border-cyan-500/20 animate-glow-pulse p-5 space-y-4">
+            {/* Pulsing header */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-shrink-0" aria-hidden>
+                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+                <div className="absolute inset-0 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping opacity-40" />
+              </div>
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">
+                Timer in esecuzione
+              </span>
+            </div>
+
+            {/* Task info */}
+            <div className="min-w-0">
+              <Link
+                to={`/tasks/${runningTimer.taskId}`}
+                className="text-sm font-semibold text-slate-200 hover:text-cyan-400 transition-colors truncate block"
+              >
+                {runningTimer.task?.title ?? 'Timer attivo'}
+              </Link>
+              {runningTimer.task?.project && (
+                <p className="text-xs text-slate-400 mt-0.5 truncate">
+                  {runningTimer.task.project.name}
+                </p>
+              )}
+            </div>
+
+            {/* Large timer display */}
+            <div className="flex items-center justify-center py-2">
+              <LiveCounter startTime={runningTimer.startTime} />
+            </div>
+
+            {/* Stop button */}
+            <button
+              onClick={() => onToggleTimer(runningTimer.taskId)}
+              className="btn-primary w-full bg-red-600 hover:bg-red-500 shadow-neon-red"
+              aria-label="Ferma timer"
+            >
+              <Square className="w-4 h-4 mr-2" aria-hidden />
+              Ferma timer
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ── Zone 5: Weekly summary ────────────────────────────────────────── */}
+      {canTrackTime && (
+        <section aria-label="Riepilogo settimanale">
+          <div className="card p-5">
+            <HudPanelHeader title="SETTIMANA" />
+
+            {/* Hours + progress */}
+            <div className="flex items-baseline gap-1 mb-3">
+              <span className={`text-xl font-bold tabular-nums ${weeklyProgressText(weeklyPercent)}`}>
+                {formatDuration(weeklyTotalMinutes)}
+              </span>
+              <span className="text-sm text-slate-500">
+                / {formatHoursFromDecimal(weeklyTarget)}h
+              </span>
+              <span className={`ml-auto text-sm font-semibold tabular-nums ${weeklyProgressText(weeklyPercent)}`}>
+                {weeklyPercent}%
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div
+              className="w-full h-1.5 bg-slate-700/50 rounded-full overflow-hidden mb-4"
+              role="progressbar"
+              aria-valuenow={weeklyPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`${weeklyPercent}% dell'obiettivo settimanale`}
+            >
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${weeklyProgressFill(weeklyPercent)}`}
+                style={{ width: `${weeklyPercent}%` }}
+              />
+            </div>
+
+            {/* Mini daily bar chart */}
+            <div
+              className="flex items-end gap-1 h-14"
+              aria-label="Ore giornaliere questa settimana"
+            >
+              {dailyBars.map((bar, i) => (
+                <div
+                  key={i}
+                  className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
+                >
+                  <div
+                    className="w-full flex items-end justify-center"
+                    style={{ height: 'calc(100% - 1rem)' }}
+                  >
+                    <div
+                      className={`w-full rounded-t-sm transition-all duration-500 ${
+                        bar.isToday
+                          ? 'bg-cyan-500'
+                          : bar.minutes > 0
+                            ? 'bg-slate-600'
+                            : 'bg-slate-800'
+                      }`}
+                      style={{ height: `${Math.max(bar.heightPct, bar.minutes > 0 ? 8 : 2)}%` }}
+                      title={`${bar.abbr}: ${formatDuration(bar.minutes)}`}
+                    />
+                  </div>
+                  <span
+                    className={`text-xs leading-none tabular-nums ${
+                      bar.isToday ? 'font-bold text-cyan-400' : 'text-slate-500'
+                    }`}
+                  >
+                    {bar.abbr}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
     </div>
   )

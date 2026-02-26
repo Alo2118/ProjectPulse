@@ -166,15 +166,15 @@ export default function GanttChart({
   const contentHeight = Math.max(200, tasks.length * ROW_HEIGHT)
 
   return (
-    <div className="flex h-full rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-surface-900">
+    <div className="flex h-full overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/70 dark:border-cyan-500/25 dark:bg-slate-900/70 [&]:not(.dark):border-slate-200 [&]:not(.dark):bg-white">
       {/* Task List (left sidebar) */}
       <div
-        className="flex flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-surface-850"
+        className="flex flex-shrink-0 flex-col border-r border-cyan-500/15 bg-slate-800/30 dark:border-cyan-500/15 dark:bg-slate-800/30 not-dark:border-slate-200 not-dark:bg-slate-50"
         style={{ width: TASK_LIST_WIDTH }}
       >
         {/* Sidebar Header */}
         <div
-          className="flex flex-shrink-0 items-center border-b border-gray-200 bg-gray-100 px-3 font-medium text-gray-700 dark:border-white/10 dark:bg-surface-800 dark:text-gray-300"
+          className="flex flex-shrink-0 items-center border-b border-cyan-500/15 bg-slate-800/50 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:border-cyan-500/15 dark:bg-slate-800/50 dark:text-slate-400 not-dark:border-slate-200 not-dark:bg-slate-100 not-dark:text-slate-500"
           style={{ height: HEADER_HEIGHT }}
         >
           Task
@@ -195,16 +195,18 @@ export default function GanttChart({
             return (
               <div
                 key={task.id}
-                className={`flex cursor-pointer items-center border-b border-gray-200/50 transition-colors dark:border-surface-800 ${
-                  isEvenRow ? 'bg-gray-50/50 dark:bg-surface-800/20' : ''
-                } hover:bg-blue-50/50 dark:hover:bg-blue-500/5`}
+                className={`flex cursor-pointer items-center border-b border-cyan-500/10 transition-colors dark:border-cyan-500/10 not-dark:border-slate-100 ${
+                  isEvenRow
+                    ? 'bg-slate-800/20 dark:bg-slate-800/20 not-dark:bg-slate-50/50'
+                    : ''
+                } hover:bg-cyan-500/5 dark:hover:bg-cyan-500/5 not-dark:hover:bg-cyan-50/60`}
                 style={{ height: ROW_HEIGHT, paddingLeft: 12 + depth * 16 }}
                 onClick={() => onTaskClick?.(task.id)}
               >
                 {/* Subtask indicator */}
                 {isSubtask && (
                   <div className="mr-2 flex-shrink-0">
-                    <div className="h-3 w-3 rounded border-2 border-gray-300 dark:border-gray-600" />
+                    <div className="h-3 w-3 rounded border-2 border-slate-600 dark:border-slate-600 not-dark:border-slate-300" />
                   </div>
                 )}
                 <div className="min-w-0 flex-1 pr-2">
@@ -212,19 +214,19 @@ export default function GanttChart({
                     isSubtask ? 'font-normal' : 'font-medium'
                   } ${
                     hasNoDates
-                      ? 'text-gray-500 dark:text-gray-500'
-                      : 'text-gray-800 dark:text-gray-200'
+                      ? 'text-slate-500 dark:text-slate-500 not-dark:text-slate-400'
+                      : 'text-slate-200 dark:text-slate-200 not-dark:text-slate-800'
                   }`}>
                     {task.title}
                   </div>
-                  <div className="truncate text-xs text-gray-500">{task.code}</div>
+                  <div className="truncate text-xs text-slate-500 dark:text-slate-500 not-dark:text-slate-400">{task.code}</div>
                 </div>
               </div>
             )
           })}
 
           {tasks.length === 0 && (
-            <div className="flex h-32 items-center justify-center text-gray-500">
+            <div className="flex h-32 items-center justify-center text-sm text-slate-500 dark:text-slate-500 not-dark:text-slate-400">
               Nessun task con date pianificate
             </div>
           )}
@@ -236,18 +238,18 @@ export default function GanttChart({
         {/* Timeline Header - synced horizontal scroll */}
         <div
           ref={timelineHeaderRef}
-          className="flex-shrink-0 overflow-x-auto overflow-y-hidden border-b border-gray-200 bg-gray-100 scrollbar-hide dark:border-white/10 dark:bg-surface-800"
+          className="flex-shrink-0 overflow-x-auto overflow-y-hidden border-b border-cyan-500/15 bg-slate-800/50 scrollbar-hide dark:border-cyan-500/15 dark:bg-slate-800/50 not-dark:border-slate-200 not-dark:bg-slate-100"
           style={{ height: HEADER_HEIGHT }}
         >
           <div className="flex h-full flex-col" style={{ width: timelineWidth }}>
-            {/* Primary header (weeks/months) */}
-            <div className="flex h-1/2 border-b border-gray-200 dark:border-white/10">
+            {/* Primary header (months/years context) */}
+            <div className="flex h-1/2 border-b border-cyan-500/10 dark:border-cyan-500/10 not-dark:border-slate-200">
               {timelineUnits.map((unit, index) => {
                 const label = formatHeaderLabel(unit, index)
                 return (
                   <div
                     key={index}
-                    className={`flex flex-shrink-0 items-center border-r border-gray-200 text-xs font-medium text-gray-600 dark:border-white/10 dark:text-gray-400 ${
+                    className={`flex flex-shrink-0 items-center border-r border-cyan-500/10 text-xs font-medium text-slate-400 dark:border-cyan-500/10 dark:text-slate-400 not-dark:border-slate-200 not-dark:text-slate-500 ${
                       zoomLevel === 'day' && label ? 'justify-start pl-1' : 'justify-center'
                     }`}
                     style={{ width: getUnitWidthAt(index) }}
@@ -258,7 +260,7 @@ export default function GanttChart({
               })}
             </div>
 
-            {/* Secondary header (sub-labels) */}
+            {/* Secondary header (day/week/month labels) */}
             <div className="flex h-1/2">
               {timelineUnits.map((unit, index) => {
                 const unitIsToday = isToday(unit)
@@ -266,12 +268,12 @@ export default function GanttChart({
                 return (
                   <div
                     key={index}
-                    className={`flex flex-shrink-0 items-center justify-center border-r border-gray-200 text-[10px] dark:border-white/10 ${
+                    className={`flex flex-shrink-0 items-center justify-center border-r border-cyan-500/10 text-[10px] dark:border-cyan-500/10 not-dark:border-slate-200 ${
                       unitIsToday
-                        ? 'bg-blue-500/20 font-medium text-blue-600 dark:text-blue-400'
+                        ? 'bg-cyan-500/15 font-semibold text-cyan-400 dark:bg-cyan-500/15 dark:text-cyan-400 not-dark:bg-cyan-50 not-dark:text-cyan-600'
                         : weekend
-                          ? 'bg-gray-200/50 text-gray-400 dark:bg-surface-800/50 dark:text-gray-500'
-                          : 'text-gray-500'
+                          ? 'bg-slate-800/40 text-slate-500 dark:bg-slate-800/40 dark:text-slate-500 not-dark:bg-slate-100/60 not-dark:text-slate-400'
+                          : 'text-slate-400 dark:text-slate-400 not-dark:text-slate-500'
                     }`}
                     style={{ width: getUnitWidthAt(index) }}
                     title={zoomLevel === 'day' ? format(unit, 'EEEE d MMMM yyyy', { locale: it }) : undefined}
@@ -298,7 +300,7 @@ export default function GanttChart({
           onScroll={handleTimelineScroll}
         >
           <div className="relative" style={{ width: timelineWidth, minHeight: contentHeight }}>
-            {/* Grid background - absolute positioned */}
+            {/* Grid background columns */}
             <div className="pointer-events-none absolute inset-0 flex">
               {timelineUnits.map((unit, index) => {
                 const unitIsToday = isToday(unit)
@@ -306,11 +308,11 @@ export default function GanttChart({
                 return (
                   <div
                     key={index}
-                    className={`h-full flex-shrink-0 border-r border-gray-100 dark:border-surface-800 ${
+                    className={`h-full flex-shrink-0 border-r border-cyan-500/10 dark:border-cyan-500/10 not-dark:border-slate-100 ${
                       unitIsToday
-                        ? 'bg-blue-500/10 dark:bg-blue-500/5'
+                        ? 'bg-cyan-500/8 dark:bg-cyan-500/8 not-dark:bg-cyan-50/40'
                         : weekend
-                          ? 'bg-gray-100/60 dark:bg-surface-800/40'
+                          ? 'bg-slate-800/30 dark:bg-slate-800/30 not-dark:bg-slate-50/60'
                           : ''
                     }`}
                     style={{ width: getUnitWidthAt(index) }}
@@ -324,7 +326,7 @@ export default function GanttChart({
               <GanttTodayLine offset={todayOffset * dayWidth} height={contentHeight} />
             )}
 
-            {/* Task rows with bars - using normal flow for proper alignment */}
+            {/* Task rows with bars */}
             <div className="relative">
               {tasks.map((task, index) => {
                 const barStyle = getBarStyle(task)
@@ -333,9 +335,11 @@ export default function GanttChart({
                 return (
                   <div
                     key={task.id}
-                    className={`group relative border-b border-gray-200/50 transition-colors dark:border-surface-800 ${
-                      isEvenRow ? 'bg-gray-50/30 dark:bg-surface-800/20' : ''
-                    } hover:bg-blue-50/50 dark:hover:bg-blue-500/5`}
+                    className={`group relative border-b border-cyan-500/10 transition-colors dark:border-cyan-500/10 not-dark:border-slate-100 ${
+                      isEvenRow
+                        ? 'bg-slate-800/15 dark:bg-slate-800/15 not-dark:bg-slate-50/30'
+                        : ''
+                    } hover:bg-cyan-500/5 dark:hover:bg-cyan-500/5 not-dark:hover:bg-cyan-50/40`}
                     style={{ height: ROW_HEIGHT }}
                   >
                     {barStyle ? (
@@ -349,7 +353,7 @@ export default function GanttChart({
                     ) : (
                       // Placeholder for tasks without dates
                       <div className="flex h-full items-center px-2">
-                        <span className="text-xs italic text-gray-400 dark:text-gray-600">
+                        <span className="text-xs italic text-slate-500 dark:text-slate-500 not-dark:text-slate-400">
                           Nessuna data
                         </span>
                       </div>

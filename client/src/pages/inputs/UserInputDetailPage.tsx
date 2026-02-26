@@ -1,5 +1,5 @@
 /**
- * User Input Detail Page - Shows single input details with actions
+ * User Input Detail Page - 2-column layout with metadata sidebar
  * @module pages/inputs/UserInputDetailPage
  */
 
@@ -20,7 +20,8 @@ import {
   Calendar,
   Clock,
   ExternalLink,
-  Info,
+  AlertCircle,
+  Tag as TagIcon,
 } from 'lucide-react'
 import {
   INPUT_STATUS_LABELS,
@@ -38,7 +39,7 @@ import ConvertToProjectModal from './ConvertToProjectModal'
 import { Breadcrumb } from '@/components/common/Breadcrumb'
 import { ConfirmDialog } from '@components/common/ConfirmDialog'
 import { DetailPageHeader } from '@components/common/DetailPageHeader'
-import { TabSection } from '@components/common/TabSection'
+import { CollapsibleSection } from '@components/common/CollapsibleSection'
 
 export default function UserInputDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -131,193 +132,10 @@ export default function UserInputDetailPage() {
   if (isLoading || !currentInput) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
-
-  const detailsTabContent = (
-    <div className="space-y-6">
-      {/* Description */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Descrizione</h3>
-        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm">
-          {currentInput.description || 'Nessuna descrizione fornita.'}
-        </p>
-      </div>
-
-      {/* Metadata */}
-      <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Informazioni</h3>
-        <dl className="space-y-3">
-          <div className="flex items-start gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0">Stato</dt>
-            <dd>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${INPUT_STATUS_COLORS[currentInput.status] || ''}`}>
-                {INPUT_STATUS_LABELS[currentInput.status] || currentInput.status}
-              </span>
-            </dd>
-          </div>
-          <div className="flex items-start gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0">Categoria</dt>
-            <dd>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${INPUT_CATEGORY_COLORS[currentInput.category] || ''}`}>
-                {INPUT_CATEGORY_LABELS[currentInput.category] || currentInput.category}
-              </span>
-            </dd>
-          </div>
-          <div className="flex items-start gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0">Priorita'</dt>
-            <dd>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${TASK_PRIORITY_COLORS[currentInput.priority] || ''}`}>
-                {TASK_PRIORITY_LABELS[currentInput.priority] || currentInput.priority}
-              </span>
-            </dd>
-          </div>
-          <div className="flex items-center gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-              <User className="w-3.5 h-3.5" />
-              Creato da
-            </dt>
-            <dd className="text-sm text-gray-900 dark:text-white">
-              {currentInput.createdBy
-                ? `${currentInput.createdBy.firstName} ${currentInput.createdBy.lastName}`
-                : '-'}
-            </dd>
-          </div>
-          <div className="flex items-center gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" />
-              Creato il
-            </dt>
-            <dd className="text-sm text-gray-900 dark:text-white">
-              {formatDate(currentInput.createdAt)}
-            </dd>
-          </div>
-          {currentInput.processedBy && (
-            <div className="flex items-center gap-3">
-              <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-                <User className="w-3.5 h-3.5" />
-                Elaborato da
-              </dt>
-              <dd className="text-sm text-gray-900 dark:text-white">
-                {currentInput.processedBy.firstName} {currentInput.processedBy.lastName}
-              </dd>
-            </div>
-          )}
-          {currentInput.processedAt && (
-            <div className="flex items-center gap-3">
-              <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                Elaborato il
-              </dt>
-              <dd className="text-sm text-gray-900 dark:text-white">
-                {formatDate(currentInput.processedAt)}
-              </dd>
-            </div>
-          )}
-          {currentInput.resolvedAt && (
-            <div className="flex items-center gap-3">
-              <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" />
-                Risolto il
-              </dt>
-              <dd className="text-sm text-gray-900 dark:text-white">
-                {formatDate(currentInput.resolvedAt)}
-              </dd>
-            </div>
-          )}
-        </dl>
-      </div>
-
-      {/* Resolution Info */}
-      {isResolved && currentInput.resolutionType && (
-        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Risoluzione</h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Tipo:</span>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${RESOLUTION_TYPE_COLORS[currentInput.resolutionType] || ''}`}>
-                {RESOLUTION_TYPE_LABELS[currentInput.resolutionType]}
-              </span>
-            </div>
-            {currentInput.resolutionNotes && (
-              <div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">Note:</span>
-                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                  {currentInput.resolutionNotes}
-                </p>
-              </div>
-            )}
-            {currentInput.convertedTask && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Task creato:</span>
-                <Link
-                  to={`/tasks/${currentInput.convertedTask.id}`}
-                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center"
-                >
-                  {currentInput.convertedTask.code} - {currentInput.convertedTask.title}
-                  <ExternalLink className="w-3 h-3 ml-1" />
-                </Link>
-              </div>
-            )}
-            {currentInput.convertedProject && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Progetto creato:</span>
-                <Link
-                  to={`/projects/${currentInput.convertedProject.id}`}
-                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center"
-                >
-                  {currentInput.convertedProject.name}
-                  <ExternalLink className="w-3 h-3 ml-1" />
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Actions for managers */}
-      {canManage && !isResolved && (
-        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Azioni</h3>
-          <div className="flex flex-wrap gap-3">
-            {isPending && (
-              <button onClick={handleStartProcessing} className="btn-secondary flex items-center">
-                <Play className="w-4 h-4 mr-2" />
-                Avvia Elaborazione
-              </button>
-            )}
-            <button
-              onClick={() => setIsConvertToTaskOpen(true)}
-              className="btn-primary flex items-center"
-            >
-              <ArrowRightCircle className="w-4 h-4 mr-2" />
-              Converti in Task
-            </button>
-            <button
-              onClick={() => setIsConvertToProjectOpen(true)}
-              className="btn-secondary flex items-center"
-            >
-              <FolderPlus className="w-4 h-4 mr-2" />
-              Converti in Progetto
-            </button>
-            <button onClick={handleAcknowledge} className="btn-secondary flex items-center">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Prendi Visione
-            </button>
-            <button
-              onClick={() => setIsRejectModalOpen(true)}
-              className="btn-danger flex items-center"
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              Rifiuta
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
 
   return (
     <div className="space-y-4">
@@ -356,20 +174,283 @@ export default function UserInputDetailPage() {
         )}
       </DetailPageHeader>
 
-      {/* Tabbed content */}
-      <TabSection
-        tabs={[
-          {
-            id: 'dettagli',
-            label: 'Dettagli',
-            icon: Info,
-            content: detailsTabContent,
-          },
-        ]}
-        defaultTab="dettagli"
-      />
+      {/* ── Two-column grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      {/* Modals */}
+        {/* ════════════════ LEFT COLUMN ════════════════ */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* ── Title + description ── */}
+          <div className="card p-5 animate-section-reveal">
+            {/* Badges */}
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              {currentInput.code && (
+                <span className="text-xs font-mono text-slate-400">{currentInput.code}</span>
+              )}
+              <span className={`text-xs px-2 py-0.5 rounded-full ${INPUT_STATUS_COLORS[currentInput.status] || ''}`}>
+                {INPUT_STATUS_LABELS[currentInput.status] || currentInput.status}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${INPUT_CATEGORY_COLORS[currentInput.category] || ''}`}>
+                {INPUT_CATEGORY_LABELS[currentInput.category] || currentInput.category}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_PRIORITY_COLORS[currentInput.priority] || ''}`}>
+                {TASK_PRIORITY_LABELS[currentInput.priority] || currentInput.priority}
+              </span>
+            </div>
+
+            <h2 className="page-title break-words mb-3">
+              {currentInput.title}
+            </h2>
+
+            {/* Description */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-700/50">
+              <p className="section-heading mb-2">Descrizione</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                {currentInput.description || 'Nessuna descrizione fornita.'}
+              </p>
+            </div>
+          </div>
+
+          {/* ── Resolution info ── */}
+          {isResolved && currentInput.resolutionType && (
+            <div className="card p-5 animate-section-reveal" style={{ animationDelay: '50ms' }}>
+              <div className="hud-panel-header mb-3">
+                <span>Risoluzione</span>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Tipo:</span>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${RESOLUTION_TYPE_COLORS[currentInput.resolutionType] || ''}`}>
+                    {RESOLUTION_TYPE_LABELS[currentInput.resolutionType]}
+                  </span>
+                </div>
+                {currentInput.resolutionNotes && (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Note di risoluzione:</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      {currentInput.resolutionNotes}
+                    </p>
+                  </div>
+                )}
+                {currentInput.convertedTask && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">Task creato:</span>
+                    <Link
+                      to={`/tasks/${currentInput.convertedTask.id}`}
+                      className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
+                    >
+                      {currentInput.convertedTask.code} - {currentInput.convertedTask.title}
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                )}
+                {currentInput.convertedProject && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">Progetto creato:</span>
+                    <Link
+                      to={`/projects/${currentInput.convertedProject.id}`}
+                      className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
+                    >
+                      {currentInput.convertedProject.name}
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Manager actions ── */}
+          {canManage && !isResolved && (
+            <div className="card p-5 animate-section-reveal" style={{ animationDelay: '100ms' }}>
+              <CollapsibleSection
+                title="Azioni disponibili"
+                icon={AlertCircle}
+                defaultExpanded={true}
+                borderTop={false}
+              >
+                <div className="flex flex-wrap gap-3 pt-2">
+                  {isPending && (
+                    <button onClick={handleStartProcessing} className="btn-secondary flex items-center">
+                      <Play className="w-4 h-4 mr-2" />
+                      Avvia Elaborazione
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setIsConvertToTaskOpen(true)}
+                    className="btn-primary flex items-center"
+                  >
+                    <ArrowRightCircle className="w-4 h-4 mr-2" />
+                    Converti in Task
+                  </button>
+                  <button
+                    onClick={() => setIsConvertToProjectOpen(true)}
+                    className="btn-secondary flex items-center"
+                  >
+                    <FolderPlus className="w-4 h-4 mr-2" />
+                    Converti in Progetto
+                  </button>
+                  <button onClick={handleAcknowledge} className="btn-secondary flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Prendi Visione
+                  </button>
+                  <button
+                    onClick={() => setIsRejectModalOpen(true)}
+                    className="btn-danger flex items-center"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Rifiuta
+                  </button>
+                </div>
+              </CollapsibleSection>
+            </div>
+          )}
+        </div>
+
+        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-20 space-y-4">
+
+            {/* ── Metadata card ── */}
+            <div className="card p-5 space-y-0 animate-section-reveal">
+              <div className="hud-panel-header mb-2">
+                <span>Informazioni</span>
+              </div>
+
+              {/* Stato */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <TagIcon className="w-3.5 h-3.5" />
+                  Stato
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${INPUT_STATUS_COLORS[currentInput.status] || ''}`}>
+                  {INPUT_STATUS_LABELS[currentInput.status] || currentInput.status}
+                </span>
+              </div>
+
+              {/* Categoria */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <TagIcon className="w-3.5 h-3.5" />
+                  Categoria
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${INPUT_CATEGORY_COLORS[currentInput.category] || ''}`}>
+                  {INPUT_CATEGORY_LABELS[currentInput.category] || currentInput.category}
+                </span>
+              </div>
+
+              {/* Priorita */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Priorita
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TASK_PRIORITY_COLORS[currentInput.priority] || ''}`}>
+                  {TASK_PRIORITY_LABELS[currentInput.priority] || currentInput.priority}
+                </span>
+              </div>
+
+              {/* Creato da */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  Creato da
+                </span>
+                <span className="meta-row-value">
+                  {currentInput.createdBy
+                    ? `${currentInput.createdBy.firstName} ${currentInput.createdBy.lastName}`
+                    : '-'}
+                </span>
+              </div>
+
+              {/* Creato il */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Creato il
+                </span>
+                <span className="meta-row-value text-right">
+                  {formatDate(currentInput.createdAt)}
+                </span>
+              </div>
+
+              {/* Elaborato da */}
+              {currentInput.processedBy && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    Elaborato da
+                  </span>
+                  <span className="meta-row-value">
+                    {currentInput.processedBy.firstName} {currentInput.processedBy.lastName}
+                  </span>
+                </div>
+              )}
+
+              {/* Elaborato il */}
+              {currentInput.processedAt && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    Elaborato il
+                  </span>
+                  <span className="meta-row-value text-right">
+                    {formatDate(currentInput.processedAt)}
+                  </span>
+                </div>
+              )}
+
+              {/* Risolto il */}
+              {currentInput.resolvedAt && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Risolto il
+                  </span>
+                  <span className="meta-row-value text-right">
+                    {formatDate(currentInput.resolvedAt)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ── Converted links ── */}
+            {(currentInput.convertedTask || currentInput.convertedProject) && (
+              <div className="card p-5">
+                <div className="hud-panel-header mb-3">
+                  <span>Convertito in</span>
+                </div>
+                <div className="space-y-2">
+                  {currentInput.convertedTask && (
+                    <Link
+                      to={`/tasks/${currentInput.convertedTask.id}`}
+                      className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-cyan-400 dark:hover:text-cyan-400 transition-colors"
+                    >
+                      <ArrowRightCircle className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                      <span className="truncate">
+                        {currentInput.convertedTask.code} - {currentInput.convertedTask.title}
+                      </span>
+                      <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0" />
+                    </Link>
+                  )}
+                  {currentInput.convertedProject && (
+                    <Link
+                      to={`/projects/${currentInput.convertedProject.id}`}
+                      className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-cyan-400 dark:hover:text-cyan-400 transition-colors"
+                    >
+                      <FolderPlus className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                      <span className="truncate">{currentInput.convertedProject.name}</span>
+                      <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Modals ── */}
       <UserInputFormModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -408,12 +489,12 @@ export default function UserInputDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={() => setIsRejectModalOpen(false)} />
-            <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
                 Rifiuta Segnalazione
               </h3>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Motivo del rifiuto *
                 </label>
                 <textarea

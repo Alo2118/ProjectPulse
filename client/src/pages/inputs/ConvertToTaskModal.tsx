@@ -97,15 +97,15 @@ export default function ConvertToTaskModal({
 
         <div className="relative w-full max-w-lg modal-panel">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
               Converti in Task
             </h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5 text-slate-500" />
             </button>
           </div>
 
@@ -116,10 +116,10 @@ export default function ConvertToTaskModal({
                 <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-base font-medium text-gray-900 dark:text-white">
+                <p className="text-base font-medium text-slate-900 dark:text-white">
                   Task creato con successo!
                 </p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   La segnalazione è stata convertita in task.
                 </p>
               </div>
@@ -143,9 +143,9 @@ export default function ConvertToTaskModal({
           ) : (
           /* Form */
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Segnalazione:</p>
-              <p className="font-medium text-gray-900 dark:text-white">{inputTitle}</p>
+            <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <p className="text-sm text-slate-500 dark:text-slate-400">Segnalazione:</p>
+              <p className="font-medium text-slate-900 dark:text-white">{inputTitle}</p>
             </div>
 
             {/* Standalone checkbox */}
@@ -155,9 +155,9 @@ export default function ConvertToTaskModal({
                 id="isStandalone"
                 checked={formData.isStandalone}
                 onChange={(e) => setFormData({ ...formData, isStandalone: e.target.checked, projectId: '' })}
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
               />
-              <label htmlFor="isStandalone" className="text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="isStandalone" className="text-sm text-slate-700 dark:text-slate-300">
                 Task standalone (senza progetto)
               </label>
             </div>
@@ -165,7 +165,7 @@ export default function ConvertToTaskModal({
             {/* Project */}
             {!formData.isStandalone && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Progetto
                 </label>
                 <select
@@ -185,7 +185,7 @@ export default function ConvertToTaskModal({
 
             {/* Assignee */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Assegna a
               </label>
               <select
@@ -205,7 +205,7 @@ export default function ConvertToTaskModal({
             {/* Priority & Due Date */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Priorità
                 </label>
                 <select
@@ -221,7 +221,7 @@ export default function ConvertToTaskModal({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Scadenza
                 </label>
                 <input
@@ -235,7 +235,7 @@ export default function ConvertToTaskModal({
 
             {/* Estimated Hours */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Ore stimate
               </label>
               <input
@@ -257,7 +257,7 @@ export default function ConvertToTaskModal({
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
               <button type="button" onClick={onClose} className="btn-secondary">
                 Annulla
               </button>

@@ -27,7 +27,7 @@ export function CustomFieldInput({
   id,
 }: CustomFieldInputProps) {
   const baseInputClass =
-    'w-full text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-60 disabled:cursor-not-allowed'
+    'w-full text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 disabled:opacity-60 disabled:cursor-not-allowed'
 
   switch (fieldType) {
     case 'text':
@@ -100,9 +100,9 @@ export function CustomFieldInput({
             onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
             disabled={readOnly}
             required={required}
-            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500 disabled:opacity-60 disabled:cursor-not-allowed"
           />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
+          <span className="text-sm text-slate-700 dark:text-slate-300">
             {value === 'true' ? 'Sì' : 'No'}
           </span>
         </label>

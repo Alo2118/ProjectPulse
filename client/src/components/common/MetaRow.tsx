@@ -30,7 +30,7 @@ export function MetaRow({ items, className = '', borderTop = false }: MetaRowPro
   return (
     <div
       className={`flex items-center gap-4 text-sm flex-wrap ${
-        borderTop ? 'mt-4 pt-4 border-t border-gray-100 dark:border-gray-700' : ''
+        borderTop ? 'mt-4 pt-4 border-t border-slate-100 dark:border-slate-700' : ''
       } ${className}`}
     >
       {validItems.map((item, index) => {
@@ -38,7 +38,7 @@ export function MetaRow({ items, className = '', borderTop = false }: MetaRowPro
         const content = (
           <>
             <Icon className={`w-4 h-4 ${item.iconClassName || ''}`} />
-            {item.label && <span className="text-gray-400">{item.label}:</span>}
+            {item.label && <span className="text-slate-400">{item.label}:</span>}
             <span className={`font-medium ${item.className || ''}`}>{item.value}</span>
           </>
         )
@@ -48,7 +48,7 @@ export function MetaRow({ items, className = '', borderTop = false }: MetaRowPro
             <Link
               key={index}
               to={item.to}
-              className={`flex items-center gap-1.5 text-primary-600 dark:text-primary-400 hover:underline ${item.className || ''}`}
+              className={`flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 hover:underline ${item.className || ''}`}
             >
               {content}
             </Link>
@@ -58,7 +58,7 @@ export function MetaRow({ items, className = '', borderTop = false }: MetaRowPro
         return (
           <span
             key={index}
-            className={`flex items-center gap-1.5 text-gray-600 dark:text-gray-400 ${item.className || ''}`}
+            className={`flex items-center gap-1.5 text-slate-600 dark:text-slate-400 ${item.className || ''}`}
           >
             {content}
           </span>

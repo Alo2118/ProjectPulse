@@ -125,11 +125,11 @@ export function InlineSelect({
         className={[
           'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-all',
           'cursor-pointer',
-          currentOption.bgColor ?? 'bg-gray-100 dark:bg-surface-800',
-          currentOption.color ?? 'text-gray-700 dark:text-gray-300',
+          currentOption.bgColor ?? 'bg-slate-100 dark:bg-slate-800',
+          currentOption.color ?? 'text-slate-700 dark:text-slate-300',
           disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600',
+            : 'hover:ring-1 hover:ring-cyan-500/40 dark:hover:ring-cyan-500/40',
         ].join(' ')}
       >
         {isSaving ? (
@@ -150,10 +150,12 @@ export function InlineSelect({
           aria-label="Seleziona opzione"
           className={[
             'absolute mt-1 z-50',
-            'bg-white dark:bg-surface-800',
-            'border border-gray-200 dark:border-gray-700',
-            'rounded-lg shadow-lg py-1 min-w-[160px]',
+            'bg-slate-900 dark:bg-slate-900',
+            'border border-cyan-500/25 dark:border-cyan-500/25',
+            'rounded-lg py-1 min-w-[160px]',
+            'shadow-[0_0_20px_rgba(6,182,212,0.12),_0_8px_20px_rgba(0,0,0,0.4)]',
             'transition-opacity duration-150 opacity-100',
+            ':root:not(.dark):bg-white :root:not(.dark):border-slate-200 :root:not(.dark):shadow-lg',
           ].join(' ')}
         >
           {options.map((option) => {
@@ -169,9 +171,9 @@ export function InlineSelect({
                 onClick={() => handleSelect(option.value)}
                 className={[
                   'w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left',
-                  'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors',
+                  'hover:bg-cyan-500/10 dark:hover:bg-cyan-500/10 cursor-pointer transition-colors duration-100',
                   isSelected
-                    ? 'bg-blue-50 dark:bg-blue-900/30 font-medium'
+                    ? 'bg-cyan-500/15 dark:bg-cyan-500/15 font-medium'
                     : '',
                 ].join(' ')}
               >
@@ -183,7 +185,7 @@ export function InlineSelect({
                 {option.dotColor && (
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${option.dotColor}`} />
                 )}
-                <span className={option.color ?? 'text-gray-700 dark:text-gray-300'}>
+                <span className={option.color ?? 'text-slate-200 dark:text-slate-200'}>
                   {option.label}
                 </span>
               </button>

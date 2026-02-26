@@ -15,21 +15,21 @@ interface GanttBarProps {
   onClick?: () => void
 }
 
-// Status colors with gradients for better visual appeal
+// JARVIS palette status colors — cyan for active, emerald for done, red for blocked
 const STATUS_COLORS: Record<string, { bg: string; shadow: string }> = {
-  todo: { bg: 'bg-gradient-to-r from-gray-500 to-gray-400', shadow: 'shadow-gray-500/30' },
-  in_progress: { bg: 'bg-gradient-to-r from-blue-600 to-blue-400', shadow: 'shadow-blue-500/30' },
-  review: { bg: 'bg-gradient-to-r from-amber-500 to-yellow-400', shadow: 'shadow-amber-500/30' },
-  blocked: { bg: 'bg-gradient-to-r from-red-600 to-red-400', shadow: 'shadow-red-500/30' },
-  done: { bg: 'bg-gradient-to-r from-green-600 to-emerald-400', shadow: 'shadow-green-500/30' },
-  cancelled: { bg: 'bg-gradient-to-r from-gray-400 to-gray-300', shadow: 'shadow-gray-400/30' },
+  todo: { bg: 'bg-gradient-to-r from-slate-500 to-slate-400', shadow: 'shadow-slate-500/30' },
+  in_progress: { bg: 'bg-gradient-to-r from-cyan-600 to-cyan-400', shadow: 'shadow-cyan-500/40' },
+  review: { bg: 'bg-gradient-to-r from-amber-500 to-amber-400', shadow: 'shadow-amber-500/30' },
+  blocked: { bg: 'bg-gradient-to-r from-red-600 to-red-500', shadow: 'shadow-red-500/40' },
+  done: { bg: 'bg-gradient-to-r from-emerald-600 to-emerald-400', shadow: 'shadow-emerald-500/40' },
+  cancelled: { bg: 'bg-gradient-to-r from-slate-400 to-slate-300', shadow: 'shadow-slate-400/20' },
 }
 
-// Priority border colors
+// Priority border colors — semantic intensity scale
 const PRIORITY_COLORS: Record<string, string> = {
-  low: 'border-l-gray-400',
-  medium: 'border-l-blue-500',
-  high: 'border-l-orange-500',
+  low: 'border-l-slate-400',
+  medium: 'border-l-cyan-500',
+  high: 'border-l-amber-500',
   critical: 'border-l-red-500',
 }
 

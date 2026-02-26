@@ -40,19 +40,19 @@ export function MyDayTaskSection({
   return (
     <div className={`card ${isDanger ? 'border-l-4 border-l-red-500' : ''}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
+      <div className="p-4 border-b border-slate-200/30 dark:border-white/5 flex items-center justify-between">
         <h2 className={`text-lg font-semibold flex items-center gap-2 ${
           isDanger
             ? 'text-red-600 dark:text-red-400'
-            : 'text-gray-900 dark:text-white'
+            : 'text-slate-900 dark:text-white'
         }`}>
-          <Icon className={`w-5 h-5 ${isDanger ? 'text-red-500' : 'text-primary-500'}`} />
+          <Icon className={`w-5 h-5 ${isDanger ? 'text-red-500' : 'text-cyan-500'}`} />
           {title}
           {tasks.length > 0 && (
             <span className={`text-xs px-2 py-0.5 rounded-full ${
               isDanger
                 ? 'bg-red-500/10 text-red-500 dark:text-red-400'
-                : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400'
             }`}>
               {tasks.length}
             </span>
@@ -62,12 +62,12 @@ export function MyDayTaskSection({
 
       {/* Task rows */}
       {tasks.length === 0 ? (
-        <div className="p-8 text-center text-gray-400 dark:text-gray-500">
+        <div className="p-8 text-center text-slate-400 dark:text-slate-500">
           <EmptyIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">{emptyMessage}</p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-100 dark:divide-white/5">
+        <div className="divide-y divide-slate-100 dark:divide-white/5">
           {tasks.map((task) => (
             <MyDayTaskRow
               key={task.id}

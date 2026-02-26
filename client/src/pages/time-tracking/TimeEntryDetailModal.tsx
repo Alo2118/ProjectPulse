@@ -119,13 +119,13 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
         <div className="relative w-full max-w-2xl modal-panel max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center justify-between p-4 border-b border-cyan-500/15 flex-shrink-0">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary-500" />
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-400" />
                 Dettaglio Registrazione
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-sm font-mono text-amber-500 dark:text-amber-400 mt-0.5">
                 {formatDuration(entry.duration)}
               </p>
             </div>
@@ -138,7 +138,7 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="border-b border-cyan-500/15 flex-shrink-0">
             <nav className="flex px-4 gap-4">
               {tabs.map((tab) => (
                 <button
@@ -146,8 +146,8 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-3 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === tab.id
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
                   }`}
                 >
                   {tab.label}
@@ -162,33 +162,33 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
               <div className="space-y-4">
                 {/* Task Info */}
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                    <CheckSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <CheckSquare className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Task</p>
+                    <p className="meta-row-label">Task</p>
                     <Link
                       to={`/tasks/${entry.taskId}`}
-                      className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400"
+                      className="font-medium text-slate-800 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
                       onClick={onClose}
                     >
                       {entry.task?.title}
                     </Link>
-                    <p className="text-xs text-gray-400 mt-0.5">{entry.task?.code}</p>
+                    <p className="text-xs text-slate-400 mt-0.5 font-mono">{entry.task?.code}</p>
                   </div>
                 </div>
 
                 {/* Project Info */}
                 {entry.task?.project && (
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                      <FolderKanban className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <FolderKanban className="w-5 h-5 text-blue-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Progetto</p>
+                      <p className="meta-row-label">Progetto</p>
                       <Link
                         to={`/projects/${entry.task.project.id}`}
-                        className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400"
+                        className="font-medium text-slate-800 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
                         onClick={onClose}
                       >
                         {entry.task.project.name}
@@ -199,16 +199,16 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
 
                 {/* Time Info */}
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                    <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <div className="p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                    <Calendar className="w-5 h-5 text-violet-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Periodo</p>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                    <p className="meta-row-label">Periodo</p>
+                    <p className="font-medium text-slate-800 dark:text-white">
                       {formatDateTime(entry.startTime)}
                     </p>
                     {entry.endTime && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">
                         fino alle {formatTime(entry.endTime)}
                       </p>
                     )}
@@ -217,12 +217,12 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
 
                 {/* Duration */}
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
-                    <Clock className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <Clock className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Durata</p>
-                    <p className="font-medium text-gray-900 dark:text-white text-lg">
+                    <p className="meta-row-label">Durata</p>
+                    <p className="font-bold font-mono text-amber-600 dark:text-amber-400 text-lg">
                       {formatDuration(entry.duration)}
                     </p>
                   </div>
@@ -230,9 +230,9 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
 
                 {/* Description */}
                 {entry.description && (
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Descrizione</p>
-                    <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
+                  <div className="pt-4 border-t border-cyan-500/10">
+                    <p className="meta-row-label mb-2">Descrizione</p>
+                    <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap text-sm">
                       {entry.description}
                     </p>
                   </div>
@@ -240,9 +240,9 @@ export function TimeEntryDetailModal({ isOpen, entry, onClose }: TimeEntryDetail
 
                 {/* User */}
                 {entry.user && (
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Registrato da: {entry.user.firstName} {entry.user.lastName}
+                  <div className="pt-4 border-t border-cyan-500/10">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Registrato da: <span className="text-slate-700 dark:text-slate-200">{entry.user.firstName} {entry.user.lastName}</span>
                     </p>
                   </div>
                 )}

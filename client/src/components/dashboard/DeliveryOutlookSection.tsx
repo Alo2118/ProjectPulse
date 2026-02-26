@@ -64,7 +64,7 @@ function getDelayBadge(
       label: 'Dati insufficienti',
       icon: null,
       className:
-        'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+        'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
     }
   }
 
@@ -135,8 +135,8 @@ function ForecastRow({ forecast }: { forecast: DeliveryForecast }) {
   const clampedProgress = Math.min(100, Math.max(0, forecast.progress))
 
   return (
-    <div className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
-      <div className="hover:bg-gray-50 dark:hover:bg-gray-800/30 rounded-lg px-3 -mx-3 transition-colors">
+    <div className="py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+      <div className="hover:bg-slate-50 dark:hover:bg-slate-800/30 rounded-lg px-3 -mx-3 transition-colors">
         {/* Top row — name, progress, deadline */}
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
           {/* Health dot + project name */}
@@ -147,7 +147,7 @@ function ForecastRow({ forecast }: { forecast: DeliveryForecast }) {
             />
             <Link
               to={`/projects/${forecast.projectId}`}
-              className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
+              className="text-sm font-medium text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors truncate"
               title={forecast.projectName}
             >
               {forecast.projectName}
@@ -156,7 +156,7 @@ function ForecastRow({ forecast }: { forecast: DeliveryForecast }) {
 
           {/* Progress bar + percentage — hidden on very small screens, shown from sm */}
           <div className="hidden sm:flex items-center gap-2 w-36 flex-shrink-0">
-            <div className="flex-1 bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+            <div className="flex-1 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${progressBarClass}`}
                 style={{ width: `${clampedProgress}%` }}
@@ -166,15 +166,15 @@ function ForecastRow({ forecast }: { forecast: DeliveryForecast }) {
                 aria-valuemax={100}
               />
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">
+            <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums w-8 text-right flex-shrink-0">
               {clampedProgress}%
             </span>
           </div>
 
           {/* Deadline */}
-          <div className="flex-shrink-0 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          <div className="flex-shrink-0 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
             {deadlineLabel ?? (
-              <span className="text-gray-400 dark:text-gray-600">Nessuna deadline</span>
+              <span className="text-slate-400 dark:text-slate-600">Nessuna deadline</span>
             )}
           </div>
         </div>
@@ -183,19 +183,19 @@ function ForecastRow({ forecast }: { forecast: DeliveryForecast }) {
         <div className="flex items-center gap-3 mt-1.5 pb-1.5">
           {/* Progress bar on mobile only */}
           <div className="flex sm:hidden items-center gap-2 flex-1 min-w-0">
-            <div className="flex-1 bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+            <div className="flex-1 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full ${progressBarClass}`}
                 style={{ width: `${clampedProgress}%` }}
               />
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">
+            <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums w-8 text-right flex-shrink-0">
               {clampedProgress}%
             </span>
           </div>
 
           {/* Velocity */}
-          <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block flex-shrink-0">
+          <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:block flex-shrink-0">
             {forecast.velocityTasksPerWeek > 0
               ? `${forecast.velocityTasksPerWeek} task/sett`
               : '— task/sett'}
@@ -244,7 +244,7 @@ export default function DeliveryOutlookSection({
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="h-14 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"
+              className="h-14 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-lg"
             />
           ))}
         </div>
@@ -257,8 +257,8 @@ export default function DeliveryOutlookSection({
       {/* Section header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-primary-500 flex-shrink-0" aria-hidden="true" />
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+          <TrendingUp className="w-5 h-5 text-cyan-500 flex-shrink-0" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
             Previsioni Consegna
           </h2>
         </div>
@@ -266,7 +266,7 @@ export default function DeliveryOutlookSection({
         {hasMore && (
           <Link
             to="/projects"
-            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 flex items-center gap-1 group transition-colors"
+            className="text-sm text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 flex items-center gap-1 group transition-colors"
           >
             Vedi tutti i {forecasts.length} progetti
             <ArrowRight
@@ -281,22 +281,22 @@ export default function DeliveryOutlookSection({
       {forecasts.length === 0 ? (
         <div className="py-10 text-center">
           <TrendingUp
-            className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600"
+            className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600"
             aria-hidden="true"
           />
-          <p className="text-sm text-gray-400 dark:text-gray-500">Nessun progetto attivo</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Nessun progetto attivo</p>
         </div>
       ) : (
         <>
           {/* Column labels — desktop only */}
           <div className="hidden sm:flex items-center gap-3 px-3 mb-1">
-            <span className="flex-1 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+            <span className="flex-1 text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
               Progetto
             </span>
-            <span className="w-36 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide text-right">
+            <span className="w-36 text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide text-right">
               Avanzamento
             </span>
-            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
               Scadenza
             </span>
           </div>
@@ -312,10 +312,10 @@ export default function DeliveryOutlookSection({
 
           {/* "View all" footer link — shown only when list is truncated */}
           {hasMore && (
-            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 text-center">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
               <Link
                 to="/projects"
-                className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 transition-colors"
+                className="text-sm text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 transition-colors"
               >
                 Vedi tutti i {forecasts.length} progetti &rarr;
               </Link>

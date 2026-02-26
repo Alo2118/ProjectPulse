@@ -176,7 +176,7 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
         type="button"
         onClick={() => handleToggle(true)}
         disabled={isSaving}
-        className="p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 transition-colors flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 w-full justify-center disabled:opacity-50"
+        className="p-3 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 w-full justify-center disabled:opacity-50"
       >
         {isSaving ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -193,7 +193,7 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Repeat2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <h3 className="font-medium text-gray-900 dark:text-white">Attività Ricorrente</h3>
+          <h3 className="font-medium text-slate-900 dark:text-white">Attività Ricorrente</h3>
         </div>
         <button
           type="button"
@@ -203,14 +203,14 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
           title="Disattiva ricorrenza"
         >
           {isSaving ? (
-            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+            <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
           ) : (
             <X className="w-4 h-4 text-red-600 dark:text-red-400" />
           )}
         </button>
       </div>
 
-      <p className="text-sm text-gray-600 dark:text-gray-400">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
         Questa attività non ha una scadenza definitiva e si ripete nel tempo.
       </p>
 
@@ -240,7 +240,7 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
         <div className="space-y-4 pt-2 border-t border-blue-200 dark:border-blue-800">
           {/* Recurrence Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Frequenza
             </label>
             <select
@@ -257,7 +257,7 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
 
           {/* Interval */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Ogni {type === 'daily' ? 'N giorni' : type === 'weekly' ? 'N settimane' : type === 'monthly' ? 'N mesi' : 'N anni'}
             </label>
             <input
@@ -272,7 +272,7 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
           {/* Days of Week for Weekly */}
           {type === 'weekly' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Giorni
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -281,15 +281,15 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
                     key={day.value}
                     className={`flex items-center gap-2 p-2 rounded-lg border transition-colors cursor-pointer ${
                       daysOfWeek.includes(day.value)
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                        ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
+                        : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={daysOfWeek.includes(day.value)}
                       onChange={() => toggleDayOfWeek(day.value)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                     />
                     <span className="text-sm">{day.label}</span>
                   </label>
@@ -301,7 +301,7 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
           {/* Day of Month for Monthly */}
           {type === 'monthly' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Giorno del mese
               </label>
               <input
@@ -316,11 +316,11 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
           )}
 
           {/* End Conditions */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-3">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Fine ricorrenza (opzionale)</p>
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-3">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Fine ricorrenza (opzionale)</p>
 
             <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">
                 Numero di occorrenze
               </label>
               <input
@@ -334,7 +334,7 @@ export default function RecurrenceSettings({ taskId, isRecurring = false, recurr
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">
                 Data di fine
               </label>
               <input

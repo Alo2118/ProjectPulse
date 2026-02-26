@@ -39,7 +39,7 @@ export function TabSection({
   return (
     <div className={`card ${className}`}>
       {/* Tab Navigation */}
-      <div className="border-b border-gray-100 dark:border-gray-700">
+      <div className="border-b border-slate-100 dark:border-slate-700">
         <div className="flex overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -51,8 +51,8 @@ export function TabSection({
                 onClick={() => handleTabChange(tab.id)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
                   isActive
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                    ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 {Icon && <Icon className="w-4 h-4" />}
@@ -61,8 +61,8 @@ export function TabSection({
                   <span
                     className={`text-xs px-1.5 py-0.5 rounded-full ${
                       isActive
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                        ? 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {tab.count}

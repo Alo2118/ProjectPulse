@@ -219,8 +219,8 @@ export function TimesheetView() {
 
   /** Return Tailwind text-color class for a column total. */
   function colTotalClass(minutes: number): string {
-    if (minutes === 0) return 'text-gray-400 dark:text-gray-500'
-    if (minutes >= dailyTargetMinutes) return 'text-green-600 dark:text-green-400'
+    if (minutes === 0) return 'text-slate-400 dark:text-slate-500'
+    if (minutes >= dailyTargetMinutes) return 'text-emerald-600 dark:text-emerald-400'
     return 'text-amber-600 dark:text-amber-400'
   }
 
@@ -237,8 +237,8 @@ export function TimesheetView() {
       {/* Navigation bar */}
       <div className="card p-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-primary-500 shrink-0" aria-hidden="true" />
-          <span className="text-base font-semibold text-gray-900 dark:text-white">
+          <Calendar className="w-5 h-5 text-cyan-400 shrink-0" aria-hidden="true" />
+          <span className="text-base font-semibold text-slate-800 dark:text-white">
             {formatWeekRange(monday)}
           </span>
         </div>
@@ -276,10 +276,10 @@ export function TimesheetView() {
           // Skeleton / loading state
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2
-              className="w-8 h-8 animate-spin text-primary-500"
+              className="w-8 h-8 animate-spin text-cyan-400"
               aria-label="Caricamento in corso"
             />
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               Caricamento ore...
             </span>
           </div>
@@ -302,10 +302,10 @@ export function TimesheetView() {
               </colgroup>
 
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/60">
+                <tr className="border-b border-cyan-500/15 bg-slate-100/60 dark:bg-slate-800/60">
                   <th
                     scope="col"
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="table-header px-4 py-3 text-left"
                   >
                     Progetto / Task
                   </th>
@@ -316,19 +316,17 @@ export function TimesheetView() {
                       className={[
                         'px-2 py-2 text-center',
                         todayColIdx === i
-                          ? 'text-primary-600 dark:text-primary-400'
-                          : 'text-gray-500 dark:text-gray-400',
+                          ? 'text-cyan-600 dark:text-cyan-400'
+                          : 'text-slate-500 dark:text-slate-400',
                       ].join(' ')}
                     >
-                      <span className="block text-xs font-semibold uppercase tracking-wider">
+                      <span className="block text-xs font-semibold uppercase tracking-widest">
                         {col.day}
                       </span>
                       <span
                         className={[
                           'block text-[11px] font-normal mt-0.5',
-                          todayColIdx === i
-                            ? 'font-medium'
-                            : '',
+                          todayColIdx === i ? 'font-medium' : '',
                         ].join(' ')}
                       >
                         {col.dateStr}
@@ -337,19 +335,19 @@ export function TimesheetView() {
                   ))}
                   <th
                     scope="col"
-                    className="px-2 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="table-header px-2 py-3 text-center"
                   >
                     Totale
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+              <tbody className="divide-y divide-cyan-500/5">
                 {grid.rows.length === 0 ? (
                   <tr>
                     <td
                       colSpan={7}
-                      className="px-4 py-12 text-center text-gray-400 dark:text-gray-500"
+                      className="px-4 py-12 text-center text-slate-400 dark:text-slate-500"
                     >
                       <Calendar
                         className="w-10 h-10 mx-auto mb-3 opacity-40"
@@ -375,11 +373,11 @@ export function TimesheetView() {
                         rows.push(
                           <tr
                             key={`proj-${row.projectId}`}
-                            className="bg-gray-50/50 dark:bg-gray-800/30"
+                            className="bg-slate-100/40 dark:bg-slate-800/30"
                           >
                             <td
                               colSpan={7}
-                              className="px-4 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide"
+                              className="px-4 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-widest"
                             >
                               {row.projectName}
                             </td>
@@ -392,16 +390,16 @@ export function TimesheetView() {
                       rows.push(
                         <tr
                           key={row.taskId}
-                          className="hover:bg-gray-50/70 dark:hover:bg-white/[0.03] transition-colors"
+                          className="table-row-hover"
                         >
                           {/* Task label */}
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="shrink-0 text-[10px] font-mono text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                              <span className="shrink-0 text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded border border-slate-200/80 dark:border-slate-600/50">
                                 {row.taskCode}
                               </span>
                               <span
-                                className="truncate text-gray-800 dark:text-gray-200 text-sm"
+                                className="truncate text-slate-700 dark:text-slate-200 text-sm"
                                 title={row.taskTitle}
                               >
                                 {row.taskTitle}
@@ -416,23 +414,23 @@ export function TimesheetView() {
                               className={[
                                 'px-2 py-2.5 text-center tabular-nums',
                                 todayColIdx === dayIdx
-                                  ? 'bg-primary-50/40 dark:bg-primary-900/10'
+                                  ? 'bg-cyan-500/5 dark:bg-cyan-900/10'
                                   : '',
                               ].join(' ')}
                             >
                               {minutes > 0 ? (
-                                <span className="text-gray-800 dark:text-gray-200 font-medium">
+                                <span className="font-medium font-mono text-amber-600 dark:text-amber-400">
                                   {fmtHours(minutes)}
                                 </span>
                               ) : (
-                                <span className="text-gray-300 dark:text-gray-600">—</span>
+                                <span className="text-slate-300 dark:text-slate-600">—</span>
                               )}
                             </td>
                           ))}
 
                           {/* Row total */}
                           <td className="px-2 py-2.5 text-center tabular-nums">
-                            <span className="text-gray-700 dark:text-gray-300 font-semibold">
+                            <span className="font-semibold font-mono text-amber-600 dark:text-amber-400">
                               {fmtHoursDecimal(rowTotal)}
                             </span>
                           </td>
@@ -448,10 +446,10 @@ export function TimesheetView() {
               {/* Footer totals */}
               {grid.rows.length > 0 && (
                 <tfoot>
-                  <tr className="border-t-2 border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-800/60">
+                  <tr className="border-t-2 border-cyan-500/20 bg-slate-100/60 dark:bg-slate-800/60">
                     <th
                       scope="row"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                      className="table-header px-4 py-3 text-left"
                     >
                       Totale giornaliero
                     </th>
@@ -459,9 +457,9 @@ export function TimesheetView() {
                       <td
                         key={i}
                         className={[
-                          'px-2 py-3 text-center tabular-nums font-semibold text-sm',
+                          'px-2 py-3 text-center tabular-nums font-semibold font-mono text-sm',
                           todayColIdx === i
-                            ? 'bg-primary-50/40 dark:bg-primary-900/10'
+                            ? 'bg-cyan-500/5 dark:bg-cyan-900/10'
                             : '',
                           colTotalClass(minutes),
                         ].join(' ')}
@@ -469,34 +467,34 @@ export function TimesheetView() {
                         {fmtHoursDecimal(minutes)}
                       </td>
                     ))}
-                    <td className="px-2 py-3 text-center tabular-nums font-bold text-sm text-gray-900 dark:text-white">
+                    <td className="px-2 py-3 text-center tabular-nums font-bold font-mono text-sm text-amber-600 dark:text-amber-400">
                       {fmtHoursDecimal(grid.grandTotal)}
                     </td>
                   </tr>
 
                   {/* Target hint row */}
-                  <tr className="bg-gray-50/40 dark:bg-gray-800/30">
+                  <tr className="bg-slate-50/40 dark:bg-slate-800/30">
                     <td
                       colSpan={7}
-                      className="px-4 py-1.5 text-right text-[11px] text-gray-400 dark:text-gray-500"
+                      className="px-4 py-1.5 text-right text-[11px] text-slate-400 dark:text-slate-500"
                     >
                       Obiettivo giornaliero:&nbsp;
-                      <span className="font-medium text-gray-500 dark:text-gray-400">
+                      <span className="font-medium font-mono text-slate-500 dark:text-slate-400">
                         {fmtHoursDecimal(dailyTargetMinutes)}
                       </span>
                       &nbsp;·&nbsp; Obiettivo settimanale:&nbsp;
-                      <span className="font-medium text-gray-500 dark:text-gray-400">
+                      <span className="font-medium font-mono text-slate-500 dark:text-slate-400">
                         {weeklyTarget}h
                       </span>
                       &nbsp;·&nbsp; Registrato:&nbsp;
                       <span
                         className={[
-                          'font-medium',
+                          'font-medium font-mono',
                           grid.grandTotal >= weeklyTarget * 60
-                            ? 'text-green-600 dark:text-green-400'
+                            ? 'text-emerald-600 dark:text-emerald-400'
                             : grid.grandTotal > 0
                               ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-gray-400 dark:text-gray-500',
+                              : 'text-slate-400 dark:text-slate-500',
                         ].join(' ')}
                       >
                         {fmtHoursDecimal(grid.grandTotal)}

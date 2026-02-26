@@ -91,7 +91,7 @@ function MyDaySkeleton() {
       </div>
       {/* Task section skeleton */}
       <div className="card">
-        <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
+        <div className="p-4 border-b border-cyan-500/10">
           <div className="skeleton h-6 w-40" />
         </div>
         <div className="p-4 space-y-3">
@@ -108,7 +108,7 @@ function MyDaySkeleton() {
       </div>
       {/* Time tracking skeleton */}
       <div className="card">
-        <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
+        <div className="p-4 border-b border-cyan-500/10">
           <div className="skeleton h-6 w-32" />
         </div>
         <div className="p-4 space-y-2">

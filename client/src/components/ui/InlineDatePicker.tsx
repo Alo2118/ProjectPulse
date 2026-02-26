@@ -121,7 +121,7 @@ export function InlineDatePicker({
         onChange={handleChange}
         onBlur={handleBlur}
         disabled={isSaving}
-        className={`input text-xs px-2 py-0.5 w-32 ${className}`}
+        className={`input text-xs px-2 py-0.5 w-32 focus:border-cyan-500/60 focus:shadow-[0_0_8px_rgba(6,182,212,0.25)] ${className}`}
         aria-label="Seleziona data"
       />
     )
@@ -132,10 +132,10 @@ export function InlineDatePicker({
 
   const colorClass =
     status === 'overdue'
-      ? 'text-red-500 dark:text-red-400'
+      ? 'text-red-400 dark:text-red-400'
       : status === 'today'
-        ? 'text-amber-500 dark:text-amber-400'
-        : 'text-gray-500 dark:text-gray-400'
+        ? 'text-amber-400 dark:text-amber-400'
+        : 'text-slate-400 dark:text-slate-400'
 
   return (
     <span
@@ -153,7 +153,7 @@ export function InlineDatePicker({
         'inline-flex items-center gap-1 text-xs transition-colors select-none',
         disabled
           ? 'opacity-50 cursor-not-allowed'
-          : 'cursor-pointer hover:text-blue-500 dark:hover:text-blue-400',
+          : 'cursor-pointer hover:text-cyan-400 dark:hover:text-cyan-400',
         colorClass,
         className,
       ].join(' ')}
@@ -165,7 +165,7 @@ export function InlineDatePicker({
           type="button"
           onClick={handleClear}
           aria-label="Rimuovi data"
-          className="ml-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors p-0.5"
+          className="ml-0.5 rounded-full hover:bg-slate-700/60 dark:hover:bg-slate-700/60 transition-colors p-0.5"
         >
           <svg
             width="10"

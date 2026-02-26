@@ -95,10 +95,10 @@ function StatTile({
   color: string
 }) {
   return (
-    <div className="bg-gray-50 dark:bg-white/[0.04] rounded-lg p-3 flex flex-col gap-1">
+    <div className="bg-slate-50 dark:bg-white/[0.04] rounded-lg p-3 flex flex-col gap-1">
       <div className={`${color}`}>{icon}</div>
-      <p className="text-lg font-bold text-gray-900 dark:text-white leading-none">{value}</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="text-lg font-bold text-slate-900 dark:text-white leading-none">{value}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
     </div>
   )
 }
@@ -124,21 +124,21 @@ function UserDistRow({ firstName, lastName, taskCount, assignedHours, availableH
   return (
     <div className="flex items-center gap-3 py-2">
       {/* Avatar */}
-      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary-500 text-white flex items-center justify-center text-xs font-bold">
+      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xs font-bold">
         {initials}
       </div>
 
       {/* Name + stats */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+          <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
             {firstName} {lastName}
           </span>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               {taskCount} {taskCount === 1 ? 'task' : 'task'}
             </span>
-            <span className={`text-xs font-semibold ${isOverloaded ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+            <span className={`text-xs font-semibold ${isOverloaded ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-300'}`}>
               {formatHoursFromDecimal(assignedHours)}
               {availableHours > 0 && ` / ${formatHoursFromDecimal(availableHours)}`}
             </span>
@@ -149,7 +149,7 @@ function UserDistRow({ firstName, lastName, taskCount, assignedHours, availableH
         </div>
         {/* Capacity bar */}
         {availableHours > 0 && (
-          <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-visible relative">
+          <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-visible relative">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
                 isOverloaded
@@ -246,8 +246,8 @@ export function PlanSummaryPanel({
       {/* Section 1: Riepilogo                                               */}
       {/* ----------------------------------------------------------------- */}
       <div className="card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <CheckSquare size={15} className="text-primary-500" aria-hidden="true" />
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          <CheckSquare size={15} className="text-cyan-500" aria-hidden="true" />
           Riepilogo
         </h3>
 
@@ -268,7 +268,7 @@ export function PlanSummaryPanel({
             icon={<CircleDot size={14} />}
             label="Subtask"
             value={stats.subtaskCount}
-            color="text-gray-500 dark:text-gray-400"
+            color="text-slate-500 dark:text-slate-400"
           />
           <StatTile
             icon={<Clock size={14} />}
@@ -279,10 +279,10 @@ export function PlanSummaryPanel({
         </div>
 
         {totalDurationDays > 0 && (
-          <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-            <Clock size={13} className="text-gray-400" aria-hidden="true" />
+          <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
+            <Clock size={13} className="text-slate-400" aria-hidden="true" />
             Durata stimata:
-            <span className="font-semibold text-gray-900 dark:text-white ml-1">
+            <span className="font-semibold text-slate-900 dark:text-white ml-1">
               {totalDurationDays} giorni
             </span>
           </div>
@@ -294,11 +294,11 @@ export function PlanSummaryPanel({
       {/* ----------------------------------------------------------------- */}
       {distributionRows.length > 0 && (
         <div className="card p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Users size={15} className="text-primary-500" aria-hidden="true" />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Users size={15} className="text-cyan-500" aria-hidden="true" />
             Distribuzione per Utente
           </h3>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
             {distributionRows.map((row) => (
               <UserDistRow key={row.userId} {...row} />
             ))}
@@ -311,8 +311,8 @@ export function PlanSummaryPanel({
       {/* ----------------------------------------------------------------- */}
       {scheduledTasks && scheduledTasks.length > 0 && (
         <div className="card p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Flag size={15} className="text-primary-500" aria-hidden="true" />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Flag size={15} className="text-cyan-500" aria-hidden="true" />
             Timeline
           </h3>
           <PlanTimelinePreview

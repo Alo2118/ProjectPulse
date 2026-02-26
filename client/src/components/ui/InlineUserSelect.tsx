@@ -203,33 +203,33 @@ export function InlineUserSelect({
           'inline-flex items-center gap-1.5 transition-all rounded-full',
           disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'cursor-pointer hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600',
+            : 'cursor-pointer hover:ring-1 hover:ring-cyan-500/40 dark:hover:ring-cyan-500/40',
         ].join(' ')}
       >
         {isSaving ? (
           <span
-            className={`${isSmall ? 'w-5 h-5' : 'w-6 h-6'} rounded-full bg-gray-200 dark:bg-gray-700 inline-flex items-center justify-center`}
+            className={`${isSmall ? 'w-5 h-5' : 'w-6 h-6'} rounded-full bg-slate-700/50 dark:bg-slate-700/50 inline-flex items-center justify-center`}
           >
-            <Loader2 size={12} className="animate-spin text-gray-500 dark:text-gray-400" />
+            <Loader2 size={12} className="animate-spin text-slate-400 dark:text-slate-400" />
           </span>
         ) : currentUser ? (
           <>
             <Avatar user={currentUser} size={size} />
             {!isSmall && (
-              <span className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              <span className="text-xs text-slate-300 dark:text-slate-300 whitespace-nowrap">
                 {currentUser.firstName} {currentUser.lastName}
               </span>
             )}
           </>
         ) : (
           <span
-            className={`${isSmall ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-xs'} rounded-full bg-gray-200 dark:bg-gray-700 inline-flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0`}
+            className={`${isSmall ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-xs'} rounded-full bg-slate-700/50 dark:bg-slate-700/50 inline-flex items-center justify-center text-slate-500 dark:text-slate-500 flex-shrink-0`}
           >
             <UserX size={isSmall ? 10 : 12} aria-hidden="true" />
           </span>
         )}
         {!isSmall && !currentUser && !isSaving && (
-          <span className="text-xs text-gray-400 dark:text-gray-500">Non assegnato</span>
+          <span className="text-xs text-slate-500 dark:text-slate-500">Non assegnato</span>
         )}
       </button>
 
@@ -240,21 +240,22 @@ export function InlineUserSelect({
           aria-label="Seleziona utente"
           className={[
             'absolute mt-1 z-50 w-56',
-            'bg-white dark:bg-surface-800',
-            'border border-gray-200 dark:border-gray-700',
-            'rounded-lg shadow-lg',
+            'bg-slate-900 dark:bg-slate-900',
+            'border border-cyan-500/25 dark:border-cyan-500/25',
+            'rounded-lg',
+            'shadow-[0_0_20px_rgba(6,182,212,0.12),_0_8px_20px_rgba(0,0,0,0.4)]',
             'transition-opacity duration-150 opacity-100',
           ].join(' ')}
         >
           {/* Search input */}
-          <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+          <div className="p-2 border-b border-cyan-500/15 dark:border-cyan-500/15">
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cerca utente..."
-              className="w-full px-2 py-1 text-xs rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              className="w-full px-2 py-1 text-xs rounded bg-slate-800/60 dark:bg-slate-800/60 border border-cyan-500/20 dark:border-cyan-500/20 focus:outline-none focus:border-cyan-500/40 focus:shadow-[0_0_6px_rgba(6,182,212,0.2)] text-slate-100 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-500 transition-all"
               aria-label="Cerca utente"
             />
           </div>
@@ -269,25 +270,25 @@ export function InlineUserSelect({
                 onClick={() => handleSelect(null)}
                 className={[
                   'w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left',
-                  'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors',
-                  value === null ? 'bg-blue-50 dark:bg-blue-900/30 font-medium' : '',
+                  'hover:bg-cyan-500/10 dark:hover:bg-cyan-500/10 cursor-pointer transition-colors duration-100',
+                  value === null ? 'bg-cyan-500/15 dark:bg-cyan-500/15 font-medium' : '',
                 ].join(' ')}
               >
-                <span className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 inline-flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0">
+                <span className="w-6 h-6 rounded-full bg-slate-700/50 dark:bg-slate-700/50 inline-flex items-center justify-center text-slate-500 dark:text-slate-500 flex-shrink-0">
                   <UserX size={12} aria-hidden="true" />
                 </span>
-                <span className="text-gray-500 dark:text-gray-400">Nessuno</span>
+                <span className="text-slate-400 dark:text-slate-400">Nessuno</span>
               </button>
             )}
 
             {/* User list */}
             {isLoadingUsers ? (
-              <div className="flex items-center justify-center py-4 gap-2 text-gray-400 dark:text-gray-500">
+              <div className="flex items-center justify-center py-4 gap-2 text-slate-400 dark:text-slate-400">
                 <Loader2 size={14} className="animate-spin" />
                 <span className="text-xs">Caricamento...</span>
               </div>
             ) : filteredUsers.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
+              <p className="px-3 py-2 text-xs text-slate-500 dark:text-slate-500">
                 Nessun utente trovato
               </p>
             ) : (
@@ -303,8 +304,8 @@ export function InlineUserSelect({
                     onClick={() => handleSelect(user.id)}
                     className={[
                       'w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left',
-                      'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors',
-                      isSelected ? 'bg-blue-50 dark:bg-blue-900/30 font-medium' : '',
+                      'hover:bg-cyan-500/10 dark:hover:bg-cyan-500/10 cursor-pointer transition-colors duration-100',
+                      isSelected ? 'bg-cyan-500/15 dark:bg-cyan-500/15 font-medium' : '',
                     ].join(' ')}
                   >
                     <span
@@ -313,7 +314,7 @@ export function InlineUserSelect({
                     >
                       {userInitials(user.firstName, user.lastName)}
                     </span>
-                    <span className="text-gray-700 dark:text-gray-300 truncate">
+                    <span className="text-slate-300 dark:text-slate-300 truncate">
                       {user.firstName} {user.lastName}
                     </span>
                   </button>

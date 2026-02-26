@@ -25,6 +25,7 @@ import {
   Users,
   Calendar,
   Tag,
+  ChevronDown,
 } from 'lucide-react'
 import { User, Project, Tag as TagType } from '@/types'
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS, TASK_TYPE_OPTIONS } from '@/constants'
@@ -90,6 +91,7 @@ export default function TaskFormPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [taskTags, setTaskTags] = useState<TagType[]>([])
   const [inheritedFromParent, setInheritedFromParent] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const { fetchEntityTags, assignTag: storeAssignTag } = useTagStore()
   const { departments, fetchDepartments } = useDepartmentStore()
 
@@ -386,11 +388,11 @@ export default function TaskFormPage() {
   if (isEditMode && !storeLoading && !currentTask) {
     return (
       <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
           Task non trovato
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-slate-500 dark:text-slate-400 mb-4">
           Il task richiesto non esiste o è stato eliminato.
         </p>
         <button onClick={() => navigate('/tasks')} className="btn-primary">
@@ -405,10 +407,10 @@ export default function TaskFormPage() {
     return (
       <div className="card p-8 text-center">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
           Accesso non autorizzato
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-slate-500 dark:text-slate-400 mb-4">
           Non hai i permessi per creare o modificare task.
         </p>
         <button onClick={() => navigate('/tasks')} className="btn-primary">
@@ -454,7 +456,7 @@ export default function TaskFormPage() {
 
               {/* Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="title" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Titolo <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -471,9 +473,9 @@ export default function TaskFormPage() {
 
               {/* Description */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="description" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Descrizione{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
                 </label>
                 <textarea
                   id="description"
@@ -504,7 +506,7 @@ export default function TaskFormPage() {
 
               {/* Task Type — horizontal selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Tipo <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -517,8 +519,8 @@ export default function TaskFormPage() {
                         title={option.description}
                         className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 cursor-pointer transition-all
                           ${isSelected
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-500/30'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                            ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20 ring-1 ring-cyan-500/30'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                           }
                           ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                         `}
@@ -532,21 +534,21 @@ export default function TaskFormPage() {
                         />
                         {option.value === 'milestone' && (
                           <Target
-                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
+                            className={`w-5 h-5 ${isSelected ? 'text-cyan-500 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}`}
                           />
                         )}
                         {option.value === 'task' && (
                           <CheckSquare
-                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
+                            className={`w-5 h-5 ${isSelected ? 'text-cyan-500 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}`}
                           />
                         )}
                         {option.value === 'subtask' && (
                           <ListTodo
-                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
+                            className={`w-5 h-5 ${isSelected ? 'text-cyan-500 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}`}
                           />
                         )}
                         <span
-                          className={`text-xs font-medium ${isSelected ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}
+                          className={`text-xs font-medium ${isSelected ? 'text-cyan-700 dark:text-cyan-400' : 'text-slate-700 dark:text-slate-300'}`}
                         >
                           {option.label}
                         </span>
@@ -562,14 +564,14 @@ export default function TaskFormPage() {
               </div>
 
               {/* ── Section: Stato e Priorità ── */}
-              <div className="form-section-header">
+              <div className="form-section-header flex items-center gap-1.5">
                 <Settings2 className="w-3.5 h-3.5" />
                 Stato e Priorità
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="status" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Stato <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -589,7 +591,7 @@ export default function TaskFormPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="priority" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Priorità <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -610,7 +612,7 @@ export default function TaskFormPage() {
               </div>
 
               {/* ── Section: Organizzazione ── */}
-              <div className="form-section-header">
+              <div className="form-section-header flex items-center gap-1.5">
                 <FolderTree className="w-3.5 h-3.5" />
                 Organizzazione
               </div>
@@ -621,9 +623,9 @@ export default function TaskFormPage() {
                   id="isStandalone"
                   type="checkbox"
                   {...register('isStandalone')}
-                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500"
                 />
-                <label htmlFor="isStandalone" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="isStandalone" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Task standalone (senza progetto)
                 </label>
               </div>
@@ -631,9 +633,9 @@ export default function TaskFormPage() {
               {/* Project */}
               {!isStandalone && (
                 <div>
-                  <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="projectId" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Progetto{' '}
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                    <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
                   </label>
                   <select
                     id="projectId"
@@ -657,39 +659,17 @@ export default function TaskFormPage() {
                 </div>
               )}
 
-              {/* Parent Task - hidden for milestones */}
-              {selectedTaskType !== 'milestone' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Task/Milestone Padre{' '}
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                  </label>
-                  <TaskSearchSelect
-                    value={watch('parentTaskId') || ''}
-                    onChange={(taskId) => setValue('parentTaskId', taskId, { shouldDirty: true })}
-                    placeholder="Cerca task o milestone padre..."
-                    projectId={selectedProjectId || undefined}
-                    excludeTaskId={isEditMode ? id : undefined}
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {selectedProjectId
-                      ? 'Lascia vuoto per un elemento root del progetto. Seleziona una milestone per raggruppare.'
-                      : 'Lascia vuoto per un task root. Seleziona un task padre per creare un subtask.'}
-                  </p>
-                </div>
-              )}
-
               {/* ── Section: Assegnazione ── */}
-              <div className="form-section-header">
+              <div className="form-section-header flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" />
                 Assegnazione
               </div>
 
               {/* Assignee */}
               <div>
-                <label htmlFor="assigneeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="assigneeId" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Assegnato a{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
                 </label>
                 <select
                   id="assigneeId"
@@ -713,42 +693,17 @@ export default function TaskFormPage() {
                       id="assignToSubtasks"
                       type="checkbox"
                       {...register('assignToSubtasks')}
-                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500"
                     />
-                    <label htmlFor="assignToSubtasks" className="text-sm text-gray-600 dark:text-gray-400">
+                    <label htmlFor="assignToSubtasks" className="text-sm text-slate-600 dark:text-slate-400">
                       Assegna anche alle subtask ({currentTask._count.subtasks} subtask dirette, include tutti i livelli)
                     </label>
                   </div>
                 )}
               </div>
 
-              {/* Department */}
-              <div>
-                <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Reparto Esecutore{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                </label>
-                <select
-                  id="departmentId"
-                  {...register('departmentId')}
-                  className="input"
-                >
-                  <option value="">Nessun reparto</option>
-                  {departments
-                    .filter((d) => d.isActive)
-                    .map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Il reparto che eseguirà questo task
-                </p>
-              </div>
-
               {/* ── Section: Tempistiche ── */}
-              <div className="form-section-header">
+              <div className="form-section-header flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
                 Tempistiche
               </div>
@@ -756,9 +711,9 @@ export default function TaskFormPage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Data Inizio{' '}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                      <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
                     </label>
                     <input
                       id="startDate"
@@ -772,9 +727,9 @@ export default function TaskFormPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="dueDate" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Data Fine{' '}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                      <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
                     </label>
                     <input
                       id="dueDate"
@@ -789,9 +744,9 @@ export default function TaskFormPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="estimatedHours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="estimatedHours" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Ore Stimate{' '}
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
+                    <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
                   </label>
                   <input
                     id="estimatedHours"
@@ -807,35 +762,99 @@ export default function TaskFormPage() {
                   )}
                 </div>
 
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Le date determinano la posizione del task nel Gantt chart
                 </p>
               </div>
 
-              {/* ── Section: Tag ── */}
-              <div className="form-section-header">
-                <Tag className="w-3.5 h-3.5" />
-                Tag
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Tag{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                </label>
-                <TagInput
-                  entityType="task"
-                  entityId={isEditMode ? id ?? null : null}
-                  value={taskTags}
-                  onChange={setTaskTags}
+              {/* ── Opzioni Avanzate (collapsible) ── */}
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="w-full flex items-center justify-between text-xs uppercase tracking-widest
+                  font-medium text-slate-500 dark:text-slate-400
+                  border-b border-slate-200 dark:border-cyan-500/15 pb-2 pt-1
+                  hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Settings2 className="w-3.5 h-3.5" />
+                  Opzioni avanzate
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}
                 />
-              </div>
+              </button>
+
+              {showAdvanced && (
+                <div className="space-y-5 pt-1">
+                  {/* Task padre — hidden for milestones */}
+                  {selectedTaskType !== 'milestone' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        Task/Milestone Padre{' '}
+                        <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
+                      </label>
+                      <TaskSearchSelect
+                        value={watch('parentTaskId') || ''}
+                        onChange={(taskId) => setValue('parentTaskId', taskId, { shouldDirty: true })}
+                        placeholder="Cerca task o milestone padre..."
+                        projectId={selectedProjectId || undefined}
+                        excludeTaskId={isEditMode ? id : undefined}
+                      />
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {selectedProjectId
+                          ? 'Lascia vuoto per un elemento root del progetto.'
+                          : 'Lascia vuoto per un task root.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Department */}
+                  <div>
+                    <label htmlFor="departmentId" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Reparto Esecutore{' '}
+                      <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
+                    </label>
+                    <select
+                      id="departmentId"
+                      {...register('departmentId')}
+                      className="input"
+                    >
+                      <option value="">Nessun reparto</option>
+                      {departments
+                        .filter((d) => d.isActive)
+                        .map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Tag */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <span className="flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5 text-slate-400" />
+                        Tag{' '}
+                        <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
+                      </span>
+                    </label>
+                    <TagInput
+                      entityType="task"
+                      entityId={isEditMode ? id ?? null : null}
+                      value={taskTags}
+                      onChange={setTaskTags}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* ── Sticky Action Bar ── */}
-        <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-3 bg-white/90 dark:bg-surface-800/90 backdrop-blur-md border-t border-gray-200/50 dark:border-white/10 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
+        <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200/50 dark:border-cyan-500/10 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
           <div className="flex items-center justify-between">
             {/* Left: Delete (edit mode only) */}
             {isEditMode ? (
@@ -856,7 +875,7 @@ export default function TaskFormPage() {
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="btn-tertiary"
               >
                 Annulla
               </button>

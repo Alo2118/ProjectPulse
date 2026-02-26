@@ -76,13 +76,13 @@ interface TaskTreeViewProps {
 
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ElementType; label: string }> = {
-  todo: { color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', icon: Circle, label: 'Da fare' },
+  todo: { color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', icon: Circle, label: 'Da fare' },
   in_progress: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: Loader2, label: 'In corso' },
   review: { color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400', icon: CheckSquare, label: 'Review' },
   blocked: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: AlertTriangle, label: 'Bloccato' },
   done: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle, label: 'Completato' },
-  cancelled: { color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500', icon: XCircle, label: 'Annullato' },
-  planning: { color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', icon: Circle, label: 'Pianificazione' },
+  cancelled: { color: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500', icon: XCircle, label: 'Annullato' },
+  planning: { color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', icon: Circle, label: 'Pianificazione' },
   design: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: Loader2, label: 'Design' },
   verification: { color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400', icon: CheckSquare, label: 'Verifica' },
   validation: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: CheckSquare, label: 'Validazione' },
@@ -93,19 +93,19 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ElementType; la
 }
 
 const PRIORITY_CONFIG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  low: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', dot: 'bg-gray-400', label: 'Bassa' },
+  low: { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-500 dark:text-slate-400', dot: 'bg-slate-400', label: 'Bassa' },
   medium: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-500', label: 'Media' },
   high: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-700 dark:text-orange-400', dot: 'bg-orange-500', label: 'Alta' },
   critical: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500', label: 'Critica' },
 }
 
 const STATUS_OPTIONS: InlineSelectOption[] = [
-  { value: 'todo', label: 'Da fare', color: 'text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { value: 'todo', label: 'Da fare', color: 'text-slate-400', bgColor: 'bg-slate-100 dark:bg-slate-800' },
   { value: 'in_progress', label: 'In Corso', color: 'text-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
   { value: 'review', label: 'Review', color: 'text-violet-500', bgColor: 'bg-violet-100 dark:bg-violet-900/30' },
   { value: 'blocked', label: 'Bloccato', color: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-900/30' },
   { value: 'done', label: 'Completato', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-  { value: 'cancelled', label: 'Annullato', color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { value: 'cancelled', label: 'Annullato', color: 'text-slate-500', bgColor: 'bg-slate-100 dark:bg-slate-800' },
 ]
 
 const PRIORITY_OPTIONS: InlineSelectOption[] = [
@@ -178,7 +178,7 @@ const ProgressBar = memo(function ProgressBar({ progress, size = 'md' }: { progr
 
   return (
     <div
-      className={`w-full bg-gray-200/70 dark:bg-gray-700/70 rounded-full ${height} overflow-hidden`}
+      className={`w-full bg-slate-200/70 dark:bg-slate-700/70 rounded-full ${height} overflow-hidden`}
       role="progressbar"
       aria-valuenow={capped}
       aria-valuemin={0}
@@ -252,7 +252,7 @@ const AssigneeAvatar = memo(function AssigneeAvatar({
       >
         {initials}
       </span>
-      <span className="text-xs text-gray-600 dark:text-gray-400">
+      <span className="text-xs text-slate-600 dark:text-slate-400">
         {assignee.firstName} {assignee.lastName[0]}.
       </span>
     </span>
@@ -265,7 +265,7 @@ const AssigneeAvatar = memo(function AssigneeAvatar({
 const StatsSummary = memo(function StatsSummary({ stats, compact = false }: { stats: TaskTreeStats; compact?: boolean }) {
   if (compact) {
     return (
-      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
         <span className="flex items-center gap-1" title="Completati">
           <CheckCircle className="w-3 h-3 text-green-500" />
           {stats.completed}
@@ -295,13 +295,13 @@ const StatsSummary = memo(function StatsSummary({ stats, compact = false }: { st
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs">
       <div className="flex items-center gap-2">
-        <span className="text-gray-500 dark:text-gray-400">Avanzamento:</span>
+        <span className="text-slate-500 dark:text-slate-400">Avanzamento:</span>
         <div className="w-24">
           <ProgressBar progress={progress} size="sm" />
         </div>
-        <span className="font-medium text-gray-700 dark:text-gray-300">{progress}%</span>
+        <span className="font-medium text-slate-700 dark:text-slate-300">{progress}%</span>
       </div>
-      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
         <span className="flex items-center gap-1">
           <CheckCircle className="w-3 h-3 text-green-500" />
           {stats.completed}/{stats.total}
@@ -361,7 +361,7 @@ const SubtaskNodeItem = memo(function SubtaskNodeItem({
   return (
     <div>
       <div
-        className={`tree-connector-row flex items-center gap-2 py-2 px-3 hover:bg-gray-50/80 dark:hover:bg-surface-800/50 cursor-pointer transition-colors duration-150 ${
+        className={`tree-connector-row flex items-center gap-2 py-2 px-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-colors duration-150 ${
           compact ? 'py-1.5' : ''
         }`}
         style={{ paddingLeft: `${paddingLeft}px` }}
@@ -369,7 +369,7 @@ const SubtaskNodeItem = memo(function SubtaskNodeItem({
       >
         {hasChildren && canExpand ? (
           <ChevronRight
-            className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
           />
         ) : (
           <span className="w-4 flex-shrink-0" />
@@ -394,7 +394,7 @@ const SubtaskNodeItem = memo(function SubtaskNodeItem({
           <div className="flex items-center gap-2">
             <Link
               to={`/tasks/${subtask.id}`}
-              className={`text-gray-500 dark:text-gray-400 truncate hover:text-primary-600 dark:hover:text-primary-400 transition-colors ${
+              className={`text-slate-500 dark:text-slate-400 truncate hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors ${
                 compact ? 'text-xs' : 'text-sm'
               } ${subtask.status === 'done' || subtask.status === 'cancelled' ? 'line-through opacity-60' : ''}`}
               onClick={(e) => e.stopPropagation()}
@@ -466,7 +466,7 @@ const SubtaskNodeItem = memo(function SubtaskNodeItem({
             className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
               isTimerRunning
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-500'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-500'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-cyan-500'
             }`}
             title={isTimerRunning ? 'Stop timer' : 'Avvia timer'}
           >
@@ -544,7 +544,7 @@ const TaskNodeItem = memo(function TaskNodeItem({
       >
         {hasChildren && canExpand ? (
           <ChevronRight
-            className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
           />
         ) : (
           <span className="w-4 flex-shrink-0" />
@@ -571,7 +571,7 @@ const TaskNodeItem = memo(function TaskNodeItem({
           <div className="flex items-center gap-2">
             <Link
               to={`/tasks/${task.id}`}
-              className={`font-medium text-gray-800 dark:text-gray-200 truncate hover:text-primary-600 dark:hover:text-primary-400 transition-colors ${
+              className={`font-medium text-slate-800 dark:text-slate-200 truncate hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors ${
                 compact ? 'text-sm' : ''
               }`}
               onClick={(e) => e.stopPropagation()}
@@ -643,7 +643,7 @@ const TaskNodeItem = memo(function TaskNodeItem({
             className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
               isTimerRunning
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-500'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-500'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-cyan-500'
             }`}
             title={isTimerRunning ? 'Stop timer' : 'Avvia timer'}
           >
@@ -723,7 +723,7 @@ const MilestoneNodeItem = memo(function MilestoneNodeItem({
       >
         {hasTasks && canExpand ? (
           <ChevronRight
-            className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
           />
         ) : (
           <span className="w-4 flex-shrink-0" />
@@ -762,17 +762,17 @@ const MilestoneNodeItem = memo(function MilestoneNodeItem({
 
         {/* Progress for milestone */}
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-[100px] sm:min-w-[120px]">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {milestone.stats.completed}/{milestone.stats.total}
           </span>
           <div className="w-16">
             <ProgressBar progress={progress} size="sm" />
           </div>
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-8">{progress}%</span>
+          <span className="text-xs font-medium text-slate-700 dark:text-slate-300 w-8">{progress}%</span>
         </div>
 
         {!compact && (
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {formatHoursFromDecimal(milestone.stats.totalHours)}/{formatHoursFromDecimal(milestone.stats.estimatedHours)}
           </span>
         )}
@@ -881,17 +881,17 @@ const ProjectNodeItem = memo(function ProjectNodeItem({
   return (
     <div className={`card overflow-hidden ${compact ? 'shadow-sm' : ''}`}>
       <div
-        className={`flex items-center gap-3 bg-gradient-to-r from-primary-100/80 to-transparent dark:from-primary-900/30 dark:to-transparent border-l-4 border-primary-400 dark:border-primary-600 cursor-pointer ${
+        className={`flex items-center gap-3 bg-gradient-to-r from-cyan-100/80 to-transparent dark:from-cyan-900/30 dark:to-transparent border-l-4 border-cyan-400 dark:border-cyan-600 cursor-pointer ${
           compact ? 'p-3' : 'p-4'
         }`}
         onClick={onToggle}
       >
         <ChevronRight
-          className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
+          className={`w-5 h-5 text-slate-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
         />
 
-        <div className={`flex items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/40 flex-shrink-0 ${compact ? 'w-7 h-7' : 'w-8 h-8'}`}>
-          <FolderKanban className={`text-primary-600 dark:text-primary-400 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
+        <div className={`flex items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900/40 flex-shrink-0 ${compact ? 'w-7 h-7' : 'w-8 h-8'}`}>
+          <FolderKanban className={`text-cyan-600 dark:text-cyan-400 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
         </div>
 
         <PriorityBadge priority={project.priority} compact={compact} />
@@ -900,7 +900,7 @@ const ProjectNodeItem = memo(function ProjectNodeItem({
           <div className="flex items-center gap-2">
             <Link
               to={`/projects/${project.id}`}
-              className={`font-bold text-gray-900 dark:text-white truncate hover:text-primary-600 dark:hover:text-primary-400 transition-colors ${
+              className={`font-bold text-slate-900 dark:text-white truncate hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors ${
                 compact ? 'text-sm' : 'text-base'
               }`}
               onClick={(e) => e.stopPropagation()}
@@ -915,7 +915,7 @@ const ProjectNodeItem = memo(function ProjectNodeItem({
       </div>
 
       {!compact && (
-        <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="px-4 pb-3 border-b border-slate-100 dark:border-slate-800">
           <StatsSummary stats={project.stats} />
         </div>
       )}
@@ -979,7 +979,7 @@ const TaskTreeSkeleton = memo(function TaskTreeSkeleton() {
       {/* Summary cards skeleton */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+          <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
             <div className="skeleton h-3 w-16 mb-2 rounded" />
             <div className="skeleton h-6 w-10 rounded" />
           </div>
@@ -987,7 +987,7 @@ const TaskTreeSkeleton = memo(function TaskTreeSkeleton() {
       </div>
       {/* Project nodes skeleton */}
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div key={i} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="p-4 flex items-center gap-3">
             <div className="skeleton h-5 w-5 rounded" />
             <div className="skeleton h-5 w-48 rounded" />
@@ -1026,41 +1026,41 @@ const SummaryCards = memo(function SummaryCards({
 }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
-      <div className="card p-4 bg-primary-50/50 dark:bg-primary-900/10">
+      <div className="card p-4 bg-cyan-50/50 dark:bg-cyan-900/10">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Progetti</p>
-          <FolderKanban className="w-4 h-4 text-primary-500 dark:text-primary-400 opacity-70" />
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-medium">Progetti</p>
+          <FolderKanban className="w-4 h-4 text-cyan-500 dark:text-cyan-400 opacity-70" />
         </div>
-        <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{summary.totalProjects}</p>
+        <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{summary.totalProjects}</p>
       </div>
       <div className="card p-4 bg-amber-50/50 dark:bg-amber-900/10">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Milestone</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-medium">Milestone</p>
           <Target className="w-4 h-4 text-amber-500 dark:text-amber-400 opacity-70" />
         </div>
         <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{summary.totalMilestones}</p>
       </div>
       <div className="card p-4 bg-blue-50/50 dark:bg-blue-900/10">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Task</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-medium">Task</p>
           <CheckSquare className="w-4 h-4 text-blue-500 dark:text-blue-400 opacity-70" />
         </div>
         <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{summary.totalTasks}</p>
       </div>
-      <div className="card p-4 bg-gray-50/50 dark:bg-gray-800/30">
+      <div className="card p-4 bg-slate-50/50 dark:bg-slate-800/30">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Subtask</p>
-          <CheckCircle className="w-4 h-4 text-gray-500 dark:text-gray-400 opacity-70" />
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-medium">Subtask</p>
+          <CheckCircle className="w-4 h-4 text-slate-500 dark:text-slate-400 opacity-70" />
         </div>
-        <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{summary.totalSubtasks}</p>
+        <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{summary.totalSubtasks}</p>
       </div>
       <div className="card p-4 bg-gradient-to-br from-blue-50/80 to-transparent dark:from-blue-900/15 dark:to-transparent">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Avanzamento</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-medium">Avanzamento</p>
           <BarChart3 className="w-4 h-4 text-blue-500 opacity-70" />
         </div>
         <div className="flex items-center gap-2">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.overallProgress}%</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{summary.overallProgress}%</p>
           <div className="flex-1 mt-1">
             <ProgressBar progress={summary.overallProgress} size="sm" />
           </div>
@@ -1068,10 +1068,10 @@ const SummaryCards = memo(function SummaryCards({
       </div>
       <div className="card p-4 bg-teal-50/50 dark:bg-teal-900/10">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Ore Totali</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-medium">Ore Totali</p>
           <Clock className="w-4 h-4 text-teal-500 dark:text-teal-400 opacity-70" />
         </div>
-        <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.totalHoursLogged}h</p>
+        <p className="text-2xl font-bold text-slate-900 dark:text-white">{summary.totalHoursLogged}h</p>
       </div>
     </div>
   )
@@ -1255,7 +1255,7 @@ export function TaskTreeView({
       {(showControls || showFilters) && (
         <div className="flex items-center justify-between flex-wrap gap-2">
           {!compact && (
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <BarChart3 className="w-4 h-4" />
               <span>Vista gerarchica progetti e task</span>
             </div>
@@ -1264,22 +1264,22 @@ export function TaskTreeView({
           <div className="flex items-center gap-2">
             {showFilters && (
               <>
-                <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={propMyTasksOnly ?? myTasksOnly}
                     onChange={(e) => setMyTasksOnly(e.target.checked)}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                   />
                   <Filter className="w-3.5 h-3.5" />
                   Solo i miei
                 </label>
-                <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={propExcludeCompleted ?? excludeCompleted}
                     onChange={(e) => setExcludeCompleted(e.target.checked)}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                   />
                   Nascondi completati
                 </label>
@@ -1290,14 +1290,14 @@ export function TaskTreeView({
               <>
                 <button
                   onClick={expandAll}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   <ChevronDown className="w-4 h-4" />
                   {!compact && 'Espandi'}
                 </button>
                 <button
                   onClick={collapseAll}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   <ChevronUp className="w-4 h-4" />
                   {!compact && 'Comprimi'}

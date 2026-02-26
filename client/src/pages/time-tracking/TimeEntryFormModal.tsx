@@ -130,14 +130,14 @@ export default function TimeEntryFormModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
-        <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-xl">
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="relative w-full max-w-lg modal-panel">
+          <div className="flex items-center justify-between p-4 border-b border-cyan-500/15">
+            <h2 className="text-lg font-semibold text-white">
               {isEdit ? 'Modifica Registrazione' : 'Nuova Registrazione'}
             </h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+              className="btn-icon"
             >
               <X className="w-5 h-5" />
             </button>
@@ -146,7 +146,7 @@ export default function TimeEntryFormModal({
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {/* Task selector */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 dark:text-slate-300 mb-1">
                 Task *
               </label>
               {isEdit ? (
@@ -166,7 +166,7 @@ export default function TimeEntryFormModal({
 
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 dark:text-slate-300 mb-1">
                 Data *
               </label>
               <input
@@ -181,7 +181,7 @@ export default function TimeEntryFormModal({
             {/* Start / End time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 dark:text-slate-300 mb-1">
                   Ora inizio *
                 </label>
                 <input
@@ -195,7 +195,7 @@ export default function TimeEntryFormModal({
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 dark:text-slate-300 mb-1">
                   Ora fine *
                 </label>
                 <input
@@ -212,7 +212,7 @@ export default function TimeEntryFormModal({
 
             {/* Duration preview */}
             {form.date && form.startTime && form.endTime && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-slate-400 dark:text-slate-400">
                 Durata:{' '}
                 {(() => {
                   const ms =
@@ -229,7 +229,7 @@ export default function TimeEntryFormModal({
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 dark:text-slate-300 mb-1">
                 Descrizione
               </label>
               <textarea
@@ -246,7 +246,7 @@ export default function TimeEntryFormModal({
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-end gap-3 pt-2 border-t border-cyan-500/15">
               <button type="button" onClick={onClose} className="btn-secondary">
                 Annulla
               </button>

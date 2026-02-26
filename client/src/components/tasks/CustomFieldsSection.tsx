@@ -137,7 +137,7 @@ function FieldRow({ item, readOnly, onSave }: FieldRowProps) {
                   onClick={() => void commitEdit()}
                   disabled={isSaving}
                   aria-label="Salva valore"
-                  className="text-xs px-2 py-1 bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50 transition-colors"
+                  className="text-xs px-2 py-1 bg-cyan-500 text-white rounded hover:bg-cyan-600 disabled:opacity-50 transition-colors"
                 >
                   {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salva'}
                 </button>

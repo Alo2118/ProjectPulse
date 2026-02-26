@@ -49,8 +49,8 @@ export function TeamCapacityChart({ data, weekLabel, onPrevWeek, onNextWeek, isL
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary-500" />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          <Users className="w-5 h-5 text-cyan-500" />
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
             Capacità Team
           </h3>
           {overloadedCount > 0 && (
@@ -65,7 +65,7 @@ export function TeamCapacityChart({ data, weekLabel, onPrevWeek, onNextWeek, isL
           <button onClick={onPrevWeek} className="btn-icon p-1" aria-label="Settimana precedente">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 min-w-[100px] text-center">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[100px] text-center">
             {weekLabel}
           </span>
           <button onClick={onNextWeek} className="btn-icon p-1" aria-label="Settimana successiva">
@@ -75,13 +75,13 @@ export function TeamCapacityChart({ data, weekLabel, onPrevWeek, onNextWeek, isL
       </div>
 
       {/* Summary stats */}
-      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-        <span>Utilizzo medio: <strong className="text-gray-900 dark:text-white">{avgUtilization}%</strong></span>
-        <span>Membri: <strong className="text-gray-900 dark:text-white">{data.length}</strong></span>
+      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+        <span>Utilizzo medio: <strong className="text-slate-900 dark:text-white">{avgUtilization}%</strong></span>
+        <span>Membri: <strong className="text-slate-900 dark:text-white">{data.length}</strong></span>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
+      <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
         <span className="flex items-center gap-1">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> &lt; 80%
         </span>
@@ -96,7 +96,7 @@ export function TeamCapacityChart({ data, weekLabel, onPrevWeek, onNextWeek, isL
       {/* Capacity bars */}
       <div className="space-y-3">
         {data.length === 0 ? (
-          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+          <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
             Nessun dato disponibile
           </p>
         ) : (

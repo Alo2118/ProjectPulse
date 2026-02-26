@@ -8,7 +8,15 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useRiskStore } from '@stores/riskStore'
 import { useProjectStore } from '@stores/projectStore'
 import api from '@services/api'
-import { ArrowLeft, Loader2, Save, AlertTriangle } from 'lucide-react'
+import {
+  Loader2,
+  Save,
+  AlertTriangle,
+  ChevronDown,
+  Users,
+  BarChart2,
+  FileText,
+} from 'lucide-react'
 import {
   RISK_CATEGORY_OPTIONS,
   RISK_PROBABILITY_OPTIONS,
@@ -17,7 +25,7 @@ import {
   RISK_LEVEL_COLORS,
 } from '@/constants'
 import { RiskCategory, RiskProbability, RiskImpact, RiskStatus, User } from '@/types'
-import { Breadcrumb } from '@/components/common/Breadcrumb'
+import { DetailPageHeader } from '@/components/common/DetailPageHeader'
 
 function calculateRiskLevel(probability: RiskProbability, impact: RiskImpact): { level: number; label: 'low' | 'medium' | 'high' } {
   const probValue = { low: 1, medium: 2, high: 3 }
@@ -40,6 +48,7 @@ export default function RiskFormPage() {
   const { currentRisk, isLoading, fetchRisk, createRisk, updateRisk, clearCurrentRisk } = useRiskStore()
   const { projects, fetchProjects } = useProjectStore()
   const [users, setUsers] = useState<User[]>([])
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const [formData, setFormData] = useState({
     projectId: '',
@@ -58,7 +67,6 @@ export default function RiskFormPage() {
 
   useEffect(() => {
     fetchProjects()
-    // Load users for owner select
     const loadUsers = async () => {
       try {
         const response = await api.get<{ success: boolean; data: User[] }>('/users?limit=100')
@@ -99,7 +107,7 @@ export default function RiskFormPage() {
       newErrors.projectId = 'Seleziona un progetto'
     }
     if (!formData.title.trim()) {
-      newErrors.title = 'Il titolo e obbligatorio'
+      newErrors.title = 'Il titolo è obbligatorio'
     }
 
     setErrors(newErrors)
@@ -148,49 +156,49 @@ export default function RiskFormPage() {
 
   if (isLoading && isEditing) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center gap-4">
+          <div className="skeleton w-10 h-10 rounded-lg" />
+          <div className="skeleton h-7 w-48" />
+        </div>
+        <div className="card p-6 space-y-4">
+          <div className="skeleton h-10 w-full" />
+          <div className="skeleton h-32 w-full" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="skeleton h-10 w-full" />
+            <div className="skeleton h-10 w-full" />
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Rischi', href: '/risks' },
-          { label: isEditing ? 'Modifica Rischio' : 'Nuovo Rischio' },
-        ]}
+    <div className="space-y-4">
+      {/* Page Header */}
+      <DetailPageHeader
+        title={isEditing ? 'Modifica Rischio' : 'Nuovo Rischio'}
+        backTo="/risks"
       />
 
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          {isEditing ? 'Modifica Rischio' : 'Nuovo Rischio'}
-        </h1>
-      </div>
+      <form onSubmit={handleSubmit}>
+        <div className="card p-6 space-y-6">
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Project Selection */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Progetto
-          </h2>
+          {/* ── Section: Progetto e Titolo ── */}
+          <div className="form-section-header flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Dettagli Rischio
+          </div>
+
+          {/* Project */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Seleziona progetto *
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Progetto <span className="text-red-400">*</span>
             </label>
             <select
               value={formData.projectId}
               onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-              className={`input ${errors.projectId ? 'border-red-500' : ''}`}
+              className={`input ${errors.projectId ? 'input-error' : ''}`}
               disabled={isEditing}
             >
               <option value="">Seleziona...</option>
@@ -201,87 +209,106 @@ export default function RiskFormPage() {
               ))}
             </select>
             {errors.projectId && (
-              <p className="mt-1 text-sm text-red-500">{errors.projectId}</p>
+              <p className="mt-1 text-sm text-red-400">{errors.projectId}</p>
             )}
           </div>
-        </div>
 
-        {/* Risk Details */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Dettagli Rischio
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Titolo *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className={`input ${errors.title ? 'border-red-500' : ''}`}
-                placeholder="Descrivi il rischio..."
-              />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-500">{errors.title}</p>
-              )}
-            </div>
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Titolo <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className={`input ${errors.title ? 'input-error' : ''}`}
+              placeholder="Descrivi il rischio..."
+            />
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-400">{errors.title}</p>
+            )}
+          </div>
 
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Descrizione <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              className="input resize-none"
+              placeholder="Descrivi il rischio in dettaglio..."
+            />
+          </div>
+
+          {/* ── Section: Valutazione ── */}
+          <div className="form-section-header flex items-center gap-1.5">
+            <BarChart2 className="w-3.5 h-3.5" />
+            Valutazione
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Descrizione
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Probabilità
               </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
+              <select
+                value={formData.probability}
+                onChange={(e) => setFormData({ ...formData, probability: e.target.value as RiskProbability })}
                 className="input"
-                placeholder="Descrivi il rischio in dettaglio..."
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Categoria
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value as RiskCategory })}
-                  className="input"
-                >
-                  {RISK_CATEGORY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {isEditing && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Stato
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as RiskStatus })}
-                    className="input"
-                  >
-                    {RISK_STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              >
+                {RISK_PROBABILITY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Responsabile
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Impatto
+              </label>
+              <select
+                value={formData.impact}
+                onChange={(e) => setFormData({ ...formData, impact: e.target.value as RiskImpact })}
+                className="input"
+              >
+                {RISK_IMPACT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Risk Level Preview */}
+          <div className={`flex items-center gap-3 p-3 rounded-lg ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Livello di rischio: {riskLevel.level}</p>
+              <p className="text-xs opacity-80">
+                {riskLevel.label === 'low' && 'Rischio basso — monitorare'}
+                {riskLevel.label === 'medium' && 'Rischio medio — pianificare mitigazione'}
+                {riskLevel.label === 'high' && 'Rischio alto — azione immediata richiesta'}
+              </p>
+            </div>
+          </div>
+
+          {/* ── Section: Assegnazione ── */}
+          <div className="form-section-header flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            Assegnazione
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Responsabile <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
               </label>
               <select
                 value={formData.ownerId}
@@ -296,97 +323,105 @@ export default function RiskFormPage() {
                 ))}
               </select>
             </div>
-          </div>
-        </div>
 
-        {/* Risk Assessment */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Valutazione Rischio
-          </h2>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Probabilita
-                </label>
-                <select
-                  value={formData.probability}
-                  onChange={(e) => setFormData({ ...formData, probability: e.target.value as RiskProbability })}
-                  className="input"
-                >
-                  {RISK_PROBABILITY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Impatto
-                </label>
-                <select
-                  value={formData.impact}
-                  onChange={(e) => setFormData({ ...formData, impact: e.target.value as RiskImpact })}
-                  className="input"
-                >
-                  {RISK_IMPACT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Risk Level Preview */}
-            <div className={`flex items-center gap-3 p-4 rounded-lg ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
-              <AlertTriangle className="w-5 h-5" />
-              <div>
-                <p className="font-medium">Livello di rischio calcolato: {riskLevel.level}</p>
-                <p className="text-sm opacity-80">
-                  {riskLevel.label === 'low' && 'Rischio basso - monitorare'}
-                  {riskLevel.label === 'medium' && 'Rischio medio - pianificare mitigazione'}
-                  {riskLevel.label === 'high' && 'Rischio alto - azione immediata richiesta'}
-                </p>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Categoria
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as RiskCategory })}
+                className="input"
+              >
+                {RISK_CATEGORY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
 
-        {/* Mitigation Plan */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Piano di Mitigazione
-          </h2>
-          <textarea
-            value={formData.mitigationPlan}
-            onChange={(e) => setFormData({ ...formData, mitigationPlan: e.target.value })}
-            rows={6}
-            className="input"
-            placeholder="Descrivi le azioni per mitigare questo rischio..."
-          />
-        </div>
+          {/* Stato — only in edit mode, in the essential area */}
+          {isEditing && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Stato
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as RiskStatus })}
+                className="input"
+              >
+                {RISK_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-        {/* Submit Buttons */}
-        <div className="flex items-center justify-end gap-4">
+          {/* ── Opzioni avanzate: Piano di Mitigazione (collapsible) ── */}
           <button
             type="button"
-            onClick={() => navigate(-1)}
-            className="btn-secondary"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="w-full flex items-center justify-between text-xs uppercase tracking-widest
+              font-medium text-slate-500 dark:text-slate-400
+              border-b border-slate-200 dark:border-cyan-500/15 pb-2 pt-1
+              hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
           >
-            Annulla
+            <span className="flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" />
+              Piano di Mitigazione
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}
+            />
           </button>
-          <button type="submit" disabled={isSaving} className="btn-primary flex items-center">
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            {isEditing ? 'Salva Modifiche' : 'Crea Rischio'}
-          </button>
+
+          {showAdvanced && (
+            <div className="pt-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Piano di mitigazione <span className="text-slate-400 dark:text-slate-500 font-normal">(opzionale)</span>
+              </label>
+              <textarea
+                value={formData.mitigationPlan}
+                onChange={(e) => setFormData({ ...formData, mitigationPlan: e.target.value })}
+                rows={5}
+                className="input resize-none"
+                placeholder="Descrivi le azioni per mitigare questo rischio..."
+              />
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-cyan-500/10">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="btn-tertiary"
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Salvataggio...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  {isEditing ? 'Salva Modifiche' : 'Crea Rischio'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>

@@ -51,7 +51,7 @@ function getMilestoneStatusBadge(ms: MilestoneRow) {
   if (ms.status === 'done')
     return { label: 'Completata', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
   if (ms.status === 'cancelled')
-    return { label: 'Annullata', cls: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' }
+    return { label: 'Annullata', cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' }
   if (ms.isOverdue)
     return { label: 'Scaduta', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
   if (ms.daysLeft !== null && ms.daysLeft <= 7)
@@ -62,10 +62,10 @@ function getMilestoneStatusBadge(ms: MilestoneRow) {
 function SectionHeader({ icon: Icon, label, count }: { icon: ElementType; label: string; count?: number }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <Icon className="w-5 h-5 text-primary-500 flex-shrink-0" />
-      <h2 className="text-base font-semibold text-gray-900 dark:text-white">{label}</h2>
+      <Icon className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+      <h2 className="text-base font-semibold text-slate-800 dark:text-white">{label}</h2>
       {count !== undefined && (
-        <span className="ml-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-400">
+        <span className="ml-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/60 text-xs font-medium text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-600/40">
           {count}
         </span>
       )}
@@ -248,16 +248,16 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase">Progetto</th>
-                  <th className="text-left py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase">Avanzamento</th>
-                  <th className="text-center py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase">Schedule</th>
-                  <th className="text-center py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase hidden md:table-cell">Task</th>
-                  <th className="text-center py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase hidden md:table-cell">Bloccati</th>
-                  <th className="text-right py-2 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase hidden md:table-cell">Ore sett.</th>
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase">Progetto</th>
+                  <th className="text-left py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase">Avanzamento</th>
+                  <th className="text-center py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase">Schedule</th>
+                  <th className="text-center py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase hidden md:table-cell">Task</th>
+                  <th className="text-center py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase hidden md:table-cell">Bloccati</th>
+                  <th className="text-right py-2 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase hidden md:table-cell">Ore sett.</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {data.projectHealth.map(p => {
                   const ragBadge = p.status === 'on-track'
                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
@@ -266,21 +266,21 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                     : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                   const ragLabel = p.status === 'on-track' ? 'On Track' : p.status === 'at-risk' ? 'A Rischio' : 'In Ritardo'
                   return (
-                    <tr key={p.projectId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <tr key={p.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="py-3 pr-4">
-                        <Link to={`/projects/${p.projectId}`} className="font-medium text-gray-900 dark:text-white hover:text-primary-500 transition-colors">
+                        <Link to={`/projects/${p.projectId}`} className="font-medium text-slate-900 dark:text-white hover:text-cyan-500 transition-colors">
                           {p.projectName}
                         </Link>
                       </td>
                       <td className="py-3 pr-4 min-w-[120px]">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full ${p.status === 'on-track' ? 'bg-green-500' : p.status === 'at-risk' ? 'bg-amber-500' : 'bg-red-500'}`}
                               style={{ width: `${p.completionPercent}%` }}
                             />
                           </div>
-                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-8 text-right">{p.completionPercent}%</span>
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 w-8 text-right">{p.completionPercent}%</span>
                         </div>
                       </td>
                       <td className="py-3 pr-4 text-center">
@@ -288,16 +288,16 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                           {ragLabel}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-center text-xs text-gray-600 dark:text-gray-400 hidden md:table-cell">
+                      <td className="py-3 pr-4 text-center text-xs text-slate-600 dark:text-slate-400 hidden md:table-cell">
                         <span className="text-green-600 dark:text-green-400 font-medium">{p.tasksCompleted}</span>
-                        <span className="text-gray-400">/{p.tasksTotal}</span>
+                        <span className="text-slate-400">/{p.tasksTotal}</span>
                       </td>
                       <td className="py-3 pr-4 text-center hidden md:table-cell">
                         {p.tasksBlocked > 0
                           ? <span className="text-red-600 dark:text-red-400 font-semibold text-xs">{p.tasksBlocked}</span>
-                          : <span className="text-gray-400 text-xs">—</span>}
+                          : <span className="text-slate-400 text-xs">—</span>}
                       </td>
-                      <td className="py-3 text-right text-xs text-gray-600 dark:text-gray-400 hidden md:table-cell">
+                      <td className="py-3 text-right text-xs text-slate-600 dark:text-slate-400 hidden md:table-cell">
                         {formatHoursFromDecimal(p.actualHours)}
                       </td>
                     </tr>
@@ -336,20 +336,20 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
             {accomplishedByProject.map(({ projectName, tasks }) => (
               <div key={projectName}>
                 <div className="flex items-center gap-2 mb-2">
-                  <FolderTree className="w-3.5 h-3.5 text-primary-400 flex-shrink-0" />
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{projectName}</span>
-                  <span className="ml-1 text-xs text-gray-400">({tasks.length})</span>
+                  <FolderTree className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">{projectName}</span>
+                  <span className="ml-1 text-xs text-slate-400">({tasks.length})</span>
                 </div>
                 <ul className="space-y-1.5 ml-5">
                   {tasks.map(t => (
                     <li key={t.id} className="flex items-start gap-2 text-sm">
                       <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <Link to={`/tasks/${t.id}`} className="text-gray-800 dark:text-gray-200 hover:text-primary-500 transition-colors">
+                        <Link to={`/tasks/${t.id}`} className="text-slate-800 dark:text-slate-200 hover:text-cyan-500 transition-colors">
                           {t.title}
                         </Link>
                         {t.assigneeName && (
-                          <span className="text-xs text-gray-400 ml-1.5">— {t.assigneeName}</span>
+                          <span className="text-xs text-slate-400 ml-1.5">— {t.assigneeName}</span>
                         )}
                       </div>
                     </li>
@@ -359,7 +359,7 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-6">Nessuna attività completata questa settimana</p>
+          <p className="text-sm text-slate-400 text-center py-6">Nessuna attività completata questa settimana</p>
         )}
       </section>
 
@@ -371,20 +371,20 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
             {plannedByProject.map(({ projectName, tasks }) => (
               <div key={projectName}>
                 <div className="flex items-center gap-2 mb-2">
-                  <FolderTree className="w-3.5 h-3.5 text-primary-400 flex-shrink-0" />
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{projectName}</span>
+                  <FolderTree className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">{projectName}</span>
                 </div>
                 <ul className="space-y-1.5 ml-5">
                   {tasks.map(t => (
                     <li key={t.id} className="flex items-start gap-2 text-sm">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0 mt-1.5" />
                       <div className="min-w-0 flex-1">
-                        <Link to={`/tasks/${t.id}`} className="text-gray-800 dark:text-gray-200 hover:text-primary-500 transition-colors">
+                        <Link to={`/tasks/${t.id}`} className="text-slate-800 dark:text-slate-200 hover:text-cyan-500 transition-colors">
                           {t.title}
                         </Link>
-                        {t.assigneeName && <span className="text-xs text-gray-400 ml-1.5">— {t.assigneeName}</span>}
+                        {t.assigneeName && <span className="text-xs text-slate-400 ml-1.5">— {t.assigneeName}</span>}
                         {t.dueDate && (
-                          <span className={`ml-1.5 text-xs ${t.isOverdue ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                          <span className={`ml-1.5 text-xs ${t.isOverdue ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
                             · {formatDate(t.dueDate)}{t.isOverdue ? ' (scaduta)' : ''}
                           </span>
                         )}
@@ -401,7 +401,7 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-6">
+          <p className="text-sm text-slate-400 text-center py-6">
             Nessun task con scadenza nella prossima settimana
           </p>
         )}
@@ -420,8 +420,8 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                 onClick={() => setMilestoneFilter(f)}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                   milestoneFilter === f
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-cyan-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
                 {f === 'all' ? 'Tutte' : f === 'active' ? 'In corso' : 'In ritardo'}
@@ -434,39 +434,39 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Milestone</th>
-                  <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Progetto</th>
-                  <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Scadenza</th>
-                  <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Stato</th>
-                  <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">Delta</th>
-                  <th className="text-center py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">Avanz.</th>
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Milestone</th>
+                  <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Progetto</th>
+                  <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Scadenza</th>
+                  <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Stato</th>
+                  <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden md:table-cell">Delta</th>
+                  <th className="text-center py-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden md:table-cell">Avanz.</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredMilestones.map(ms => {
                   const badge = getMilestoneStatusBadge(ms)
                   const dateColor = ms.isOverdue
                     ? 'text-red-600 dark:text-red-400 font-semibold'
                     : ms.daysLeft !== null && ms.daysLeft <= 7
                     ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-gray-600 dark:text-gray-400'
+                    : 'text-slate-600 dark:text-slate-400'
                   const delta = ms.daysLeft !== null
                     ? ms.daysLeft < 0
                       ? <span className="text-red-500 text-xs font-medium">-{Math.abs(ms.daysLeft)}gg</span>
                       : ms.daysLeft === 0
                       ? <span className="text-amber-500 text-xs font-medium">oggi</span>
-                      : <span className="text-gray-500 text-xs">+{ms.daysLeft}gg</span>
-                    : <span className="text-gray-400 text-xs">—</span>
+                      : <span className="text-slate-500 text-xs">+{ms.daysLeft}gg</span>
+                    : <span className="text-slate-400 text-xs">—</span>
                   return (
-                    <tr key={ms.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <tr key={ms.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                       <td className="py-2.5 pr-3">
-                        <Link to={`/tasks/${ms.id}`} className="font-medium text-gray-900 dark:text-white hover:text-primary-500 transition-colors text-sm">
+                        <Link to={`/tasks/${ms.id}`} className="font-medium text-slate-900 dark:text-white hover:text-cyan-500 transition-colors text-sm">
                           {ms.title}
                         </Link>
-                        <div className="text-xs text-gray-400">{ms.code}</div>
+                        <div className="text-xs text-slate-400">{ms.code}</div>
                       </td>
-                      <td className="py-2.5 pr-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                      <td className="py-2.5 pr-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">
                         {ms.projectName}
                       </td>
                       <td className={`py-2.5 pr-3 text-center text-xs ${dateColor}`}>
@@ -480,10 +480,10 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                       <td className="py-2.5 pr-3 text-center hidden md:table-cell">{delta}</td>
                       <td className="py-2.5 text-center hidden md:table-cell">
                         <div className="flex items-center gap-1 justify-center">
-                          <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                            <div className="h-1.5 rounded-full bg-primary-500" style={{ width: `${ms.completionPercent}%` }} />
+                          <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full bg-cyan-500" style={{ width: `${ms.completionPercent}%` }} />
                           </div>
-                          <span className="text-xs text-gray-500">{ms.completionPercent}%</span>
+                          <span className="text-xs text-slate-500">{ms.completionPercent}%</span>
                         </div>
                       </td>
                     </tr>
@@ -493,7 +493,7 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
             </table>
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-6">Nessuna milestone{milestoneFilter !== 'all' ? ' con questo filtro' : ' nei progetti attivi'}</p>
+          <p className="text-sm text-slate-400 text-center py-6">Nessuna milestone{milestoneFilter !== 'all' ? ' con questo filtro' : ' nei progetti attivi'}</p>
         )}
       </section>
 
@@ -527,31 +527,31 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Task</th>
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Progetto</th>
-                        <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bloccato da</th>
-                        <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">Motivo</th>
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Task</th>
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Progetto</th>
+                        <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Bloccato da</th>
+                        <th className="text-left py-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden md:table-cell">Motivo</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {filteredBlockers.map(b => (
-                        <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                           <td className="py-2.5 pr-3">
-                            <Link to={`/tasks/${b.id}`} className="font-medium text-gray-900 dark:text-white hover:text-primary-500 text-sm">
+                            <Link to={`/tasks/${b.id}`} className="font-medium text-slate-900 dark:text-white hover:text-cyan-500 text-sm">
                               {b.title}
                             </Link>
-                            {b.assigneeName && <div className="text-xs text-gray-400">{b.assigneeName}</div>}
+                            {b.assigneeName && <div className="text-xs text-slate-400">{b.assigneeName}</div>}
                           </td>
-                          <td className="py-2.5 pr-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                          <td className="py-2.5 pr-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">
                             {b.projectName ?? '—'}
                           </td>
                           <td className="py-2.5 pr-3 text-center">
-                            <span className={`text-xs font-semibold ${b.daysBlocked > 5 ? 'text-red-600 dark:text-red-400' : b.daysBlocked > 2 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                            <span className={`text-xs font-semibold ${b.daysBlocked > 5 ? 'text-red-600 dark:text-red-400' : b.daysBlocked > 2 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
                               {b.daysBlocked}gg
                             </span>
                           </td>
-                          <td className="py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell max-w-[200px] truncate">
+                          <td className="py-2.5 text-xs text-slate-500 dark:text-slate-400 hidden md:table-cell max-w-[200px] truncate">
                             {b.blockedReason ?? '—'}
                           </td>
                         </tr>
@@ -578,32 +578,32 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rischio</th>
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Progetto</th>
-                        <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Prob.</th>
-                        <th className="text-center py-2 pr-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Impatto</th>
-                        <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden lg:table-cell">Mitigazione</th>
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Rischio</th>
+                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Progetto</th>
+                        <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Prob.</th>
+                        <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Impatto</th>
+                        <th className="text-left py-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden lg:table-cell">Mitigazione</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {data.risks.map(r => {
-                        const probCls = r.probability === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.probability === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                        const impCls = r.impact === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.impact === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        const probCls = r.probability === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.probability === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        const impCls = r.impact === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.impact === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                         return (
-                          <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                          <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                             <td className="py-2.5 pr-3">
-                              <span className="font-medium text-gray-900 dark:text-white">{r.title}</span>
-                              <div className="text-xs text-gray-400">{r.code}</div>
+                              <span className="font-medium text-slate-900 dark:text-white">{r.title}</span>
+                              <div className="text-xs text-slate-400">{r.code}</div>
                             </td>
-                            <td className="py-2.5 pr-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">{r.projectName}</td>
+                            <td className="py-2.5 pr-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">{r.projectName}</td>
                             <td className="py-2.5 pr-3 text-center">
                               <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${probCls}`}>{r.probability}</span>
                             </td>
                             <td className="py-2.5 pr-3 text-center">
                               <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${impCls}`}>{r.impact}</span>
                             </td>
-                            <td className="py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell max-w-[200px] truncate">
+                            <td className="py-2.5 text-xs text-slate-500 dark:text-slate-400 hidden lg:table-cell max-w-[200px] truncate">
                               {r.mitigationPlan ?? '—'}
                             </td>
                           </tr>
@@ -624,19 +624,19 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Ore totali', value: formatHoursFromDecimal(data.timeTracking.totalHours), icon: Clock, color: 'text-blue-600 dark:text-blue-400' },
-            { label: 'Giorni lavorati', value: data.productivity?.daysWorked ?? '—', icon: Calendar, color: 'text-gray-700 dark:text-gray-300' },
-            { label: 'Media ore/giorno', value: data.productivity ? formatHoursFromDecimal(data.productivity.avgHoursPerDay) : '—', icon: Clock, color: 'text-gray-700 dark:text-gray-300' },
+            { label: 'Giorni lavorati', value: data.productivity?.daysWorked ?? '—', icon: Calendar, color: 'text-slate-700 dark:text-slate-300' },
+            { label: 'Media ore/giorno', value: data.productivity ? formatHoursFromDecimal(data.productivity.avgHoursPerDay) : '—', icon: Clock, color: 'text-slate-700 dark:text-slate-300' },
             { label: 'Task completati', value: allCompleted.length, icon: CheckCircle2, color: 'text-green-600 dark:text-green-400' },
             { label: 'Task in corso', value: allInProgress.length, icon: Hourglass, color: 'text-purple-600 dark:text-purple-400' },
-            { label: 'Bloccati', value: blockedTasksFiltered.length, icon: Ban, color: blockedTasksFiltered.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500' },
-            { label: 'Commenti', value: data.comments.total, icon: Users, color: 'text-gray-600 dark:text-gray-400' },
+            { label: 'Bloccati', value: blockedTasksFiltered.length, icon: Ban, color: blockedTasksFiltered.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500' },
+            { label: 'Commenti', value: data.comments.total, icon: Users, color: 'text-slate-600 dark:text-slate-400' },
             { label: 'Consegne puntuali', value: data.productivity ? data.productivity.onTimeDeliveryRate + '%' : '—', icon: CheckCircle, color: 'text-green-600 dark:text-green-400' },
           ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-start gap-3">
+            <div key={label} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 flex items-start gap-3">
               <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${color}`} />
               <div>
                 <div className={`text-xl font-bold ${color}`}>{value}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
               </div>
             </div>
           ))}
@@ -644,7 +644,7 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
 
         {/* Trend vs previous week */}
         {data.previousWeek && (
-          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1">
               {data.timeTracking.totalHours >= data.previousWeek.totalHours
                 ? <TrendingUp className="w-3.5 h-3.5 text-green-500" />
@@ -667,8 +667,8 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
           {/* Bar chart giornaliero */}
           {data.timeTracking.byDay.length > 0 && (
             <div className="card p-5">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-400" />
                 Ore per giorno
               </h3>
               <div className="flex items-end gap-1.5 h-32">
@@ -680,14 +680,14 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                   return (
                     <div key={day.date} title={`${formatDate(day.date)}: ${hoursLabel}`}
                       className="flex-1 flex flex-col items-center gap-1 group">
-                      <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">{hoursLabel}</span>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-t h-24 flex flex-col justify-end overflow-hidden">
+                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{hoursLabel}</span>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-t h-24 flex flex-col justify-end overflow-hidden">
                         <div
                           className={`w-full rounded-t transition-all ${isWeekend ? 'bg-amber-400' : 'bg-green-500'}`}
                           style={{ height: `${Math.max(pct, 4)}%` }}
                         />
                       </div>
-                      <span className="text-[9px] text-gray-400">{formatDate(day.date)}</span>
+                      <span className="text-[9px] text-slate-400">{formatDate(day.date)}</span>
                     </div>
                   )
                 })}
@@ -698,8 +698,8 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
           {/* Per progetto */}
           {data.timeTracking.byProject.length > 0 && (
             <div className="card p-5">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <FolderTree className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <FolderTree className="w-4 h-4 text-slate-400" />
                 Ore per progetto
               </h3>
               <div className="space-y-3">
@@ -710,10 +710,10 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                   return (
                     <div key={p.projectId}>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]">{p.projectName}</span>
-                        <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">{formatDuration(p.totalMinutes)} · {pct.toFixed(0)}%</span>
+                        <span className="text-slate-700 dark:text-slate-300 truncate max-w-[60%]">{p.projectName}</span>
+                        <span className="text-slate-500 dark:text-slate-400 flex-shrink-0">{formatDuration(p.totalMinutes)} · {pct.toFixed(0)}%</span>
                       </div>
-                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div className={`h-2 rounded-full ${colors[i % colors.length]}`} style={{ width: `${pct}%` }} />
                       </div>
                     </div>
@@ -736,10 +736,10 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
               return (
                 <div key={u.userId}>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-700 dark:text-gray-300">{u.userName}</span>
-                    <span className="text-gray-500 dark:text-gray-400">{formatDuration(u.totalMinutes)} · {pct.toFixed(0)}%</span>
+                    <span className="text-slate-700 dark:text-slate-300">{u.userName}</span>
+                    <span className="text-slate-500 dark:text-slate-400">{formatDuration(u.totalMinutes)} · {pct.toFixed(0)}%</span>
                   </div>
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -753,25 +753,25 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
       <section aria-label="Dettaglio registrazioni ore">
         <button
           onClick={() => setTimeEntriesOpen(o => !o)}
-          className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-gray-400" />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-slate-400" />
             Dettaglio registrazioni ore
           </span>
           {timeEntriesOpen
-            ? <ChevronUp className="w-4 h-4 text-gray-400" />
-            : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            ? <ChevronUp className="w-4 h-4 text-slate-400" />
+            : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>
 
         {timeEntriesOpen && (
           <div className="mt-2 card p-5">
             {/* User filter tabs */}
             {entryUsers.length > 1 && (
-              <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
                 <button
                   onClick={() => setActivityUserTab(null)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activityUserTab === null ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activityUserTab === null ? 'bg-cyan-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                 >
                   Tutti
                 </button>
@@ -779,7 +779,7 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                   <button
                     key={u.userId}
                     onClick={() => setActivityUserTab(u.userId)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${activityUserTab === u.userId ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${activityUserTab === u.userId ? 'bg-cyan-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                   >
                     <User className="w-3 h-3" />
                     {u.userName}
@@ -794,15 +794,15 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                   <div key={project.projectId}>
                     <div className="flex items-center gap-2 mb-2">
                       <FolderTree className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{project.projectName}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{project.projectName}</span>
                     </div>
-                    <div className="ml-5 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                    <div className="ml-5 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 pl-4">
                       {project.tasks.map(task => (
                         <div key={task.taskId}>
-                          <Link to={`/tasks/${task.taskId}`} className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200 hover:text-primary-500 mb-1">
+                          <Link to={`/tasks/${task.taskId}`} className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-cyan-500 mb-1">
                             {task.isRecurring
                               ? <Repeat2 className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                              : <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />}
+                              : <span className="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />}
                             <span>{task.taskTitle}</span>
                             {task.isRecurring && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 font-medium">Ricorrente</span>
@@ -811,12 +811,12 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                           <div className="ml-5 space-y-0.5">
                             {task.entries.map(entry => (
                               <div key={entry.id} className="flex items-start gap-2 py-0.5 text-xs">
-                                <Clock className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" />
-                                <span className="flex-1 text-gray-600 dark:text-gray-400">
-                                  {entry.description ?? <span className="italic text-gray-400">Nessuna nota</span>}
+                                <Clock className="w-3 h-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                                <span className="flex-1 text-slate-600 dark:text-slate-400">
+                                  {entry.description ?? <span className="italic text-slate-400">Nessuna nota</span>}
                                 </span>
-                                <span className="text-gray-500 flex-shrink-0">{entry.duration ? formatDuration(entry.duration) : '—'}</span>
-                                <span className="text-primary-500 font-medium hidden sm:inline flex-shrink-0">{entry.userName}</span>
+                                <span className="text-slate-500 flex-shrink-0">{entry.duration ? formatDuration(entry.duration) : '—'}</span>
+                                <span className="text-cyan-500 font-medium hidden sm:inline flex-shrink-0">{entry.userName}</span>
                               </div>
                             ))}
                           </div>
@@ -827,7 +827,7 @@ function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selec
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 text-center py-4">Nessuna registrazione di tempo questa settimana</p>
+              <p className="text-sm text-slate-400 text-center py-4">Nessuna registrazione di tempo questa settimana</p>
             )}
           </div>
         )}
@@ -850,7 +850,7 @@ function ReportHistory({
 }) {
   if (reports.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-slate-500">
         <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
         <p>Nessun report generato</p>
       </div>
@@ -862,16 +862,16 @@ function ReportHistory({
       {reports.map((report) => (
         <div
           key={report.id}
-          className="card p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+          className="card p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
           onClick={() => onSelect(report.id)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">{report.code}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="font-medium text-slate-900 dark:text-white">{report.code}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Settimana {report.weekNumber}/{report.year}
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-slate-400">
                 {formatDate(report.weekStartDate)} - {formatDate(report.weekEndDate)}
               </p>
             </div>
@@ -879,12 +879,12 @@ function ReportHistory({
               <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
                 report.status === 'completed'
                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
               }`}>
                 {report.status === 'completed' ? 'Completato' : report.status}
               </span>
               {report.generatedAt && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Generato il {new Date(report.generatedAt).toLocaleDateString('it-IT')}
                 </p>
               )}
@@ -901,8 +901,8 @@ function ReportHistory({
               onClick={() => onPageChange(page)}
               className={`px-3 py-1 rounded text-sm ${
                 page === pagination.page
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {page}
@@ -1076,14 +1076,14 @@ export default function WeeklyReportPage() {
           <div>
             <button
               onClick={clearSelectedReport}
-              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 mb-2"
+              className="text-sm text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 mb-2"
             >
               ← Torna alla lista
             </button>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
               {selectedReport.code}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-slate-600 dark:text-slate-400">
               Settimana {selectedReport.weekNumber}/{selectedReport.year}
               {selectedReport.user && ` - ${selectedReport.user.firstName} ${selectedReport.user.lastName}`}
             </p>
@@ -1119,9 +1119,9 @@ export default function WeeklyReportPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Report Settimanale</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Report Settimanale</h1>
           {currentWeekInfo && (
-            <p className="mt-1 text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-slate-600 dark:text-slate-400">
               Settimana {currentWeekInfo.weekNumber}/{currentWeekInfo.year} ({formatDate(currentWeekInfo.weekStartDate)} - {formatDate(currentWeekInfo.weekEndDate)})
             </p>
           )}
@@ -1179,13 +1179,13 @@ export default function WeeklyReportPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto scrollbar-thin">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 overflow-x-auto scrollbar-thin">
         <button
           onClick={() => setActiveTab('preview')}
           className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'preview'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           Preview Settimana
@@ -1194,8 +1194,8 @@ export default function WeeklyReportPage() {
           onClick={() => setActiveTab('projectTree')}
           className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
             activeTab === 'projectTree'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <FolderTree className="w-4 h-4" />
@@ -1205,8 +1205,8 @@ export default function WeeklyReportPage() {
           onClick={() => setActiveTab('myReports')}
           className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'myReports'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           I Miei Report
@@ -1215,8 +1215,8 @@ export default function WeeklyReportPage() {
           onClick={() => setActiveTab('teamReports')}
           className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
             activeTab === 'teamReports'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -1228,14 +1228,14 @@ export default function WeeklyReportPage() {
       {activeTab === 'preview' && (
         isLoadingPreview && !currentWeekPreview ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
           </div>
         ) : currentWeekPreview ? (
           <div className="space-y-4">
             {/* User Filter (Team Mode Only) */}
             {isDirezione && currentWeekPreview.timeTracking.byUser && currentWeekPreview.timeTracking.byUser.length > 0 && (
               <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                   Filtra per Utente
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -1243,8 +1243,8 @@ export default function WeeklyReportPage() {
                     onClick={() => setSelectedUserId(null)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       selectedUserId === null
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        ? 'bg-cyan-500 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     Tutti gli utenti
@@ -1255,8 +1255,8 @@ export default function WeeklyReportPage() {
                       onClick={() => setSelectedUserId(u.userId)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         selectedUserId === u.userId
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          ? 'bg-cyan-500 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -1272,7 +1272,7 @@ export default function WeeklyReportPage() {
             <ReportPreview data={currentWeekPreview} selectedUserId={selectedUserId} />
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-slate-500">
             <p>Nessun dato disponibile per questa settimana</p>
           </div>
         )
@@ -1283,7 +1283,7 @@ export default function WeeklyReportPage() {
           {/* User Filter (Team Mode Only) */}
           {isDirezione && currentWeekPreview?.timeTracking.byUser && currentWeekPreview.timeTracking.byUser.length > 0 && (
             <div className="card p-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                 Filtra per Utente
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -1291,8 +1291,8 @@ export default function WeeklyReportPage() {
                   onClick={() => setSelectedUserId(null)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     selectedUserId === null
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-cyan-500 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
                   Tutti gli utenti
@@ -1303,8 +1303,8 @@ export default function WeeklyReportPage() {
                     onClick={() => setSelectedUserId(u.userId)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       selectedUserId === u.userId
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        ? 'bg-cyan-500 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -1324,7 +1324,7 @@ export default function WeeklyReportPage() {
       {activeTab === 'myReports' && (
         isLoading && reports.length === 0 ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
           </div>
         ) : (
           <ReportHistory
@@ -1339,7 +1339,7 @@ export default function WeeklyReportPage() {
       {activeTab === 'teamReports' && (
         isLoading && teamReports.length === 0 ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
           </div>
         ) : (
           <ReportHistory

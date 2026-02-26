@@ -53,14 +53,9 @@ const overlayVariants = {
 }
 
 const panelVariants = {
-  hidden: { opacity: 0, scale: 0.95, y: 8 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 400, damping: 30, duration: 0.2 },
-  },
-  exit: { opacity: 0, scale: 0.95, y: 8, transition: { duration: 0.15 } },
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.15, ease: 'easeOut' } },
+  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.1 } },
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +106,7 @@ export function BaseModal({
         >
           {/* Overlay */}
           <motion.div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             variants={overlayVariants}
             initial="hidden"
             animate="visible"
@@ -143,11 +138,11 @@ export function BaseModal({
           >
             {/* Header — rendered only when title or close button is present */}
             {(title !== undefined || showCloseButton) && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-cyan-500/15">
                 {title !== undefined ? (
                   <h2
                     id="base-modal-title"
-                    className="text-lg font-semibold text-gray-900 dark:text-white"
+                    className="text-base font-semibold text-slate-900 dark:text-slate-100"
                   >
                     {title}
                   </h2>

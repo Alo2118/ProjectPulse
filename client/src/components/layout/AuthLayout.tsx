@@ -9,11 +9,11 @@ export default function AuthLayout() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-600">ProjectPulse</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+          <h1 className="text-3xl font-bold text-cyan-600">ProjectPulse</h1>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
             Sistema di gestione progetti ISO 13485
           </p>
         </div>

@@ -68,7 +68,7 @@ function timeAgo(dateStr: string): string {
 
 export default function NotificationItem({ notification, onMarkAsRead, onDelete, onClick }: NotificationItemProps) {
   const Icon = iconMap[notification.type] || MessageSquare
-  const iconColor = colorMap[notification.type] || 'text-gray-500'
+  const iconColor = colorMap[notification.type] || 'text-slate-500'
 
   const handleClick = () => {
     if (!notification.isRead) {
@@ -82,22 +82,22 @@ export default function NotificationItem({ notification, onMarkAsRead, onDelete,
       onClick={handleClick}
       className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors duration-150 ${
         notification.isRead
-          ? 'bg-white dark:bg-surface-800'
+          ? 'bg-white dark:bg-slate-800'
           : 'bg-blue-50/50 dark:bg-blue-900/10'
-      } hover:bg-gray-50 dark:hover:bg-surface-700`}
+      } hover:bg-slate-50 dark:hover:bg-slate-700`}
     >
       <div className={`mt-0.5 flex-shrink-0 ${iconColor}`}>
         <Icon className="w-4 h-4" />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className={`text-sm ${notification.isRead ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-white font-medium'}`}>
+        <p className={`text-sm ${notification.isRead ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white font-medium'}`}>
           {notification.title}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-500 truncate mt-0.5">
+        <p className="text-xs text-slate-500 dark:text-slate-500 truncate mt-0.5">
           {notification.message}
         </p>
-        <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
+        <p className="text-xs text-slate-400 dark:text-slate-600 mt-1">
           {timeAgo(notification.createdAt)}
         </p>
       </div>
@@ -107,7 +107,7 @@ export default function NotificationItem({ notification, onMarkAsRead, onDelete,
           e.stopPropagation()
           onDelete(notification.id)
         }}
-        className="flex-shrink-0 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+        className="flex-shrink-0 p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
         title="Elimina"
       >
         <XCircle className="w-3.5 h-3.5" />

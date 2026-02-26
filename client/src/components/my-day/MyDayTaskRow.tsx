@@ -21,12 +21,12 @@ interface MyDayTaskRowProps {
 }
 
 const ALL_STATUS_OPTIONS: InlineSelectOption[] = [
-  { value: 'todo', label: 'Da fare', color: 'text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { value: 'todo', label: 'Da fare', color: 'text-slate-400', bgColor: 'bg-slate-100 dark:bg-slate-800' },
   { value: 'in_progress', label: 'In Corso', color: 'text-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
   { value: 'review', label: 'Review', color: 'text-violet-500', bgColor: 'bg-violet-100 dark:bg-violet-900/30' },
   { value: 'blocked', label: 'Bloccato', color: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-900/30' },
   { value: 'done', label: 'Completato', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-  { value: 'cancelled', label: 'Annullato', color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { value: 'cancelled', label: 'Annullato', color: 'text-slate-500', bgColor: 'bg-slate-100 dark:bg-slate-800' },
 ]
 
 const PRIORITY_OPTIONS: InlineSelectOption[] = [
@@ -40,13 +40,13 @@ const PRIORITY_BORDER: Record<string, string> = {
   critical: 'border-l-red-500',
   high: 'border-l-orange-500',
   medium: 'border-l-amber-400',
-  low: 'border-l-gray-300 dark:border-l-gray-600',
+  low: 'border-l-slate-300 dark:border-l-slate-600',
 }
 
 const COMPLETION_CIRCLE_COLORS: Record<string, string> = {
   in_progress: 'border-blue-400 bg-blue-400/20',
   review: 'border-violet-400 bg-violet-400/20',
-  todo: 'border-gray-300 dark:border-gray-600',
+  todo: 'border-slate-300 dark:border-slate-600',
   blocked: 'border-red-400 bg-red-400/20',
 }
 
@@ -68,7 +68,7 @@ function getDueBadge(dueDate: string | null): { label: string; className: string
   if (diffDays <= 7) {
     return { label: `${diffDays}g`, className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' }
   }
-  return { label: `${diffDays}g`, className: 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400' }
+  return { label: `${diffDays}g`, className: 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400' }
 }
 
 function formatHours(value: number | null): string {
@@ -98,8 +98,8 @@ export function MyDayTaskRow({
     <div
       className={`flex items-center gap-3 px-4 py-3 transition-all group border-l-4 ${borderClass} ${
         isTimerRunning
-          ? 'bg-primary-50/50 dark:bg-primary-900/10'
-          : 'hover:bg-gray-50 dark:hover:bg-white/5'
+          ? 'bg-cyan-50/50 dark:bg-cyan-900/10'
+          : 'hover:bg-slate-50 dark:hover:bg-white/5'
       }`}
     >
       {/* Completion circle */}
@@ -124,18 +124,18 @@ export function MyDayTaskRow({
 
       {/* Task info */}
       <Link to={`/tasks/${task.id}`} className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-white truncate hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+        <p className="text-sm font-medium text-slate-900 dark:text-white truncate hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
           {task.title}
         </p>
         {task.project && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
             {task.project.name}
           </p>
         )}
       </Link>
 
       {/* Hours */}
-      <div className="hidden sm:flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+      <div className="hidden sm:flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">
         <Clock className="w-3 h-3" />
         <span>{formatHours(task.actualHours)}/{formatHours(task.estimatedHours)}</span>
       </div>
@@ -167,7 +167,7 @@ export function MyDayTaskRow({
           className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
             isTimerRunning
               ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'bg-gray-100 dark:bg-white/10 text-gray-400 hover:bg-primary-500 hover:text-white opacity-0 group-hover:opacity-100'
+              : 'bg-slate-100 dark:bg-white/10 text-slate-400 hover:bg-cyan-500 hover:text-white opacity-0 group-hover:opacity-100'
           }`}
           title={isTimerRunning ? 'Stop timer' : 'Avvia timer'}
           aria-label={isTimerRunning ? 'Stop timer' : 'Avvia timer'}

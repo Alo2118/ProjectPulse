@@ -52,8 +52,8 @@ export default function LoginPage() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Accedi</h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <h2 className="page-title">Accedi</h2>
+        <p className="mt-1 text-sm page-subtitle">
           Inserisci le tue credenziali per accedere
         </p>
       </div>
@@ -65,7 +65,7 @@ export default function LoginPage() {
       )}
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="email" className="block text-sm font-medium text-slate-600 dark:text-slate-300">
           Email
         </label>
         <input
@@ -82,7 +82,7 @@ export default function LoginPage() {
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="password" className="block text-sm font-medium text-slate-600 dark:text-slate-300">
           Password
         </label>
         <div className="relative mt-1">
@@ -97,7 +97,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500"
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -118,7 +118,7 @@ export default function LoginPage() {
         )}
       </button>
 
-      <p className="text-center text-xs text-gray-400 dark:text-gray-500">
+      <p className="text-center text-xs text-slate-400 dark:text-slate-500">
         &copy; {new Date().getFullYear()} MIKAI SPA. Tutti i diritti riservati.
       </p>
     </form>

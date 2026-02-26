@@ -6,7 +6,7 @@ interface PageTransitionProps {
 
 export function PageTransition({ children }: PageTransitionProps) {
   return (
-    <div className="animate-fade-in">
+    <div className="animate-page-enter">
       {children}
     </div>
   )

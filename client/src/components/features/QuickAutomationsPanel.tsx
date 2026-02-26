@@ -138,7 +138,7 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
 
   if (!isAdmin) {
     return (
-      <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+      <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
         Solo admin e direzione possono gestire le automazioni
       </div>
     )
@@ -146,7 +146,7 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
 
   if (templates.length === 0 && !isLoading) {
     return (
-      <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+      <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
         Nessun modello di automazione disponibile
       </div>
     )
@@ -166,7 +166,7 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
     <div className="space-y-4">
       {/* Summary */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <Settings className="w-4 h-4" />
           <span>
             {activeRulesCount > 0
@@ -183,7 +183,7 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
 
         return (
           <div key={category}>
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
               {CATEGORY_LABELS[category] ?? category}
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -195,16 +195,16 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
                 return (
                   <div
                     key={template.key}
-                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
+                    className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-cyan-300 dark:hover:border-cyan-600 transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                    <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">
                         {template.name}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
                         {template.description}
                       </p>
 
@@ -214,7 +214,7 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
                           <select
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(e.target.value)}
-                            className="flex-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1"
+                            className="flex-1 text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white px-2 py-1"
                           >
                             <option value="">Seleziona utente...</option>
                             {users.map((u) => (
@@ -226,13 +226,13 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
                           <button
                             onClick={handleActivateWithUser}
                             disabled={!selectedUserId || isActivating}
-                            className="px-2 py-1 text-xs bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50"
+                            className="px-2 py-1 text-xs bg-cyan-500 text-white rounded hover:bg-cyan-600 disabled:opacity-50"
                           >
                             OK
                           </button>
                           <button
                             onClick={() => { setUserSelectKey(null); setSelectedUserId('') }}
-                            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                            className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400"
                           >
                             Annulla
                           </button>
@@ -255,7 +255,7 @@ export default function QuickAutomationsPanel({ projectId }: QuickAutomationsPan
                       <button
                         onClick={() => handleActivate(template)}
                         disabled={isActivating}
-                        className="flex-shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50"
+                        className="flex-shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-900/50"
                       >
                         {isActivating ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />

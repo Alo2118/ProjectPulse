@@ -106,9 +106,11 @@ export function InlineTextInput({
         disabled={isSaving}
         placeholder={placeholder}
         className={[
-          'text-sm px-2 py-0.5 border border-blue-300 dark:border-blue-600 rounded',
-          'outline-none focus:ring-1 focus:ring-blue-500',
-          'bg-white dark:bg-surface-800 text-gray-900 dark:text-gray-100',
+          'text-sm px-2 py-0.5 rounded',
+          'bg-slate-800/50 dark:bg-slate-800/50 border border-cyan-500/30 dark:border-cyan-500/30',
+          'text-slate-100 dark:text-slate-100',
+          'outline-none focus:border-cyan-500/60 focus:shadow-[0_0_8px_rgba(6,182,212,0.25)]',
+          'transition-all duration-150',
           isNumber ? 'w-20 text-right' : 'w-full',
           className,
         ].join(' ')}
@@ -137,16 +139,16 @@ export function InlineTextInput({
       className={[
         'inline-flex items-center gap-1 text-sm transition-colors select-none',
         isNumber ? 'justify-end' : '',
-        isEmpty ? 'text-gray-400 dark:text-gray-500 italic' : 'text-gray-900 dark:text-gray-100',
+        isEmpty ? 'text-slate-500 dark:text-slate-500 italic' : 'text-slate-100 dark:text-slate-100',
         disabled
           ? 'opacity-50 cursor-not-allowed'
-          : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-0.5 rounded',
+          : 'cursor-pointer hover:bg-cyan-500/10 dark:hover:bg-cyan-500/10 px-2 py-0.5 rounded',
         'truncate',
         className,
       ].join(' ')}
     >
       {isSaving && (
-        <Loader2 size={12} className="animate-spin flex-shrink-0 text-gray-400" aria-hidden="true" />
+        <Loader2 size={12} className="animate-spin flex-shrink-0 text-slate-400" aria-hidden="true" />
       )}
       <span className="truncate">{displayText}</span>
     </span>

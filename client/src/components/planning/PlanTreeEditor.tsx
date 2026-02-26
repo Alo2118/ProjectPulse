@@ -101,36 +101,36 @@ export function PlanTreeEditor({ tasks, users, onUpdate, onRemove, onAddTask }: 
   return (
     <div className="flex flex-col">
       {/* Column header row */}
-      <div className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-white/[0.03] rounded-t-lg">
+      <div className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-white/[0.03] rounded-t-lg">
         {/* Icon placeholder */}
         <div className="flex-shrink-0 w-4" aria-hidden="true" />
         {/* Title column */}
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
             Task
           </span>
         </div>
         {/* Ore */}
         <div className="flex-shrink-0 w-16 text-right">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
             Ore
           </span>
         </div>
         {/* Priorità */}
         <div className="flex-shrink-0 w-20">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
             Priorita
           </span>
         </div>
         {/* Assegnatario */}
         <div className="flex-shrink-0 w-24">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden md:inline">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:inline">
             Assegnatario
           </span>
         </div>
         {/* Actions column */}
         <div className="flex-shrink-0 w-14">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
             Azioni
           </span>
         </div>
@@ -138,20 +138,20 @@ export function PlanTreeEditor({ tasks, users, onUpdate, onRemove, onAddTask }: 
 
       {/* Task rows */}
       <div
-        className="bg-white dark:bg-surface-800/60 border border-gray-200 dark:border-gray-700 border-t-0 rounded-b-lg overflow-hidden"
+        className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 border-t-0 rounded-b-lg overflow-hidden"
         role="table"
         aria-label="Albero dei task del piano"
       >
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
-            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <ListTree className="w-6 h-6 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <ListTree className="w-6 h-6 text-slate-400 dark:text-slate-500" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                 Nessun task nel piano
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                 Aggiungi una milestone o un task per iniziare
               </p>
             </div>
@@ -200,7 +200,7 @@ export function PlanTreeEditor({ tasks, users, onUpdate, onRemove, onAddTask }: 
         </button>
 
         {tasks.length > 0 && (
-          <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
+          <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">
             {tasks.length} {tasks.length === 1 ? 'elemento' : 'elementi'}
           </span>
         )}

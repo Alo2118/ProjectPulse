@@ -3,13 +3,13 @@ import { Home } from 'lucide-react'
 
 export default function NotFoundPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
       <div className="text-center">
-        <h1 className="text-9xl font-bold text-gray-200 dark:text-gray-700">404</h1>
-        <h2 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-9xl font-bold text-slate-200 dark:text-slate-700">404</h1>
+        <h2 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">
           Pagina non trovata
         </h2>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-slate-600 dark:text-slate-400">
           La pagina che stai cercando non esiste o e stata spostata.
         </p>
         <Link to="/dashboard" className="mt-6 btn-primary inline-flex items-center">

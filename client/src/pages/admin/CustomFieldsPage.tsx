@@ -179,7 +179,7 @@ export default function CustomFieldsPage() {
   if (isLoading && definitions.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
       </div>
     )
   }
@@ -189,11 +189,11 @@ export default function CustomFieldsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Settings2 className="w-6 h-6 text-primary-600" />
+          <h1 className="page-title flex items-center gap-2">
+            <Settings2 className="w-6 h-6 text-cyan-400" />
             Campi Personalizzati
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm page-subtitle">
             Definisci campi aggiuntivi per i task, globali o specifici per progetto
           </p>
         </div>
@@ -207,12 +207,12 @@ export default function CustomFieldsPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
           <input
             type="checkbox"
             checked={showInactive}
             onChange={(e) => setShowInactive(e.target.checked)}
-            className="rounded border-gray-300 dark:border-gray-600 text-primary-600"
+            className="rounded border-slate-300 dark:border-slate-600 text-cyan-600"
           />
           Mostra inattivi
         </label>
@@ -236,7 +236,7 @@ export default function CustomFieldsPage() {
       {showForm && (
         <div className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-base font-semibold text-slate-800 dark:text-white">
               {editingDef ? 'Modifica Campo' : 'Nuovo Campo Personalizzato'}
             </h2>
             <button onClick={closeForm} aria-label="Chiudi form" className="btn-icon">
@@ -253,7 +253,7 @@ export default function CustomFieldsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Nome <span className="text-red-500">*</span>
               </label>
               <input
@@ -268,7 +268,7 @@ export default function CustomFieldsPage() {
 
             {/* Field type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Tipo <span className="text-red-500">*</span>
               </label>
               <select
@@ -286,7 +286,7 @@ export default function CustomFieldsPage() {
 
             {/* Project scope */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Ambito
               </label>
               <select
@@ -305,7 +305,7 @@ export default function CustomFieldsPage() {
 
             {/* Position */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Posizione
               </label>
               <input
@@ -321,9 +321,9 @@ export default function CustomFieldsPage() {
           {/* Dropdown options */}
           {formData.fieldType === 'dropdown' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Opzioni <span className="text-red-500">*</span>
-                <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">
+                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-2">
                   (una per riga)
                 </span>
               </label>
@@ -343,9 +343,9 @@ export default function CustomFieldsPage() {
               type="checkbox"
               checked={formData.isRequired}
               onChange={(e) => setFormData((f) => ({ ...f, isRequired: e.target.checked }))}
-              className="rounded border-gray-300 dark:border-gray-600 text-primary-600"
+              className="rounded border-slate-300 dark:border-slate-600 text-cyan-600"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Campo obbligatorio</span>
+            <span className="text-sm text-slate-600 dark:text-slate-300">Campo obbligatorio</span>
           </label>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -363,8 +363,8 @@ export default function CustomFieldsPage() {
       {/* Definitions list */}
       {definitions.length === 0 ? (
         <div className="card p-12 text-center">
-          <Settings2 className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
+          <Settings2 className="w-10 h-10 mx-auto text-slate-400 mb-3" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             {showInactive ? 'Nessun campo trovato' : 'Nessun campo personalizzato attivo'}
           </p>
           {canManage && !showForm && (
@@ -377,7 +377,7 @@ export default function CustomFieldsPage() {
       ) : (
         <div className="card overflow-hidden">
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[1fr_100px_140px_80px_80px_120px] gap-4 px-6 py-3 bg-gray-50 dark:bg-gray-700/50 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <div className="hidden sm:grid grid-cols-[1fr_100px_140px_80px_80px_120px] gap-4 px-6 py-3 bg-slate-100/60 dark:bg-slate-700/30 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest border-b border-cyan-500/10">
             <span>Nome</span>
             <span>Tipo</span>
             <span>Ambito</span>
@@ -386,31 +386,31 @@ export default function CustomFieldsPage() {
             <span className="text-right">Azioni</span>
           </div>
 
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+          <ul className="divide-y divide-cyan-500/5">
             {definitions.map((def) => {
               const project = def.projectId ? projectMap.get(def.projectId) : null
               return (
-                <li key={def.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                <li key={def.id} className="px-6 py-4 table-row-hover">
                   <div className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_140px_80px_80px_120px] sm:gap-4 sm:items-center gap-2">
                     {/* Name */}
                     <div>
-                      <span className="font-medium text-gray-900 dark:text-white text-sm">
+                      <span className="font-medium text-slate-800 dark:text-white text-sm">
                         {def.name}
                       </span>
                       {def.fieldType === 'dropdown' && def.options && def.options.length > 0 && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                           {def.options.slice(0, 3).join(', ')}{def.options.length > 3 ? ` +${def.options.length - 3}` : ''}
                         </p>
                       )}
                     </div>
 
                     {/* Type */}
-                    <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full w-fit">
+                    <span className="text-xs bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full w-fit border border-slate-200/80 dark:border-slate-600/50">
                       {FIELD_TYPE_LABELS[def.fieldType]}
                     </span>
 
                     {/* Scope */}
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                       {project ? (
                         <>
                           <FolderKanban className="w-3 h-3 flex-shrink-0" />
@@ -425,12 +425,12 @@ export default function CustomFieldsPage() {
                     </div>
 
                     {/* Required */}
-                    <span className={`text-xs ${def.isRequired ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                    <span className={`text-xs ${def.isRequired ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
                       {def.isRequired ? 'Sì' : 'No'}
                     </span>
 
                     {/* Status */}
-                    <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${def.isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${def.isActive ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400'}`}>
                       {def.isActive ? 'Attivo' : 'Inattivo'}
                     </span>
 
@@ -441,7 +441,7 @@ export default function CustomFieldsPage() {
                           onClick={() => handleToggleActive(def)}
                           title={def.isActive ? 'Disattiva' : 'Attiva'}
                           aria-label={def.isActive ? 'Disattiva campo' : 'Attiva campo'}
-                          className="btn-icon text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          className="btn-icon"
                         >
                           {def.isActive ? (
                             <X className="w-4 h-4" />
@@ -452,14 +452,14 @@ export default function CustomFieldsPage() {
                         <button
                           onClick={() => openEdit(def)}
                           aria-label="Modifica campo"
-                          className="btn-icon text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                          className="btn-icon text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setDeleteConfirm({ id: def.id, name: def.name })}
                           aria-label="Elimina campo"
-                          className="btn-icon text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                          className="btn-icon text-slate-400 hover:text-red-600 dark:hover:text-red-400"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

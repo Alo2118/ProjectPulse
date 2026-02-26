@@ -53,7 +53,7 @@ const ACTION_COLORS: Record<AuditActionType, string> = {
   delete: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   status_change: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
   login: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  logout: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  logout: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300',
 }
 
 const ENTITY_TYPE_OPTIONS: { value: AuditEntityType | ''; label: string }[] = [
@@ -120,7 +120,7 @@ interface DiffValueProps {
 
 function DiffValue({ value }: DiffValueProps) {
   if (value === null || value === undefined) {
-    return <span className="text-gray-400 dark:text-gray-500 italic">null</span>
+    return <span className="text-slate-400 dark:text-slate-500 italic">null</span>
   }
   if (typeof value === 'boolean') {
     return (
@@ -131,13 +131,13 @@ function DiffValue({ value }: DiffValueProps) {
   }
   if (typeof value === 'object') {
     return (
-      <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">
+      <span className="text-slate-700 dark:text-slate-300 font-mono text-xs">
         {JSON.stringify(value, null, 2)}
       </span>
     )
   }
   return (
-    <span className="text-gray-700 dark:text-gray-300">
+    <span className="text-slate-700 dark:text-slate-300">
       {String(value)}
     </span>
   )
@@ -156,7 +156,7 @@ function DataDiff({ oldData, newData }: DataDiffProps) {
 
   if (allKeys.size === 0) {
     return (
-      <p className="text-sm text-gray-400 dark:text-gray-500 italic">Nessun dato disponibile.</p>
+      <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nessun dato disponibile.</p>
     )
   }
 
@@ -177,22 +177,22 @@ function DataDiff({ oldData, newData }: DataDiffProps) {
     <div className="space-y-3">
       {changedKeys.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
             Campi modificati
           </p>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800/50">
-                  <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 w-1/4">Campo</th>
+                <tr className="bg-slate-50 dark:bg-slate-800/50">
+                  <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-400 w-1/4">Campo</th>
                   <th className="px-3 py-2 text-left font-medium text-red-600 dark:text-red-400 w-[37.5%]">Precedente</th>
                   <th className="px-3 py-2 text-left font-medium text-green-600 dark:text-green-400 w-[37.5%]">Nuovo</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {changedKeys.map((key) => (
-                  <tr key={key} className="bg-white dark:bg-gray-800">
-                    <td className="px-3 py-2 font-mono text-xs text-gray-600 dark:text-gray-400 align-top">
+                  <tr key={key} className="bg-white dark:bg-slate-800">
+                    <td className="px-3 py-2 font-mono text-xs text-slate-600 dark:text-slate-400 align-top">
                       {key}
                     </td>
                     <td className="px-3 py-2 bg-red-50 dark:bg-red-900/10 align-top break-all">
@@ -211,18 +211,18 @@ function DataDiff({ oldData, newData }: DataDiffProps) {
 
       {unchangedKeys.length > 0 && changedKeys.length > 0 && (
         <details className="group">
-          <summary className="text-xs text-gray-400 dark:text-gray-500 cursor-pointer select-none hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+          <summary className="text-xs text-slate-400 dark:text-slate-500 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             Mostra {unchangedKeys.length} campi invariati
           </summary>
-          <div className="mt-2 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="mt-2 rounded-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
             <table className="w-full text-sm">
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {unchangedKeys.map((key) => (
-                  <tr key={key} className="bg-gray-50 dark:bg-gray-800/50">
-                    <td className="px-3 py-2 font-mono text-xs text-gray-500 dark:text-gray-500 w-1/4">
+                  <tr key={key} className="bg-slate-50 dark:bg-slate-800/50">
+                    <td className="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-500 w-1/4">
                       {key}
                     </td>
-                    <td className="px-3 py-2 text-gray-500 dark:text-gray-500 break-all">
+                    <td className="px-3 py-2 text-slate-500 dark:text-slate-500 break-all">
                       <DiffValue value={oldData?.[key] ?? newData?.[key]} />
                     </td>
                   </tr>
@@ -234,18 +234,18 @@ function DataDiff({ oldData, newData }: DataDiffProps) {
       )}
 
       {changedKeys.length === 0 && (
-        <div className="rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="rounded-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-800/50">
-                <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 w-1/3">Campo</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Valore</th>
+              <tr className="bg-slate-50 dark:bg-slate-800/50">
+                <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-400 w-1/3">Campo</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-400">Valore</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
               {unchangedKeys.map((key) => (
-                <tr key={key} className="bg-white dark:bg-gray-800">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-600 dark:text-gray-400 align-top">
+                <tr key={key} className="bg-white dark:bg-slate-800">
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600 dark:text-slate-400 align-top">
                     {key}
                   </td>
                   <td className="px-3 py-2 break-all align-top">
@@ -277,12 +277,12 @@ function AuditRow({ log, isExpanded, onToggle }: AuditRowProps) {
       <tr
         className={`transition-colors ${
           isExpanded
-            ? 'bg-primary-50/50 dark:bg-primary-900/10'
-            : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+            ? 'bg-cyan-50/50 dark:bg-cyan-900/10'
+            : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'
         }`}
       >
         {/* Data/Ora */}
-        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+        <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
           {formatDateTime(log.createdAt)}
         </td>
 
@@ -290,20 +290,20 @@ function AuditRow({ log, isExpanded, onToggle }: AuditRowProps) {
         <td className="px-4 py-3">
           {log.user ? (
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-medium text-white">
                   {log.user.firstName[0]}{log.user.lastName[0]}
                 </span>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white leading-tight">
+                <p className="text-sm font-medium text-slate-900 dark:text-white leading-tight">
                   {log.user.firstName} {log.user.lastName}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{log.user.email}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{log.user.email}</p>
               </div>
             </div>
           ) : (
-            <span className="text-sm text-gray-400 dark:text-gray-500 italic">Sistema</span>
+            <span className="text-sm text-slate-400 dark:text-slate-500 italic">Sistema</span>
           )}
         </td>
 
@@ -315,13 +315,13 @@ function AuditRow({ log, isExpanded, onToggle }: AuditRowProps) {
         </td>
 
         {/* Tipo Entità */}
-        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+        <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
           {ENTITY_TYPE_LABELS[log.entityType] ?? log.entityType}
         </td>
 
         {/* ID Entità */}
         <td className="px-4 py-3">
-          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 max-w-[120px] truncate block" title={log.entityId}>
+          <span className="font-mono text-xs text-slate-500 dark:text-slate-400 max-w-[120px] truncate block" title={log.entityId}>
             {log.entityId}
           </span>
         </td>
@@ -334,7 +334,7 @@ function AuditRow({ log, isExpanded, onToggle }: AuditRowProps) {
               onClick={onToggle}
               aria-label={isExpanded ? 'Comprimi dettagli' : 'Espandi dettagli'}
               aria-expanded={isExpanded}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors"
+              className="inline-flex items-center gap-1 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition-colors"
             >
               {isExpanded ? (
                 <ChevronDown className="w-4 h-4" />
@@ -344,13 +344,13 @@ function AuditRow({ log, isExpanded, onToggle }: AuditRowProps) {
               {isExpanded ? 'Chiudi' : 'Dettagli'}
             </button>
           ) : (
-            <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
           )}
         </td>
       </tr>
 
       {isExpanded && hasDetail && (
-        <tr className="bg-primary-50/30 dark:bg-primary-900/5">
+        <tr className="bg-cyan-50/30 dark:bg-cyan-900/5">
           <td colSpan={6} className="px-4 py-4">
             <div className="max-w-4xl">
               <DataDiff oldData={oldData} newData={newData} />
@@ -387,7 +387,7 @@ function AuditSkeleton() {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-4 py-3">
               <div className="skeleton h-4 w-32" />
@@ -493,15 +493,15 @@ export default function AuditTrailPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+          <div className="w-8 h-8 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
               Registro Audit
             </h1>
             {pagination.total > 0 && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                 {pagination.total.toLocaleString('it-IT')}
               </span>
             )}
@@ -518,7 +518,7 @@ export default function AuditTrailPage() {
             <Filter className="w-4 h-4" />
             <span className="hidden sm:inline">Filtri</span>
             {hasActiveFilters && (
-              <span className="w-2 h-2 rounded-full bg-primary-500" />
+              <span className="w-2 h-2 rounded-full bg-cyan-500" />
             )}
           </button>
           <button
@@ -539,7 +539,7 @@ export default function AuditTrailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {/* Entity type */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 Tipo entita
               </label>
               <select
@@ -557,7 +557,7 @@ export default function AuditTrailPage() {
 
             {/* Action */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 Azione
               </label>
               <select
@@ -575,7 +575,7 @@ export default function AuditTrailPage() {
 
             {/* User */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 <User className="w-3 h-3 inline mr-1" />
                 Utente
               </label>
@@ -595,7 +595,7 @@ export default function AuditTrailPage() {
 
             {/* Start date */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 <Calendar className="w-3 h-3 inline mr-1" />
                 Data da
               </label>
@@ -609,7 +609,7 @@ export default function AuditTrailPage() {
 
             {/* End date */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 <Calendar className="w-3 h-3 inline mr-1" />
                 Data a
               </label>
@@ -657,11 +657,11 @@ export default function AuditTrailPage() {
       {/* Results */}
       {logs.length === 0 && !isLoading ? (
         <div className="card p-12 text-center">
-          <Shield className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <Shield className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
             Nessun log trovato
           </h3>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-slate-500 dark:text-slate-400">
             {hasActiveFilters
               ? 'Nessun log corrisponde ai filtri selezionati. Prova a modificarli.'
               : 'Il registro audit è vuoto.'}
@@ -682,36 +682,36 @@ export default function AuditTrailPage() {
           <div className="card overflow-hidden">
             {/* Loading overlay for subsequent fetches */}
             {isLoading && logs.length > 0 && (
-              <div className="h-1 w-full bg-primary-100 dark:bg-primary-900/20">
-                <div className="h-full bg-primary-500 animate-pulse rounded-full" />
+              <div className="h-1 w-full bg-cyan-100 dark:bg-cyan-900/20">
+                <div className="h-full bg-cyan-500 animate-pulse rounded-full" />
               </div>
             )}
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px]">
                 <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">
+                  <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
                       Data/Ora
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       Utente
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       Azione
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
                       Tipo Entita
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
                       ID Entita
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       Dettagli
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                   {logs.map((log) => (
                     <AuditRow
                       key={log.id}

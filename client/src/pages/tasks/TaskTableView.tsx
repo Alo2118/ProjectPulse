@@ -28,12 +28,12 @@ import type { Task, TaskStatus } from '@/types'
 // ─── Option constants ────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS: InlineSelectOption[] = [
-  { value: 'todo',        label: 'Da fare',    color: 'text-gray-400',   bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { value: 'todo',        label: 'Da fare',    color: 'text-slate-400',  bgColor: 'bg-slate-100 dark:bg-slate-800' },
   { value: 'in_progress', label: 'In Corso',   color: 'text-blue-500',   bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
   { value: 'review',      label: 'Review',     color: 'text-violet-500', bgColor: 'bg-violet-100 dark:bg-violet-900/30' },
   { value: 'blocked',     label: 'Bloccato',   color: 'text-red-500',    bgColor: 'bg-red-100 dark:bg-red-900/30' },
   { value: 'done',        label: 'Completato', color: 'text-green-500',  bgColor: 'bg-green-100 dark:bg-green-900/30' },
-  { value: 'cancelled',   label: 'Annullato',  color: 'text-gray-500',   bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { value: 'cancelled',   label: 'Annullato',  color: 'text-slate-500',  bgColor: 'bg-slate-100 dark:bg-slate-800' },
 ]
 
 const PRIORITY_OPTIONS: InlineSelectOption[] = [
@@ -76,7 +76,7 @@ function TaskTypeIcon({ taskType }: { taskType: Task['taskType'] }) {
   if (taskType === 'task') {
     return <CheckSquare size={13} className="text-blue-500 flex-shrink-0" aria-label="Task" />
   }
-  return <CornerDownRight size={13} className="text-gray-400 flex-shrink-0" aria-label="Subtask" />
+  return <CornerDownRight size={13} className="text-slate-400 flex-shrink-0" aria-label="Subtask" />
 }
 
 // ─── Sort indicator (multi-column aware) ──────────────────────────────────────
@@ -94,7 +94,7 @@ function SortIndicator({
   if (!sortInfo) {
     return (
       <ArrowUpDown
-        className="w-3 h-3 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-0.5 flex-shrink-0"
+        className="w-3 h-3 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity ml-0.5 flex-shrink-0"
         aria-hidden
       />
     )
@@ -103,12 +103,12 @@ function SortIndicator({
   return (
     <span className="flex items-center gap-0.5 ml-0.5 flex-shrink-0">
       {sortInfo.direction === 'asc' ? (
-        <ArrowUp className="w-3 h-3 text-primary-500" aria-hidden />
+        <ArrowUp className="w-3 h-3 text-cyan-500" aria-hidden />
       ) : (
-        <ArrowDown className="w-3 h-3 text-primary-500" aria-hidden />
+        <ArrowDown className="w-3 h-3 text-cyan-500" aria-hidden />
       )}
       {sortColumns.length > 1 && (
-        <span className="text-[10px] font-bold text-primary-500 leading-none">
+        <span className="text-[10px] font-bold text-cyan-500 leading-none">
           {sortIndex + 1}
         </span>
       )}
@@ -257,14 +257,14 @@ export default function TaskTableView({
 
   const getRowClassName = useCallback((task: Task, index: number, isSelected: boolean) => {
     const classes = [
-      'border-b border-gray-100 dark:border-gray-700',
+      'border-b border-slate-100 dark:border-slate-700',
       'transition-colors duration-100',
     ]
 
     // Selected state takes priority over everything else
     if (isSelected) {
-      classes.push('bg-primary-50 dark:bg-primary-900/20')
-      classes.push('hover:bg-primary-50/80 dark:hover:bg-primary-900/30')
+      classes.push('bg-cyan-50 dark:bg-cyan-900/20')
+      classes.push('hover:bg-cyan-50/80 dark:hover:bg-cyan-900/30')
       // Still apply priority border for selected rows
       if (task.priority === 'critical') {
         classes.push('border-l-2 border-l-red-500')
@@ -278,7 +278,7 @@ export default function TaskTableView({
       classes.push('opacity-50')
       // Zebra still applies for done/cancelled rows
       if (index % 2 === 0) {
-        classes.push('bg-gray-50/30 dark:bg-white/[0.02]')
+        classes.push('bg-slate-50/30 dark:bg-white/[0.02]')
       }
     } else {
       // Conditional date-based coloring overrides zebra
@@ -301,9 +301,9 @@ export default function TaskTableView({
       // Zebra striping only when no conditional color applied
       if (!hasConditionalBg) {
         if (index % 2 === 0) {
-          classes.push('bg-gray-50/30 dark:bg-white/[0.02]')
+          classes.push('bg-slate-50/30 dark:bg-white/[0.02]')
         }
-        classes.push('hover:bg-primary-50/30 dark:hover:bg-primary-900/10')
+        classes.push('hover:bg-cyan-50/30 dark:hover:bg-cyan-900/10')
       }
 
       // Priority border always applied
@@ -336,10 +336,10 @@ export default function TaskTableView({
         className={[
           'px-3 py-2 text-left text-xs font-medium uppercase tracking-wider',
           'cursor-pointer select-none transition-colors group',
-          'hover:bg-gray-100 dark:hover:bg-gray-700/60',
+          'hover:bg-slate-100 dark:hover:bg-slate-700/60',
           isActive
-            ? 'text-primary-600 dark:text-primary-400'
-            : 'text-gray-500 dark:text-gray-400',
+            ? 'text-cyan-600 dark:text-cyan-400'
+            : 'text-slate-500 dark:text-slate-400',
           cls,
         ].join(' ')}
         title="Click per ordinare · Shift+Click per ordinamento secondario"
@@ -357,9 +357,9 @@ export default function TaskTableView({
   if (tasks.length === 0) {
     return (
       <div className="card p-12 text-center">
-        <Table2 className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden />
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun task da mostrare</p>
-        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+        <Table2 className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" aria-hidden />
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Nessun task da mostrare</p>
+        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
           Modifica i filtri o crea un nuovo task
         </p>
       </div>
@@ -380,11 +380,11 @@ export default function TaskTableView({
           <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
           Scade oggi
         </span>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
           <span className="w-1 h-4 rounded-sm bg-red-500 flex-shrink-0" />
           Critico
         </span>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
           <span className="w-1 h-4 rounded-sm bg-orange-400 flex-shrink-0" />
           Alta priorità
         </span>
@@ -392,16 +392,16 @@ export default function TaskTableView({
 
       {/* Sort hint bar — polished card style */}
       {sortColumns.length > 0 && (
-        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2 mb-3">
-          <span className="text-xs text-gray-500 dark:text-gray-400 flex-1">
+        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-2 mb-3">
+          <span className="text-xs text-slate-500 dark:text-slate-400 flex-1">
             Ordinamento:{' '}
             {sortColumns.map((s, i) => (
               <span key={s.column}>
-                {i > 0 && <span className="mx-1 text-gray-300 dark:text-gray-600">·</span>}
-                <span className="font-medium text-gray-700 dark:text-gray-300">
+                {i > 0 && <span className="mx-1 text-slate-300 dark:text-slate-600">·</span>}
+                <span className="font-medium text-slate-700 dark:text-slate-300">
                   {i + 1}. {getColumnLabel(s.column)}
                 </span>
-                <span className="ml-0.5 text-gray-400 dark:text-gray-500">
+                <span className="ml-0.5 text-slate-400 dark:text-slate-500">
                   {s.direction === 'asc' ? ' ↑' : ' ↓'}
                 </span>
               </span>
@@ -410,7 +410,7 @@ export default function TaskTableView({
           <button
             type="button"
             onClick={() => setSortColumns([])}
-            className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded px-1.5 py-0.5 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded px-1.5 py-0.5 hover:bg-red-50 dark:hover:bg-red-900/20"
             title="Rimuovi ordinamento"
             aria-label="Rimuovi ordinamento"
           >
@@ -420,18 +420,18 @@ export default function TaskTableView({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
         <table className="w-full text-sm">
           {/* ── HEAD — sticky with blur backdrop ── */}
           <thead
             className={[
               'sticky top-0 z-10',
-              'bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm',
-              'border-b border-gray-200 dark:border-gray-700',
+              'bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-sm',
+              'border-b border-slate-200 dark:border-slate-700',
               'shadow-[0_1px_3px_rgba(0,0,0,0.08)]',
             ].join(' ')}
           >
-            <tr className="bg-gray-50/95 dark:bg-gray-800/95">
+            <tr className="bg-slate-50/95 dark:bg-slate-800/95">
               {/* Checkbox */}
               <th
                 scope="col"
@@ -442,7 +442,7 @@ export default function TaskTableView({
                   type="checkbox"
                   checked={allSelected}
                   onChange={onSelectAll}
-                  className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                  className="w-3.5 h-3.5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
                   aria-label="Seleziona tutti i task"
                 />
               </th>
@@ -461,7 +461,7 @@ export default function TaskTableView({
           </thead>
 
           {/* ── BODY ── */}
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+          <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
             {sortedTasks.map((task, index) => {
               const isSelected = selectedTasks.has(task.id)
 
@@ -477,7 +477,7 @@ export default function TaskTableView({
                       checked={isSelected}
                       onChange={() => onToggleSelect(task.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
                       aria-label={`Seleziona ${task.title}`}
                     />
                   </td>
@@ -486,7 +486,7 @@ export default function TaskTableView({
                   <td className="px-3 py-1.5 whitespace-nowrap w-24">
                     <Link
                       to={`/tasks/${task.id}`}
-                      className="text-xs font-mono text-primary-600 dark:text-primary-400 hover:underline"
+                      className="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:underline"
                       title={`Apri ${task.code}`}
                     >
                       {task.code}
@@ -552,13 +552,13 @@ export default function TaskTableView({
                   <td className="px-3 py-1.5 whitespace-nowrap w-40">
                     {task.project ? (
                       <span
-                        className="text-xs text-gray-500 dark:text-gray-400 truncate block max-w-[140px]"
+                        className="text-xs text-slate-500 dark:text-slate-400 truncate block max-w-[140px]"
                         title={task.project.name}
                       >
                         {task.project.name}
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-300 dark:text-gray-600 italic">
+                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">
                         Standalone
                       </span>
                     )}
@@ -585,7 +585,7 @@ export default function TaskTableView({
                     {(() => {
                       const h = task.estimatedHours ?? 0
                       return (
-                        <span className="text-xs text-gray-700 dark:text-gray-300">
+                        <span className="text-xs text-slate-700 dark:text-slate-300">
                           {h !== 0 ? `${h}h` : '-'}
                         </span>
                       )
@@ -597,7 +597,7 @@ export default function TaskTableView({
                     {(() => {
                       const h = task.actualHours ?? 0
                       return (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           {h !== 0 ? `${h}h` : '-'}
                         </span>
                       )

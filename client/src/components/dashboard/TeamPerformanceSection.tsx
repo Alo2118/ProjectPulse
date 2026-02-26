@@ -122,9 +122,9 @@ export function TeamPerformanceSection({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Team Workload */}
       <div className="card">
-        <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary-500" />
+        <div className="p-4 border-b border-slate-200/30 dark:border-white/5">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Users className="w-5 h-5 text-cyan-500" />
             Carico Team
           </h2>
         </div>
@@ -216,10 +216,10 @@ export function TeamPerformanceSection({
 
       {/* Task Completion Trend */}
       <div className="card">
-        <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
+        <div className="p-4 border-b border-slate-200/30 dark:border-white/5">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary-500" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-cyan-500" />
               Trend Task
             </h2>
             {onTrendPeriodChange && (

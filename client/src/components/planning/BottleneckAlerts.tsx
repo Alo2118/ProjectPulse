@@ -36,7 +36,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   critical: 'text-red-500',
   high: 'text-orange-500',
   medium: 'text-amber-500',
-  low: 'text-gray-400',
+  low: 'text-slate-400',
 }
 
 export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
@@ -55,8 +55,8 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
     return (
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-5 h-5 text-primary-500" />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          <AlertTriangle className="w-5 h-5 text-cyan-500" />
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
             Colli di Bottiglia
           </h3>
         </div>
@@ -64,7 +64,7 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
           <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-2">
             <AlertTriangle className="w-5 h-5 text-emerald-500" />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Nessun problema rilevato</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Nessun problema rilevato</p>
         </div>
       </div>
     )
@@ -75,8 +75,8 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-primary-500" />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          <AlertTriangle className="w-5 h-5 text-cyan-500" />
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
             Colli di Bottiglia
           </h3>
         </div>
@@ -104,10 +104,10 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
           >
             <Ban className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                 {task.code} — {task.title}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Bloccato da {task.daysBlocked}g
                 {task.blockedReason ? ` · ${task.blockedReason}` : ''}
                 {task.assigneeName ? ` · ${task.assigneeName}` : ''}
@@ -124,10 +124,10 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
           >
             <UserX className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
                 {user.name}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Sovraccarico: {formatHoursFromDecimal(user.assignedHours)} assegnate · {user.taskCount} task
               </p>
             </div>
@@ -143,10 +143,10 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
           >
             <Clock className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                 Dipendenza a rischio
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 «{dep.predecessorTitle}» blocca «{dep.successorTitle}» — {dep.daysUntilStart <= 0 ? 'scaduto' : `${dep.daysUntilStart}g rimanenti`}
               </p>
             </div>
@@ -158,14 +158,14 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
           <Link
             key={task.id}
             to={`/tasks/${task.id}`}
-            className="flex items-start gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            className="flex items-start gap-3 p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           >
-            <FileQuestion className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+            <FileQuestion className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                 {task.code} — {task.title}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Senza stima ore</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Senza stima ore</p>
             </div>
           </Link>
         ))}
@@ -175,17 +175,17 @@ export function BottleneckAlerts({ data, isLoading }: BottleneckAlertsProps) {
           <Link
             key={task.id}
             to={`/tasks/${task.id}`}
-            className="flex items-start gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            className="flex items-start gap-3 p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           >
-            <UserMinus className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+            <UserMinus className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                 {task.code} — {task.title}
-                <span className={`ml-2 text-xs ${PRIORITY_COLORS[task.priority] ?? 'text-gray-400'}`}>
+                <span className={`ml-2 text-xs ${PRIORITY_COLORS[task.priority] ?? 'text-slate-400'}`}>
                   {task.priority}
                 </span>
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Senza assegnatario</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Senza assegnatario</p>
             </div>
           </Link>
         ))}

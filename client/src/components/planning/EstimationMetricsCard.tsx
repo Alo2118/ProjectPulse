@@ -71,62 +71,62 @@ export function EstimationMetricsCard({ byUser, byType, overall, isLoading }: Es
     <div className="card p-5 space-y-5">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Target className="w-5 h-5 text-primary-500" />
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+        <Target className="w-5 h-5 text-cyan-500" />
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
           Precisione Stime
         </h3>
       </div>
 
       {/* KPI summary row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-3 text-center">
+        <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-3 text-center">
           <div className="flex justify-center mb-1">
             <Target className="w-4 h-4 text-blue-500" />
           </div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
+          <p className="text-lg font-bold text-slate-900 dark:text-white">
             {(overall.avgAccuracyRatio * 100).toFixed(0)}%
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Accuratezza Media</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Accuratezza Media</p>
         </div>
-        <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-3 text-center">
+        <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-3 text-center">
           <div className="flex justify-center mb-1">
             <Activity className="w-4 h-4 text-purple-500" />
           </div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
+          <p className="text-lg font-bold text-slate-900 dark:text-white">
             {overall.avgVelocity.toFixed(1)}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Task/Settimana</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Task/Settimana</p>
         </div>
-        <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-3 text-center">
+        <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-3 text-center">
           <div className="flex justify-center mb-1">
             <AlertCircle className="w-4 h-4 text-amber-500" />
           </div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
+          <p className="text-lg font-bold text-slate-900 dark:text-white">
             {(overall.overrunRate * 100).toFixed(0)}%
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Tasso Sforamento</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Tasso Sforamento</p>
         </div>
-        <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-3 text-center">
+        <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-3 text-center">
           <div className="flex justify-center mb-1">
             <TrendingUp className="w-4 h-4 text-emerald-500" />
           </div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
+          <p className="text-lg font-bold text-slate-900 dark:text-white">
             {overall.totalTasksAnalyzed}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Task Analizzati</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Task Analizzati</p>
         </div>
       </div>
 
       {/* Chart: accuracy by user */}
       {chartData.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
             Accuratezza per Utente (actual/stimato %)
           </p>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
                 <XAxis
                   dataKey="name"
                   tick={{ fontSize: 11, fill: '#9ca3af' }}
@@ -160,14 +160,14 @@ export function EstimationMetricsCard({ byUser, byType, overall, isLoading }: Es
       {/* By type table */}
       {byType.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
             Per Tipo di Task
           </p>
-          <div className="divide-y divide-gray-100 dark:divide-white/5">
+          <div className="divide-y divide-slate-100 dark:divide-white/5">
             {byType.map((t) => (
               <div key={t.taskType} className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-700 dark:text-gray-300">{TYPE_LABELS[t.taskType] ?? t.taskType}</span>
-                <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-slate-700 dark:text-slate-300">{TYPE_LABELS[t.taskType] ?? t.taskType}</span>
+                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                   <span>~{formatHoursFromDecimal(t.avgDurationHours)}</span>
                   <span className={`font-medium ${
                     t.avgAccuracyRatio > 1.2 ? 'text-red-500' : t.avgAccuracyRatio < 0.8 ? 'text-amber-500' : 'text-emerald-500'

@@ -28,9 +28,9 @@ import { ConfirmDialog } from '@components/common/ConfirmDialog'
 
 const WORKFLOW_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   gray: {
-    bg: 'bg-gray-100 dark:bg-gray-700',
-    text: 'text-gray-700 dark:text-gray-300',
-    dot: 'bg-gray-400',
+    bg: 'bg-slate-100 dark:bg-slate-700',
+    text: 'text-slate-700 dark:text-slate-300',
+    dot: 'bg-slate-400',
   },
   blue: {
     bg: 'bg-blue-100 dark:bg-blue-900/30',
@@ -179,11 +179,11 @@ function ColorSelect({ value, onChange, disabled }: ColorSelectProps) {
         onClick={() => setOpen((o) => !o)}
         aria-label="Seleziona colore"
         aria-expanded={open}
-        className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-surface-800/60 backdrop-blur-sm hover:bg-white dark:hover:bg-surface-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-slate-200/60 dark:border-slate-600/50 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
       >
         <span className={`w-3 h-3 rounded-full flex-shrink-0 ${colors.dot}`} />
         <span className={`text-xs font-medium ${colors.text}`}>{COLOR_LABELS[value] ?? value}</span>
-        <ChevronDown className="w-3 h-3 text-gray-400" />
+        <ChevronDown className="w-3 h-3 text-slate-400" />
       </button>
 
       {open && (
@@ -193,7 +193,7 @@ function ColorSelect({ value, onChange, disabled }: ColorSelectProps) {
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1.5 min-w-[120px]">
+          <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-1.5 min-w-[120px]">
             {COLOR_OPTIONS.map((color) => {
               const c = WORKFLOW_COLORS[color]
               return (
@@ -204,7 +204,7 @@ function ColorSelect({ value, onChange, disabled }: ColorSelectProps) {
                   className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     value === color
                       ? `${c.bg} ${c.text}`
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${c.dot}`} />
@@ -236,10 +236,10 @@ function TemplateCard({ template, isSelected, onEdit, onDelete }: TemplateCardPr
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg border transition-all duration-150 p-4 ${
+      className={`bg-white dark:bg-slate-800/60 rounded-lg border transition-all duration-150 p-4 ${
         isSelected
-          ? 'border-primary-500 ring-1 ring-primary-500/30 dark:border-primary-400'
-          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          ? 'border-cyan-500 ring-1 ring-cyan-500/30 dark:border-cyan-400'
+          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
       }`}
     >
       {/* Card header */}
@@ -248,7 +248,7 @@ function TemplateCard({ template, isSelected, onEdit, onDelete }: TemplateCardPr
           {template.isDefault && (
             <Star className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" aria-label="Template predefinito" />
           )}
-          <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+          <span className="font-semibold text-sm text-slate-800 dark:text-white truncate">
             {template.name}
           </span>
         </div>
@@ -263,7 +263,7 @@ function TemplateCard({ template, isSelected, onEdit, onDelete }: TemplateCardPr
             className={`px-1.5 py-0.5 rounded text-xs font-medium ${
               template.isActive !== false
                 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
             }`}
           >
             {template.isActive !== false ? 'Attivo' : 'Inattivo'}
@@ -273,7 +273,7 @@ function TemplateCard({ template, isSelected, onEdit, onDelete }: TemplateCardPr
 
       {/* Description */}
       {template.description && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
           {template.description}
         </p>
       )}
@@ -285,7 +285,7 @@ function TemplateCard({ template, isSelected, onEdit, onDelete }: TemplateCardPr
             <StatusChip key={s.key} status={s} />
           ))}
           {template.statuses.length > 5 && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 self-center">
+            <span className="text-xs text-slate-400 dark:text-slate-500 self-center">
               +{template.statuses.length - 5}
             </span>
           )}
@@ -293,13 +293,13 @@ function TemplateCard({ template, isSelected, onEdit, onDelete }: TemplateCardPr
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex items-center gap-1 pt-2 border-t border-cyan-500/10">
         <button
           onClick={onEdit}
           disabled={isSystem}
           aria-label={isSystem ? 'Template di sistema non modificabile' : 'Modifica workflow'}
           title={isSystem ? 'I template di sistema non possono essere modificati' : 'Modifica'}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-cyan-600 dark:hover:text-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
         >
           <Edit className="w-3.5 h-3.5" />
           Modifica
@@ -309,7 +309,7 @@ function TemplateCard({ template, isSelected, onEdit, onDelete }: TemplateCardPr
           disabled={isSystem}
           aria-label={isSystem ? 'Template di sistema non eliminabile' : 'Elimina workflow'}
           title={isSystem ? 'I template di sistema non possono essere eliminati' : 'Elimina'}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 ml-auto"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 ml-auto"
         >
           <Trash2 className="w-3.5 h-3.5" />
           Elimina
@@ -346,7 +346,7 @@ function TransitionMatrix({ statuses, transitions, onChange, disabled }: Transit
 
   if (validKeys.length < 2) {
     return (
-      <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+      <p className="text-sm text-slate-500 dark:text-slate-400 italic">
         Aggiungi almeno 2 stati per configurare le transizioni.
       </p>
     )
@@ -357,10 +357,10 @@ function TransitionMatrix({ statuses, transitions, onChange, disabled }: Transit
       <table className="min-w-full text-xs border-collapse">
         <thead>
           <tr>
-            <th className="w-8 border-b border-gray-200 dark:border-gray-700" aria-label="Da / A" />
+            <th className="w-8 border-b border-cyan-500/15" aria-label="Da / A" />
             <th
               colSpan={validKeys.length}
-              className="px-2 pb-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700"
+              className="px-2 pb-2 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide border-b border-cyan-500/15"
             >
               <span className="flex items-center gap-1">
                 A (destinazione)
@@ -369,7 +369,7 @@ function TransitionMatrix({ statuses, transitions, onChange, disabled }: Transit
             </th>
           </tr>
           <tr>
-            <th className="pr-2 pb-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">
+            <th className="pr-2 pb-2 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
               Da
             </th>
             {validKeys.map((toKey) => {
@@ -401,7 +401,7 @@ function TransitionMatrix({ statuses, transitions, onChange, disabled }: Transit
             return (
               <tr
                 key={fromKey}
-                className="group hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
               >
                 <td className="pr-3 py-2 text-right whitespace-nowrap">
                   <span
@@ -419,7 +419,7 @@ function TransitionMatrix({ statuses, transitions, onChange, disabled }: Transit
                     <td key={toKey} className="px-3 py-2 text-center">
                       {isSelf ? (
                         <span
-                          className="block w-5 h-5 mx-auto rounded bg-gray-100 dark:bg-gray-700"
+                          className="block w-5 h-5 mx-auto rounded bg-slate-100 dark:bg-slate-700"
                           aria-label="Transizione verso se stesso non permessa"
                           title="Impossibile transitare verso lo stesso stato"
                         />
@@ -430,7 +430,7 @@ function TransitionMatrix({ statuses, transitions, onChange, disabled }: Transit
                           onChange={() => handleToggle(fromKey, toKey)}
                           disabled={disabled}
                           aria-label={`Consenti transizione da ${fromStatus?.label ?? fromKey} a ${statuses.find((s) => s.key === toKey)?.label ?? toKey}`}
-                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500/40 focus:ring-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                          className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500/40 focus:ring-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                         />
                       )}
                     </td>
@@ -485,7 +485,7 @@ function StatusRow({ status, index, allStatuses, onChange, onRemove, disabled }:
     allStatuses.filter((s) => s._tempId !== status._tempId && s.key === status.key).length > 0
 
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 items-start p-3 rounded-lg bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700">
+    <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 items-start p-3 rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-200/80 dark:border-slate-700/60">
       {/* Label + key */}
       <div className="space-y-1 min-w-0">
         <input
@@ -503,7 +503,7 @@ function StatusRow({ status, index, allStatuses, onChange, onRemove, disabled }:
             className={`text-xs font-mono px-1.5 py-0.5 rounded ${
               hasKeyConflict
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'
             }`}
             title="Chiave interna (auto-generata)"
           >
@@ -544,13 +544,13 @@ function StatusRow({ status, index, allStatuses, onChange, onRemove, disabled }:
           onChange={(e) => handleInitialChange(e.target.checked)}
           disabled={disabled}
           aria-label="Stato iniziale"
-          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500/40 cursor-pointer disabled:cursor-not-allowed"
+          className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500/40 cursor-pointer disabled:cursor-not-allowed"
         />
       </label>
 
       {/* Is Final */}
       <label className="flex flex-col items-center gap-1 cursor-pointer pt-1">
-        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
           Fine
         </span>
         <input
@@ -559,13 +559,13 @@ function StatusRow({ status, index, allStatuses, onChange, onRemove, disabled }:
           onChange={(e) => handleFinalChange(e.target.checked)}
           disabled={disabled}
           aria-label="Stato finale"
-          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500/40 cursor-pointer disabled:cursor-not-allowed"
+          className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500/40 cursor-pointer disabled:cursor-not-allowed"
         />
       </label>
 
       {/* Requires Comment */}
       <label className="flex flex-col items-center gap-1 cursor-pointer pt-1">
-        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
           Nota
         </span>
         <input
@@ -574,7 +574,7 @@ function StatusRow({ status, index, allStatuses, onChange, onRemove, disabled }:
           onChange={(e) => handleCommentChange(e.target.checked)}
           disabled={disabled}
           aria-label="Richiede commento"
-          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500/40 cursor-pointer disabled:cursor-not-allowed"
+          className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500/40 cursor-pointer disabled:cursor-not-allowed"
         />
       </label>
 
@@ -584,7 +584,7 @@ function StatusRow({ status, index, allStatuses, onChange, onRemove, disabled }:
         onClick={onRemove}
         disabled={disabled}
         aria-label="Rimuovi stato"
-        className="btn-icon text-gray-400 hover:text-red-600 dark:hover:text-red-400 mt-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="btn-icon text-slate-400 hover:text-red-600 dark:hover:text-red-400 mt-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <X className="w-4 h-4" />
       </button>
@@ -736,8 +736,8 @@ function TemplateEditor({
     <div className="card p-6 space-y-6">
       {/* Editor header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <GitBranch className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+        <h2 className="text-base font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+          <GitBranch className="w-4 h-4 text-cyan-400" />
           {title}
         </h2>
         <button
@@ -760,14 +760,14 @@ function TemplateEditor({
 
       {/* Basic info */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
           Informazioni di base
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Name */}
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
               Nome <span className="text-red-500" aria-hidden="true">*</span>
             </label>
             <input
@@ -793,7 +793,7 @@ function TemplateEditor({
 
           {/* Description */}
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
               Descrizione
             </label>
             <textarea
@@ -812,17 +812,17 @@ function TemplateEditor({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
               Stati del Workflow
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Definisci gli stati che un task puo assumere in questo workflow
             </p>
           </div>
           <button
             type="button"
             onClick={addStatus}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 border border-primary-200 dark:border-primary-800 transition-all duration-150"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-cyan-200/80 dark:border-cyan-800/60 transition-all duration-150"
           >
             <Plus className="w-3.5 h-3.5" />
             Aggiungi Stato
@@ -831,7 +831,7 @@ function TemplateEditor({
 
         {/* Legend for columns */}
         {form.statuses.length > 0 && (
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-3 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-3 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
             <span>Nome / Chiave</span>
             <span>Colore</span>
             <span className="text-center w-12">Inizio</span>
@@ -849,9 +849,9 @@ function TemplateEditor({
         )}
 
         {form.statuses.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-            <GitBranch className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+            <GitBranch className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Nessuno stato definito. Aggiungi il primo stato.
             </p>
           </div>
@@ -886,15 +886,15 @@ function TemplateEditor({
       {form.statuses.length >= 2 && (
         <div className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
               Matrice delle Transizioni
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Definisci quali transizioni tra stati sono consentite. Spunta le celle per abilitare la transizione.
             </p>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4 border border-cyan-500/15">
             <TransitionMatrix
               statuses={form.statuses}
               transitions={form.transitions}
@@ -905,7 +905,7 @@ function TemplateEditor({
       )}
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex justify-end gap-3 pt-2 border-t border-cyan-500/10">
         <button type="button" onClick={onCancel} className="btn-secondary" disabled={isSaving}>
           Annulla
         </button>
@@ -1045,7 +1045,7 @@ export default function WorkflowEditorPage() {
   if (isLoading && templates.length === 0) {
     return (
       <div className="flex items-center justify-center h-64" aria-live="polite" aria-label="Caricamento in corso">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
       </div>
     )
   }
@@ -1055,11 +1055,11 @@ export default function WorkflowEditorPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <GitBranch className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+          <h1 className="page-title flex items-center gap-2">
+            <GitBranch className="w-6 h-6 text-cyan-400" />
             Gestione Workflow
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 page-subtitle">
             Configura i template di workflow per gestire i cicli di vita dei task nei progetti
           </p>
         </div>
@@ -1099,7 +1099,7 @@ export default function WorkflowEditorPage() {
             <button
               onClick={handleNewWorkflow}
               disabled={isCreating && editingTemplate === null}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-500 dark:text-gray-400 hover:border-primary-400 dark:hover:border-primary-600 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 text-sm font-medium text-slate-500 dark:text-slate-400 hover:border-cyan-400 dark:hover:border-cyan-600 hover:text-cyan-600 dark:hover:text-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
             >
               <Plus className="w-4 h-4" />
               Nuovo Workflow
@@ -1108,11 +1108,11 @@ export default function WorkflowEditorPage() {
 
           {sortedTemplates.length === 0 ? (
             <div className="card p-10 text-center">
-              <GitBranch className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              <GitBranch className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
                 Nessun template di workflow
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Crea il primo workflow per i tuoi progetti
               </p>
               {isAdmin && !showEditor && (
@@ -1152,11 +1152,11 @@ export default function WorkflowEditorPage() {
             />
           ) : (
             <div className="card border-dashed p-12 text-center hidden lg:block">
-              <GitBranch className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 font-medium">
+              <GitBranch className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1 font-medium">
                 Seleziona un workflow da modificare
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Oppure crea un nuovo workflow usando il pulsante in alto
               </p>
             </div>

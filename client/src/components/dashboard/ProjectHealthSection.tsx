@@ -45,12 +45,12 @@ function getHealthColor(health: ProjectHealth['healthStatus']) {
 }
 
 function getDeadlineBadge(days: number | null): { label: string; className: string } {
-  if (days === null) return { label: '-', className: 'text-gray-400 dark:text-gray-500' }
+  if (days === null) return { label: '-', className: 'text-slate-400 dark:text-slate-500' }
   if (days < 0) return { label: `${Math.abs(days)}g ritardo`, className: 'bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full' }
   if (days === 0) return { label: 'Oggi', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full' }
   if (days <= 7) return { label: `${days}g`, className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full' }
   if (days <= 30) return { label: `${days}g`, className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full' }
-  return { label: `${days}g`, className: 'text-gray-500 dark:text-gray-400' }
+  return { label: `${days}g`, className: 'text-slate-500 dark:text-slate-400' }
 }
 
 export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSectionProps) {
@@ -97,7 +97,7 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
   if (isLoading) {
     return (
       <div className="card">
-        <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
+        <div className="p-4 border-b border-slate-200/30 dark:border-white/5">
           <div className="skeleton h-6 w-48" />
         </div>
         <div className="p-4 space-y-3">
@@ -116,13 +116,13 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
   if (projects.length === 0) {
     return (
       <div className="card">
-        <div className="p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <FolderKanban className="w-5 h-5 text-primary-500" />
+        <div className="p-4 border-b border-slate-200/30 dark:border-white/5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <FolderKanban className="w-5 h-5 text-cyan-500" />
             Salute Progetti
           </h2>
         </div>
-        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+        <div className="p-8 text-center text-slate-500 dark:text-slate-400">
           <FolderKanban className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p>Nessun progetto attivo</p>
         </div>
@@ -133,26 +133,26 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
   const SortHeader = ({ label, sortKeyVal, className = '' }: { label: string; sortKeyVal: SortKey; className?: string }) => (
     <button
       onClick={() => handleSort(sortKeyVal)}
-      className={`flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide hover:text-gray-700 dark:hover:text-gray-300 transition-colors ${className}`}
+      className={`flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide hover:text-slate-700 dark:hover:text-slate-300 transition-colors ${className}`}
     >
       {label}
-      <ArrowUpDown className={`w-3 h-3 ${sortKey === sortKeyVal ? 'text-primary-500' : 'opacity-40'}`} />
+      <ArrowUpDown className={`w-3 h-3 ${sortKey === sortKeyVal ? 'text-cyan-500' : 'opacity-40'}`} />
     </button>
   )
 
   return (
     <div className="card">
-      <div className="p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <FolderKanban className="w-5 h-5 text-primary-500" />
+      <div className="p-4 border-b border-slate-200/30 dark:border-white/5 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          <FolderKanban className="w-5 h-5 text-cyan-500" />
           Salute Progetti
-          <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+          <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
             ({projects.length} attivi)
           </span>
         </h2>
         <Link
           to="/projects"
-          className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 flex items-center group"
+          className="text-sm text-cyan-500 hover:text-cyan-600 dark:text-cyan-400 flex items-center group"
         >
           Vedi tutti
           <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
@@ -160,7 +160,7 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
       </div>
 
       {/* Table header */}
-      <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
+      <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2.5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
         <div className="col-span-3">
           <SortHeader label="Progetto" sortKeyVal="name" />
         </div>
@@ -182,19 +182,19 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
       </div>
 
       {/* Rows */}
-      <div className="divide-y divide-gray-100 dark:divide-white/5">
+      <div className="divide-y divide-slate-100 dark:divide-white/5">
         {sortedProjects.map((project) => {
           const badge = getDeadlineBadge(project.daysRemaining)
           return (
             <Link
               key={project.projectId}
               to={`/projects/${project.projectId}`}
-              className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors items-center"
+              className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2 px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors items-center"
             >
               {/* Name */}
               <div className="md:col-span-3 flex items-center gap-2 min-w-0">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getHealthColor(project.healthStatus)}`} />
-                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <span className="text-sm font-medium text-slate-900 dark:text-white truncate">
                   {project.projectName}
                 </span>
               </div>
@@ -214,7 +214,7 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
                 {project.tasksBlocked > 0 ? (
                   <span className="text-sm font-medium text-red-500">{project.tasksBlocked}</span>
                 ) : (
-                  <span className="text-sm text-gray-300 dark:text-gray-600">0</span>
+                  <span className="text-sm text-slate-300 dark:text-slate-600">0</span>
                 )}
               </div>
 
@@ -226,7 +226,7 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
                     {project.openRisks}
                   </span>
                 ) : (
-                  <span className="text-sm text-gray-300 dark:text-gray-600">0</span>
+                  <span className="text-sm text-slate-300 dark:text-slate-600">0</span>
                 )}
               </div>
 
@@ -234,7 +234,7 @@ export function ProjectHealthSection({ projects, isLoading }: ProjectHealthSecti
               <div className="md:col-span-2 flex items-center gap-1">
                 {project.targetEndDate && (
                   <>
-                    <Calendar className="w-3 h-3 text-gray-400 hidden md:block" />
+                    <Calendar className="w-3 h-3 text-slate-400 hidden md:block" />
                     <span className={`text-xs font-medium ${badge.className}`}>
                       {badge.label}
                     </span>

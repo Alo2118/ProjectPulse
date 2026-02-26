@@ -98,7 +98,7 @@ export default function UserListPage() {
         </div>
 
         {/* User list skeleton */}
-        <div className="card divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="card divide-y divide-slate-200 dark:divide-slate-700">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="flex items-center p-4 gap-4">
               <div className="skeleton w-10 h-10 rounded-full" />
@@ -126,8 +126,8 @@ export default function UserListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Utenti</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Utenti</h1>
+          <p className="mt-1 text-slate-600 dark:text-slate-400">
             Gestisci gli utenti della piattaforma
           </p>
         </div>
@@ -142,7 +142,7 @@ export default function UserListPage() {
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-64">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="search"
                 placeholder="Cerca per nome o email..."
@@ -179,11 +179,11 @@ export default function UserListPage() {
       {/* User List */}
       {users.length === 0 ? (
         <div className="card p-8 text-center">
-          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
             {searchTerm || roleFilter || activeFilter ? 'Nessun utente trovato' : 'Nessun utente'}
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
             {searchTerm || roleFilter || activeFilter
               ? 'Prova a modificare i filtri di ricerca'
               : 'Crea il primo utente per iniziare'}
@@ -191,15 +191,15 @@ export default function UserListPage() {
         </div>
       ) : (
         <>
-          <div className="card divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="card divide-y divide-slate-200 dark:divide-slate-700">
             {users.map((u) => (
               <div
                 key={u.id}
-                className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                className="flex items-center p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               >
                 {/* Avatar */}
                 <div className="mr-4">
-                  <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-700 dark:text-primary-400 font-semibold">
+                  <div className="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-700 dark:text-cyan-400 font-semibold">
                     {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export default function UserListPage() {
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/users/${u.id}/edit`}
-                      className="text-base font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400"
+                      className="text-base font-medium text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400"
                     >
                       {u.firstName} {u.lastName}
                     </Link>
@@ -220,7 +220,7 @@ export default function UserListPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center text-sm text-slate-500 dark:text-slate-400">
                       <Mail className="w-3.5 h-3.5 mr-1" />
                       {u.email}
                     </span>
@@ -233,7 +233,7 @@ export default function UserListPage() {
                     <Shield className="w-3 h-3 inline mr-1" />
                     {USER_ROLE_LABELS[u.role as UserRole]}
                   </span>
-                  <span className={`flex items-center gap-1 text-xs ${u.isActive !== false ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                  <span className={`flex items-center gap-1 text-xs ${u.isActive !== false ? 'text-green-600 dark:text-green-400' : 'text-slate-400'}`}>
                     <CircleDot className="w-3 h-3" />
                     {u.isActive !== false ? 'Attivo' : 'Inattivo'}
                   </span>
@@ -243,10 +243,10 @@ export default function UserListPage() {
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => navigate(`/users/${u.id}/edit`)}
-                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                     title="Modifica utente"
                   >
-                    <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <Edit2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                   </button>
                   {u.id !== currentUser?.id && (
                     <button
@@ -275,19 +275,19 @@ export default function UserListPage() {
       {/* Hard Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
                 <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
                 Eliminazione permanente
               </h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-slate-600 dark:text-slate-400 mb-2">
               Stai per eliminare permanentemente l'utente:
             </p>
-            <p className="font-medium text-gray-900 dark:text-white mb-4">
+            <p className="font-medium text-slate-900 dark:text-white mb-4">
               {deleteConfirm.email}
             </p>
             <p className="text-sm text-red-600 dark:text-red-400 mb-4">
@@ -301,7 +301,7 @@ export default function UserListPage() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => { setDeleteConfirm(null); setDeleteError(null) }}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
                 Annulla
               </button>

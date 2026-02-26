@@ -1,5 +1,6 @@
 /**
  * GanttZoomControls - Zoom level selector for Gantt chart
+ * Uses JARVIS design system: segmented-control, btn-icon, btn-secondary
  */
 
 import { GanttZoomLevel } from '@/types'
@@ -31,52 +32,50 @@ export default function GanttZoomControls({
   onToday,
 }: GanttZoomControlsProps) {
   return (
-    <div className="flex items-center gap-4">
-      {/* Navigation */}
+    <div className="flex items-center gap-3">
+      {/* Navigation controls */}
       <div className="flex items-center gap-1">
         <button
           onClick={() => onNavigate('prev')}
-          className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-surface-800 dark:hover:text-white"
-          title="Precedente"
+          className="btn-icon"
+          title="Periodo precedente"
           aria-label="Periodo precedente"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
 
         <button
           onClick={onToday}
-          className="flex items-center gap-1 rounded px-2 py-1.5 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-surface-800 dark:hover:text-white"
+          className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs"
           title="Vai a oggi"
         >
-          <Calendar className="h-4 w-4" />
+          <Calendar className="h-3.5 w-3.5" />
           <span>Oggi</span>
         </button>
 
         <button
           onClick={() => onNavigate('next')}
-          className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-surface-800 dark:hover:text-white"
-          title="Successivo"
+          className="btn-icon"
+          title="Periodo successivo"
           aria-label="Periodo successivo"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Date range display */}
-      <div className="text-sm text-gray-600 dark:text-gray-400">
-        {format(viewStart, 'd MMM', { locale: it })} - {format(viewEnd, 'd MMM yyyy', { locale: it })}
-      </div>
+      {/* Date range label */}
+      <span className="text-xs text-slate-400 dark:text-slate-400 not-dark:text-slate-500 tabular-nums">
+        {format(viewStart, 'd MMM', { locale: it })} &ndash; {format(viewEnd, 'd MMM yyyy', { locale: it })}
+      </span>
 
-      {/* Zoom selector */}
-      <div className="flex rounded-lg border border-gray-200 bg-gray-100 dark:border-white/10 dark:bg-surface-800">
+      {/* Zoom segmented control */}
+      <div className="segmented-control">
         {ZOOM_OPTIONS.map((option) => (
           <button
             key={option.value}
             onClick={() => onZoomChange(option.value)}
-            className={`px-3 py-1.5 text-sm transition-colors first:rounded-l-lg last:rounded-r-lg ${
-              zoomLevel === option.value
-                ? 'bg-primary-600 text-white'
-                : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-surface-800/80 dark:hover:text-white'
+            className={`segmented-control-item ${
+              zoomLevel === option.value ? 'segmented-control-item-active' : ''
             }`}
           >
             {option.label}

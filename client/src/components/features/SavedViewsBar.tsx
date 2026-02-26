@@ -167,8 +167,8 @@ export function SavedViewsBar({
           onClick={handleTuttiClick}
           className={`flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors ${
             activeViewId === null
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ? 'bg-cyan-500 text-white shadow-sm'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
           }`}
         >
           Tutti
@@ -187,8 +187,8 @@ export function SavedViewsBar({
               disabled={isBeingDeleted}
               className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
                 isActive
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'bg-cyan-500 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
               title={view.isShared ? 'Vista condivisa — tasto destro per opzioni' : 'Tasto destro per opzioni'}
             >
@@ -211,7 +211,7 @@ export function SavedViewsBar({
         {/* Save current filters button */}
         <button
           onClick={handleSaveNew}
-          className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+          className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-dashed border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 transition-colors"
           title="Salva i filtri correnti come nuova vista"
           aria-label="Salva vista corrente"
         >
@@ -224,15 +224,15 @@ export function SavedViewsBar({
       {contextMenu && contextView && (
         <div
           ref={contextMenuRef}
-          className="fixed z-50 bg-white dark:bg-surface-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[180px]"
+          className="fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[180px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           {isOwner && (
             <button
               onClick={() => handleContextAction('edit', contextMenu.viewId)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <Edit2 className="w-3.5 h-3.5 text-gray-400" />
+              <Edit2 className="w-3.5 h-3.5 text-slate-400" />
               Rinomina / Modifica
             </button>
           )}
@@ -240,16 +240,16 @@ export function SavedViewsBar({
           {isOwner && (
             <button
               onClick={() => handleContextAction('share', contextMenu.viewId)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               {contextView.isShared ? (
                 <>
-                  <Lock className="w-3.5 h-3.5 text-gray-400" />
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
                   Rendi privata
                 </>
               ) : (
                 <>
-                  <Share2 className="w-3.5 h-3.5 text-gray-400" />
+                  <Share2 className="w-3.5 h-3.5 text-slate-400" />
                   Condividi con il team
                 </>
               )}
@@ -259,7 +259,7 @@ export function SavedViewsBar({
           {isOwner && (
             <button
               onClick={() => handleContextAction('default', contextMenu.viewId)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               {contextView.isDefault ? (
                 <>
@@ -268,7 +268,7 @@ export function SavedViewsBar({
                 </>
               ) : (
                 <>
-                  <Star className="w-3.5 h-3.5 text-gray-400" />
+                  <Star className="w-3.5 h-3.5 text-slate-400" />
                   Imposta come predefinita
                 </>
               )}
@@ -276,7 +276,7 @@ export function SavedViewsBar({
           )}
 
           {isOwner && (
-            <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+            <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
               <button
                 onClick={() => handleContextAction('delete', contextMenu.viewId)}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -288,7 +288,7 @@ export function SavedViewsBar({
           )}
 
           {!isOwner && (
-            <div className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 italic">
+            <div className="px-3 py-2 text-xs text-slate-400 dark:text-slate-500 italic">
               Vista condivisa da{' '}
               {contextView.user
                 ? `${contextView.user.firstName} ${contextView.user.lastName}`

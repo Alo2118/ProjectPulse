@@ -1,20 +1,36 @@
 /**
- * Project List Page - Shows all projects with filters
+ * Project List Page - Table layout with progress and health indicators
  * @module pages/projects/ProjectListPage
  */
 
 import { useEffect, useState, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useProjectStore } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
-import { Plus, Search, Calendar, Users, Clock, Target, FolderKanban } from 'lucide-react'
-import { PROJECT_PRIORITY_BORDER_COLORS } from '@/constants'
+import { Plus, Search, FolderKanban, Calendar, ChevronUp, ChevronDown } from 'lucide-react'
 import { StatusIcon } from '@/components/ui/StatusIcon'
-import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { Tooltip } from '@/components/ui/Tooltip'
 import { EmptyState } from '@components/common/EmptyState'
 import { formatDate } from '@utils/dateFormatters'
+
+type SortKey = 'name' | 'status' | 'progress' | 'targetEndDate'
+type SortDir = 'asc' | 'desc'
+
+/** Returns a health badge class based on task stats and deadline */
+function healthClass(hasBlocked: boolean, isOverdue: boolean, pct: number): string {
+  if (hasBlocked || isOverdue) return 'text-red-600 dark:text-red-400 bg-red-500/10'
+  if (pct < 33) return 'text-amber-600 dark:text-amber-400 bg-amber-500/10'
+  return 'text-green-600 dark:text-green-400 bg-green-500/10'
+}
+
+function healthLabel(hasBlocked: boolean, isOverdue: boolean, pct: number): string {
+  if (hasBlocked) return 'Bloccato'
+  if (isOverdue) return 'In ritardo'
+  if (pct >= 100) return 'Completo'
+  if (pct >= 66) return 'In linea'
+  return 'In corso'
+}
 
 export default function ProjectListPage() {
   const navigate = useNavigate()
@@ -24,17 +40,27 @@ export default function ProjectListPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
+  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
 
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
 
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
   const filteredProjects = useMemo(() => {
-    return projects.filter((project) => {
+    const filtered = projects.filter((project) => {
       const matchesSearch =
         searchTerm === '' ||
         project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.description?.toLowerCase().includes(searchTerm.toLowerCase())
 
       const matchesStatus = statusFilter === '' || project.status === statusFilter
@@ -42,14 +68,34 @@ export default function ProjectListPage() {
 
       return matchesSearch && matchesStatus && matchesPriority
     })
-  }, [projects, searchTerm, statusFilter, priorityFilter])
+
+    return [...filtered].sort((a, b) => {
+      let comparison = 0
+      if (sortKey === 'name') {
+        comparison = a.name.localeCompare(b.name)
+      } else if (sortKey === 'status') {
+        comparison = a.status.localeCompare(b.status)
+      } else if (sortKey === 'progress') {
+        const pctA = a.taskStats && a.taskStats.total > 0
+          ? (a.taskStats.completed / a.taskStats.total) * 100 : 0
+        const pctB = b.taskStats && b.taskStats.total > 0
+          ? (b.taskStats.completed / b.taskStats.total) * 100 : 0
+        comparison = pctA - pctB
+      } else if (sortKey === 'targetEndDate') {
+        const dateA = a.targetEndDate ? new Date(a.targetEndDate).getTime() : Infinity
+        const dateB = b.targetEndDate ? new Date(b.targetEndDate).getTime() : Infinity
+        comparison = dateA - dateB
+      }
+      return sortDir === 'asc' ? comparison : -comparison
+    })
+  }, [projects, searchTerm, statusFilter, priorityFilter, sortKey, sortDir])
 
   const canCreateProject = !!user
 
+  // --- Skeleton ---
   if (isLoading && projects.length === 0) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        {/* Header skeleton */}
+      <div className="space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
             <div className="skeleton h-8 w-32" />
@@ -57,47 +103,56 @@ export default function ProjectListPage() {
           </div>
           <div className="skeleton h-10 w-40" />
         </div>
-
-        {/* Filters skeleton */}
-        <div className="card p-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="skeleton h-10 flex-1 min-w-64" />
-            <div className="skeleton h-10 w-40" />
-            <div className="skeleton h-10 w-40" />
-          </div>
+        <div className="card p-4 flex flex-wrap gap-3">
+          <div className="skeleton h-10 flex-1 min-w-64" />
+          <div className="skeleton h-10 w-40" />
+          <div className="skeleton h-10 w-40" />
         </div>
-
-        {/* Project grid skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card p-6 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="skeleton h-6 w-20" />
-                <div className="skeleton h-3 w-3 rounded-full" />
+        <div className="card overflow-hidden">
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center px-4 py-3 gap-4">
+                <div className="skeleton h-5 flex-1" />
+                <div className="skeleton h-5 w-24" />
+                <div className="skeleton h-3 w-40 rounded-full" />
+                <div className="skeleton h-5 w-20" />
               </div>
-              <div className="skeleton h-6 w-3/4" />
-              <div className="skeleton h-4 w-1/2" />
-              <div className="skeleton h-16 w-full" />
-              <div className="skeleton h-2 w-full" />
-              <div className="flex justify-between">
-                <div className="skeleton h-4 w-24" />
-                <div className="skeleton h-4 w-20" />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
+  // Column header helper
+  const SortHeader = ({ label, colKey }: { label: string; colKey: SortKey }) => {
+    const active = sortKey === colKey
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(colKey)}
+        className="flex items-center gap-1 text-xs uppercase tracking-widest text-slate-400 font-medium text-left hover:text-slate-300 transition-colors"
+      >
+        {label}
+        {active ? (
+          sortDir === 'asc'
+            ? <ChevronUp className="w-3 h-3" aria-hidden="true" />
+            : <ChevronDown className="w-3 h-3" aria-hidden="true" />
+        ) : (
+          <ChevronDown className="w-3 h-3 opacity-30" aria-hidden="true" />
+        )}
+      </button>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Progetti</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            Gestisci i tuoi progetti e monitora l'avanzamento
+          <h1 className="page-title">Progetti</h1>
+          <p className="page-subtitle mt-1">
+            Gestisci i tuoi progetti e monitora l&apos;avanzamento
           </p>
         </div>
         {canCreateProject && (
@@ -113,16 +168,17 @@ export default function ProjectListPage() {
 
       {/* Filters */}
       <div className="card p-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-64">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-52">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Cerca progetti..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-10"
+                className="input pl-10 w-full"
+                aria-label="Cerca progetti"
               />
             </div>
           </div>
@@ -130,6 +186,7 @@ export default function ProjectListPage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="input w-auto"
+            aria-label="Filtra per stato"
           >
             <option value="">Tutti gli stati</option>
             <option value="planning">Pianificazione</option>
@@ -145,6 +202,7 @@ export default function ProjectListPage() {
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="input w-auto"
+            aria-label="Filtra per priorita"
           >
             <option value="">Tutte le priorita</option>
             <option value="high">Alta</option>
@@ -154,7 +212,7 @@ export default function ProjectListPage() {
         </div>
       </div>
 
-      {/* Projects Grid */}
+      {/* Projects Table */}
       {filteredProjects.length === 0 ? (
         <div className="card">
           <EmptyState
@@ -169,160 +227,136 @@ export default function ProjectListPage() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProjects.map((project) => (
-            <Link
-              key={project.id}
-              to={`/projects/${project.id}`}
-              className={`card-hover p-6 border-l-4 ${PROJECT_PRIORITY_BORDER_COLORS[project.priority]}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <StatusIcon type="projectStatus" value={project.status} size="md" showLabel />
-                    {project.taskStats && project.taskStats.total > 0 && (() => {
-                      const pct = (project.taskStats.completed / project.taskStats.total) * 100
-                      const hasBlocked = project.taskStats.blocked > 0
-                      const isOverdue = project.targetEndDate && new Date(project.targetEndDate) < new Date() && project.status !== 'completed'
-                      const healthColor = hasBlocked || isOverdue
-                        ? 'bg-red-500 shadow-red-500/50 animate-pulse'
-                        : pct < 33
-                          ? 'bg-amber-500 shadow-amber-500/50'
-                          : 'bg-green-500 shadow-green-500/50'
-                      return <span className={`inline-block w-2.5 h-2.5 rounded-full shadow-sm ${healthColor}`} title={hasBlocked ? 'Task bloccati' : isOverdue ? 'Scaduto' : `${Math.round(pct)}% completato`} />
-                    })()}
-                  </div>
-                  <Tooltip
-                    position="bottom"
-                    content={
-                      <div className="space-y-1.5 min-w-48">
-                        <p className="font-semibold">{project.name}</p>
-                        <div className="flex items-center gap-2 text-[11px] opacity-80">
-                          <StatusIcon type="projectStatus" value={project.status} size="sm" showLabel />
-                        </div>
-                        {project.taskStats && (
-                          <p className="text-[11px] opacity-70">
-                            📋 {project.taskStats.completed}/{project.taskStats.total} task completati
-                            {project.taskStats.blocked > 0 && ` · 🚫 ${project.taskStats.blocked} bloccati`}
-                          </p>
-                        )}
-                        {project.owner && (
-                          <p className="text-[11px] opacity-70">👤 {project.owner.firstName} {project.owner.lastName}</p>
-                        )}
-                        {project.targetEndDate && (
-                          <p className="text-[11px] opacity-70">📅 {formatDate(project.targetEndDate)}</p>
-                        )}
-                      </div>
+        <div className="card overflow-hidden">
+          {/* Table header */}
+          <div className="px-4 py-2.5 border-b border-cyan-500/5 grid grid-cols-[1fr_auto_180px_120px] gap-4 items-center">
+            <SortHeader label="Progetto" colKey="name" />
+            <SortHeader label="Stato" colKey="status" />
+            <SortHeader label="Progresso" colKey="progress" />
+            <SortHeader label="Scadenza" colKey="targetEndDate" />
+          </div>
+
+          {/* Table rows */}
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
+            {filteredProjects.map((project, idx) => {
+              const pct = project.taskStats && project.taskStats.total > 0
+                ? Math.round((project.taskStats.completed / project.taskStats.total) * 100)
+                : 0
+              const hasBlocked = (project.taskStats?.blocked ?? 0) > 0
+              const isOverdue =
+                !!project.targetEndDate &&
+                new Date(project.targetEndDate) < new Date() &&
+                project.status !== 'completed'
+
+              const hClass = project.taskStats && project.taskStats.total > 0
+                ? healthClass(hasBlocked, isOverdue, pct)
+                : ''
+              const hLabel = project.taskStats && project.taskStats.total > 0
+                ? healthLabel(hasBlocked, isOverdue, pct)
+                : ''
+
+              return (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, delay: idx * 0.03 }}
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                  className="grid grid-cols-[1fr_auto_180px_120px] gap-4 items-center px-4 py-3 border-t border-cyan-500/5 hover:bg-cyan-500/5 cursor-pointer transition-colors group"
+                  role="row"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      navigate(`/projects/${project.id}`)
                     }
-                  >
-                    <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white truncate">
-                      {project.name}
-                    </h3>
-                  </Tooltip>
-                </div>
-              </div>
-              {project.description && (
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                  {project.description}
-                </p>
-              )}
-
-              {/* Counts */}
-              {project._count && (
-                <div className="mt-4 flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                    <span>{'\u{1F4CB}'}</span>
-                    <AnimatedCounter value={project._count.tasks || 0} className="font-semibold text-gray-900 dark:text-white" />
-                    <span>task</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                    <span>{'\u26A0\uFE0F'}</span>
-                    <AnimatedCounter value={project._count.risks || 0} className="font-semibold text-gray-900 dark:text-white" />
-                    <span>rischi</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Progress + Health */}
-              {project.taskStats && project.taskStats.total > 0 && (
-                <div className="mt-4 space-y-2">
-                  <ProgressBar
-                    value={Math.round((project.taskStats.completed / project.taskStats.total) * 100)}
-                    size="sm"
-                    showLabel
-                    glow
-                    animated
-                  />
-                  {project.taskStats.blocked > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 animate-pulse">
-                      <span>🚫</span>
-                      <span>{project.taskStats.blocked} task bloccati</span>
+                  }}
+                  aria-label={`Vai al progetto ${project.name}`}
+                >
+                  {/* Name + optional health dot */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    {project.taskStats && project.taskStats.total > 0 && (
+                      <span
+                        className={`flex-shrink-0 w-2 h-2 rounded-full ${
+                          hasBlocked || isOverdue
+                            ? 'bg-red-500 animate-pulse'
+                            : pct >= 66
+                              ? 'bg-green-500'
+                              : 'bg-amber-500'
+                        }`}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                        {project.name}
+                      </span>
+                      {project.owner && (
+                        <span className="text-xs text-slate-400">
+                          {project.owner.firstName} {project.owner.lastName?.charAt(0)}.
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Hours + Next Milestone */}
-              <div className="mt-3 space-y-1.5">
-                {typeof project.totalHoursLogged === 'number' && project.totalHoursLogged > 0 && (
-                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                    <Clock className="w-3 h-3" />
-                    <span>{Math.round(project.totalHoursLogged * 10) / 10}h registrate</span>
                   </div>
-                )}
-                {project.nextMilestone && (
-                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                    <Target className="w-3 h-3 text-amber-500" />
-                    <span className="truncate">{project.nextMilestone.title}</span>
-                    {project.nextMilestone.daysRemaining !== null && (
-                      <span className={`ml-auto flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
-                        project.nextMilestone.daysRemaining < 0
-                          ? 'bg-red-500/10 text-red-600 dark:text-red-400'
-                          : project.nextMilestone.daysRemaining <= 7
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                      }`}>
-                        {project.nextMilestone.daysRemaining < 0
-                          ? `${Math.abs(project.nextMilestone.daysRemaining)}g ritardo`
-                          : `${project.nextMilestone.daysRemaining}g`}
+
+                  {/* Status */}
+                  <div className="flex items-center gap-2">
+                    <StatusIcon type="projectStatus" value={project.status} size="sm" showLabel />
+                    {hLabel && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${hClass}`}>
+                        {hLabel}
                       </span>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Footer */}
-              <div className="mt-3 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                {project.targetEndDate ? (
-                  <div className={`flex items-center ${
-                    (() => {
-                      if (!project.targetEndDate || project.status === 'completed') return ''
-                      const days = Math.ceil((new Date(project.targetEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                      if (days < 0) return 'text-red-500 dark:text-red-400 font-medium'
-                      if (days <= 7) return 'text-amber-500 dark:text-amber-400'
-                      return ''
-                    })()
-                  }`}>
-                    <Calendar className="w-4 h-4 mr-1" />
-                    <span>{formatDate(project.targetEndDate)}</span>
+                  {/* Progress */}
+                  <div className="w-full">
+                    {project.taskStats && project.taskStats.total > 0 ? (
+                      <div className="space-y-0.5">
+                        <ProgressBar value={pct} size="sm" glow />
+                        <span className="text-[10px] text-slate-400">
+                          {project.taskStats.completed}/{project.taskStats.total} task
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">Nessun task</span>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    <span>-</span>
+
+                  {/* Due date */}
+                  <div className="flex items-center gap-1 text-xs">
+                    {project.targetEndDate ? (
+                      <>
+                        <Calendar
+                          className={`w-3 h-3 flex-shrink-0 ${
+                            isOverdue
+                              ? 'text-red-500'
+                              : 'text-slate-400'
+                          }`}
+                          aria-hidden="true"
+                        />
+                        <span
+                          className={
+                            isOverdue
+                              ? 'text-red-500 dark:text-red-400 font-medium'
+                              : 'text-slate-400'
+                          }
+                        >
+                          {formatDate(project.targetEndDate)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </div>
-                )}
-                {project.owner && (
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-1" />
-                    <span className="truncate max-w-24">
-                      {project.owner.firstName} {project.owner.lastName?.charAt(0)}.
-                    </span>
-                  </div>
-                )}
-              </div>
-            </Link>
-          ))}
+                </motion.div>
+              )
+            })}
+          </div>
+
+          {/* Footer count */}
+          <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5 text-xs text-slate-400">
+            {filteredProjects.length} {filteredProjects.length === 1 ? 'progetto' : 'progetti'}
+          </div>
         </div>
       )}
     </div>

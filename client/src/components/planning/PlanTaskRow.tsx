@@ -155,7 +155,7 @@ function AssigneeDropdown({
       >
         {assigned ? (
           <>
-            <span className="w-5 h-5 rounded-full bg-primary-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+            <span className="w-5 h-5 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
               {initials}
             </span>
             <span className="text-xs text-gray-700 dark:text-gray-300 hidden md:inline max-w-[80px] truncate">
@@ -205,7 +205,7 @@ function AssigneeDropdown({
                   user.id === value ? 'bg-blue-50 dark:bg-blue-900/20 font-medium' : '',
                 ].join(' ')}
               >
-                <span className="w-5 h-5 rounded-full bg-primary-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                <span className="w-5 h-5 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
                   {userInitials}
                 </span>
                 <span className="text-gray-700 dark:text-gray-300 truncate">

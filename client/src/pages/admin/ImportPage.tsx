@@ -218,8 +218,8 @@ export default function ImportPage() {
                 step > s
                   ? 'bg-emerald-500 text-white'
                   : step === s
-                  ? 'bg-primary-500 text-white ring-4 ring-primary-100 dark:ring-primary-900/50'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                  ? 'bg-cyan-500 text-white ring-4 ring-cyan-100 dark:ring-cyan-900/50'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
               }`}
             >
               {step > s ? <CheckCircle className="w-4 h-4" /> : s}
@@ -227,8 +227,8 @@ export default function ImportPage() {
             <span
               className={`text-xs mt-1 font-medium hidden sm:block ${
                 step >= s
-                  ? 'text-gray-700 dark:text-gray-300'
-                  : 'text-gray-400 dark:text-gray-600'
+                  ? 'text-slate-700 dark:text-slate-300'
+                  : 'text-slate-400 dark:text-slate-600'
               }`}
             >
               {STEP_LABELS[s]}
@@ -237,7 +237,7 @@ export default function ImportPage() {
           {idx < 3 && (
             <div
               className={`h-0.5 w-12 sm:w-20 mx-1 mt-[-12px] sm:mt-[-18px] transition-colors ${
-                step > s ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-gray-700'
+                step > s ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'
               }`}
             />
           )}
@@ -253,8 +253,8 @@ export default function ImportPage() {
   const renderStep1 = () => (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Carica il file CSV</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <h2 className="text-base font-semibold text-slate-800 dark:text-white">Carica il file CSV</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           Il file deve avere una riga di intestazione. Dimensione massima: 5 MB.
         </p>
       </div>
@@ -267,8 +267,8 @@ export default function ImportPage() {
         onClick={() => fileInputRef.current?.click()}
         className={`relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
           isDragging
-            ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+            ? 'border-cyan-400 bg-cyan-50 dark:bg-cyan-900/10'
+            : 'border-slate-300 dark:border-slate-600 hover:border-cyan-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
         }`}
         role="button"
         aria-label="Trascina un file CSV o clicca per selezionarlo"
@@ -277,23 +277,23 @@ export default function ImportPage() {
       >
         {isLoading ? (
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-10 h-10 text-primary-500 animate-spin" />
-            <p className="text-sm text-gray-600 dark:text-gray-400">Analisi in corso...</p>
+            <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+            <p className="text-sm text-slate-600 dark:text-slate-400">Analisi in corso...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-full bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-              <Upload className="w-7 h-7 text-primary-500" />
+            <div className="w-14 h-14 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+              <Upload className="w-7 h-7 text-cyan-400" />
             </div>
             <div>
-              <p className="font-medium text-gray-700 dark:text-gray-300">
+              <p className="font-medium text-slate-700 dark:text-slate-300">
                 Trascina qui il file CSV
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                oppure <span className="text-primary-500 font-medium">clicca per selezionarlo</span>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                oppure <span className="text-cyan-600 dark:text-cyan-400 font-medium">clicca per selezionarlo</span>
               </p>
             </div>
-            <p className="text-xs text-gray-400">.csv, max 5 MB</p>
+            <p className="text-xs text-slate-400">.csv, max 5 MB</p>
           </div>
         )}
 
@@ -308,7 +308,7 @@ export default function ImportPage() {
       </div>
 
       {/* Download template */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         <FileText className="w-4 h-4 flex-shrink-0" />
         <span>
           Non hai un file?{' '}
@@ -326,7 +326,7 @@ export default function ImportPage() {
               link.click()
               window.URL.revokeObjectURL(url)
             }}
-            className="text-primary-500 hover:underline inline-flex items-center gap-1"
+            className="text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1"
           >
             <Download className="w-3.5 h-3.5" />
             scarica il template
@@ -350,9 +350,9 @@ export default function ImportPage() {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Mappa le colonne</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          File: <span className="font-medium text-gray-700 dark:text-gray-300">{fileName}</span>
+        <h2 className="text-base font-semibold text-slate-800 dark:text-white">Mappa le colonne</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          File: <span className="font-medium text-slate-700 dark:text-slate-300">{fileName}</span>
           {previewData && (
             <> &mdash; {previewData.totalRows} righe rilevate</>
           )}
@@ -362,36 +362,36 @@ export default function ImportPage() {
       {/* Preview table */}
       {previewData && previewData.preview.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Anteprima (prime {previewData.preview.length} righe)
           </h3>
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="overflow-x-auto rounded-lg border border-cyan-500/15 dark:border-cyan-500/10">
             <table className="text-xs min-w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+              <thead className="bg-slate-50 dark:bg-slate-800/60">
                 <tr>
                   {previewData.headers.map((h) => (
                     <th
                       key={h}
-                      className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap border-b border-gray-200 dark:border-gray-700"
+                      className="px-3 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap border-b border-cyan-500/10"
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              <tbody className="divide-y divide-cyan-500/5">
                 {previewData.preview.map((row, idx) => (
                   <tr
                     key={idx}
-                    className="bg-white dark:bg-gray-800/20 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                    className="bg-white dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40"
                   >
                     {previewData.headers.map((h) => (
                       <td
                         key={h}
-                        className="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap max-w-[160px] truncate"
+                        className="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-[160px] truncate"
                         title={row[h]}
                       >
-                        {row[h] || <span className="text-gray-300 dark:text-gray-600">&mdash;</span>}
+                        {row[h] || <span className="text-slate-300 dark:text-slate-600">&mdash;</span>}
                       </td>
                     ))}
                   </tr>
@@ -431,15 +431,15 @@ export default function ImportPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Impostazioni predefinite</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h2 className="text-base font-semibold text-slate-800 dark:text-white">Impostazioni predefinite</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Configura i valori di default per i campi non mappati o vuoti.
           </p>
         </div>
 
         {/* Summary of mappings */}
-        <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Riepilogo Mappature</h3>
+        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-lg p-4 space-y-2 border border-cyan-500/10">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Riepilogo Mappature</h3>
           <div className="space-y-1">
             {Object.entries(mappings)
               .filter(([, v]) => v !== 'ignore')
@@ -448,16 +448,16 @@ export default function ImportPage() {
                   TASK_FIELD_OPTIONS.find((o) => o.value === field)?.label ?? field
                 return (
                   <div key={header} className="flex items-center gap-2 text-sm">
-                    <span className="font-mono bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs">
+                    <span className="font-mono bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-xs">
                       {header}
                     </span>
-                    <span className="text-gray-400">&rarr;</span>
-                    <span className="text-gray-700 dark:text-gray-300">{fieldLabel}</span>
+                    <span className="text-slate-400">&rarr;</span>
+                    <span className="text-slate-700 dark:text-slate-300">{fieldLabel}</span>
                   </div>
                 )
               })}
             {Object.values(mappings).every((v) => v === 'ignore') && (
-              <p className="text-sm text-gray-400">Nessun campo mappato.</p>
+              <p className="text-sm text-slate-400">Nessun campo mappato.</p>
             )}
           </div>
         </div>
@@ -465,11 +465,11 @@ export default function ImportPage() {
         {/* Default project */}
         {!projectMapped && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">
               Progetto Predefinito
-              <span className="ml-1 text-gray-400 font-normal">(opzionale)</span>
+              <span className="ml-1 text-slate-400 font-normal">(opzionale)</span>
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
               Se non hai mappato la colonna "Codice Progetto", puoi assegnare tutti i task importati
               a un progetto.
             </p>
@@ -543,10 +543,10 @@ export default function ImportPage() {
             </div>
           )}
 
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
             {importResult.imported > 0 ? 'Importazione completata' : 'Nessun task importato'}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
             {importResult.imported} task importat{importResult.imported === 1 ? 'o' : 'i'}{' '}
             con successo
             {hasErrors ? `, ${importResult.errors.length} error${importResult.errors.length === 1 ? 'e' : 'i'}` : ''}
@@ -556,16 +556,16 @@ export default function ImportPage() {
         {/* Stats cards */}
         <div className="grid grid-cols-2 gap-4">
           <div className="card p-4 text-center">
-            <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+            <p className="text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
               {importResult.imported}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Importati</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Importati</p>
           </div>
           <div className={`card p-4 text-center ${hasErrors ? 'border-red-200 dark:border-red-700/50' : ''}`}>
-            <p className={`text-3xl font-bold ${hasErrors ? 'text-red-600 dark:text-red-400' : 'text-gray-400'}`}>
+            <p className={`text-3xl font-bold ${hasErrors ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}>
               {importResult.errors.length}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Errori</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Errori</p>
           </div>
         </div>
 
@@ -623,7 +623,7 @@ export default function ImportPage() {
     if (step === 4) return null
 
     return (
-      <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
+      <div className="flex items-center justify-between pt-6 border-t border-cyan-500/15 mt-6">
         <button
           type="button"
           onClick={() => setStep((s) => Math.max(1, s - 1) as WizardStep)}
@@ -680,10 +680,10 @@ export default function ImportPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="page-title">
           Importa Task da CSV
         </h1>
-        <p className="mt-1 text-gray-600 dark:text-gray-400">
+        <p className="mt-1 page-subtitle">
           Importa task in massa utilizzando un file CSV con mappatura personalizzata delle colonne.
         </p>
       </div>

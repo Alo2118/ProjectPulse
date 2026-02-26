@@ -1,6 +1,9 @@
+import { useState, useCallback } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@stores/authStore'
 import { useDashboardStore } from '@stores/dashboardStore'
+import { useNotificationStore } from '@stores/notificationStore'
+import { useSearchStore } from '@stores/searchStore'
 import {
   LayoutDashboard,
   FolderKanban,
@@ -8,10 +11,8 @@ import {
   Clock,
   AlertTriangle,
   FileText,
-  Users,
   BarChart3,
   MessageSquarePlus,
-  GanttChartSquare,
   CalendarDays,
   ClipboardList,
   Shield,
@@ -22,11 +23,13 @@ import {
   GitBranch,
   Zap,
   BrainCircuit,
-  LayoutGrid,
   UserCog,
   Bell,
   Sun,
   X,
+  ChevronRight,
+  Search,
+  LogOut,
 } from 'lucide-react'
 
 interface NavItem {
@@ -37,33 +40,30 @@ interface NavItem {
 }
 
 interface NavGroup {
+  key: string
   label: string
+  collapsible: boolean
   items: NavItem[]
 }
 
 const navigationGroups: NavGroup[] = [
   {
+    key: 'primary',
     label: '',
+    collapsible: false,
     items: [
       { name: 'La Mia Giornata', href: '/my-day', icon: Sun, roles: ['admin', 'direzione', 'dipendente'] },
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
       { name: 'Progetti', href: '/projects', icon: FolderKanban, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
       { name: 'Task', href: '/tasks', icon: CheckSquare, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
-      { name: 'Kanban', href: '/kanban', icon: LayoutGrid, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
-      { name: 'Gantt', href: '/gantt', icon: GanttChartSquare, roles: ['admin', 'direzione', 'dipendente'] },
       { name: 'Calendario', href: '/calendar', icon: CalendarDays, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
-      { name: 'Notifiche', href: '/notifications', icon: Bell, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
+      { name: 'Tempo', href: '/time-tracking', icon: Clock, roles: ['admin', 'direzione', 'dipendente'] },
     ],
   },
   {
-    label: 'Tempo',
-    items: [
-      { name: 'Registra Tempo', href: '/time-tracking', icon: Clock, roles: ['admin', 'dipendente'] },
-      { name: 'Tempo Team', href: '/team-time', icon: Users, roles: ['admin', 'direzione'] },
-    ],
-  },
-  {
+    key: 'gestione',
     label: 'Gestione',
+    collapsible: true,
     items: [
       { name: 'Segnalazioni', href: '/inputs', icon: MessageSquarePlus, roles: ['admin', 'direzione', 'dipendente'] },
       { name: 'Rischi', href: '/risks', icon: AlertTriangle, roles: ['admin', 'direzione'] },
@@ -71,7 +71,9 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
+    key: 'analisi',
     label: 'Analisi',
+    collapsible: true,
     items: [
       { name: 'Pianificazione', href: '/planning', icon: BrainCircuit, roles: ['admin', 'direzione'] },
       { name: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['admin', 'direzione'] },
@@ -79,7 +81,9 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
+    key: 'admin',
     label: 'Amministrazione',
+    collapsible: true,
     items: [
       { name: 'Utenti', href: '/users', icon: UserCog, roles: ['admin'] },
       { name: 'Reparti', href: '/admin/departments', icon: Building2, roles: ['admin'] },
@@ -94,18 +98,42 @@ const navigationGroups: NavGroup[] = [
 ]
 
 export default function Sidebar() {
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const userRole = user?.role || 'dipendente'
   const { mobileSidebarOpen, setMobileSidebarOpen } = useDashboardStore()
+  const unreadCount = useNotificationStore((s) => s.unreadCount)
+  const openSearch = useSearchStore((s) => s.open)
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sidebar-collapsed') || '{}')
+    } catch {
+      return {}
+    }
+  })
+
+  const toggleGroup = useCallback((group: string) => {
+    setCollapsedGroups((prev) => {
+      const next = { ...prev, [group]: !prev[group] }
+      localStorage.setItem('sidebar-collapsed', JSON.stringify(next))
+      return next
+    })
+  }, [])
 
   const closeMobile = () => setMobileSidebarOpen(false)
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+    closeMobile()
+  }
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200/30 dark:border-white/5">
-        <span className="text-xl font-bold text-gradient">ProjectPulse</span>
+      <div className="flex items-center justify-between h-14 px-5 border-b sidebar-border">
+        <span className="sidebar-logo">ProjectPulse</span>
         <button
           onClick={closeMobile}
           className="lg:hidden btn-icon"
@@ -115,73 +143,118 @@ export default function Sidebar() {
         </button>
       </div>
 
+      {/* Search */}
+      <div className="px-3 py-3">
+        <button
+          onClick={() => { openSearch(); closeMobile() }}
+          className="sidebar-search"
+        >
+          <Search className="w-4 h-4" />
+          <span className="text-xs">Cerca...</span>
+          <kbd className="ml-auto hidden sm:inline-flex text-[10px] text-slate-600 border border-slate-700 rounded px-1 py-0.5">
+            Ctrl K
+          </kbd>
+        </button>
+      </div>
+
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+      <nav className="flex-1 px-3 overflow-y-auto scrollbar-hide">
         {navigationGroups.map((group) => {
           const visibleItems = group.items.filter((item) =>
             item.roles.includes(userRole)
           )
           if (visibleItems.length === 0) return null
 
+          const isCollapsed = group.collapsible && collapsedGroups[group.key]
+
           return (
-            <div key={group.label || '__primary__'}>
-              {group.label && (
-                <p className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider px-3 pt-4 pb-1">
-                  {group.label}
-                </p>
+            <div key={group.key} className="mb-1">
+              {group.collapsible && group.label && (
+                <button
+                  onClick={() => toggleGroup(group.key)}
+                  className="flex items-center justify-between w-full px-3 pt-4 pb-1 group"
+                >
+                  <span className="nav-group-label">
+                    {group.label}
+                  </span>
+                  <ChevronRight
+                    className={`nav-group-chevron group-hover:text-slate-400 ${
+                      !isCollapsed ? 'rotate-90' : ''
+                    }`}
+                  />
+                </button>
               )}
-              <div className="space-y-1">
-                {visibleItems.map((item) => (
-                  <NavLink
-                    key={item.name}
-                    to={item.href}
-                    onClick={closeMobile}
-                    className={({ isActive }) =>
-                      `relative flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
-                        isActive
-                          ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
-                          : 'text-gray-600 hover:bg-gray-100/60 dark:text-gray-400 dark:hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 bg-primary-500 rounded-full" />
-                        )}
-                        <item.icon className="w-5 h-5 mr-3" />
-                        {item.name}
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
+              {!isCollapsed && (
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => (
+                    <NavLink
+                      key={item.name}
+                      to={item.href}
+                      onClick={closeMobile}
+                      className={({ isActive }) =>
+                        `nav-item ${isActive ? 'nav-item-active' : ''}`
+                      }
+                    >
+                      <item.icon className="w-4.5 h-4.5 mr-3 flex-shrink-0" />
+                      <span className="truncate">{item.name}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}
       </nav>
 
-      {/* User info */}
-      <div className="p-4 border-t border-gray-200/30 dark:border-white/5">
-        <button
-          onClick={() => { navigate('/profile'); closeMobile() }}
-          className="flex items-center w-full rounded-lg p-1 -m-1 hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
-          title="Modifica profilo"
+      {/* Bottom section */}
+      <div className="px-3 py-2 border-t sidebar-border space-y-0.5">
+        {/* Notifications */}
+        <NavLink
+          to="/notifications"
+          onClick={closeMobile}
+          className={({ isActive }) =>
+            `nav-item ${isActive ? 'nav-item-active' : ''}`
+          }
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center ring-2 ring-primary-500/20">
-            <span className="text-sm font-medium text-white">
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+          <Bell className="w-4.5 h-4.5 mr-3 flex-shrink-0" />
+          <span>Notifiche</span>
+          {unreadCount > 0 && (
+            <span className="notification-badge">
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
-          </div>
-          <div className="ml-3 text-left">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {user?.firstName} {user?.lastName}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-              {user?.role}
-            </p>
-          </div>
-        </button>
+          )}
+        </NavLink>
+
+        {/* User info */}
+        <div className="flex items-center gap-2 mt-2 px-2 py-2">
+          <button
+            onClick={() => { navigate('/profile'); closeMobile() }}
+            className="flex items-center gap-3 flex-1 min-w-0 rounded-lg p-1 -m-1 hover:bg-cyan-500/5 transition-colors"
+            title="Modifica profilo"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center ring-2 ring-cyan-500/20 flex-shrink-0">
+              <span className="text-xs font-medium text-white">
+                {user?.firstName?.[0]}{user?.lastName?.[0]}
+              </span>
+            </div>
+            <div className="text-left min-w-0">
+              <p className="text-sm font-medium text-slate-200 truncate">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-slate-500 capitalize">
+                {user?.role}
+              </p>
+            </div>
+          </button>
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 flex-shrink-0"
+            aria-label="Esci"
+            title="Esci"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -189,7 +262,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white/70 dark:bg-surface-900/90 backdrop-blur-xl border-r border-white/20 dark:border-white/5 hidden lg:block">
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 sidebar hidden lg:block">
         {sidebarContent}
       </aside>
 
@@ -197,10 +270,10 @@ export default function Sidebar() {
       {mobileSidebarOpen && (
         <>
           <div
-            className="fixed inset-0 z-50 bg-black/50 lg:hidden"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
             onClick={closeMobile}
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-surface-900 backdrop-blur-xl border-r border-white/20 dark:border-white/5 lg:hidden">
+          <aside className="fixed inset-y-0 left-0 z-50 w-64 sidebar lg:hidden">
             {sidebarContent}
           </aside>
         </>

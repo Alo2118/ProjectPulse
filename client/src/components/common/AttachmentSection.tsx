@@ -226,8 +226,8 @@ export function AttachmentSection({
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-        <Paperclip className="w-5 h-5 mr-2" />
+      <h2 className="section-heading mb-4 flex items-center gap-2">
+        <Paperclip className="w-4 h-4 text-cyan-500/70" />
         {title} ({attachments.length})
       </h2>
 
@@ -236,11 +236,11 @@ export function AttachmentSection({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-colors
+        className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-150
           ${
             isDragging
-              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-              : 'border-gray-300 dark:border-gray-600 hover:border-primary-400'
+              ? 'border-cyan-500/60 bg-cyan-500/10 dark:bg-cyan-500/10'
+              : 'border-slate-600/50 dark:border-slate-600/50 hover:border-cyan-500/40 dark:hover:border-cyan-500/40'
           }`}
       >
         <input
@@ -252,22 +252,22 @@ export function AttachmentSection({
         />
         {isUploading ? (
           <div className="flex flex-col items-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary-500 mb-2" />
-            <p className="text-sm text-gray-600 dark:text-gray-400">Caricamento in corso...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-cyan-500 mb-2" />
+            <p className="text-sm text-slate-400 dark:text-slate-400">Caricamento in corso...</p>
           </div>
         ) : (
           <>
-            <Upload className="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" />
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Upload className="w-8 h-8 mx-auto text-slate-500 dark:text-slate-500 mb-2" />
+            <p className="text-sm text-slate-400 dark:text-slate-400 mb-2">
               Trascina un file qui o{' '}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="text-primary-600 dark:text-primary-400 hover:underline"
+                className="text-cyan-400 dark:text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
               >
                 sfoglia
               </button>
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
+            <p className="text-xs text-slate-500 dark:text-slate-500">
               PDF, DOCX, XLSX, PNG, JPEG, TXT, CSV, ZIP - Max 10MB
             </p>
           </>
@@ -280,7 +280,7 @@ export function AttachmentSection({
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
       ) : attachments.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-8 text-slate-500 dark:text-slate-500">
           Nessun allegato ancora
         </div>
       ) : (
@@ -288,14 +288,14 @@ export function AttachmentSection({
           {attachments.map((attachment) => (
             <div
               key={attachment.id}
-              className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+              className="flex items-center gap-3 p-3 bg-slate-800/30 dark:bg-slate-800/30 rounded-lg border border-cyan-500/10 dark:border-cyan-500/10 hover:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:border-cyan-500/20 transition-all duration-150 group"
             >
               {getFileIcon(attachment.mimeType)}
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 dark:text-white truncate">
+                <p className="font-medium text-slate-200 dark:text-slate-200 truncate text-sm">
                   {attachment.fileName}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                   {formatFileSize(attachment.fileSize)} •{' '}
                   {attachment.uploadedBy?.firstName} {attachment.uploadedBy?.lastName} •{' '}
                   {formatDateTime(attachment.createdAt)}
@@ -304,7 +304,7 @@ export function AttachmentSection({
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleDownload(attachment)}
-                  className="p-1.5 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 rounded"
+                  className="btn-icon p-1.5"
                   title="Scarica"
                 >
                   <Download className="w-4 h-4" />
@@ -312,7 +312,7 @@ export function AttachmentSection({
                 {canConvertToDocument && (
                   <button
                     onClick={() => openConvertModal(attachment)}
-                    className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 rounded"
+                    className="btn-icon p-1.5"
                     title="Registra Documento"
                   >
                     <FileUp className="w-4 h-4" />
@@ -322,7 +322,7 @@ export function AttachmentSection({
                   currentUser?.role === 'admin') && (
                   <button
                     onClick={() => handleDeleteAttachment(attachment.id)}
-                    className="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded"
+                    className="p-1.5 text-slate-500 hover:text-red-400 dark:text-slate-500 dark:hover:text-red-400 rounded transition-colors"
                     title="Elimina"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -342,32 +342,32 @@ export function AttachmentSection({
               className="fixed inset-0 bg-black/50 transition-opacity"
               onClick={closeConvertModal}
             />
-            <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-xl">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <FileUp className="w-5 h-5 text-blue-500" />
+            <div className="modal-panel relative w-full max-w-md">
+              <div className="flex items-center justify-between p-4 border-b border-cyan-500/15 dark:border-cyan-500/15">
+                <h3 className="text-base font-semibold text-slate-100 dark:text-slate-100 flex items-center gap-2">
+                  <FileUp className="w-4 h-4 text-cyan-400" />
                   Registra Documento
                 </h3>
                 <button
                   onClick={closeConvertModal}
-                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+                  className="btn-icon p-1"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="p-4 space-y-4">
-                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    File: <span className="font-medium text-gray-900 dark:text-white">{convertingAttachment.fileName}</span>
+                <div className="p-3 bg-slate-800/40 dark:bg-slate-800/40 rounded-lg border border-cyan-500/10">
+                  <p className="text-sm text-slate-400 dark:text-slate-400">
+                    File: <span className="font-medium text-slate-200 dark:text-slate-200">{convertingAttachment.fileName}</span>
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
                     {formatFileSize(convertingAttachment.fileSize)}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="form-section-header block mb-1">
                     Titolo Documento *
                   </label>
                   <input
@@ -380,7 +380,7 @@ export function AttachmentSection({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="form-section-header block mb-1">
                     Tipo Documento
                   </label>
                   <select
@@ -397,7 +397,7 @@ export function AttachmentSection({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="form-section-header block mb-1">
                     Descrizione (opzionale)
                   </label>
                   <textarea
@@ -410,7 +410,7 @@ export function AttachmentSection({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-end gap-3 p-4 border-t border-cyan-500/15 dark:border-cyan-500/15">
                 <button
                   onClick={closeConvertModal}
                   className="btn-secondary"
@@ -421,7 +421,7 @@ export function AttachmentSection({
                 <button
                   onClick={handleConvertToDocument}
                   disabled={!convertForm.title.trim() || isConverting}
-                  className="btn-primary flex items-center disabled:opacity-50"
+                  className="btn-primary"
                 >
                   {isConverting ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

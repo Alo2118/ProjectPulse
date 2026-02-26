@@ -81,18 +81,18 @@ export default function ProfilePage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center ring-2 ring-primary-500/20">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center ring-2 ring-cyan-500/20">
           <span className="text-lg font-semibold text-white">
             {user?.firstName?.[0]}{user?.lastName?.[0]}
           </span>
         </div>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
             Il mio profilo
           </h1>
           <div className="flex items-center gap-2 mt-0.5">
-            <Shield className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <Shield className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               {roleLabel}
             </span>
           </div>
@@ -110,7 +110,7 @@ export default function ProfilePage() {
       <form onSubmit={handleSubmit} className="card p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Nome *
             </label>
             <input
@@ -125,7 +125,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Cognome *
             </label>
             <input
@@ -141,7 +141,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Email *
           </label>
           <input
@@ -154,7 +154,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Nuova password
           </label>
           <div className="relative">
@@ -168,7 +168,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -178,10 +178,10 @@ export default function ProfilePage() {
 
         {/* Role info - read only */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Ruolo
           </label>
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-surface-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 dark:text-slate-400">
             <User className="w-4 h-4" />
             <span>{roleLabel}</span>
             <span className="text-xs ml-auto">(non modificabile)</span>
@@ -189,7 +189,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
           <button type="submit" disabled={isSaving || isLoading} className="btn-primary flex items-center">
             {isSaving ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

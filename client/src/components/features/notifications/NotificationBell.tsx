@@ -88,7 +88,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100/60 dark:text-gray-400 dark:hover:bg-white/5 transition-all duration-150 relative"
+        className="p-2 rounded-lg text-slate-500 hover:bg-slate-100/60 dark:text-slate-400 dark:hover:bg-white/5 transition-all duration-150 relative"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
@@ -99,18 +99,18 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-surface-800 rounded-xl shadow-xl border border-gray-200 dark:border-surface-700 z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-surface-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifiche</h3>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Notifiche</h3>
             <div className="flex items-center gap-1.5">
               {/* Sound toggle */}
               <button
                 onClick={() => setSoundEnabled(!soundEnabled)}
                 className={`flex items-center gap-1 text-xs rounded-md px-2 py-1 transition-colors ${
                   soundEnabled
-                    ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                    ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/30'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
                 }`}
                 title={soundEnabled ? 'Disattiva suono' : 'Attiva suono'}
               >
@@ -127,8 +127,8 @@ export default function NotificationBell() {
                   onClick={handleDesktopToggle}
                   className={`flex items-center gap-1 text-xs rounded-md px-2 py-1 transition-colors ${
                     desktopEnabled && permission === 'granted'
-                      ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                      ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/30'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
                   }`}
                   title={desktopEnabled && permission === 'granted' ? 'Disattiva notifiche PC' : 'Attiva notifiche PC'}
                 >
@@ -153,11 +153,11 @@ export default function NotificationBell() {
           </div>
 
           {/* List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-surface-700">
+          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
             {isLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">Caricamento...</div>
+              <div className="px-4 py-8 text-center text-sm text-slate-500">Caricamento...</div>
             ) : notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+              <div className="px-4 py-8 text-center text-sm text-slate-500 dark:text-gray-400">
                 Nessuna notifica
               </div>
             ) : (
@@ -174,13 +174,13 @@ export default function NotificationBell() {
           </div>
 
           {/* Footer: link to notification center */}
-          <div className="border-t border-gray-100 dark:border-surface-700">
+          <div className="border-t border-slate-100 dark:border-slate-700">
             <button
               onClick={() => {
                 navigate('/notifications')
                 setIsOpen(false)
               }}
-              className="w-full px-4 py-2.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 dark:hover:bg-surface-700 transition-colors text-center"
+              className="w-full px-4 py-2.5 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-center"
             >
               Vedi tutte le notifiche
             </button>

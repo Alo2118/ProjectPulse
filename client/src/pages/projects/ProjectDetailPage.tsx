@@ -1,5 +1,5 @@
 /**
- * Project Detail Page - Compact layout with reusable components
+ * Project Detail Page - 2-column layout, no tabs
  * @module pages/projects/ProjectDetailPage
  */
 
@@ -27,16 +27,14 @@ import {
   Paperclip,
   History,
   Zap,
+  BarChart2,
+  FolderKanban,
 } from 'lucide-react'
 import { Note, Attachment } from '@/types'
 import { NoteSection } from '@/components/common/NoteSection'
 import { AttachmentSection } from '@/components/common/AttachmentSection'
-import { DetailPageHeader } from '@/components/common/DetailPageHeader'
-import { InfoCard } from '@/components/common/InfoCard'
-import { MetaRow } from '@/components/common/MetaRow'
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
-import { TabSection } from '@/components/common/TabSection'
-import { QuickLinksGrid } from '@/components/common/QuickLinksGrid'
+import { DetailPageHeader } from '@/components/common/DetailPageHeader'
 import { Breadcrumb } from '@/components/common/Breadcrumb'
 import { TaskTreeView } from '@/components/reports/TaskTreeView'
 import { ProjectMembersSection } from '@/components/projects/ProjectMembersSection'
@@ -118,7 +116,6 @@ export default function ProjectDetailPage() {
     setAttachments((prev) => prev.filter((a) => a.id !== attachmentId))
   }, [])
 
-
   const canEdit = user?.role === 'admin' || user?.role === 'direzione' || currentProject?.ownerId === user?.id
   const showInternalToggle = user?.role === 'admin' || user?.role === 'direzione'
 
@@ -145,7 +142,7 @@ export default function ProjectDetailPage() {
   if (isLoading && !currentProject) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -153,11 +150,11 @@ export default function ProjectDetailPage() {
   if (!currentProject) {
     return (
       <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
           Progetto non trovato
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-slate-500 dark:text-slate-400 mb-4">
           Il progetto richiesto non esiste o è stato eliminato.
         </p>
         <button onClick={() => navigate('/projects')} className="btn-primary">
@@ -182,7 +179,7 @@ export default function ProjectDetailPage() {
         {canEdit && (
           <button
             onClick={() => navigate(`/projects/${id}/edit`)}
-            className="flex items-center px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="flex items-center px-3 py-2 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
           >
             <Edit2 className="w-4 h-4 mr-1.5" />
             Modifica
@@ -190,254 +187,373 @@ export default function ProjectDetailPage() {
         )}
       </DetailPageHeader>
 
-      {/* Main Info Card */}
-      <InfoCard>
-        {/* Title + Status + Priority */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {currentProject.name}
-          </h2>
-          <StatusIcon type="projectStatus" value={currentProject.status} size="md" showLabel />
-          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-            {PROJECT_PRIORITY_LABELS[currentProject.priority]}
-          </span>
-        </div>
+      {/* ── Two-column grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Meta row: Owner, Start Date, Deadline */}
-        <MetaRow
-          className="mt-3"
-          items={[
-            currentProject.owner && {
-              icon: User,
-              value: `${currentProject.owner.firstName} ${currentProject.owner.lastName}`,
-            },
-            currentProject.startDate ? {
-              icon: Calendar,
-              value: formatDateShort(currentProject.startDate),
-            } : null,
-            currentProject.targetEndDate ? {
-              icon: Clock,
-              value: `Scade ${formatDateRelative(currentProject.targetEndDate)}`,
-              className: isOverdue ? 'text-red-500 font-medium' : isDueSoon ? 'text-amber-500' : '',
-            } : null,
-          ]}
-        />
+        {/* ════════════════ LEFT COLUMN ════════════════ */}
+        <div className="lg:col-span-2 space-y-6">
 
-        {/* Progress bar */}
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <ProgressBar value={progressPercentage} size="md" showLabel />
+          {/* ── Project name + description ── */}
+          <div className="card p-5 animate-section-reveal">
+            <div className="flex items-start gap-3 flex-wrap">
+              <h2 className="page-title flex-1">
+                {currentProject.name}
+              </h2>
+              <StatusIcon type="projectStatus" value={currentProject.status} size="md" showLabel />
+              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                {PROJECT_PRIORITY_LABELS[currentProject.priority]}
+              </span>
             </div>
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-gray-500 dark:text-gray-400">
+
+            {currentProject.description && (
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+                <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">
+                  {currentProject.description}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Progress summary ── */}
+          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '50ms' }}>
+            <div className="hud-panel-header mb-4">
+              <span>Avanzamento</span>
+            </div>
+
+            <div className="flex items-center gap-4 mb-3">
+              <div className="flex-1">
+                <ProgressBar value={progressPercentage} size="md" showLabel />
+              </div>
+              <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 {completedTasks}/{totalTasks} task
               </span>
+            </div>
+
+            <div className="flex items-center gap-4 flex-wrap text-sm">
               {inProgressCount > 0 && (
-                <span className="text-blue-600 dark:text-blue-400">
+                <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
                   {inProgressCount} in corso
                 </span>
               )}
               {blockedCount > 0 && (
-                <span className="text-red-600 dark:text-red-400">
+                <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
                   {blockedCount} bloccati
                 </span>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* Hours summary */}
-        {(totalHoursLogged > 0 || estimatedHours > 0) && (
-          <div className="mt-3 flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-              <Clock className="w-4 h-4" />
-              <span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {Math.round(totalHoursLogged * 10) / 10}h
+              {completedTasks > 0 && (
+                <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  {completedTasks} completati
                 </span>
-                {estimatedHours > 0 && (
-                  <span> / {Math.round(estimatedHours * 10) / 10}h stimate</span>
-                )}
-              </span>
+              )}
             </div>
-            {estimatedHours > 0 && (
-              <div className="flex-1 max-w-32">
-                <ProgressBar
-                  value={Math.min(100, Math.round((totalHoursLogged / estimatedHours) * 100))}
-                  size="sm"
-                  color={totalHoursLogged > estimatedHours ? 'red' : undefined}
-                />
+
+            {/* Hours summary */}
+            {(totalHoursLogged > 0 || estimatedHours > 0) && (
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                  <Clock className="w-4 h-4" />
+                  <span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {Math.round(totalHoursLogged * 10) / 10}h
+                    </span>
+                    {estimatedHours > 0 && (
+                      <span> / {Math.round(estimatedHours * 10) / 10}h stimate</span>
+                    )}
+                  </span>
+                </div>
+                {estimatedHours > 0 && (
+                  <div className="flex-1 max-w-32">
+                    <ProgressBar
+                      value={Math.min(100, Math.round((totalHoursLogged / estimatedHours) * 100))}
+                      size="sm"
+                      color={totalHoursLogged > estimatedHours ? 'red' : undefined}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
 
-        {/* Description (collapsible) */}
-        {currentProject.description && (
-          <CollapsibleSection
-            title="Descrizione"
-            icon={FileText}
-            isEmpty={!currentProject.description}
-            emptyMessage="Nessuna descrizione"
-          >
-            <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap text-sm">
-              {currentProject.description}
-            </p>
-          </CollapsibleSection>
-        )}
-      </InfoCard>
+          {/* ── Task Tree ── */}
+          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '100ms' }}>
+            <div className="hud-panel-header mb-4">
+              <span>Task</span>
+              {totalTasks > 0 && (
+                <span className="text-xs text-cyan-400 font-mono ml-1">({totalTasks})</span>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 mb-3">
+              <Link
+                to={`/tasks?projectId=${id}`}
+                className="text-sm text-slate-500 hover:text-cyan-400 dark:hover:text-cyan-400 flex items-center gap-1 transition-colors"
+              >
+                Vedi tutti
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+              {canEdit && (
+                <button
+                  onClick={() => navigate(`/tasks/new?projectId=${id}`)}
+                  className="flex items-center px-3 py-1.5 text-sm bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Nuovo
+                </button>
+              )}
+            </div>
+            <TaskTreeView
+              projectId={id}
+              skipProjectLevel
+              mode="compact"
+              showSummary={false}
+              showControls={false}
+              showFilters={false}
+              canTrackTime={canTrackTime}
+              onTimerToggle={handleTimerToggle}
+              runningTimerId={runningTimerTaskId}
+            />
+          </div>
 
-      {/* Budget & Hours Card */}
-      <BudgetCard
-        budget={currentProject.budget !== null ? parseFloat(currentProject.budget) : null}
-        totalHoursLogged={totalHoursLogged}
-        estimatedHours={estimatedHours}
-      />
-
-      {/* Tabs: Tasks / Notes / Attachments */}
-      <TabSection
-        defaultTab="tasks"
-        tabs={[
-          {
-            id: 'tasks',
-            label: 'Task',
-            icon: CheckSquare,
-            count: totalTasks,
-            content: (
-              <div>
-                <div className="flex items-center justify-end gap-2 mb-3">
-                  <Link
-                    to={`/tasks?projectId=${id}`}
-                    className="text-sm text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 flex items-center gap-1"
-                  >
-                    Vedi tutti
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                  {canEdit && (
-                    <button
-                      onClick={() => navigate(`/tasks/new?projectId=${id}`)}
-                      className="flex items-center px-3 py-1.5 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Nuovo
-                    </button>
-                  )}
-                </div>
-                <TaskTreeView
-                  projectId={id}
-                  skipProjectLevel
-                  mode="compact"
-                  showSummary={false}
-                  showControls={false}
-                  showFilters={false}
-                  canTrackTime={canTrackTime}
-                  onTimerToggle={handleTimerToggle}
-                  runningTimerId={runningTimerTaskId}
-                />
-              </div>
-            ),
-          },
-          {
-            id: 'notes',
-            label: 'Note',
-            icon: StickyNote,
-            count: notes.length,
-            content: (
-              <NoteSection
-                entityType="project"
-                entityId={id!}
-                notes={notes}
-                currentUser={user}
-                isLoading={notesLoading}
-                onNoteAdded={handleNoteAdded}
-                onNoteDeleted={handleNoteDeleted}
-                showInternalToggle={showInternalToggle}
-              />
-            ),
-          },
-          {
-            id: 'attachments',
-            label: 'Allegati',
-            icon: Paperclip,
-            count: attachments.length,
-            content: (
-              <AttachmentSection
-                entityType="project"
-                entityId={id!}
-                attachments={attachments}
-                currentUser={user}
-                isLoading={attachmentsLoading}
-                onAttachmentAdded={handleAttachmentAdded}
-                onAttachmentDeleted={handleAttachmentDeleted}
-              />
-            ),
-          },
-          {
-            id: 'members',
-            label: 'Membri',
-            icon: Users,
-            content: (
+          {/* ── Members ── */}
+          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '150ms' }}>
+            <CollapsibleSection
+              title="Membri del progetto"
+              icon={Users}
+              defaultExpanded={true}
+              borderTop={false}
+            >
               <ProjectMembersSection projectId={id!} />
-            ),
-          },
-          {
-            id: 'automations',
-            label: 'Automazioni',
-            icon: Zap,
-            content: (
-              <QuickAutomationsPanel projectId={id!} />
-            ),
-          },
-          {
-            id: 'activity',
-            label: 'Attivita\'',
-            icon: History,
-            content: (
-              <ActivityFeed entityType="project" entityId={id!} projectId={id!} />
-            ),
-          },
-        ]}
-      />
+            </CollapsibleSection>
+          </div>
 
-      {/* Quick Links */}
-      <QuickLinksGrid
-        columns={4}
-        links={[
-          {
-            to: `/risks?projectId=${id}`,
-            icon: AlertTriangle,
-            iconBgClass: 'bg-amber-100 dark:bg-amber-900/30',
-            iconColorClass: 'text-amber-600 dark:text-amber-400',
-            title: 'Rischi',
-            subtitle: 'Gestisci rischi',
-          },
-          {
-            to: `/documents?projectId=${id}`,
-            icon: FileText,
-            iconBgClass: 'bg-blue-100 dark:bg-blue-900/30',
-            iconColorClass: 'text-blue-600 dark:text-blue-400',
-            title: 'Documenti',
-            subtitle: 'File e allegati',
-          },
-          {
-            to: `/time-entries?projectId=${id}`,
-            icon: Clock,
-            iconBgClass: 'bg-green-100 dark:bg-green-900/30',
-            iconColorClass: 'text-green-600 dark:text-green-400',
-            title: 'Tempo',
-            subtitle: 'Registrazione ore',
-          },
-          {
-            to: `/users?projectId=${id}`,
-            icon: Users,
-            iconBgClass: 'bg-purple-100 dark:bg-purple-900/30',
-            iconColorClass: 'text-purple-600 dark:text-purple-400',
-            title: 'Team',
-            subtitle: 'Membri',
-          },
-        ]}
-      />
+          {/* ── Automations ── */}
+          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '175ms' }}>
+            <CollapsibleSection
+              title="Automazioni"
+              icon={Zap}
+              defaultExpanded={false}
+              borderTop={false}
+            >
+              <QuickAutomationsPanel projectId={id!} />
+            </CollapsibleSection>
+          </div>
+
+          {/* ── Activity ── */}
+          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '200ms' }}>
+            <CollapsibleSection
+              title="Attivita'"
+              icon={History}
+              defaultExpanded={false}
+              borderTop={false}
+            >
+              <ActivityFeed entityType="project" entityId={id!} projectId={id!} />
+            </CollapsibleSection>
+          </div>
+        </div>
+
+        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-20 space-y-4">
+
+            {/* ── Metadata card ── */}
+            <div className="card p-5 space-y-0 animate-section-reveal">
+              <div className="hud-panel-header mb-2">
+                <span>Informazioni</span>
+              </div>
+
+              {/* Stato */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  Stato
+                </span>
+                <span className="meta-row-value">
+                  <StatusIcon type="projectStatus" value={currentProject.status} size="sm" showLabel />
+                </span>
+              </div>
+
+              {/* Priorita */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Priorita
+                </span>
+                <span className="meta-row-value">
+                  {PROJECT_PRIORITY_LABELS[currentProject.priority]}
+                </span>
+              </div>
+
+              {/* Owner */}
+              {currentProject.owner && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    Owner
+                  </span>
+                  <span className="meta-row-value">
+                    {currentProject.owner.firstName} {currentProject.owner.lastName}
+                  </span>
+                </div>
+              )}
+
+              {/* Data inizio */}
+              {currentProject.startDate && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Inizio
+                  </span>
+                  <span className="meta-row-value">
+                    {formatDateShort(currentProject.startDate)}
+                  </span>
+                </div>
+              )}
+
+              {/* Data fine */}
+              {currentProject.targetEndDate && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Scadenza
+                  </span>
+                  <span className={`meta-row-value ${
+                    isOverdue
+                      ? 'text-red-500 dark:text-red-400'
+                      : isDueSoon
+                        ? 'text-amber-500 dark:text-amber-400'
+                        : ''
+                  }`}>
+                    {formatDateRelative(currentProject.targetEndDate)}
+                    {isOverdue && <AlertCircle className="w-3 h-3 inline ml-1" />}
+                  </span>
+                </div>
+              )}
+
+              {/* Task count */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  Task totali
+                </span>
+                <span className="meta-row-value">{totalTasks}</span>
+              </div>
+
+              {/* Hours */}
+              {(totalHoursLogged > 0 || estimatedHours > 0) && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    Ore
+                  </span>
+                  <span className="meta-row-value">
+                    {Math.round(totalHoursLogged * 10) / 10}h
+                    {estimatedHours > 0 && (
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-normal ml-1">
+                        / {Math.round(estimatedHours * 10) / 10}h
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ── Budget card ── */}
+            <BudgetCard
+              budget={currentProject.budget !== null ? parseFloat(currentProject.budget) : null}
+              totalHoursLogged={totalHoursLogged}
+              estimatedHours={estimatedHours}
+            />
+
+            {/* ── Notes (collapsible) ── */}
+            <div className="card p-5">
+              <CollapsibleSection
+                title={`Note${notes.length > 0 ? ` (${notes.length})` : ''}`}
+                icon={StickyNote}
+                defaultExpanded={notes.length > 0}
+                borderTop={false}
+              >
+                <NoteSection
+                  entityType="project"
+                  entityId={id!}
+                  notes={notes}
+                  currentUser={user}
+                  isLoading={notesLoading}
+                  onNoteAdded={handleNoteAdded}
+                  onNoteDeleted={handleNoteDeleted}
+                  showInternalToggle={showInternalToggle}
+                />
+              </CollapsibleSection>
+            </div>
+
+            {/* ── Attachments (collapsible) ── */}
+            <div className="card p-5">
+              <CollapsibleSection
+                title={`Allegati${attachments.length > 0 ? ` (${attachments.length})` : ''}`}
+                icon={Paperclip}
+                defaultExpanded={attachments.length > 0}
+                borderTop={false}
+              >
+                <AttachmentSection
+                  entityType="project"
+                  entityId={id!}
+                  attachments={attachments}
+                  currentUser={user}
+                  isLoading={attachmentsLoading}
+                  onAttachmentAdded={handleAttachmentAdded}
+                  onAttachmentDeleted={handleAttachmentDeleted}
+                />
+              </CollapsibleSection>
+            </div>
+
+            {/* ── Quick links ── */}
+            <div className="card p-5">
+              <div className="hud-panel-header mb-3">
+                <span>Link rapidi</span>
+              </div>
+              <div className="space-y-1">
+                <Link
+                  to={`/risks?projectId=${id}`}
+                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                >
+                  <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/30 flex-shrink-0">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  Rischi
+                </Link>
+                <Link
+                  to={`/documents?projectId=${id}`}
+                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                >
+                  <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+                    <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  Documenti
+                </Link>
+                <Link
+                  to={`/time-entries?projectId=${id}`}
+                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                >
+                  <div className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                  </div>
+                  Registrazione tempo
+                </Link>
+                <Link
+                  to={`/gantt?projectId=${id}`}
+                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                >
+                  <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                    <FolderKanban className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  Gantt
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

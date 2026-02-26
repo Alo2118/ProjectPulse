@@ -1,116 +1,138 @@
-import { LogOut, Moon, Sun, Menu, Square, Search } from 'lucide-react'
-import { useAuthStore } from '@stores/authStore'
+import { useMemo } from 'react'
+import { Moon, Sun, Menu, Square } from 'lucide-react'
 import { useThemeStore } from '@stores/themeStore'
 import { useDashboardStore } from '@stores/dashboardStore'
-import { useSearchStore } from '@stores/searchStore'
-import { Link, useNavigate } from 'react-router-dom'
-import NotificationBell from '@/components/features/notifications/NotificationBell'
+import { Link, useLocation } from 'react-router-dom'
 import { LiveTimer } from '@/components/ui/LiveTimer'
 
-export default function Header() {
-  const { logout } = useAuthStore()
-  const { theme, setTheme } = useThemeStore()
-  const { runningTimer, stopTimer } = useDashboardStore()
-  const openSearch = useSearchStore((s) => s.open)
-  const navigate = useNavigate()
+const pathLabels: Record<string, string> = {
+  'projects': 'Progetti',
+  'tasks': 'Task',
+  'time-tracking': 'Registra Tempo',
+  'team-time': 'Tempo Team',
+  'kanban': 'Kanban',
+  'gantt': 'Gantt',
+  'calendar': 'Calendario',
+  'risks': 'Rischi',
+  'documents': 'Documenti',
+  'inputs': 'Segnalazioni',
+  'planning': 'Pianificazione',
+  'analytics': 'Analytics',
+  'reports': 'Report',
+  'weekly': 'Settimanale',
+  'notifications': 'Notifiche',
+  'users': 'Utenti',
+  'admin': 'Amministrazione',
+  'departments': 'Reparti',
+  'templates': 'Template',
+  'custom-fields': 'Campi Custom',
+  'import': 'Import / Export',
+  'workflows': 'Workflow',
+  'automations': 'Automazioni',
+  'audit': 'Registro Audit',
+  'profile': 'Profilo',
+  'my-day': 'La Mia Giornata',
+  'dashboard': 'Dashboard',
+  'new': 'Nuovo',
+  'edit': 'Modifica',
+}
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+export default function Header() {
+  const { theme, setTheme } = useThemeStore()
+  const { runningTimer, stopTimer, mobileSidebarOpen, setMobileSidebarOpen } = useDashboardStore()
+  const location = useLocation()
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
   }
 
-  return (
-    <header className="sticky top-0 z-40 h-16 bg-white/70 dark:bg-surface-900/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
-      <div className="flex items-center justify-between h-full px-6">
-        {/* Mobile menu button */}
-        <button
-          onClick={() => {
-            const { mobileSidebarOpen, setMobileSidebarOpen } = useDashboardStore.getState()
-            setMobileSidebarOpen(!mobileSidebarOpen)
-          }}
-          className="lg:hidden btn-icon"
-          aria-label="Apri menu"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
+  const breadcrumbs = useMemo(() => {
+    const segments = location.pathname.split('/').filter(Boolean)
+    const crumbs: { label: string; path: string }[] = []
+    let currentPath = ''
 
-        {/* Running Timer Indicator */}
+    for (const segment of segments) {
+      currentPath += `/${segment}`
+      const label = pathLabels[segment]
+      if (label) {
+        crumbs.push({ label, path: currentPath })
+      }
+      // Skip numeric IDs in breadcrumb display
+    }
+
+    return crumbs
+  }, [location.pathname])
+
+  return (
+    <header className="sticky top-0 z-40 h-14 header-bar">
+      <div className="flex items-center justify-between h-full px-6">
+        {/* Left: Mobile menu + Breadcrumb */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="lg:hidden btn-icon flex-shrink-0"
+            aria-label="Apri menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1 text-sm min-w-0" aria-label="Breadcrumb">
+            {breadcrumbs.map((crumb, i) => (
+              <span key={crumb.path} className="flex items-center gap-1 animate-breadcrumb-slide">
+                {i > 0 && (
+                  <span className="text-cyan-500/30 mx-1">/</span>
+                )}
+                {i === breadcrumbs.length - 1 ? (
+                  <span className="text-slate-200 font-medium truncate">{crumb.label}</span>
+                ) : (
+                  <Link
+                    to={crumb.path}
+                    className="text-slate-500 hover:text-cyan-400 transition-colors truncate"
+                  >
+                    {crumb.label}
+                  </Link>
+                )}
+              </span>
+            ))}
+          </nav>
+        </div>
+
+        {/* Center: Running timer */}
         {runningTimer && (
-          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700 rounded-lg">
+          <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full">
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse flex-shrink-0" />
             <Link
               to="/time-tracking"
-              className="text-xs sm:text-sm font-medium text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200 truncate max-w-20 sm:max-w-32"
+              className="text-xs font-medium text-red-400 hover:text-red-300 truncate max-w-32"
               title={runningTimer.task?.title}
             >
-              <span className="hidden sm:inline">{runningTimer.task?.title}</span>
-              <span className="sm:hidden">Timer</span>
+              {runningTimer.task?.title}
             </Link>
-            <LiveTimer startTime={runningTimer.startTime} size="sm" className="text-primary-600 dark:text-primary-400" />
+            <LiveTimer startTime={runningTimer.startTime} size="sm" className="text-red-400 font-mono text-xs" />
             <button
               onClick={() => stopTimer()}
-              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors"
+              className="p-0.5 rounded hover:bg-red-500/20 text-red-400 transition-colors"
               title="Stop timer"
               aria-label="Ferma timer"
             >
-              <Square className="w-3.5 h-3.5" />
+              <Square className="w-3 h-3" />
             </button>
           </div>
         )}
 
-        <div className="flex-1" />
-
-        {/* Actions */}
-        <div className="flex items-center space-x-1">
-          {/* Search / Command Palette trigger */}
-          <button
-            onClick={openSearch}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
-            aria-label="Apri ricerca globale (Ctrl+K)"
-          >
-            <Search className="w-4 h-4" />
-            <span className="hidden md:inline text-xs">Cerca...</span>
-            <kbd className="hidden md:inline-flex items-center gap-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5">
-              Ctrl K
-            </kbd>
-          </button>
-
-          {/* Mobile search icon only */}
-          <button
-            onClick={openSearch}
-            className="sm:hidden btn-icon"
-            aria-label="Apri ricerca globale"
-          >
-            <Search className="w-5 h-5" />
-          </button>
-
-          {/* Notifications */}
-          <NotificationBell />
-
-          {/* Theme toggle */}
+        {/* Right: Theme toggle */}
+        <div className="flex items-center">
           <button
             onClick={toggleTheme}
             className="btn-icon"
             aria-label={theme === 'dark' ? 'Passa a tema chiaro' : 'Passa a tema scuro'}
           >
             {theme === 'dark' ? (
-              <Sun className="w-5 h-5" />
+              <Sun className="w-4.5 h-4.5" />
             ) : (
-              <Moon className="w-5 h-5" />
+              <Moon className="w-4.5 h-4.5" />
             )}
-          </button>
-
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-all duration-150"
-            aria-label="Esci"
-          >
-            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </div>

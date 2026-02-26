@@ -33,9 +33,9 @@ function LiveTotal({ baseMinutes, runningStartTime }: { baseMinutes: number; run
   const m = total % 60
 
   return (
-    <span className="font-mono text-xl font-bold text-gray-900 dark:text-white">
-      {h > 0 && <>{h}<span className="text-gray-400 text-sm">h </span></>}
-      {m}<span className="text-gray-400 text-sm">m</span>
+    <span className="font-mono text-xl font-bold text-slate-900 dark:text-white">
+      {h > 0 && <>{h}<span className="text-slate-400 text-sm">h </span></>}
+      {m}<span className="text-slate-400 text-sm">m</span>
     </span>
   )
 }
@@ -86,12 +86,12 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
   return (
     <div className="card">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200/30 dark:border-white/5 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Clock className="w-5 h-5 text-primary-500" />
+      <div className="p-4 border-b border-slate-200/30 dark:border-white/5 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          <Clock className="w-5 h-5 text-cyan-500" />
           Tempo Oggi
           {entryCount > 0 && (
-            <span className="text-xs bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+            <span className="text-xs bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
               {entryCount} {entryCount === 1 ? 'voce' : 'voci'}
             </span>
           )}
@@ -102,7 +102,7 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
       <div className="p-4">
         {/* Running Timer (highlighted) */}
         {runningTimer && (
-          <div className="mb-3 p-3 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800">
+          <div className="mb-3 p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
             <div className="flex items-center gap-3">
               <div className="relative flex-shrink-0">
                 <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
@@ -110,17 +110,17 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
               <div className="flex-1 min-w-0">
                 <Link
                   to={`/tasks/${runningTimer.taskId}`}
-                  className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 truncate block"
+                  className="text-sm font-medium text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 truncate block"
                 >
                   {runningTimer.task?.title || 'Timer attivo'}
                 </Link>
                 {runningTimer.task?.project && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                     {runningTimer.task.project.name} &middot; {runningTimer.task.code}
                   </p>
                 )}
               </div>
-              <LiveTimer startTime={runningTimer.startTime} size="sm" className="text-primary-600 dark:text-primary-400" />
+              <LiveTimer startTime={runningTimer.startTime} size="sm" className="text-cyan-600 dark:text-cyan-400" />
               <button
                 onClick={() => onTimerToggle(runningTimer.taskId)}
                 className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors flex-shrink-0"
@@ -147,12 +147,12 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
             ))}
           </div>
         ) : todayEntries.length === 0 && !runningTimer ? (
-          <div className="text-center py-6 text-gray-400 dark:text-gray-500">
+          <div className="text-center py-6 text-slate-400 dark:text-slate-500">
             <Pause className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Nessuna registrazione oggi</p>
             <Link
               to="/tasks"
-              className="text-xs text-primary-500 hover:text-primary-600 mt-1 inline-flex items-center gap-1"
+              className="text-xs text-cyan-500 hover:text-cyan-600 mt-1 inline-flex items-center gap-1"
             >
               <Play className="w-3 h-3" />
               Avvia un timer da un task
@@ -163,29 +163,29 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
             {todayEntries.slice(0, 6).map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
               >
-                <div className="w-2.5 h-2.5 bg-gray-300 dark:bg-gray-600 rounded-full flex-shrink-0" />
+                <div className="w-2.5 h-2.5 bg-slate-300 dark:bg-slate-600 rounded-full flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <Link
                     to={`/tasks/${entry.taskId}`}
-                    className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate block"
+                    className="text-sm text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 truncate block"
                   >
                     {entry.task?.title || entry.description || 'Time entry'}
                   </Link>
                   {entry.task?.project && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
                       {entry.task.project.name} &middot; {entry.task.code}
                     </p>
                   )}
                 </div>
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   {formatDuration(entry.duration || 0)}
                 </span>
               </div>
             ))}
             {todayEntries.length > 6 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center pt-1">
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-1">
                 ...e altre {todayEntries.length - 6} registrazioni
               </p>
             )}
@@ -194,10 +194,10 @@ export function TodayTimeTracking({ onTimerToggle }: TodayTimeTrackingProps) {
       </div>
 
       {/* Footer link */}
-      <div className="px-4 py-3 border-t border-gray-100 dark:border-white/5">
+      <div className="px-4 py-3 border-t border-slate-100 dark:border-white/5">
         <Link
           to="/time-tracking"
-          className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 flex items-center justify-center gap-1 group"
+          className="text-sm text-cyan-500 hover:text-cyan-600 dark:text-cyan-400 flex items-center justify-center gap-1 group"
         >
           Vedi tutto il registro ore
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />

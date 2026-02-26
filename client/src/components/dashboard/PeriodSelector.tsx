@@ -35,11 +35,11 @@ export default function PeriodSelector({ value, onChange }: PeriodSelectorProps)
 
         const borderClass = isFirst
           ? 'border border-gray-200 dark:border-gray-700'
-          : 'border-t border-b border-r border-gray-200 dark:border-gray-700'
+          : 'border-t border-b border-r border-slate-200 dark:border-slate-700'
 
         const activeClass = isActive
-          ? 'bg-primary-600 text-white dark:bg-primary-500 shadow-sm'
-          : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+          ? 'bg-cyan-600 text-white dark:bg-cyan-500 shadow-sm'
+          : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
 
         return (
           <button

@@ -153,8 +153,8 @@ export function SaveViewModal({
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Bookmark className="w-5 h-5 text-primary-500" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Bookmark className="w-5 h-5 text-cyan-500" />
             {isEditMode ? 'Modifica vista' : 'Salva vista corrente'}
           </h3>
           <button
@@ -169,12 +169,12 @@ export function SaveViewModal({
 
         {/* Active filters summary */}
         {!isEditMode && (
-          <div className="mb-5 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+          <div className="mb-5 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
               Filtri attivi
             </p>
             {activeFilters.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 italic">Nessun filtro attivo</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nessun filtro attivo</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {activeFilters.map(([key, value]) => {
@@ -184,7 +184,7 @@ export function SaveViewModal({
                   return (
                     <span
                       key={key}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 text-xs"
                     >
                       <span className="font-medium">{label}:</span> {formatted}
                     </span>
@@ -200,7 +200,7 @@ export function SaveViewModal({
           <div>
             <label
               htmlFor="view-name"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
             >
               Nome della vista <span className="text-red-500">*</span>
             </label>
@@ -231,15 +231,15 @@ export function SaveViewModal({
                 checked={isShared}
                 onChange={(e) => setIsShared(e.target.checked)}
                 disabled={isSaving}
-                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
               />
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                <Users className="w-4 h-4 text-slate-400 group-hover:text-cyan-500 transition-colors" />
                 <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Condividi con il team
                   </span>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Tutti i membri potranno vedere questa vista
                   </p>
                 </div>
@@ -252,15 +252,15 @@ export function SaveViewModal({
                 checked={isDefault}
                 onChange={(e) => setIsDefault(e.target.checked)}
                 disabled={isSaving}
-                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
               />
               <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-gray-400 group-hover:text-amber-500 transition-colors" />
+                <Star className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors" />
                 <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Imposta come predefinita
                   </span>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Verrà applicata automaticamente all'apertura della pagina
                   </p>
                 </div>

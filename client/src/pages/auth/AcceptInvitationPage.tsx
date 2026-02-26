@@ -84,19 +84,19 @@ function StepIndicator({ step }: { step: PageStep }) {
             <div
               className={`h-2 w-2 rounded-full transition-colors duration-300 ${
                 idx < activeIndex
-                  ? 'bg-primary-500'
+                  ? 'bg-cyan-500'
                   : idx === activeIndex
-                    ? 'bg-primary-600 ring-2 ring-primary-200 dark:ring-primary-800'
-                    : 'bg-gray-300 dark:bg-gray-600'
+                    ? 'bg-cyan-600 ring-2 ring-cyan-200 dark:ring-cyan-800'
+                    : 'bg-slate-300 dark:bg-slate-600'
               }`}
             />
             <span
               className={`text-xs font-medium transition-colors duration-300 ${
                 idx === activeIndex
-                  ? 'text-primary-600 dark:text-primary-400'
+                  ? 'text-cyan-600 dark:text-cyan-400'
                   : idx < activeIndex
-                    ? 'text-gray-500 dark:text-gray-400'
-                    : 'text-gray-400 dark:text-gray-600'
+                    ? 'text-slate-500 dark:text-slate-400'
+                    : 'text-slate-400 dark:text-slate-600'
               }`}
             >
               {s.label}
@@ -106,8 +106,8 @@ function StepIndicator({ step }: { step: PageStep }) {
             <div
               className={`h-px w-8 transition-colors duration-300 ${
                 idx < activeIndex
-                  ? 'bg-primary-400'
-                  : 'bg-gray-300 dark:bg-gray-600'
+                  ? 'bg-cyan-400'
+                  : 'bg-slate-300 dark:bg-slate-600'
               }`}
             />
           )}
@@ -120,7 +120,7 @@ function StepIndicator({ step }: { step: PageStep }) {
 function ProjectRoleBadge({ role }: { role: string }) {
   const label = PROJECT_ROLE_LABELS[role] ?? role
   return (
-    <span className="inline-flex items-center rounded-full bg-primary-50 dark:bg-primary-900/30 px-2.5 py-0.5 text-xs font-medium text-primary-700 dark:text-primary-300">
+    <span className="inline-flex items-center rounded-full bg-cyan-50 dark:bg-cyan-900/30 px-2.5 py-0.5 text-xs font-medium text-cyan-700 dark:text-cyan-300">
       {label}
     </span>
   )
@@ -232,14 +232,14 @@ export default function AcceptInvitationPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         {/* Branding */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-600 dark:text-primary-400">
+          <h1 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
             ProjectPulse
           </h1>
-          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
             Sistema di gestione progetti ISO 13485
           </p>
         </div>
@@ -248,18 +248,18 @@ export default function AcceptInvitationPage() {
         <StepIndicator step={step} />
 
         {/* Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8">
           {/* ----------------------------------------------------------------
               LOADING
           ---------------------------------------------------------------- */}
           {step === 'loading' && (
             <div className="flex flex-col items-center gap-4 py-6 text-center">
-              <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
+              <Loader2 className="h-10 w-10 animate-spin text-cyan-500" />
               <div>
-                <p className="text-base font-medium text-gray-900 dark:text-white">
+                <p className="text-base font-medium text-slate-900 dark:text-white">
                   Verifica invito in corso...
                 </p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   Stiamo controllando la validita del tuo link di invito.
                 </p>
               </div>
@@ -275,20 +275,20 @@ export default function AcceptInvitationPage() {
                 <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                   Invito non valido
                 </h2>
-                <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
                   {invalidMessage}
                 </p>
               </div>
-              <p className="text-sm text-gray-400 dark:text-gray-500">
+              <p className="text-sm text-slate-400 dark:text-slate-500">
                 Se pensi che si tratti di un errore, contatta chi ti ha inviato l&apos;invito per
                 ricevere un nuovo link.
               </p>
               <Link
                 to="/login"
-                className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:underline"
               >
                 <LogIn className="h-4 w-4" />
                 Vai alla pagina di login
@@ -301,21 +301,21 @@ export default function AcceptInvitationPage() {
           ---------------------------------------------------------------- */}
           {step === 'form' && invitation?.isExistingUser && (
             <div className="flex flex-col items-center gap-5 py-2 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/30">
-                <FolderOpen className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-cyan-50 dark:bg-cyan-900/30">
+                <FolderOpen className="h-8 w-8 text-cyan-600 dark:text-cyan-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                   Sei stato invitato!
                 </h2>
-                <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                  <strong className="text-gray-700 dark:text-gray-300">
+                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+                  <strong className="text-slate-700 dark:text-slate-300">
                     {invitation.inviterName}
                   </strong>{' '}
                   ti ha invitato a partecipare al progetto
                 </p>
                 <div className="mt-3 flex flex-col items-center gap-2">
-                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                  <p className="text-base font-semibold text-slate-900 dark:text-white">
                     {invitation.projectName}
                   </p>
                   <ProjectRoleBadge role={invitation.projectRole} />
@@ -340,21 +340,21 @@ export default function AcceptInvitationPage() {
           {step === 'form' && invitation && !invitation.isExistingUser && (
             <div>
               {/* Invitation summary */}
-              <div className="mb-6 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 px-4 py-3">
+              <div className="mb-6 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 px-4 py-3">
                 <div className="flex items-start gap-3">
-                  <FolderOpen className="h-5 w-5 text-primary-600 dark:text-primary-400 mt-0.5 shrink-0" />
+                  <FolderOpen className="h-5 w-5 text-cyan-600 dark:text-cyan-400 mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-primary-800 dark:text-primary-200">
+                    <p className="text-sm font-medium text-cyan-800 dark:text-cyan-200">
                       Invito al progetto
                     </p>
-                    <p className="mt-0.5 text-sm text-primary-700 dark:text-primary-300 font-semibold truncate">
+                    <p className="mt-0.5 text-sm text-cyan-700 dark:text-cyan-300 font-semibold truncate">
                       {invitation.projectName}
                     </p>
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-primary-600 dark:text-primary-400">
+                      <span className="text-xs text-cyan-600 dark:text-cyan-400">
                         Invitato da {invitation.inviterName}
                       </span>
-                      <span className="text-primary-400 dark:text-primary-600">·</span>
+                      <span className="text-cyan-400 dark:text-cyan-600">·</span>
                       <ProjectRoleBadge role={invitation.projectRole} />
                     </div>
                   </div>
@@ -362,14 +362,14 @@ export default function AcceptInvitationPage() {
               </div>
 
               <div className="flex items-center gap-3 mb-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 shrink-0">
-                  <UserPlus className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 shrink-0">
+                  <UserPlus className="h-5 w-5 text-slate-600 dark:text-slate-300" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-white leading-tight">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-white leading-tight">
                     Crea il tuo account
                   </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Completa la registrazione per accedere al progetto
                   </p>
                 </div>
@@ -389,7 +389,7 @@ export default function AcceptInvitationPage() {
                   <div>
                     <label
                       htmlFor="firstName"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
                     >
                       Nome
                     </label>
@@ -411,7 +411,7 @@ export default function AcceptInvitationPage() {
                   <div>
                     <label
                       htmlFor="lastName"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
                     >
                       Cognome
                     </label>
@@ -436,7 +436,7 @@ export default function AcceptInvitationPage() {
                 <div>
                   <label
                     htmlFor="email"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
                   >
                     Email
                   </label>
@@ -449,7 +449,7 @@ export default function AcceptInvitationPage() {
                     className="input opacity-70 cursor-not-allowed"
                     aria-describedby="email-note"
                   />
-                  <p id="email-note" className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  <p id="email-note" className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                     L&apos;email e precompilata e non modificabile.
                   </p>
                 </div>
@@ -458,7 +458,7 @@ export default function AcceptInvitationPage() {
                 <div>
                   <label
                     htmlFor="password"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
                   >
                     Password
                   </label>
@@ -475,7 +475,7 @@ export default function AcceptInvitationPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                       aria-label={showPassword ? 'Nascondi password' : 'Mostra password'}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -492,7 +492,7 @@ export default function AcceptInvitationPage() {
                 <div>
                   <label
                     htmlFor="confirmPassword"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
                   >
                     Conferma Password
                   </label>
@@ -509,7 +509,7 @@ export default function AcceptInvitationPage() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((v) => !v)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                       aria-label={
                         showConfirmPassword ? 'Nascondi password' : 'Mostra password'
                       }
@@ -559,24 +559,24 @@ export default function AcceptInvitationPage() {
                 <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                   Registrazione completata!
                 </h2>
-                <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
                   Il tuo account e stato creato con successo. Sei stato aggiunto al progetto{' '}
-                  <strong className="text-gray-700 dark:text-gray-300">
+                  <strong className="text-slate-700 dark:text-slate-300">
                     {invitation?.projectName}
                   </strong>
                   .
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 <span>Reindirizzamento al login tra pochi secondi...</span>
               </div>
               <Link
                 to="/login"
-                className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:underline"
               >
                 <LogIn className="h-4 w-4" />
                 Vai subito al login
@@ -586,7 +586,7 @@ export default function AcceptInvitationPage() {
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-600">
+        <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-600">
           &copy; {new Date().getFullYear()} MIKAI SPA. Tutti i diritti riservati.
         </p>
       </div>

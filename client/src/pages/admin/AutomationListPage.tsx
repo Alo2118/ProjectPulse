@@ -164,12 +164,12 @@ function ToggleSwitch({ checked, onChange, disabled = false, ariaLabel }: Toggle
       onClick={() => onChange(!checked)}
       className={`
         relative inline-flex h-5 w-9 items-center rounded-full
-        transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:ring-offset-1
-        dark:focus:ring-offset-gray-800
+        transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-1
+        dark:focus:ring-offset-slate-800
         disabled:opacity-40 disabled:cursor-not-allowed
         ${checked
-          ? 'bg-primary-600 dark:bg-primary-500'
-          : 'bg-gray-200 dark:bg-gray-600'
+          ? 'bg-cyan-600 dark:bg-cyan-500'
+          : 'bg-slate-200 dark:bg-slate-600'
         }
       `}
     >
@@ -199,7 +199,7 @@ interface RuleCardProps {
 
 function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: RuleCardProps) {
   const triggerLabel = TRIGGER_LABELS[rule.trigger.type] ?? rule.trigger.type
-  const triggerColorClass = TRIGGER_COLORS[rule.trigger.type] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+  const triggerColorClass = TRIGGER_COLORS[rule.trigger.type] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
   const domainConf = DOMAIN_CONFIG[rule.domain ?? 'task']
   const DomainIcon = domainConf?.icon ?? CheckSquare
 
@@ -212,11 +212,11 @@ function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: 
       {/* Top row: name + toggle */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-gray-900 dark:text-white truncate text-sm">
+          <h3 className="font-semibold text-slate-900 dark:text-white truncate text-sm">
             {rule.name}
           </h3>
           {rule.description && (
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
               {rule.description}
             </p>
           )}
@@ -240,7 +240,7 @@ function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: 
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${triggerColorClass}`}>
           {triggerLabel}
         </span>
-        <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+        <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
           {rule.project ? (
             <>
               <FolderKanban className="w-3 h-3 flex-shrink-0" />
@@ -263,13 +263,13 @@ function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: 
           {rule.actions.slice(0, 3).map((action, i) => (
             <span
               key={i}
-              className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded"
+              className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded"
             >
               {ACTION_LABELS[action.type] ?? action.type}
             </span>
           ))}
           {rule.actions.length > 3 && (
-            <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded">
+            <span className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded">
               +{rule.actions.length - 3}
             </span>
           )}
@@ -277,8 +277,8 @@ function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: 
       )}
 
       {/* Stats + actions footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 mt-auto">
-        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700 mt-auto">
+        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {formatRelativeTime(rule.lastTriggeredAt)}
@@ -294,7 +294,7 @@ function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: 
             onClick={() => onViewLogs(rule.id)}
             title="Visualizza log"
             aria-label="Visualizza log esecuzioni"
-            className="btn-icon text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="btn-icon text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           >
             <ScrollText className="w-4 h-4" />
           </button>
@@ -302,7 +302,7 @@ function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: 
             onClick={() => onEdit(rule.id)}
             title="Modifica regola"
             aria-label="Modifica regola"
-            className="btn-icon text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+            className="btn-icon text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400"
           >
             <Edit className="w-4 h-4" />
           </button>
@@ -310,7 +310,7 @@ function RuleCard({ rule, onEdit, onDelete, onViewLogs, onToggle, isToggling }: 
             onClick={() => onDelete(rule.id, rule.name)}
             title="Elimina regola"
             aria-label="Elimina regola"
-            className="btn-icon text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+            className="btn-icon text-slate-400 hover:text-red-600 dark:hover:text-red-400"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -361,29 +361,29 @@ function LogsModal({ ruleId, ruleName, onClose }: LogsModalProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <ScrollText className="w-5 h-5 text-primary-500" />
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <ScrollText className="w-5 h-5 text-cyan-500" />
                 Log Esecuzioni
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{ruleName}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{ruleName}</p>
             </div>
             <button
               onClick={onClose}
               className="btn-icon"
               aria-label="Chiudi"
             >
-              <span className="text-gray-500 dark:text-gray-400 text-xl leading-none">&times;</span>
+              <span className="text-slate-500 dark:text-slate-400 text-xl leading-none">&times;</span>
             </button>
           </div>
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
             </div>
           ) : logs.length === 0 ? (
             <div className="py-12 text-center">
-              <ScrollText className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <ScrollText className="w-10 h-10 mx-auto text-slate-400 mb-3" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Nessuna esecuzione registrata per questa regola.
               </p>
             </div>
@@ -397,11 +397,11 @@ function LogsModal({ ruleId, ruleName, onClose }: LogsModalProps) {
                     {statusLabels[log.status]}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {new Date(log.createdAt).toLocaleString('it-IT')}
                     </p>
                     {log.details && (
-                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 truncate">
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 truncate">
                         {typeof log.details === 'object'
                           ? JSON.stringify(log.details)
                           : String(log.details)}
@@ -437,9 +437,9 @@ function RecommendationCard({ recommendation, onApply, onDismiss, isApplying }: 
     <div className="card p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-900 dark:text-white">{patternLabel}</p>
+          <p className="text-sm font-medium text-slate-900 dark:text-white">{patternLabel}</p>
           {recommendation.project && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
               <FolderKanban className="w-3 h-3 flex-shrink-0" />
               {recommendation.project.name}
             </p>
@@ -451,10 +451,10 @@ function RecommendationCard({ recommendation, onApply, onDismiss, isApplying }: 
       </div>
 
       {recommendation.evidence && Object.keys(recommendation.evidence).length > 0 && (
-        <div className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-2.5">
+        <div className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 rounded-lg p-2.5">
           {Object.entries(recommendation.evidence).slice(0, 3).map(([key, value]) => (
             <div key={key} className="flex justify-between gap-2">
-              <span className="text-gray-500 dark:text-gray-400">{key}:</span>
+              <span className="text-slate-500 dark:text-slate-400">{key}:</span>
               <span className="font-medium">{String(value)}</span>
             </div>
           ))}
@@ -465,7 +465,7 @@ function RecommendationCard({ recommendation, onApply, onDismiss, isApplying }: 
         <button
           onClick={() => onApply(recommendation.id)}
           disabled={isApplying}
-          className="flex-1 px-3 py-1.5 text-xs font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+          className="flex-1 px-3 py-1.5 text-xs font-medium bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
         >
           {isApplying ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -478,7 +478,7 @@ function RecommendationCard({ recommendation, onApply, onDismiss, isApplying }: 
         </button>
         <button
           onClick={() => onDismiss(recommendation.id)}
-          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5"
+          className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center gap-1.5"
         >
           <ThumbsDown className="w-3.5 h-3.5" />
           Ignora
@@ -611,7 +611,7 @@ export default function AutomationListPage() {
   if (isLoading && rules.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -621,11 +621,11 @@ export default function AutomationListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Zap className="w-6 h-6 text-primary-500" />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Zap className="w-6 h-6 text-cyan-500" />
             Automazioni
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Configura regole automatiche basate su eventi nei tuoi progetti
           </p>
         </div>
@@ -642,24 +642,24 @@ export default function AutomationListPage() {
 
       {/* Templates section */}
       {templates.length > 0 && isAdmin && (
-        <div className="bg-gradient-to-r from-primary-50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-900/10 rounded-xl border border-primary-200/50 dark:border-primary-800/30 overflow-hidden">
+        <div className="bg-gradient-to-r from-cyan-50 to-cyan-100/50 dark:from-cyan-900/20 dark:to-cyan-900/10 rounded-xl border border-cyan-200/50 dark:border-cyan-800/30 overflow-hidden">
           <button
             onClick={() => setShowTemplates(!showTemplates)}
             className="w-full px-5 py-3 flex items-center justify-between text-left"
           >
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
+              <Sparkles className="w-4 h-4 text-cyan-500" />
+              <span className="text-sm font-medium text-slate-900 dark:text-white">
                 Modelli Rapidi
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {templates.length} disponibili
               </span>
             </div>
             {showTemplates ? (
-              <ChevronUp className="w-4 h-4 text-gray-400" />
+              <ChevronUp className="w-4 h-4 text-slate-400" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-slate-400" />
             )}
           </button>
           {showTemplates && (
@@ -670,8 +670,8 @@ export default function AutomationListPage() {
                   className="flex items-center gap-3 p-3 rounded-lg card"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{template.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{template.description}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{template.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{template.description}</p>
                   </div>
                   <button
                     onClick={async () => {
@@ -686,7 +686,7 @@ export default function AutomationListPage() {
                       }
                     }}
                     disabled={activatingTemplate === template.key}
-                    className="flex-shrink-0 px-3 py-1.5 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors"
+                    className="flex-shrink-0 px-3 py-1.5 text-xs bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:opacity-50 transition-colors"
                   >
                     {activatingTemplate === template.key ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -705,7 +705,7 @@ export default function AutomationListPage() {
       {recommendations.length > 0 && isAdmin && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-amber-500" />
               Suggerimenti ({recommendations.length})
             </h2>
@@ -745,17 +745,17 @@ export default function AutomationListPage() {
           >
             <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-violet-500" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
+              <span className="text-sm font-medium text-slate-900 dark:text-white">
                 Pacchetti Automazione
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {packages.length} disponibili
               </span>
             </div>
             {showPackages ? (
-              <ChevronUp className="w-4 h-4 text-gray-400" />
+              <ChevronUp className="w-4 h-4 text-slate-400" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-slate-400" />
             )}
           </button>
           {showPackages && (
@@ -766,9 +766,9 @@ export default function AutomationListPage() {
                   className="flex items-start gap-3 p-4 rounded-lg card"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{pkg.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{pkg.description}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{pkg.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{pkg.description}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                       {pkg.templates.length} {pkg.templates.length === 1 ? 'regola' : 'regole'}
                     </p>
                   </div>
@@ -823,15 +823,15 @@ export default function AutomationListPage() {
         </select>
 
         {/* Active/inactive filter */}
-        <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
           {(['all', 'active', 'inactive'] as const).map((val) => (
             <button
               key={val}
               onClick={() => setFilterActive(val)}
               className={`px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
                 filterActive === val
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
               {val === 'all' ? 'Tutte' : val === 'active' ? 'Attive' : 'Inattive'}
@@ -840,7 +840,7 @@ export default function AutomationListPage() {
         </div>
 
         {/* Summary count */}
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+        <span className="text-sm text-slate-500 dark:text-slate-400">
           {filteredRules.length} {filteredRules.length === 1 ? 'regola' : 'regole'}
         </span>
       </div>
@@ -848,11 +848,11 @@ export default function AutomationListPage() {
       {/* Rules list */}
       {filteredRules.length === 0 ? (
         <div className="card p-12 text-center">
-          <Zap className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <Zap className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
             {rules.length === 0 ? 'Nessuna automazione' : 'Nessuna regola corrisponde ai filtri'}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
             {rules.length === 0
               ? 'Crea la prima regola per automatizzare i processi del tuo team'
               : 'Modifica i filtri per vedere le regole esistenti'}

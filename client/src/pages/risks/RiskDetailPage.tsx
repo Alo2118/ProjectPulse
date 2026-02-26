@@ -1,5 +1,5 @@
 /**
- * Risk Detail Page - View and edit a single risk
+ * Risk Detail Page - 2-column layout with metadata sidebar
  * @module pages/risks/RiskDetailPage
  */
 
@@ -8,15 +8,16 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useRiskStore } from '@stores/riskStore'
 import { useAuthStore } from '@stores/authStore'
 import {
-  ArrowLeft,
   AlertTriangle,
   Loader2,
   Edit2,
   Trash2,
-  ChevronDown,
   FolderOpen,
   User,
   Shield,
+  Calendar,
+  BarChart2,
+  Tag as TagIcon,
 } from 'lucide-react'
 import {
   RISK_STATUS_LABELS,
@@ -30,6 +31,9 @@ import {
 } from '@/constants'
 import { RiskProbability, RiskImpact, RiskStatus } from '@/types'
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal'
+import { Breadcrumb } from '@/components/common/Breadcrumb'
+import { CollapsibleSection } from '@/components/common/CollapsibleSection'
+import { DetailPageHeader } from '@/components/common/DetailPageHeader'
 
 function calculateRiskLevel(probability: RiskProbability, impact: RiskImpact): { level: number; label: 'low' | 'medium' | 'high' } {
   const probValue = { low: 1, medium: 2, high: 3 }
@@ -61,8 +65,6 @@ export default function RiskDetailPage() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
-  const [isMitigationExpanded, setIsMitigationExpanded] = useState(true)
 
   useEffect(() => {
     if (id) {
@@ -97,7 +99,7 @@ export default function RiskDetailPage() {
   if (isLoading || !currentRisk) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -106,192 +108,289 @@ export default function RiskDetailPage() {
 
   return (
     <div className="space-y-4">
-      {/* Compact Header */}
-      <div className="card p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 mt-0.5"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-500 dark:text-gray-400">{currentRisk.code}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_STATUS_COLORS[currentRisk.status]}`}>
-                  {RISK_STATUS_LABELS[currentRisk.status]}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[currentRisk.category]}`}>
-                  {RISK_CATEGORY_LABELS[currentRisk.category]}
-                </span>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-1 break-words">
-                {currentRisk.title}
-              </h1>
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Rischi', href: '/risks' },
+          ...(currentRisk.project
+            ? [{ label: currentRisk.project.name, href: `/projects/${currentRisk.project.id}` }]
+            : []),
+          { label: currentRisk.title },
+        ]}
+      />
 
-              {/* Inline Info */}
-              <div className="flex items-center gap-4 mt-2 flex-wrap text-sm">
+      {/* Page Header */}
+      <DetailPageHeader title={currentRisk.title} subtitle={currentRisk.code}>
+        {canManageRisks && (
+          <button
+            onClick={() => navigate(`/risks/${id}/edit`)}
+            className="btn-secondary text-sm py-1.5"
+          >
+            <Edit2 className="w-4 h-4 mr-1.5" />
+            Modifica
+          </button>
+        )}
+        {canDelete && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="btn-danger text-sm py-1.5"
+          >
+            <Trash2 className="w-4 h-4 mr-1.5" />
+            Elimina
+          </button>
+        )}
+      </DetailPageHeader>
+
+      {/* ── Two-column grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* ════════════════ LEFT COLUMN ════════════════ */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* ── Title + Level badge ── */}
+          <div className="card p-5 animate-section-reveal">
+            <div className="flex items-start gap-4">
+              <div className="flex-1 min-w-0">
+                {/* Badges */}
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
+                    {currentRisk.code}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_STATUS_COLORS[currentRisk.status]}`}>
+                    {RISK_STATUS_LABELS[currentRisk.status]}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[currentRisk.category]}`}>
+                    {RISK_CATEGORY_LABELS[currentRisk.category]}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h2 className="page-title break-words">
+                  {currentRisk.title}
+                </h2>
+
+                {/* Project link */}
                 {currentRisk.project && (
                   <Link
                     to={`/projects/${currentRisk.project.id}`}
-                    className="flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline"
+                    className="inline-flex items-center gap-1.5 mt-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                   >
                     <FolderOpen className="w-4 h-4" />
                     {currentRisk.project.name}
                   </Link>
                 )}
-                {currentRisk.owner && (
-                  <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                    <User className="w-4 h-4" />
-                    {currentRisk.owner.firstName} {currentRisk.owner.lastName}
-                  </span>
-                )}
-                <span className="text-gray-500 dark:text-gray-400">
-                  Creato {formatDate(currentRisk.createdAt)}
-                </span>
+              </div>
+
+              {/* Risk Level Badge */}
+              <div className={`flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-xl ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
+                <AlertTriangle className="w-5 h-5" />
+                <div className="text-2xl font-bold leading-none">{riskLevel.level}</div>
+                <div className="text-xs opacity-80 uppercase tracking-wider">Livello</div>
               </div>
             </div>
           </div>
 
-          {/* Risk Level Badge */}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg flex-shrink-0 ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
-            <AlertTriangle className="w-5 h-5" />
-            <div className="text-center">
-              <div className="text-lg font-bold">{riskLevel.level}</div>
-              <div className="text-xs opacity-80">Livello</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Probability / Impact inline */}
-        <div className="flex items-center gap-6 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Probabilità:</span>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {RISK_PROBABILITY_LABELS[currentRisk.probability]}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Impatto:</span>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {RISK_IMPACT_LABELS[currentRisk.impact]}
-            </span>
-          </div>
-          {currentRisk.createdBy && (
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Creato da:</span>
-              <span className="text-sm text-gray-900 dark:text-white">
-                {currentRisk.createdBy.firstName} {currentRisk.createdBy.lastName}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        {canManageRisks && (
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => navigate(`/risks/${id}/edit`)}
-              className="btn-secondary text-sm py-1.5"
-            >
-              <Edit2 className="w-4 h-4 mr-1.5" />
-              Modifica
-            </button>
-            {canDelete && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="btn-danger text-sm py-1.5"
-              >
-                <Trash2 className="w-4 h-4 mr-1.5" />
-                Elimina
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Description - Collapsible */}
-      {currentRisk.description && (
-        <div className="card">
-          <button
-            onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          >
-            <span className="font-medium text-gray-900 dark:text-white">Descrizione</span>
-            <ChevronDown
-              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                isDescriptionExpanded ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-          {isDescriptionExpanded && (
-            <div className="px-4 pb-4">
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+          {/* ── Description ── */}
+          {currentRisk.description && (
+            <div className="card p-5 animate-section-reveal" style={{ animationDelay: '50ms' }}>
+              <div className="hud-panel-header mb-3">
+                <span>Descrizione</span>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                 {currentRisk.description}
               </p>
             </div>
           )}
-        </div>
-      )}
 
-      {/* Mitigation Plan - Collapsible */}
-      <div className="card">
-        <button
-          onClick={() => setIsMitigationExpanded(!isMitigationExpanded)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-gray-400" />
-            <span className="font-medium text-gray-900 dark:text-white">Piano di Mitigazione</span>
+          {/* ── Mitigation Plan ── */}
+          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '100ms' }}>
+            <CollapsibleSection
+              title="Piano di Mitigazione"
+              icon={Shield}
+              defaultExpanded={true}
+              borderTop={false}
+            >
+              {currentRisk.mitigationPlan ? (
+                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  {currentRisk.mitigationPlan}
+                </p>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400 italic">
+                  Nessun piano di mitigazione definito
+                </p>
+              )}
+            </CollapsibleSection>
           </div>
-          <ChevronDown
-            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-              isMitigationExpanded ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
-        {isMitigationExpanded && (
-          <div className="px-4 pb-4">
-            {currentRisk.mitigationPlan ? (
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {currentRisk.mitigationPlan}
-              </p>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 italic">
-                Nessun piano di mitigazione definito
-              </p>
-            )}
+
+          {/* ── Status change (managers only) ── */}
+          {canManageRisks && (
+            <div className="card p-5 animate-section-reveal" style={{ animationDelay: '150ms' }}>
+              <div className="hud-panel-header mb-3">
+                <span>Cambia Stato</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {RISK_STATUS_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleStatusChange(option.value)}
+                    disabled={currentRisk.status === option.value}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      currentRisk.status === option.value
+                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-500 cursor-not-allowed'
+                        : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-20 space-y-4">
+
+            {/* ── Metadata card ── */}
+            <div className="card p-5 space-y-0 animate-section-reveal">
+              <div className="hud-panel-header mb-2">
+                <span>Informazioni</span>
+              </div>
+
+              {/* Probabilita */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  Probabilita
+                </span>
+                <span className="meta-row-value">
+                  {RISK_PROBABILITY_LABELS[currentRisk.probability]}
+                </span>
+              </div>
+
+              {/* Impatto */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Impatto
+                </span>
+                <span className="meta-row-value">
+                  {RISK_IMPACT_LABELS[currentRisk.impact]}
+                </span>
+              </div>
+
+              {/* Stato */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <TagIcon className="w-3.5 h-3.5" />
+                  Stato
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_STATUS_COLORS[currentRisk.status]}`}>
+                  {RISK_STATUS_LABELS[currentRisk.status]}
+                </span>
+              </div>
+
+              {/* Categoria */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <TagIcon className="w-3.5 h-3.5" />
+                  Categoria
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[currentRisk.category]}`}>
+                  {RISK_CATEGORY_LABELS[currentRisk.category]}
+                </span>
+              </div>
+
+              {/* Owner */}
+              {currentRisk.owner && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    Owner
+                  </span>
+                  <span className="meta-row-value">
+                    {currentRisk.owner.firstName} {currentRisk.owner.lastName}
+                  </span>
+                </div>
+              )}
+
+              {/* Creato da */}
+              {currentRisk.createdBy && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    Creato da
+                  </span>
+                  <span className="meta-row-value">
+                    {currentRisk.createdBy.firstName} {currentRisk.createdBy.lastName}
+                  </span>
+                </div>
+              )}
+
+              {/* Creato il */}
+              <div className="meta-row">
+                <span className="meta-row-label flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Creato il
+                </span>
+                <span className="meta-row-value">
+                  {formatDate(currentRisk.createdAt)}
+                </span>
+              </div>
+
+              {/* Progetto */}
+              {currentRisk.project && (
+                <div className="meta-row">
+                  <span className="meta-row-label flex items-center gap-1.5">
+                    <FolderOpen className="w-3.5 h-3.5" />
+                    Progetto
+                  </span>
+                  <Link
+                    to={`/projects/${currentRisk.project.id}`}
+                    className="text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors text-right truncate max-w-[9rem]"
+                  >
+                    {currentRisk.project.name}
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* ── Risk level visual ── */}
+            <div className="card p-5">
+              <div className="hud-panel-header mb-3">
+                <span>Matrice di Rischio</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1 text-xs text-center">
+                {/* Header row */}
+                <div />
+                <div className="text-slate-400 py-1">Prob.</div>
+                <div className="text-slate-400 py-1">Score</div>
+                {/* Probabilita row */}
+                <div className="text-slate-400 flex items-center">Prob.</div>
+                <div className="py-1.5 rounded bg-slate-800 dark:bg-slate-700/50 text-slate-200 font-medium">
+                  {RISK_PROBABILITY_LABELS[currentRisk.probability]}
+                </div>
+                <div className="py-1.5 rounded font-bold text-lg leading-none flex items-center justify-center">
+                  <span className={`px-2 py-0.5 rounded ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
+                    {riskLevel.level}
+                  </span>
+                </div>
+                {/* Impatto row */}
+                <div className="text-slate-400 flex items-center">Impatto</div>
+                <div className="py-1.5 rounded bg-slate-800 dark:bg-slate-700/50 text-slate-200 font-medium">
+                  {RISK_IMPACT_LABELS[currentRisk.impact]}
+                </div>
+                <div className="py-1.5 rounded text-slate-400 flex items-center justify-center">
+                  P × I
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Status Change */}
-      {canManageRisks && (
-        <div className="card p-4">
-          <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Cambia Stato
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {RISK_STATUS_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleStatusChange(option.value)}
-                disabled={currentRisk.status === option.value}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  currentRisk.status === option.value
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
+      {/* ── Delete Modal ── */}
       <DeleteConfirmModal
         isOpen={showDeleteConfirm}
         title="Conferma eliminazione"

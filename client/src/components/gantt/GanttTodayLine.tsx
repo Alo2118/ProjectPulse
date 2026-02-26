@@ -1,5 +1,6 @@
 /**
- * GanttTodayLine - Vertical line indicator for today's date
+ * GanttTodayLine - Vertical cyan line indicator for today's date
+ * JARVIS palette: cyan-500 for the "now" marker (active/key-data element)
  */
 
 interface GanttTodayLineProps {
@@ -13,19 +14,19 @@ export default function GanttTodayLine({ offset, height }: GanttTodayLineProps) 
       className="pointer-events-none absolute z-20"
       style={{ left: offset, height: Math.max(height, 200) }}
     >
-      {/* Line */}
-      <div className="h-full w-0.5 bg-red-500 dark:bg-red-400 opacity-80" />
+      {/* Vertical line */}
+      <div className="h-full w-0.5 bg-cyan-500 opacity-70 shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
 
-      {/* Top marker - triangle pointing down */}
+      {/* Top triangle marker pointing down */}
       <div
         className="absolute -left-1.5 top-0 h-0 w-0
                    border-l-[6px] border-l-transparent
                    border-r-[6px] border-r-transparent
-                   border-t-[8px] border-t-red-500 dark:border-t-red-400"
+                   border-t-[8px] border-t-cyan-500"
       />
 
-      {/* Label - positioned inside visible area */}
-      <div className="absolute left-1 top-1 whitespace-nowrap rounded bg-red-500 dark:bg-red-400 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+      {/* "Oggi" label */}
+      <div className="absolute left-1 top-1 whitespace-nowrap rounded bg-cyan-500/90 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white shadow-[0_0_8px_rgba(6,182,212,0.4)]">
         Oggi
       </div>
     </div>

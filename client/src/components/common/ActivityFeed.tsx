@@ -156,7 +156,7 @@ export default function ActivityFeed({ entityType, entityId, projectId, limit = 
 
   if (isLoading && entries.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8 text-gray-400 dark:text-gray-500">
+      <div className="flex items-center justify-center py-8 text-slate-400 dark:text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
         <span className="text-sm">Caricamento attivita'...</span>
       </div>
@@ -165,7 +165,7 @@ export default function ActivityFeed({ entityType, entityId, projectId, limit = 
 
   if (entries.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+      <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
         Nessuna attivita' registrata
       </div>
     )
@@ -184,7 +184,7 @@ export default function ActivityFeed({ entityType, entityId, projectId, limit = 
           <div key={entry.id} className="flex gap-3 relative">
             {/* Timeline line */}
             {!isLast && (
-              <div className="absolute left-[15px] top-9 bottom-0 w-px bg-gray-200 dark:bg-gray-700" />
+              <div className="absolute left-[15px] top-9 bottom-0 w-px bg-slate-200 dark:bg-slate-700" />
             )}
 
             {/* Icon */}
@@ -195,18 +195,18 @@ export default function ActivityFeed({ entityType, entityId, projectId, limit = 
             {/* Content */}
             <div className="flex-1 pb-4 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                   {entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Sistema'}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   {actionLabel}
                 </span>
-                <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto flex-shrink-0">
+                <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto flex-shrink-0">
                   {formatRelativeTime(entry.createdAt)}
                 </span>
               </div>
               {summary && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 truncate">
                   {summary}
                 </p>
               )}
@@ -219,7 +219,7 @@ export default function ActivityFeed({ entityType, entityId, projectId, limit = 
       {entries.length >= displayLimit && (
         <button
           onClick={() => setDisplayLimit((prev) => prev + 15)}
-          className="w-full py-2 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+          className="w-full py-2 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium"
         >
           Carica altro
         </button>

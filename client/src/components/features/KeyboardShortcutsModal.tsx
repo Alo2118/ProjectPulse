@@ -110,12 +110,12 @@ export function KeyboardShortcutsModal({
       {/* Custom scrollable content — the panel itself does not scroll, the inner div does */}
       <div className="flex flex-col max-h-[80vh]">
         {/* Sticky header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-surface-800/95 backdrop-blur-xl rounded-t-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-cyan-500/15 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-t-xl">
           <h2
             id="shortcuts-modal-title"
-            className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
+            className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100"
           >
-            <Keyboard className="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden />
+            <Keyboard className="w-5 h-5 text-slate-500 dark:text-slate-400" aria-hidden />
             Scorciatoie da Tastiera
           </h2>
           <button

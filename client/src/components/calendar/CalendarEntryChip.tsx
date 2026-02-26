@@ -1,5 +1,6 @@
 /**
  * CalendarEntryChip - Compact time entry representation for calendar cells
+ * JARVIS palette: cyan accent for time entries (interactive/key-data element)
  */
 
 import React from 'react'
@@ -26,10 +27,12 @@ const CalendarEntryChip = React.memo(function CalendarEntryChip({
       className="
         w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs truncate cursor-pointer
         border-l-2 text-left
-        border-l-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200
-        hover:brightness-95 dark:hover:brightness-110
+        border-l-cyan-500
+        dark:bg-cyan-500/15 dark:text-cyan-300
+        not-dark:bg-cyan-50 not-dark:text-cyan-800
+        hover:brightness-110 dark:hover:brightness-110 not-dark:hover:brightness-95
         transition-all duration-100
-        focus:outline-none focus:ring-1 focus:ring-primary-500/50
+        focus:outline-none focus:ring-1 focus:ring-cyan-500/40
       "
     >
       <Clock className="w-3 h-3 flex-shrink-0 opacity-60" />

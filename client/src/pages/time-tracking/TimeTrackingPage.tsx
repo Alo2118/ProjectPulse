@@ -241,32 +241,24 @@ export default function TimeTrackingPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Registro Ore</h1>
-          <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+          <h1 className="page-title">Registro Ore</h1>
+          <p className="mt-1 text-sm sm:text-base page-subtitle">
             Registra e monitora il tempo dedicato ai task
           </p>
         </div>
         <div className="flex items-center gap-2 self-start">
           {/* View toggle */}
-          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5">
+          <div className="segmented-control">
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
+              className={`segmented-control-item flex items-center gap-1.5 ${viewMode === 'list' ? 'segmented-control-item-active' : ''}`}
             >
               <List className="w-4 h-4" />
               <span className="hidden sm:inline">Lista</span>
             </button>
             <button
               onClick={() => setViewMode('timesheet')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'timesheet'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
+              className={`segmented-control-item flex items-center gap-1.5 ${viewMode === 'timesheet' ? 'segmented-control-item-active' : ''}`}
             >
               <Grid3X3 className="w-4 h-4" />
               <span className="hidden sm:inline">Timesheet</span>
@@ -374,7 +366,7 @@ export default function TimeTrackingPage() {
             </select>
           )}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500 dark:text-gray-400">Da:</label>
+            <label className="text-sm text-slate-500 dark:text-slate-400">Da:</label>
             <input
               type="date"
               value={dateFrom}
@@ -386,7 +378,7 @@ export default function TimeTrackingPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500 dark:text-gray-400">A:</label>
+            <label className="text-sm text-slate-500 dark:text-slate-400">A:</label>
             <input
               type="date"
               value={dateTo}
@@ -409,7 +401,7 @@ export default function TimeTrackingPage() {
                 setDateTo(new Date().toISOString().split('T')[0])
                 setPagination((prev) => ({ ...prev, page: 1 }))
               }}
-              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
+              className="text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
             >
               Resetta filtri
             </button>
@@ -421,10 +413,10 @@ export default function TimeTrackingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-4">
           <div className="flex items-center">
-            <Clock className="w-8 h-8 text-primary-500 mr-3" />
+            <Clock className="w-8 h-8 text-amber-400 mr-3 flex-shrink-0" />
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Totale pagina</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">
+              <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">Totale pagina</p>
+              <p className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
                 {formatDuration(totalMinutes)}
               </p>
             </div>
@@ -432,19 +424,19 @@ export default function TimeTrackingPage() {
         </div>
         <div className="card p-4">
           <div className="flex items-center">
-            <CheckSquare className="w-8 h-8 text-green-500 mr-3" />
+            <CheckSquare className="w-8 h-8 text-emerald-400 mr-3 flex-shrink-0" />
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Registrazioni</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{pagination.total}</p>
+              <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">Registrazioni</p>
+              <p className="text-xl font-bold font-mono text-slate-800 dark:text-white">{pagination.total}</p>
             </div>
           </div>
         </div>
         <div className="card p-4">
           <div className="flex items-center">
-            <FolderKanban className="w-8 h-8 text-blue-500 mr-3" />
+            <FolderKanban className="w-8 h-8 text-blue-400 mr-3 flex-shrink-0" />
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Progetti</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">
+              <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">Progetti</p>
+              <p className="text-xl font-bold font-mono text-slate-800 dark:text-white">
                 {new Set(filteredEntries.map((e) => e.task?.project?.id)).size}
               </p>
             </div>
@@ -454,38 +446,38 @@ export default function TimeTrackingPage() {
 
       {/* Time Entries List */}
       <div className="card">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="p-4 border-b border-cyan-500/15">
+          <h2 className="section-heading">
             Registrazioni Tempo
           </h2>
         </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
           </div>
         ) : filteredEntries.length === 0 ? (
           <div className="p-8 text-center">
-            <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-2">
               Nessuna registrazione
             </h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-slate-500 dark:text-slate-400">
               {projectFilter || dateFrom || dateTo
                 ? 'Nessuna registrazione corrisponde ai filtri selezionati'
                 : 'Inizia a tracciare il tempo sui tuoi task'}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="divide-y divide-cyan-500/10">
             {Object.entries(entriesByDate).map(([date, entries]) => (
               <div key={date}>
-                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800">
+                <div className="px-4 py-2 bg-slate-100/60 dark:bg-slate-800/40">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span className="text-xs uppercase tracking-widest font-medium text-slate-600 dark:text-slate-300">
                       {formatDateGroup(entries[0].startTime)} - {formatDate(entries[0].startTime)}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-sm font-mono text-amber-600 dark:text-amber-400">
                       {formatDuration(entries.reduce((sum, e) => sum + (e.duration || 0), 0))}
                     </span>
                   </div>
@@ -493,7 +485,7 @@ export default function TimeTrackingPage() {
                 {entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                    className="px-4 py-2.5 table-row-hover cursor-pointer"
                     onClick={() => setViewingEntry(entry)}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -501,33 +493,32 @@ export default function TimeTrackingPage() {
                       <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <Link
                           to={`/projects/${entry.task?.project?.id}`}
-                          className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 shrink-0"
+                          className="text-sm font-medium text-slate-800 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 shrink-0 transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {entry.task?.project?.name}
                         </Link>
-                        <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                        <span className="text-sm text-slate-600 dark:text-slate-300 truncate">
                           {entry.task?.title}
                         </span>
                         {entry.description && (
-                          <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate hidden sm:inline" title={entry.description}>
+                          <span className="text-xs text-slate-400 dark:text-slate-500 italic truncate hidden sm:inline" title={entry.description}>
                             — {entry.description}
                           </span>
                         )}
                         {isPrivileged && entry.user && (
-                          <span className="text-[11px] text-gray-400/80 dark:text-gray-500/80 shrink-0 hidden sm:inline">
+                          <span className="text-[11px] text-slate-400/80 dark:text-slate-500/80 shrink-0 hidden sm:inline">
                             [{entry.user.firstName} {entry.user.lastName}]
                           </span>
                         )}
-                        {/* Approval status badge rimosso - funzione disabilitata */}
                       </div>
                       {/* Time info */}
-                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0 hidden sm:inline">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0 hidden sm:inline font-mono">
                         {formatTime(entry.startTime)}
                         {entry.endTime && ` - ${formatTime(entry.endTime)}`}
                       </span>
                       {/* Duration */}
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0 w-14 sm:w-16 text-right">
+                      <span className="text-sm font-semibold font-mono text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0 w-14 sm:w-16 text-right">
                         {formatDuration(entry.duration)}
                       </span>
                       {/* Actions */}
@@ -535,7 +526,7 @@ export default function TimeTrackingPage() {
                         {!entry.isRunning && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
-                            className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600"
+                            className="btn-icon"
                             title="Modifica"
                           >
                             <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -544,7 +535,7 @@ export default function TimeTrackingPage() {
                         {(!entry.isRunning || (entry.isRunning && entry.id !== runningTimer?.id)) && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeletingEntryId(entry.id); }}
-                            className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-600"
+                            className="btn-icon hover:text-red-400 dark:hover:text-red-400"
                             title={entry.isRunning ? "Elimina timer orfano" : "Elimina"}
                           >
                             <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -566,7 +557,7 @@ export default function TimeTrackingPage() {
           total={pagination.total}
           limit={pagination.limit}
           onPageChange={handlePageChange}
-          className="px-4 py-3 border-t border-gray-200 dark:border-gray-700"
+          className="px-4 py-3 border-t border-cyan-500/10"
         />
       </div>
 
@@ -591,11 +582,11 @@ export default function TimeTrackingPage() {
               className="fixed inset-0 bg-black/50 transition-opacity"
               onClick={() => setDeletingEntryId(null)}
             />
-            <div className="relative w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <div className="relative w-full max-w-sm modal-panel p-6">
+              <h3 className="text-lg font-semibold text-white dark:text-white mb-2">
                 Elimina Registrazione
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-sm text-slate-400 dark:text-slate-400 mb-4">
                 Sei sicuro di voler eliminare questa registrazione? L'azione non è reversibile.
               </p>
               <div className="flex justify-end gap-3">

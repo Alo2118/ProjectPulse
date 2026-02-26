@@ -124,7 +124,7 @@ export default function DepartmentListPage() {
   if (isLoading && departments.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
       </div>
     )
   }
@@ -134,11 +134,11 @@ export default function DepartmentListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-primary-600" />
+          <h1 className="page-title flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-cyan-400" />
             Reparti
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm page-subtitle">
             Unità organizzative assegnate ai task come team esecutori (non richiedono accesso al sistema)
           </p>
         </div>
@@ -152,12 +152,12 @@ export default function DepartmentListPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
           <input
             type="checkbox"
             checked={showInactive}
             onChange={(e) => setShowInactive(e.target.checked)}
-            className="rounded border-gray-300 dark:border-gray-600 text-primary-600"
+            className="rounded border-slate-300 dark:border-slate-600 text-cyan-600"
           />
           Mostra inattivi
         </label>
@@ -167,7 +167,7 @@ export default function DepartmentListPage() {
       {showForm && (
         <div className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-base font-semibold text-slate-800 dark:text-white">
               {editingDept ? 'Modifica Reparto' : 'Nuovo Reparto'}
             </h2>
             <button onClick={closeForm} aria-label="Chiudi form" className="btn-icon">
@@ -181,7 +181,7 @@ export default function DepartmentListPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Nome <span className="text-red-500">*</span>
               </label>
               <input
@@ -195,7 +195,7 @@ export default function DepartmentListPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Descrizione
               </label>
               <input
@@ -210,7 +210,7 @@ export default function DepartmentListPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
               Colore
             </label>
             <div className="flex flex-wrap gap-2">
@@ -220,7 +220,7 @@ export default function DepartmentListPage() {
                   type="button"
                   onClick={() => setFormData((f) => ({ ...f, color }))}
                   aria-label={`Colore ${color}`}
-                  className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-500"
+                  className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-cyan-500"
                   style={{
                     backgroundColor: color,
                     borderColor: formData.color === color ? color : 'transparent',
@@ -259,8 +259,8 @@ export default function DepartmentListPage() {
       {/* Department List */}
       {departments.length === 0 ? (
         <div className="card p-12 text-center">
-          <Building2 className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
+          <Building2 className="w-10 h-10 mx-auto text-slate-400 mb-3" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             {showInactive ? 'Nessun reparto trovato' : 'Nessun reparto attivo'}
           </p>
           {isAdmin && !showForm && (
@@ -272,9 +272,9 @@ export default function DepartmentListPage() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+          <ul className="divide-y divide-cyan-500/5">
             {departments.map((dept) => (
-              <li key={dept.id} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+              <li key={dept.id} className="flex items-center gap-4 px-6 py-4 table-row-hover">
                 {/* Color dot */}
                 <span
                   className="w-4 h-4 rounded-full flex-shrink-0"
@@ -284,17 +284,17 @@ export default function DepartmentListPage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">
+                    <span className="font-medium text-slate-800 dark:text-white text-sm">
                       {dept.name}
                     </span>
                     {!dept.isActive && (
-                      <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full">
+                      <span className="text-xs bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-full border border-slate-200/80 dark:border-slate-600/50">
                         Inattivo
                       </span>
                     )}
                   </div>
                   {dept.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                       {dept.description}
                     </p>
                   )}
@@ -307,7 +307,7 @@ export default function DepartmentListPage() {
                       onClick={() => handleToggleActive(dept)}
                       title={dept.isActive ? 'Disattiva' : 'Attiva'}
                       aria-label={dept.isActive ? 'Disattiva reparto' : 'Attiva reparto'}
-                      className="btn-icon text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      className="btn-icon text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                     >
                       {dept.isActive ? (
                         <X className="w-4 h-4" />
@@ -318,14 +318,14 @@ export default function DepartmentListPage() {
                     <button
                       onClick={() => openEdit(dept)}
                       aria-label="Modifica reparto"
-                      className="btn-icon text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                      className="btn-icon text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setDeleteConfirm({ id: dept.id, name: dept.name })}
                       aria-label="Elimina reparto"
-                      className="btn-icon text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                      className="btn-icon text-slate-400 hover:text-red-600 dark:hover:text-red-400"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

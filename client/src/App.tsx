@@ -20,7 +20,6 @@ const TaskDetailPage = lazy(() => import('@pages/tasks/TaskDetailPage'))
 const TaskFormPage = lazy(() => import('@pages/tasks/TaskFormPage'))
 const TimeTrackingPage = lazy(() => import('@pages/time-tracking/TimeTrackingPage'))
 const TeamTimePage = lazy(() => import('@pages/time-tracking/TeamTimePage'))
-const KanbanBoardPage = lazy(() => import('@pages/kanban/KanbanBoardPage'))
 const RiskListPage = lazy(() => import('@pages/risks/RiskListPage'))
 const RiskDetailPage = lazy(() => import('@pages/risks/RiskDetailPage'))
 const RiskFormPage = lazy(() => import('@pages/risks/RiskFormPage'))
@@ -34,7 +33,6 @@ const UserFormPage = lazy(() => import('@pages/users/UserFormPage'))
 const ProfilePage = lazy(() => import('@pages/profile/ProfilePage'))
 const AnalyticsPage = lazy(() => import('@pages/analytics/AnalyticsPage'))
 const WeeklyReportPage = lazy(() => import('@pages/reports/WeeklyReportPage'))
-const GanttPage = lazy(() => import('@pages/gantt/GanttPage'))
 const CalendarPage = lazy(() => import('@pages/calendar/CalendarPage'))
 const NotFoundPage = lazy(() => import('@pages/NotFoundPage'))
 const AuditTrailPage = lazy(() => import('@pages/audit/AuditTrailPage'))
@@ -56,7 +54,7 @@ const MyDayPage = lazy(() => import('@pages/my-day/MyDayPage'))
 function PageLoader() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
     </div>
   )
 }
@@ -88,15 +86,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
           <div className="text-center max-w-md">
             <div className="mx-auto w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
               <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
               Qualcosa è andato storto
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-slate-600 dark:text-slate-400 mb-2">
               Si è verificato un errore imprevisto nell'applicazione.
             </p>
             {this.state.error && (
@@ -151,10 +149,10 @@ function AuthInitializer({ children }: { children: ReactNode }) {
 
   if (!isInitialized || isValidating) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
+          <span className="text-sm text-slate-500 dark:text-slate-400">
             Verifica sessione...
           </span>
         </div>
@@ -204,8 +202,9 @@ function App() {
               <Route path="/tasks/:id/edit" element={<TaskFormPage />} />
               <Route path="/time-tracking" element={<TimeTrackingPage />} />
               <Route path="/team-time" element={<TeamTimePage />} />
-              <Route path="/kanban" element={<KanbanBoardPage />} />
-              <Route path="/gantt" element={<GanttPage />} />
+              {/* Redirect legacy standalone routes to unified task view with view mode param */}
+              <Route path="/kanban" element={<Navigate to="/tasks?view=kanban" replace />} />
+              <Route path="/gantt" element={<Navigate to="/tasks?view=gantt" replace />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/risks" element={<RiskListPage />} />
               <Route path="/risks/new" element={<RiskFormPage />} />

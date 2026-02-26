@@ -116,7 +116,7 @@ export default function TeamTimePage() {
   if (isLoading && byUser.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
@@ -126,8 +126,8 @@ export default function TeamTimePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Tempo Team</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
+          <h1 className="page-title">Tempo Team</h1>
+          <p className="mt-1 page-subtitle">
             Panoramica delle ore registrate dal team
           </p>
         </div>
@@ -151,7 +151,7 @@ export default function TeamTimePage() {
       <div className="card p-4">
         <div className="flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
               Data inizio
             </label>
             <input
@@ -164,7 +164,7 @@ export default function TeamTimePage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
               Data fine
             </label>
             <input
@@ -177,7 +177,7 @@ export default function TeamTimePage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
               Progetto
             </label>
             <select
@@ -194,7 +194,7 @@ export default function TeamTimePage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
               Utente
             </label>
             <select
@@ -228,14 +228,12 @@ export default function TeamTimePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="card-hover p-4">
             <div className="flex items-center">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                <Clock className="w-5 h-5 text-white" />
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 mr-3">
+                <Clock className="w-5 h-5 text-amber-400" />
               </div>
-              <div className="ml-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Ore Totali
-                </p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
+              <div>
+                <p className="meta-row-label">Ore Totali</p>
+                <p className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
                   {formatHoursFromDecimal(summary.totalHours)}
                 </p>
               </div>
@@ -243,62 +241,54 @@ export default function TeamTimePage() {
           </div>
           <div className="card-hover p-4">
             <div className="flex items-center">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
-                <Users className="w-5 h-5 text-white" />
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 mr-3">
+                <Users className="w-5 h-5 text-blue-400" />
               </div>
-              <div className="ml-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Utenti Attivi
-                </p>
+              <div>
+                <p className="meta-row-label">Utenti Attivi</p>
                 <AnimatedCounter
                   value={summary.userCount}
-                  className="text-xl font-bold text-gray-900 dark:text-white"
+                  className="text-xl font-bold font-mono text-slate-800 dark:text-white"
                 />
               </div>
             </div>
           </div>
           <div className="card-hover p-4">
             <div className="flex items-center">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg">
-                <FolderKanban className="w-5 h-5 text-white" />
+              <div className="p-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 mr-3">
+                <FolderKanban className="w-5 h-5 text-violet-400" />
               </div>
-              <div className="ml-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Progetti
-                </p>
+              <div>
+                <p className="meta-row-label">Progetti</p>
                 <AnimatedCounter
                   value={summary.projectCount}
-                  className="text-xl font-bold text-gray-900 dark:text-white"
+                  className="text-xl font-bold font-mono text-slate-800 dark:text-white"
                 />
               </div>
             </div>
           </div>
           <div className="card-hover p-4">
             <div className="flex items-center">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg">
-                <Clock className="w-5 h-5 text-white" />
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mr-3">
+                <Clock className="w-5 h-5 text-emerald-400" />
               </div>
-              <div className="ml-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Registrazioni
-                </p>
+              <div>
+                <p className="meta-row-label">Registrazioni</p>
                 <AnimatedCounter
                   value={summary.entryCount}
-                  className="text-xl font-bold text-gray-900 dark:text-white"
+                  className="text-xl font-bold font-mono text-slate-800 dark:text-white"
                 />
               </div>
             </div>
           </div>
           <div className="card-hover p-4">
             <div className="flex items-center">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 shadow-lg">
-                <Clock className="w-5 h-5 text-white" />
+              <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 mr-3">
+                <Clock className="w-5 h-5 text-cyan-400" />
               </div>
-              <div className="ml-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Media/Utente
-                </p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
+              <div>
+                <p className="meta-row-label">Media/Utente</p>
+                <p className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
                   {summary.userCount > 0
                     ? formatHoursFromDecimal(summary.totalHours / summary.userCount)
                     : '0h'}
@@ -313,33 +303,32 @@ export default function TeamTimePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* By User */}
         <div className="lg:col-span-2 card">
-          <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary-500" />
+          <div className="p-4 border-b border-cyan-500/15">
+            <h2 className="section-heading flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-400" />
               Per Utente
             </h2>
           </div>
           <div className="p-4">
             {byUser.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <span className="text-3xl block mb-2">{'\u{1F465}'}</span>
+              <div className="text-center py-8 text-slate-400 dark:text-slate-400">
                 Nessun dato disponibile
               </div>
             ) : (
               <div className="space-y-3">
                 {byUser.map((user) => (
-                  <div key={user.userId} className="bg-gray-50/50 dark:bg-white/5 rounded-lg overflow-hidden">
+                  <div key={user.userId} className="bg-slate-100/50 dark:bg-white/5 rounded-lg overflow-hidden border border-transparent hover:border-cyan-500/10 transition-colors">
                     <button
                       onClick={() => setExpandedUser(expandedUser === user.userId ? null : user.userId)}
-                      className="w-full p-3 flex items-center justify-between hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors"
+                      className="w-full p-3 flex items-center justify-between hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-medium text-sm">
+                        <div className="w-8 h-8 rounded-full bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-medium text-sm">
                           {user.firstName.charAt(0)}
                           {user.lastName.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-white text-left">
+                          <p className="font-medium text-slate-800 dark:text-white text-left text-sm">
                             {user.firstName} {user.lastName}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
@@ -349,47 +338,47 @@ export default function TeamTimePage() {
                               color="blue"
                               className="flex-1 max-w-48"
                             />
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
                               {user.entryCount} reg.
                             </span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
-                        <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
+                        <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">
                           {formatDuration(user.totalMinutes)}
                         </span>
                         {expandedUser === user.userId ? (
-                          <ChevronUp className="w-4 h-4 text-gray-400" />
+                          <ChevronUp className="w-4 h-4 text-slate-400" />
                         ) : (
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
                         )}
                       </div>
                     </button>
 
                     {/* Expanded entries */}
                     {expandedUser === user.userId && (
-                      <div className="border-t border-gray-200/30 dark:border-white/5 p-3 space-y-2 bg-gray-100/30 dark:bg-black/10">
+                      <div className="border-t border-cyan-500/10 p-3 space-y-2 bg-slate-100/30 dark:bg-black/10">
                         {getUserEntries(user.userId).slice(0, 10).map((entry) => (
                           <div
                             key={entry.id}
                             className="flex items-center justify-between text-sm p-2 bg-white dark:bg-white/5 rounded-lg"
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 dark:text-white truncate">
+                              <p className="font-medium text-slate-800 dark:text-white truncate">
                                 {entry.task?.title || 'Senza task'}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
                                 {entry.task?.project?.name} · {formatDate(entry.startTime)}
                               </p>
                             </div>
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-2 tabular-nums">
+                            <span className="text-sm font-semibold font-mono text-amber-600 dark:text-amber-400 ml-2 tabular-nums">
                               {formatDuration(entry.duration)}
                             </span>
                           </div>
                         ))}
                         {getUserEntries(user.userId).length > 10 && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 text-center pt-2">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-2">
                             +{getUserEntries(user.userId).length - 10} altre registrazioni
                           </p>
                         )}
@@ -404,16 +393,15 @@ export default function TeamTimePage() {
 
         {/* By Project */}
         <div className="card">
-          <div className="p-4 border-b border-gray-200/30 dark:border-white/5">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <FolderKanban className="w-5 h-5 text-purple-500" />
+          <div className="p-4 border-b border-cyan-500/15">
+            <h2 className="section-heading flex items-center gap-2">
+              <FolderKanban className="w-4 h-4 text-violet-400" />
               Per Progetto
             </h2>
           </div>
           <div className="p-4">
             {byProject.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <span className="text-3xl block mb-2">{'\u{1F4C2}'}</span>
+              <div className="text-center py-8 text-slate-400 dark:text-slate-400">
                 Nessun dato disponibile
               </div>
             ) : (
@@ -421,15 +409,15 @@ export default function TeamTimePage() {
                 {byProject.map((project) => (
                   <div
                     key={project.projectId}
-                    className="p-3 bg-gray-50/50 dark:bg-white/5 rounded-lg"
+                    className="p-3 bg-slate-100/50 dark:bg-white/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">
+                        <p className="font-medium text-slate-800 dark:text-white truncate text-sm">
                           {project.projectName}
                         </p>
                       </div>
-                      <span className="text-lg font-bold text-gray-900 dark:text-white ml-2 tabular-nums">
+                      <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 ml-2 tabular-nums">
                         {formatDuration(project.totalMinutes)}
                       </span>
                     </div>

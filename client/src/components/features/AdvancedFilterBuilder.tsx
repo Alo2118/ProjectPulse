@@ -234,11 +234,11 @@ function RuleRow({
       {/* Logic badge (AND/OR) — shown for rows after the first */}
       <div className="w-10 flex-shrink-0 text-center">
         {showLogicBadge ? (
-          <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 uppercase">
+          <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 uppercase">
             {logic === 'and' ? 'E' : 'O'}
           </span>
         ) : (
-          <span className="inline-block w-8 h-5 text-xs font-medium text-gray-400 dark:text-gray-500 text-center">
+          <span className="inline-block w-8 h-5 text-xs font-medium text-slate-400 dark:text-slate-500 text-center">
             {index + 1}.
           </span>
         )}
@@ -288,7 +288,7 @@ function RuleRow({
       <div className="flex-shrink-0 flex items-center gap-1">
         {meta.type === 'boolean' ? (
           /* Boolean fields: no extra value input needed — operator IS the value */
-          <span className="text-sm text-gray-400 dark:text-gray-500 italic px-2">
+          <span className="text-sm text-slate-400 dark:text-slate-500 italic px-2">
             (nessun valore richiesto)
           </span>
         ) : meta.type === 'select' ? (
@@ -329,7 +329,7 @@ function RuleRow({
                 className="input py-1.5 text-sm w-36"
                 aria-label="Dal"
               />
-              <span className="text-xs text-gray-400 dark:text-gray-500 px-0.5">e</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500 px-0.5">e</span>
               <label htmlFor={`${valId}-to`} className="sr-only">
                 Al
               </label>
@@ -383,7 +383,7 @@ function RuleRow({
       <button
         type="button"
         onClick={() => onRemove(rule.id)}
-        className="flex-shrink-0 p-1.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        className="flex-shrink-0 p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
         aria-label={`Rimuovi regola ${index + 1}`}
         title="Rimuovi regola"
       >
@@ -493,15 +493,15 @@ export function AdvancedFilterBuilder({
 
   return (
     <div
-      className="rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-900/10 p-4"
+      className="rounded-lg border border-cyan-200 dark:border-cyan-800 bg-cyan-50/50 dark:bg-cyan-900/10 p-4"
       role="region"
       aria-label="Filtro avanzato"
     >
       {/* Header row */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <SlidersHorizontal className="w-4 h-4 text-cyan-600 dark:text-cyan-400" aria-hidden="true" />
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
             Filtro avanzato
           </span>
         </div>
@@ -509,7 +509,7 @@ export function AdvancedFilterBuilder({
         {/* AND / OR toggle — only relevant when there are ≥ 2 rules */}
         {filter.rules.length >= 2 && (
           <div className="flex items-center gap-1.5 text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Operatore logico:</span>
+            <span className="text-slate-500 dark:text-slate-400">Operatore logico:</span>
             <button
               type="button"
               onClick={handleLogicToggle}
@@ -537,7 +537,7 @@ export function AdvancedFilterBuilder({
 
         {/* Active rule count badge */}
         {hasRules && (
-          <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+          <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
             {filter.rules.length}{' '}
             {filter.rules.length === 1 ? 'regola attiva' : 'regole attive'}
             {filter.rules.length >= 2 && (
@@ -572,7 +572,7 @@ export function AdvancedFilterBuilder({
         </AnimatePresence>
 
         {!hasRules && (
-          <p className="text-sm text-gray-400 dark:text-gray-500 italic pl-12">
+          <p className="text-sm text-slate-400 dark:text-slate-500 italic pl-12">
             Nessuna regola aggiunta. Clicca "Aggiungi regola" per iniziare.
           </p>
         )}
@@ -583,7 +583,7 @@ export function AdvancedFilterBuilder({
         <button
           type="button"
           onClick={handleAddRule}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 hover:bg-primary-200 dark:hover:bg-primary-900/60 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-cyan-700 dark:text-cyan-300 bg-cyan-100 dark:bg-cyan-900/40 hover:bg-cyan-200 dark:hover:bg-cyan-900/60 rounded-lg transition-colors"
           aria-label="Aggiungi una nuova regola di filtro"
         >
           <Plus className="w-3.5 h-3.5" aria-hidden="true" />
@@ -594,7 +594,7 @@ export function AdvancedFilterBuilder({
           <button
             type="button"
             onClick={handleReset}
-            className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             aria-label="Rimuovi tutte le regole"
           >
             Azzera tutto
