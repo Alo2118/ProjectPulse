@@ -1,13 +1,39 @@
 import { useState } from 'react'
 import { useAuthStore } from '@stores/authStore'
 import { useUserStore } from '@stores/userStore'
+import { useThemeStore } from '@stores/themeStore'
 import { USER_ROLE_LABELS } from '@/constants'
 import { UserRole } from '@/types'
-import { Save, Loader2, Eye, EyeOff, User, Shield } from 'lucide-react'
+import { Save, Loader2, Eye, EyeOff, User, Shield, Monitor, Palette, Building2 } from 'lucide-react'
+
+const themes = [
+  {
+    id: 'tech-hud' as const,
+    name: 'TECH-HUD',
+    description: 'Stile JARVIS — neon, glow, HUD decorations',
+    icon: Monitor,
+    colors: ['#06b6d4', '#0f172a', '#8b5cf6', '#10b981'],
+  },
+  {
+    id: 'basic' as const,
+    name: 'BASIC',
+    description: 'Pulito e moderno — ispirato ad Asana',
+    icon: Palette,
+    colors: ['#f06a6a', '#ffffff', '#7c3aed', '#16a34a'],
+  },
+  {
+    id: 'classic' as const,
+    name: 'CLASSIC',
+    description: 'Professionale — stile Office 365 / Teams',
+    icon: Building2,
+    colors: ['#0078d4', '#f3f2f1', '#8764b8', '#107c10'],
+  },
+]
 
 export default function ProfilePage() {
   const { user, updateUser: updateAuthUser } = useAuthStore()
   const { updateProfile, isLoading } = useUserStore()
+  const { themeStyle, setThemeStyle } = useThemeStore()
 
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -81,7 +107,11 @@ export default function ProfilePage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center ring-2 ring-cyan-500/20">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
+            boxShadow: '0 0 0 2px var(--accent-primary-bg)',
+          }}>
           <span className="text-lg font-semibold text-white">
             {user?.firstName?.[0]}{user?.lastName?.[0]}
           </span>
@@ -105,6 +135,62 @@ export default function ProfilePage() {
           {successMessage}
         </div>
       )}
+
+      {/* Theme selector */}
+      <div className="card p-6 space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-label)' }}>
+          Tema interfaccia
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {themes.map((t) => {
+            const isSelected = themeStyle === t.id
+            const Icon = t.icon
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setThemeStyle(t.id)}
+                className="relative p-4 text-left transition-all duration-200"
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-default)'}`,
+                  backgroundColor: isSelected ? 'var(--accent-primary-bg)' : 'transparent',
+                }}
+              >
+                {isSelected && (
+                  <div
+                    className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: 'var(--accent-primary)' }}
+                  >
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                <Icon className="w-6 h-6 mb-2" style={{ color: t.colors[0] }} />
+                <h3 className="font-semibold text-sm" style={{ color: 'var(--text-heading)' }}>
+                  {t.name}
+                </h3>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  {t.description}
+                </p>
+                <div className="flex gap-1.5 mt-3">
+                  {t.colors.map((color, i) => (
+                    <div
+                      key={i}
+                      className="w-5 h-5 rounded-full border"
+                      style={{
+                        backgroundColor: color,
+                        borderColor: color === '#ffffff' || color === '#f3f2f1' ? '#e5e7eb' : color,
+                      }}
+                    />
+                  ))}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="card p-6 space-y-6">
