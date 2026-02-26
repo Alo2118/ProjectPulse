@@ -76,6 +76,21 @@ export const useThemeStore = create<ThemeState>()(
     {
       name: 'theme-storage',
       version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        if (version < 2) {
+          const state = persistedState as Record<string, unknown>
+          return { ...state, themeStyle: 'tech-hud' as const }
+        }
+        return persistedState as ThemeState
+      },
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state) {
+            applyTheme(state.theme)
+            applyThemeStyle(state.themeStyle)
+          }
+        }
+      },
     }
   )
 )
