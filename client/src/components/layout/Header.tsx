@@ -81,7 +81,7 @@ export default function Header() {
             {breadcrumbs.map((crumb, i) => (
               <span key={crumb.path} className="flex items-center gap-1 animate-breadcrumb-slide">
                 {i > 0 && (
-                  <span className="text-cyan-500/30 mx-1">/</span>
+                  <span className="mx-1" style={{ color: 'var(--border-default)' }}>/</span>
                 )}
                 {i === breadcrumbs.length - 1 ? (
                   <span className="text-themed-primary font-medium truncate">{crumb.label}</span>

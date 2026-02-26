@@ -402,6 +402,9 @@
     color: var(--text-secondary);
     box-shadow: var(--shadow-glow);
   }
+  .sidebar-user-btn:hover {
+    background: var(--bg-hover);
+  }
   .sidebar-logo {
     font-size: 1.125rem;
     font-weight: 600;

@@ -229,10 +229,10 @@ export default function Sidebar() {
         <div className="flex items-center gap-2 mt-2 px-2 py-2">
           <button
             onClick={() => { navigate('/profile'); closeMobile() }}
-            className="flex items-center gap-3 flex-1 min-w-0 rounded-lg p-1 -m-1 hover:bg-cyan-500/5 transition-colors"
+            className="flex items-center gap-3 flex-1 min-w-0 rounded-lg p-1 -m-1 transition-colors sidebar-user-btn"
             title="Modifica profilo"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center ring-2 ring-cyan-500/20 flex-shrink-0">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', boxShadow: '0 0 0 2px var(--accent-primary-bg)' }}>
               <span className="text-xs font-medium text-white">
                 {user?.firstName?.[0]}{user?.lastName?.[0]}
               </span>
