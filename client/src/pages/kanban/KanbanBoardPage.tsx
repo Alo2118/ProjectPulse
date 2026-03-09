@@ -49,21 +49,21 @@ import { EmptyState } from '@components/common/EmptyState'
 import { formatDateRelative, getDueDateColor } from '@utils/dateFormatters'
 
 const KANBAN_COLUMN_COLORS: Record<TaskStatus, string> = {
-  todo: 'bg-slate-500',
-  in_progress: 'bg-cyan-500',
-  review: 'bg-amber-500',
-  blocked: 'bg-red-500',
-  done: 'bg-emerald-500',
-  cancelled: 'bg-slate-400',
+  todo: 'bg-status-todo',
+  in_progress: 'bg-status-inprogress',
+  review: 'bg-status-review',
+  blocked: 'bg-status-blocked',
+  done: 'bg-status-done',
+  cancelled: 'bg-status-cancelled',
 }
 
 const KANBAN_COLUMN_BG: Record<TaskStatus, string> = {
-  todo: 'bg-slate-800/30 dark:bg-slate-900/50 bg-slate-100/80',
-  in_progress: 'bg-cyan-500/5 dark:bg-cyan-900/10 border-cyan-500/15',
-  review: 'bg-amber-500/5 dark:bg-amber-900/10 border-amber-500/15',
-  blocked: 'bg-red-500/5 dark:bg-red-900/10 border-red-500/15',
-  done: 'bg-emerald-500/5 dark:bg-emerald-900/10 border-emerald-500/15',
-  cancelled: 'bg-slate-500/5 dark:bg-slate-900/20',
+  todo: 'bg-[var(--bg-hover)]',
+  in_progress: 'bg-status-inprogress/10',
+  review: 'bg-status-review/10',
+  blocked: 'bg-status-blocked/10',
+  done: 'bg-status-done/10',
+  cancelled: 'bg-[var(--bg-hover)]',
 }
 
 const statusColumns: { id: TaskStatus; label: string; color: string }[] = [
@@ -100,20 +100,20 @@ function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrac
     <div
       className={`card-hover p-3 border-l-4 ${
         task.taskType === 'subtask'
-          ? 'border-l-violet-400 dark:border-l-violet-500'
+          ? 'border-l-semantic-purple'
           : TASK_PRIORITY_BORDER_COLORS[task.priority]
-      } ${isDragging ? 'shadow-[0_0_20px_rgba(6,182,212,0.4)] border-cyan-500/40 ring-1 ring-cyan-500/30' : ''} ${
+      } ${isDragging ? 'shadow-[var(--shadow-focus-glow)] border-[var(--accent-primary)]/40 ring-1 ring-[var(--accent-primary)]/30' : ''} ${
         isHighPriority && task.taskType !== 'subtask' ? 'shadow-glow-red' : ''
       }`}
       onKeyDown={handleCardKeyDown}
     >
       {task.taskType === 'subtask' && task.parentTask && (
-        <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-violet-500/20 dark:border-violet-800/40">
-          <GitBranch className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
+        <div className="flex items-center gap-1.5 mb-2 pb-1.5" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <GitBranch className="w-3.5 h-3.5 text-semantic-purple flex-shrink-0" />
           <Link
             to={`/tasks/${task.parentTask.id}`}
-            className="text-xs font-medium text-violet-400 dark:text-violet-400 hover:text-violet-300 dark:hover:text-violet-300 truncate"
-            title={`${task.parentTask.code} - ${task.parentTask.title}`}
+            className="text-xs font-medium text-semantic-purple hover:opacity-80 truncate"
+            title={task.parentTask.title}
             onClick={(e) => e.stopPropagation()}
           >
             {task.parentTask.title}
@@ -121,20 +121,20 @@ function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrac
         </div>
       )}
       <div className="flex items-start gap-2">
-        <GripVertical className="w-4 h-4 text-slate-500 dark:text-slate-500 mt-0.5 flex-shrink-0 cursor-grab" />
+        <GripVertical className="w-4 h-4 text-themed-secondary mt-0.5 flex-shrink-0 cursor-grab" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <StatusIcon type="taskPriority" value={task.priority} size="sm" />
             <Link
               to={`/tasks/${task.id}`}
-              className="text-sm font-medium text-slate-800 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 line-clamp-2 transition-colors"
+              className="text-sm font-medium text-themed-primary hover:text-themed-accent line-clamp-2 transition-colors"
             >
               {task.title}
             </Link>
           </div>
           <div className="flex items-center gap-2 mt-1">
             {task.project?.name && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              <p className="text-xs text-themed-secondary truncate">
                 {task.project.name}
               </p>
             )}
@@ -147,15 +147,15 @@ function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrac
 
           {task.estimatedHours && (
             <div className="mt-1.5">
-              <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mb-0.5">
+              <div className="flex items-center gap-1 text-xs text-themed-secondary mb-0.5">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                <span className="font-mono text-amber-600 dark:text-amber-400">
+                <span className="font-mono text-semantic-warning">
                   {task.actualHours ?? '0'}h / {task.estimatedHours}h
                 </span>
               </div>
-              <div className="h-1 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+              <div className="h-1 w-full rounded-full bg-[var(--bg-hover)] overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-cyan-500 dark:bg-cyan-400 transition-all"
+                  className="h-full rounded-full bg-semantic-info-solid transition-all"
                   style={{
                     width: `${Math.min(
                       100,
@@ -174,7 +174,7 @@ function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrac
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-2">
               {task.assignee && (
-                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center text-xs text-themed-secondary">
                   <User className="w-3 h-3 mr-1" />
                   <span className="truncate max-w-16">
                     {task.assignee.firstName?.charAt(0)}.{task.assignee.lastName?.charAt(0)}.
@@ -195,13 +195,13 @@ function TaskCard({ task, isDragging, onTimerToggle, runningTimerTaskId, canTrac
                   e.stopPropagation()
                   onTimerToggle(task.id)
                 }}
-                className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                className="p-1 rounded-md hover:bg-[var(--bg-hover)]/50 transition-colors"
                 title={isTimerRunning ? 'Stop timer' : 'Avvia timer'}
               >
                 {isTimerRunning ? (
-                  <Square className="w-4 h-4 text-red-400" />
+                  <Square className="w-4 h-4 text-semantic-danger" />
                 ) : (
-                  <Play className="w-4 h-4 text-slate-400 hover:text-cyan-400 dark:hover:text-cyan-400 transition-colors" />
+                  <Play className="w-4 h-4 text-themed-tertiary hover:text-themed-accent transition-colors" />
                 )}
               </button>
             )}
@@ -315,8 +315,8 @@ function KanbanColumn({
         aria-label={`Colonna ${label}, ${tasks.length} task. Usa ← → per navigare tra colonne, ↓ per entrare nei task`}
       >
         <StatusIcon type="taskStatus" value={status} size="md" />
-        <h3 className="text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-medium">{label}</h3>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 font-mono">
+        <h3 className="text-xs uppercase tracking-widest text-themed-secondary font-medium">{label}</h3>
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--bg-hover)] text-themed-secondary font-mono">
           <AnimatedCounter value={tasks.length} />
         </span>
       </div>
@@ -517,22 +517,22 @@ export default function KanbanBoardPage() {
   const totalColumns = statusColumns.length + (recurringTasks.length > 0 ? 1 : 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="page-title flex items-center">
-          <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-cyan-400" />
-          Kanban Board
-        </h1>
+        <div className="flex items-center gap-3">
+          <LayoutGrid className="w-5 h-5 text-themed-accent" />
+          <h1 className="page-title">Kanban Board</h1>
+        </div>
         <p className="mt-1 text-sm sm:text-base page-subtitle">
           Trascina i task per cambiare lo stato
         </p>
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
+      <div className="card p-5">
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Progetto:</label>
+          <label className="text-sm font-medium text-themed-secondary">Progetto:</label>
           <select
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
@@ -546,7 +546,7 @@ export default function KanbanBoardPage() {
             ))}
           </select>
 
-          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Priorità:</label>
+          <label className="text-sm font-medium text-themed-secondary">Priorità:</label>
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
@@ -561,7 +561,7 @@ export default function KanbanBoardPage() {
             ))}
           </select>
 
-          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Assegnatario:</label>
+          <label className="text-sm font-medium text-themed-secondary">Assegnatario:</label>
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
@@ -580,8 +580,8 @@ export default function KanbanBoardPage() {
             onClick={() => setShowSubtasks(!showSubtasks)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
               showSubtasks
-                ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-700 dark:text-cyan-400'
-                : 'bg-transparent border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-cyan-500/40 dark:hover:border-cyan-500/40'
+                ? 'bg-semantic-info border-semantic-info text-semantic-info'
+                : 'bg-transparent border-[var(--border-default)] text-themed-secondary hover:border-[var(--accent-primary)]'
             }`}
             title={showSubtasks ? 'Nascondi subtask' : 'Mostra subtask'}
           >
@@ -597,7 +597,7 @@ export default function KanbanBoardPage() {
                 setAssigneeFilter('')
                 setShowSubtasks(false)
               }}
-              className="text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+              className="text-sm text-themed-accent hover:opacity-80 transition-opacity"
             >
               Reimposta filtri
             </button>
@@ -615,7 +615,7 @@ export default function KanbanBoardPage() {
                 <div className="skeleton h-3 w-20" />
                 <div className="skeleton h-4 w-6 rounded-full" />
               </div>
-              <div className="bg-slate-100/80 dark:bg-slate-900/50 rounded-xl p-2 min-h-96 border border-transparent">
+              <div className="bg-[var(--bg-hover)] rounded-xl p-2 min-h-96 border border-transparent">
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, j) => (
                     <div key={j} className="card p-3 space-y-2">
@@ -685,13 +685,13 @@ export default function KanbanBoardPage() {
                   role="columnheader"
                   aria-label={`Colonna Ricorrenti, ${recurringTasks.length} task`}
                 >
-                  <Repeat className="w-4 h-4 text-violet-400" />
-                  <h3 className="text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-medium">Ricorrenti</h3>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 font-mono">
+                  <Repeat className="w-4 h-4 text-semantic-purple" />
+                  <h3 className="text-xs uppercase tracking-widest text-themed-secondary font-medium">Ricorrenti</h3>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-semantic-purple text-semantic-purple font-mono">
                     <AnimatedCounter value={recurringTasks.length} />
                   </span>
                 </div>
-                <div className="bg-violet-500/5 dark:bg-violet-900/10 rounded-xl p-2 min-h-96 border border-violet-500/15 dark:border-violet-800/40">
+                <div className="bg-semantic-purple rounded-xl p-2 min-h-96 border border-semantic-purple">
                   <SortableContext
                     items={recurringTasks.map((t) => t.id)}
                     strategy={verticalListSortingStrategy}

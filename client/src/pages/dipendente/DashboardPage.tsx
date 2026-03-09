@@ -16,13 +16,15 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { format } from 'date-fns'
+import { format, isSameDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import {
   Clock,
   Play,
   Square,
   RefreshCw,
+  FolderKanban,
+  CalendarClock,
 } from 'lucide-react'
 
 import { useAuthStore } from '@stores/authStore'
@@ -30,34 +32,21 @@ import { useDashboardStore } from '@stores/dashboardStore'
 import { useAnalyticsStore } from '@stores/analyticsStore'
 import { useTimerToggle } from '@hooks/useTimerToggle'
 
-import { HudPanelHeader, HudProgressBar, HudStatusRing } from '@/components/ui/hud'
+import { HudStatusRing } from '@/components/ui/hud'
+import { SectionHeader } from '@components/common/SectionHeader'
+import { ProgressBar } from '@/components/ui/ProgressBar'
 import KPICard from '@/components/dashboard/KPICard'
 import AttentionSection from '@/components/dashboard/AttentionSection'
 import { StatCardSkeleton, ListItemSkeleton } from '@/components/ui/SkeletonLoader'
 import { formatDuration, formatHoursFromDecimal } from '@utils/dateFormatters'
+import { TERMINAL_TASK_STATUSES } from '@/constants/enums'
+import { TASK_PRIORITY_DOT_COLORS, HEALTH_STATUS_LABELS } from '@/constants'
+import type { HealthStatus } from '@/types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 /** Abbreviated Italian day labels Mon–Fri */
 const DAY_ABBR = ['L', 'M', 'M', 'G', 'V'] as const
-
-/** Priority dot colours */
-const PRIORITY_DOT: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-500',
-  medium: 'bg-amber-400',
-  low: 'bg-slate-500',
-}
-
-// ─── Helper: task horizon grouping ──────────────────────────────────────────
-
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
-}
 
 // ─── Inline live timer ────────────────────────────────────────────────────────
 
@@ -78,7 +67,7 @@ function LiveCounter({ startTime }: { startTime: string }) {
   const s = String(elapsed % 60).padStart(2, '0')
 
   return (
-    <span className="font-mono text-2xl text-cyan-400 glow-text tabular-nums" aria-live="polite">
+    <span className="font-mono text-2xl text-themed-accent glow-text tabular-nums" aria-live="polite">
       {h}
       <span className="animate-timer-tick opacity-100">:</span>
       {m}
@@ -97,26 +86,26 @@ function healthToRingStatus(health: string): 'active' | 'warning' | 'danger' | '
   return 'idle'
 }
 
-// ─── Progress % → semantic color for HudProgressBar ─────────────────────────
+// ─── Progress % → semantic color for ProgressBar ────────────────────────────
 
-function progressColor(pct: number): 'emerald' | 'amber' | 'red' {
-  if (pct >= 80) return 'emerald'
-  if (pct >= 50) return 'amber'
-  return 'red'
+function progressColor(pct: number): 'success' | 'warning' | 'danger' {
+  if (pct >= 80) return 'success'
+  if (pct >= 50) return 'warning'
+  return 'danger'
 }
 
 // ─── Weekly progress fill colour ─────────────────────────────────────────────
 
 function weeklyProgressFill(pct: number): string {
-  if (pct >= 80) return 'bg-emerald-500'
-  if (pct >= 50) return 'bg-amber-500'
-  return 'bg-red-500'
+  if (pct >= 80) return 'bg-semantic-success-solid'
+  if (pct >= 50) return 'bg-semantic-warning-solid'
+  return 'bg-semantic-danger-solid'
 }
 
 function weeklyProgressText(pct: number): string {
-  if (pct >= 80) return 'text-emerald-400'
-  if (pct >= 50) return 'text-amber-400'
-  return 'text-red-400'
+  if (pct >= 80) return 'text-semantic-success'
+  if (pct >= 50) return 'text-semantic-warning'
+  return 'text-semantic-danger'
 }
 
 // ─── IT month abbreviations for date display ─────────────────────────────────
@@ -212,7 +201,7 @@ export default function DashboardPage() {
   const today = useMemo(() => new Date(), [])
 
   const { todayTasks, nextDaysTasks } = useMemo(() => {
-    const active = myTasks.filter((t) => !['done', 'cancelled'].includes(t.status))
+    const active = myTasks.filter((t) => !(TERMINAL_TASK_STATUSES as readonly string[]).includes(t.status))
     const todayList = active.filter(
       (t) => t.dueDate && isSameDay(new Date(t.dueDate), today)
     )
@@ -301,16 +290,16 @@ export default function DashboardPage() {
 
   if (isDirezione) {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-5 animate-fade-in">
 
         {/* ── Zone 1: Greeting + KPI row ───────────────────────────────── */}
         <div>
           {/* Greeting */}
-          <p className="text-lg text-slate-400">
+          <p className="text-lg text-themed-tertiary">
             Buongiorno,{' '}
-            <span className="text-white font-semibold">{firstName}</span>.
+            <span className="text-themed-heading font-semibold">{firstName}</span>.
           </p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-themed-secondary mt-0.5">
             {format(new Date(), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
 
@@ -361,8 +350,8 @@ export default function DashboardPage() {
 
         {/* ── Zone 3: Projects table ────────────────────────────────────── */}
         <div className="card overflow-hidden">
-          <div className="p-4">
-            <HudPanelHeader title="PROGETTI" />
+          <div className="p-4 pb-0">
+            <SectionHeader icon={FolderKanban} label="Progetti" />
           </div>
 
           {isLoadingAnalytics ? (
@@ -372,23 +361,23 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : projectHealth.length === 0 ? (
-            <div className="px-4 pb-6 text-center text-slate-500 text-sm">
+            <div className="px-4 pb-6 text-center text-themed-secondary text-sm">
               Nessun progetto attivo
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-cyan-500/10">
-                  <th className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                <tr className="border-b border-[var(--border-default)]/40">
+                  <th className="px-4 py-2 text-xs uppercase tracking-widest text-themed-tertiary font-medium text-left">
                     Progetto
                   </th>
-                  <th className="hidden sm:table-cell px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                  <th className="hidden sm:table-cell px-4 py-2 text-xs uppercase tracking-widest text-themed-tertiary font-medium text-left">
                     Stato
                   </th>
-                  <th className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                  <th className="px-4 py-2 text-xs uppercase tracking-widest text-themed-tertiary font-medium text-left">
                     Progresso
                   </th>
-                  <th className="hidden md:table-cell px-4 py-2 text-xs uppercase tracking-widest text-slate-400 font-medium text-left">
+                  <th className="hidden md:table-cell px-4 py-2 text-xs uppercase tracking-widest text-themed-tertiary font-medium text-left">
                     Scadenza
                   </th>
                 </tr>
@@ -407,7 +396,7 @@ export default function DashboardPage() {
                   return (
                     <tr
                       key={p.projectId}
-                      className="border-t border-cyan-500/5 hover:bg-cyan-500/5 cursor-pointer animate-fade-in-stagger"
+                      className="table-row-hover cursor-pointer animate-fade-in-stagger"
                       style={{ animationDelay: `${idx * 30}ms`, animationFillMode: 'both' }}
                       onClick={() => navigate(`/projects/${p.projectId}`)}
                       role="row"
@@ -415,7 +404,7 @@ export default function DashboardPage() {
                     >
                       {/* Progetto */}
                       <td className="px-4 py-3">
-                        <span className="font-medium text-slate-200 truncate block max-w-[16rem]">
+                        <span className="font-medium text-themed-primary truncate block max-w-[16rem]">
                           {p.projectName}
                         </span>
                       </td>
@@ -424,12 +413,8 @@ export default function DashboardPage() {
                       <td className="hidden sm:table-cell px-4 py-3">
                         <div className="flex items-center gap-2">
                           <HudStatusRing status={ringStatus} size={12} />
-                          <span className="text-xs text-slate-400 capitalize">
-                            {p.healthStatus === 'healthy'
-                              ? 'Salute'
-                              : p.healthStatus === 'at_risk'
-                                ? 'A rischio'
-                                : 'Critico'}
+                          <span className="text-xs text-themed-tertiary capitalize">
+                            {HEALTH_STATUS_LABELS[p.healthStatus as HealthStatus]}
                           </span>
                         </div>
                       </td>
@@ -438,25 +423,25 @@ export default function DashboardPage() {
                       <td className="px-4 py-3 w-40">
                         <div className="flex items-center gap-2">
                           <div className="flex-1">
-                            <HudProgressBar
+                            <ProgressBar
                               value={p.progress}
                               segments={8}
+                              segmented
                               color={pColor}
-                              showLabel={false}
                               size="sm"
-                              animate={false}
+                              animated={false}
                             />
                           </div>
-                          <span className="font-mono text-xs text-slate-400 tabular-nums w-8 text-right">
+                          <span className="font-mono text-xs text-themed-tertiary tabular-nums w-8 text-right">
                             {p.progress}%
                           </span>
                         </div>
                       </td>
 
                       {/* Scadenza */}
-                      <td className="hidden md:table-cell px-4 py-3 text-xs text-slate-400">
+                      <td className="hidden md:table-cell px-4 py-3 text-xs text-themed-tertiary">
                         {deadlineStr || (
-                          <span className="text-slate-600">—</span>
+                          <span className="text-themed-secondary">—</span>
                         )}
                       </td>
                     </tr>
@@ -477,17 +462,17 @@ export default function DashboardPage() {
   const isLoadingAll = isLoadingTasks || isLoadingWeeklyHours
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
 
       {/* ── Zone 1: Greeting + hours inline ─────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         {/* Left: greeting */}
         <div>
-          <p className="text-lg text-slate-400">
+          <p className="text-lg text-themed-tertiary">
             Buongiorno,{' '}
-            <span className="text-white font-semibold">{firstName}</span>.
+            <span className="text-themed-heading font-semibold">{firstName}</span>.
           </p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-themed-secondary mt-0.5">
             {format(new Date(), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
         </div>
@@ -495,11 +480,11 @@ export default function DashboardPage() {
         {/* Right: today's hours */}
         {canTrackTime && (
           <div className="flex items-center gap-2 text-sm">
-            <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" aria-hidden />
-            <span className="font-mono text-amber-400 font-semibold tabular-nums">
+            <Clock className="w-4 h-4 text-themed-secondary flex-shrink-0" aria-hidden />
+            <span className="font-mono text-semantic-warning font-semibold tabular-nums">
               {todayHours}
             </span>
-            <span className="text-slate-500">
+            <span className="text-themed-secondary">
               / {formatHoursFromDecimal(dailyTarget)}h oggi
             </span>
           </div>
@@ -508,45 +493,45 @@ export default function DashboardPage() {
 
       {/* ── Zone 2: "Oggi" ────────────────────────────────────────────────── */}
       <section aria-label="Task di oggi">
-        <h2 className="section-heading mb-3">Oggi</h2>
+        <SectionHeader icon={CalendarClock} label="Oggi" count={todayTasks.length > 0 ? todayTasks.length : undefined} className="mb-3" />
 
         {isLoadingAll ? (
           <div className="card p-4 space-y-2">
             {Array.from({ length: 3 }).map((_, i) => <ListItemSkeleton key={i} />)}
           </div>
         ) : todayTasks.length === 0 ? (
-          <div className="card p-5 text-center text-slate-500 text-sm">
+          <div className="card p-5 text-center text-themed-secondary text-sm">
             Nessun task in scadenza oggi
           </div>
         ) : (
-          <div className="card divide-y divide-cyan-500/5">
+          <div className="card divide-y" style={{ borderColor: 'var(--border-default)' }}>
             {todayTasks.map((task, idx) => {
               const isRunning = runningTimerTaskId === task.id
               return (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-cyan-500/5 transition-colors group animate-fade-in-stagger"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--accent-primary-bg)] transition-colors group animate-fade-in-stagger"
                   style={{ animationDelay: `${idx * 40}ms`, animationFillMode: 'both' }}
                 >
                   {/* Priority dot */}
                   <div
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.low}`}
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${TASK_PRIORITY_DOT_COLORS[task.priority] ?? TASK_PRIORITY_DOT_COLORS.low}`}
                     aria-label={`Priorita: ${task.priority}`}
                   />
 
                   {/* Title + project */}
                   <Link to={`/tasks/${task.id}`} className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-200 truncate hover:text-cyan-400 transition-colors">
+                    <p className="text-sm font-medium text-themed-primary truncate hover:text-themed-accent transition-colors">
                       {task.title}
                       {task.isRecurring && (
                         <RefreshCw
-                          className="inline-block w-3 h-3 ml-1.5 text-slate-500"
+                          className="inline-block w-3 h-3 ml-1.5 text-themed-secondary"
                           aria-label="Task ricorrente"
                         />
                       )}
                     </p>
                     {task.project && (
-                      <p className="text-xs text-slate-400 truncate">{task.project.name}</p>
+                      <p className="text-xs text-themed-tertiary truncate">{task.project.name}</p>
                     )}
                   </Link>
 
@@ -560,8 +545,8 @@ export default function DashboardPage() {
                       aria-label={isRunning ? 'Stop timer' : 'Avvia timer'}
                       className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
                         isRunning
-                          ? 'bg-red-500 text-white hover:bg-red-600'
-                          : 'text-slate-400 hover:text-cyan-400 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                          ? 'bg-semantic-danger-solid text-white hover:bg-semantic-danger-solid'
+                          : 'text-themed-tertiary hover:text-themed-accent opacity-0 group-hover:opacity-100 focus:opacity-100'
                       }`}
                     >
                       {isRunning ? (
@@ -581,21 +566,21 @@ export default function DashboardPage() {
       {/* ── Zone 3: "Prossimi giorni" ────────────────────────────────────── */}
       {!isLoadingAll && nextDaysTasks.length > 0 && (
         <section aria-label="Task prossimi giorni">
-          <h2 className="section-heading mb-3">Prossimi giorni</h2>
+          <SectionHeader icon={CalendarClock} label="Prossimi giorni" className="mb-3" />
 
           <div className="space-y-3">
             {nextDaysTasks.map(({ dateLabel, tasks }, groupIdx) => (
               <div key={groupIdx}>
                 {/* Date subheader */}
-                <p className="text-xs text-slate-500 capitalize mb-1 px-1">
+                <p className="text-xs text-themed-secondary capitalize mb-1 px-1">
                   {dateLabel}
                 </p>
 
-                <div className="card divide-y divide-cyan-500/5">
+                <div className="card divide-y" style={{ borderColor: 'var(--border-default)' }}>
                   {tasks.map((task, idx) => (
                     <div
                       key={task.id}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-cyan-500/5 transition-colors animate-fade-in-stagger"
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--accent-primary-bg)] transition-colors animate-fade-in-stagger"
                       style={{
                         animationDelay: `${(groupIdx * 5 + idx) * 30}ms`,
                         animationFillMode: 'both',
@@ -603,28 +588,28 @@ export default function DashboardPage() {
                     >
                       {/* Priority dot */}
                       <div
-                        className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.low}`}
+                        className={`w-2 h-2 rounded-full flex-shrink-0 ${TASK_PRIORITY_DOT_COLORS[task.priority] ?? TASK_PRIORITY_DOT_COLORS.low}`}
                         aria-label={`Priorita: ${task.priority}`}
                       />
 
                       {/* Title + project */}
                       <Link to={`/tasks/${task.id}`} className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-200 truncate hover:text-cyan-400 transition-colors">
+                        <p className="text-sm font-medium text-themed-primary truncate hover:text-themed-accent transition-colors">
                           {task.title}
                           {task.isRecurring && (
                             <RefreshCw
-                              className="inline-block w-3 h-3 ml-1.5 text-slate-500"
+                              className="inline-block w-3 h-3 ml-1.5 text-themed-secondary"
                               aria-label="Task ricorrente"
                             />
                           )}
                         </p>
                         {task.project && (
-                          <p className="text-xs text-slate-400 truncate">{task.project.name}</p>
+                          <p className="text-xs text-themed-tertiary truncate">{task.project.name}</p>
                         )}
                       </Link>
 
                       {/* Date label (right-aligned) */}
-                      <span className="text-xs text-slate-500 flex-shrink-0 font-mono tabular-nums">
+                      <span className="text-xs text-themed-secondary flex-shrink-0 font-mono tabular-nums">
                         {task.dueDate ? formatITDate(task.dueDate) : ''}
                       </span>
                     </div>
@@ -639,14 +624,14 @@ export default function DashboardPage() {
       {/* ── Zone 4: Active timer (conditional) ───────────────────────────── */}
       {runningTimer && (
         <section aria-label="Timer attivo" aria-live="polite">
-          <div className="card border-cyan-500/20 animate-glow-pulse p-5 space-y-4">
+          <div className="card border-[var(--accent-primary)]/20 animate-glow-pulse p-5 space-y-4">
             {/* Pulsing header */}
             <div className="flex items-center gap-2">
               <div className="relative flex-shrink-0" aria-hidden>
-                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
-                <div className="absolute inset-0 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping opacity-40" />
+                <div className="w-2.5 h-2.5 bg-semantic-success-solid rounded-full" />
+                <div className="absolute inset-0 w-2.5 h-2.5 bg-semantic-success-solid rounded-full animate-ping opacity-40" />
               </div>
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-semantic-success uppercase tracking-wide">
                 Timer in esecuzione
               </span>
             </div>
@@ -655,12 +640,12 @@ export default function DashboardPage() {
             <div className="min-w-0">
               <Link
                 to={`/tasks/${runningTimer.taskId}`}
-                className="text-sm font-semibold text-slate-200 hover:text-cyan-400 transition-colors truncate block"
+                className="text-sm font-semibold text-themed-primary hover:text-themed-accent transition-colors truncate block"
               >
                 {runningTimer.task?.title ?? 'Timer attivo'}
               </Link>
               {runningTimer.task?.project && (
-                <p className="text-xs text-slate-400 mt-0.5 truncate">
+                <p className="text-xs text-themed-tertiary mt-0.5 truncate">
                   {runningTimer.task.project.name}
                 </p>
               )}
@@ -674,7 +659,7 @@ export default function DashboardPage() {
             {/* Stop button */}
             <button
               onClick={() => onToggleTimer(runningTimer.taskId)}
-              className="btn-primary w-full bg-red-600 hover:bg-red-500 shadow-neon-red"
+              className="btn-primary w-full bg-semantic-danger-solid hover:opacity-90 shadow-glow-red"
               aria-label="Ferma timer"
             >
               <Square className="w-4 h-4 mr-2" aria-hidden />
@@ -688,14 +673,14 @@ export default function DashboardPage() {
       {canTrackTime && (
         <section aria-label="Riepilogo settimanale">
           <div className="card p-5">
-            <HudPanelHeader title="SETTIMANA" />
+            <SectionHeader icon={Clock} label="Settimana" />
 
             {/* Hours + progress */}
             <div className="flex items-baseline gap-1 mb-3">
               <span className={`text-xl font-bold tabular-nums ${weeklyProgressText(weeklyPercent)}`}>
                 {formatDuration(weeklyTotalMinutes)}
               </span>
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-themed-secondary">
                 / {formatHoursFromDecimal(weeklyTarget)}h
               </span>
               <span className={`ml-auto text-sm font-semibold tabular-nums ${weeklyProgressText(weeklyPercent)}`}>
@@ -705,7 +690,7 @@ export default function DashboardPage() {
 
             {/* Progress bar */}
             <div
-              className="w-full h-1.5 bg-slate-700/50 rounded-full overflow-hidden mb-4"
+              className="w-full h-1.5 bg-[var(--bg-card-hover)] rounded-full overflow-hidden mb-4"
               role="progressbar"
               aria-valuenow={weeklyPercent}
               aria-valuemin={0}
@@ -735,10 +720,10 @@ export default function DashboardPage() {
                     <div
                       className={`w-full rounded-t-sm transition-all duration-500 ${
                         bar.isToday
-                          ? 'bg-cyan-500'
+                          ? 'bg-[var(--accent-primary)]'
                           : bar.minutes > 0
-                            ? 'bg-slate-600'
-                            : 'bg-slate-800'
+                            ? 'bg-[var(--bg-disabled)]'
+                            : 'bg-[var(--bg-sidebar)]'
                       }`}
                       style={{ height: `${Math.max(bar.heightPct, bar.minutes > 0 ? 8 : 2)}%` }}
                       title={`${bar.abbr}: ${formatDuration(bar.minutes)}`}
@@ -746,7 +731,7 @@ export default function DashboardPage() {
                   </div>
                   <span
                     className={`text-xs leading-none tabular-nums ${
-                      bar.isToday ? 'font-bold text-cyan-400' : 'text-slate-500'
+                      bar.isToday ? 'font-bold text-themed-accent' : 'text-themed-secondary'
                     }`}
                   >
                     {bar.abbr}
