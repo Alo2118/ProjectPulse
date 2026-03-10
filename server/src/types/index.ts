@@ -103,6 +103,7 @@ export interface CreateProjectInput {
   description?: string
   ownerId: string
   templateId?: string
+  phaseTemplateId?: string
   startDate?: Date
   targetEndDate?: Date
   budget?: number
