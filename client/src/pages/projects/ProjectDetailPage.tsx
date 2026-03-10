@@ -1,23 +1,11 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
-import {
-  AlertTriangle,
-  Calendar,
-  CheckSquare,
-  Clock,
-  Edit,
-  ExternalLink,
-  FileText,
-  Signal,
-  Target,
-  User,
-  Users,
-} from "lucide-react"
+import { Edit, ExternalLink, AlertTriangle, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { MetaRow } from "@/components/common/MetaRow"
+import { DeadlineCell } from "@/components/common/DeadlineCell"
 import { ProjectTreeSidebar } from "@/components/common/ProjectTreeSidebar"
 import { RelatedEntitiesSidebar } from "@/components/common/RelatedEntitiesSidebar"
 import { SidebarActionSuggestion } from "@/components/common/SidebarActionSuggestion"
@@ -25,23 +13,23 @@ import type { SidebarSuggestion } from "@/components/common/SidebarActionSuggest
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Separator } from "@/components/ui/separator"
 import {
   useProjectQuery,
   useProjectStatsQuery,
   useChangeProjectStatus,
   useDeleteProject,
+  useProjectPhasesQuery,
+  useAdvancePhase,
 } from "@/hooks/api/useProjects"
 import { useTaskListQuery } from "@/hooks/api/useTasks"
 import { useRisksByProjectQuery } from "@/hooks/api/useRisks"
 import { useDocumentsByProjectQuery } from "@/hooks/api/useDocuments"
 import { useProjectMembersQuery } from "@/hooks/api/useProjectMembers"
+import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
+import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
   PROJECT_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
@@ -53,14 +41,11 @@ import {
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_TYPE_LABELS,
   PROJECT_ROLE_LABELS,
-  STATUS_COLORS_HSL,
+  STATUS_COLORS,
 } from "@/lib/constants"
-import { formatDate } from "@/lib/utils"
-import { cn } from "@/lib/utils"
-import { ProgressSummary } from "@/components/common/ProgressSummary"
-import { WorkflowStepper } from "@/components/common/WorkflowStepper"
-import { projectWorkflow } from "@/lib/workflows/projectWorkflow"
-import type { ValidationData } from "@/lib/workflow-engine"
+import { cn, formatDate, getUserInitials, getAvatarColor } from "@/lib/utils"
+import { ProgressRing } from "@/components/common/ProgressRing"
+import { ProjectPhasesStepper } from "@/components/common/WorkflowStepper"
 
 interface ProjectData {
   id: string
@@ -157,53 +142,6 @@ interface MemberRow {
   }
 }
 
-interface ProjectWorkflowStepperWrapperProps {
-  project: ProjectData
-  stats?: ProjectStats
-  tasks: TaskRow[]
-  members: MemberRow[]
-  docs: DocumentRow[]
-  onAdvance: (status: string) => void
-}
-
-function ProjectWorkflowStepperWrapper({
-  project,
-  stats,
-  tasks,
-  members,
-  docs,
-  onAdvance,
-}: ProjectWorkflowStepperWrapperProps) {
-  const validationData: ValidationData = {
-    milestoneCount: tasks.filter((t) => t.taskType === "milestone").length,
-    teamSize: members.length,
-    hasDescription: !!(project.description && project.description.trim().length > 0),
-    completionPercent: stats?.completionPercentage ?? 0,
-    blockedTaskCount: tasks.filter((t) => t.status === "blocked").length,
-    completedTaskCount: stats?.completedTasks ?? 0,
-    taskCount: stats?.totalTasks ?? 0,
-    attachmentCount: docs.length,
-    hoursLogged: 0,
-  }
-
-  // Determine the current project workflow phase key
-  const workflowPhaseKey = project.status
-
-  // Only render for workflow phases (not maintenance/completed/on_hold/cancelled)
-  const workflowPhaseKeys = projectWorkflow.phases.map((p) => p.key)
-  if (!workflowPhaseKeys.includes(workflowPhaseKey)) return null
-
-  return (
-    <WorkflowStepper
-      workflow={projectWorkflow}
-      currentPhase={workflowPhaseKey}
-      validationData={validationData}
-      onAdvance={onAdvance}
-      canAdvancePhase={true}
-    />
-  )
-}
-
 function TabSkeleton() {
   return (
     <div className="space-y-3 pt-4">
@@ -214,25 +152,27 @@ function TabSkeleton() {
   )
 }
 
-function isOverdue(dueDate: string): boolean {
-  return new Date(dueDate) < new Date()
-}
+const TASK_LIMIT = 50
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   useSetPageContext({ domain: 'project', entityId: id })
   const navigate = useNavigate()
+  const { icons, emojis } = useThemeConfig()
 
   const { data: project, isLoading, error } = useProjectQuery(id!)
   const { data: stats } = useProjectStatsQuery(id!)
+  const { data: phasesData } = useProjectPhasesQuery(id!)
   const changeStatus = useChangeProjectStatus()
+  const advancePhase = useAdvancePhase()
   const deleteProject = useDeleteProject()
+  const { isPrivileged: canManageProject } = usePrivilegedRole()
 
   // Tab data
   const { data: tasksData, isLoading: tasksLoading } = useTaskListQuery({
     projectId: id!,
     includeSubtasks: true,
-    limit: 50,
+    limit: TASK_LIMIT,
   })
   const { data: risksData, isLoading: risksLoading } =
     useRisksByProjectQuery(id!)
@@ -249,6 +189,23 @@ export default function ProjectDetailPage() {
   const docs = (docsData ?? []) as DocumentRow[]
   const members = (membersData ?? []) as MemberRow[]
 
+  const totalTaskCount = s?.totalTasks ?? tasks.length
+  const tasksTruncated = totalTaskCount > TASK_LIMIT
+
+  // Domain icons from theme
+  const TaskIcon = icons.task
+  const MilestoneIcon = icons.milestone
+  const SubtaskIcon = icons.subtask
+  const RiskIcon = icons.risk
+  const DocIcon = icons.document
+
+  // Task type → icon mapping
+  const taskTypeIcon: Record<string, typeof TaskIcon> = {
+    milestone: MilestoneIcon,
+    task: TaskIcon,
+    subtask: SubtaskIcon,
+  }
+
   // ---- Sidebar: related entities ----
   const relatedItems = useMemo(() => {
     if (!p) return []
@@ -256,9 +213,9 @@ export default function ProjectDetailPage() {
     const inProgressCount = tasks.filter((t) => t.status === "in_progress").length
     return [
       {
-        icon: CheckSquare,
+        icon: TaskIcon,
         label: "Task",
-        total: s?.totalTasks ?? tasks.length,
+        total: totalTaskCount,
         domain: "task",
         breakdowns: [
           ...(inProgressCount > 0
@@ -284,19 +241,19 @@ export default function ProjectDetailPage() {
         ],
       },
       {
-        icon: AlertTriangle,
+        icon: RiskIcon,
         label: "Rischi",
         total: risks.length,
         domain: "risk",
       },
       {
-        icon: FileText,
+        icon: DocIcon,
         label: "Documenti",
         total: docs.length,
         domain: "document",
       },
     ]
-  }, [p, s, tasks, risks, docs, id])
+  }, [p, s, tasks, risks, docs, id, TaskIcon, RiskIcon, DocIcon, totalTaskCount])
 
   // ---- Sidebar: suggestions ----
   const projectSuggestions = useMemo((): SidebarSuggestion[] => {
@@ -307,7 +264,7 @@ export default function ProjectDetailPage() {
     if (blockedCount > 0) {
       return [
         {
-          icon: "🔴",
+          icon: emojis.blocked,
           message: `${blockedCount} task bloccati in questo progetto`,
           actionLabel: "Vedi bloccati →",
           actionHref: `/tasks?projectId=${id}&status=blocked`,
@@ -317,7 +274,7 @@ export default function ProjectDetailPage() {
     if (completionPctVal >= 100) {
       return [
         {
-          icon: "✅",
+          icon: emojis.completed,
           message: "Tutti i task completati",
           actionLabel: "Chiudi progetto →",
           actionHref: `/projects/${id}/edit`,
@@ -331,7 +288,7 @@ export default function ProjectDetailPage() {
       if (daysLeft >= 0 && daysLeft <= 7 && completionPctVal < 50) {
         return [
           {
-            icon: "⏰",
+            icon: emojis.warning,
             message: `Scadenza tra ${daysLeft}gg ma solo ${Math.round(completionPctVal)}% completato`,
             actionLabel: "Vedi task →",
             actionHref: `/tasks?projectId=${id}`,
@@ -340,14 +297,25 @@ export default function ProjectDetailPage() {
       }
     }
     return []
-  }, [p, s, tasks, id])
+  }, [p, s, tasks, id, emojis])
 
   const handleStatusChange = (status: string) => {
     changeStatus.mutate(
       { id: id!, status },
       {
-        onSuccess: () => toast.success("Stato aggiornato"),
-        onError: () => toast.error("Errore nell'aggiornamento dello stato"),
+        onSuccess: () => toast.success("Condizione aggiornata"),
+        onError: () => toast.error("Errore nell'aggiornamento"),
+      }
+    )
+  }
+
+  const handleAdvancePhase = (targetPhaseKey: string) => {
+    advancePhase.mutate(
+      { id: id!, targetPhaseKey },
+      {
+        onSuccess: () => toast.success("Fase avanzata"),
+        onError: (err: Error) =>
+          toast.error(err.message || "Errore nell'avanzamento fase"),
       }
     )
   }
@@ -368,17 +336,22 @@ export default function ProjectDetailPage() {
   const taskTree = buildTaskTree(tasks)
 
   function renderTaskNode(node: TaskNode, depth: number) {
+    const TypeIcon = taskTypeIcon[node.taskType] ?? TaskIcon
     return (
       <div key={node.id}>
         <Link
           to={`/tasks/${node.id}`}
-          className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors border-b last:border-b-0"
-          style={{ paddingLeft: `${16 + depth * 24}px` }}
+          className={cn(
+            "flex items-center justify-between py-2.5 hover:bg-muted/50 transition-colors border-b last:border-b-0 group",
+            depth > 0 && "border-l-2 border-muted ml-4"
+          )}
+          style={{ paddingLeft: `${depth > 0 ? 12 : 16}px`, paddingRight: 16 }}
         >
           <div className="flex items-center gap-2 min-w-0">
-            {depth > 0 && (
-              <span className="text-muted-foreground/40 text-xs">└</span>
-            )}
+            <TypeIcon className={cn(
+              "h-3.5 w-3.5 shrink-0",
+              node.taskType === "milestone" ? "text-purple-500" : "text-muted-foreground"
+            )} />
             <span
               className={cn(
                 "text-sm truncate",
@@ -402,24 +375,14 @@ export default function ProjectDetailPage() {
           <div className="flex items-center gap-2 shrink-0 ml-4">
             <StatusBadge status={node.status} labels={TASK_STATUS_LABELS} />
             {node.dueDate && (
-              <span
-                className={cn(
-                  "text-xs",
-                  node.status !== "done" &&
-                    node.status !== "cancelled" &&
-                    isOverdue(node.dueDate) &&
-                    "text-destructive font-medium"
-                )}
-              >
-                {formatDate(node.dueDate)}
-              </span>
+              <DeadlineCell dueDate={node.dueDate} status={node.status} />
             )}
             {node.assignee && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground hidden sm:inline">
                 {node.assignee.firstName} {node.assignee.lastName}
               </span>
             )}
-            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </Link>
         {node.children.length > 0 &&
@@ -438,11 +401,23 @@ export default function ProjectDetailPage() {
       </Button>
     </div>
   ) : (
-    <Card className="mt-4">
-      <CardContent className="p-0">
-        {taskTree.map((node) => renderTaskNode(node, 0))}
-      </CardContent>
-    </Card>
+    <div className="space-y-2 mt-4">
+      {tasksTruncated && (
+        <div className="flex items-center gap-2 rounded-md border border-warning/50 bg-warning/10 px-3 py-2">
+          <span className="text-xs text-warning">
+            {emojis.warning} Mostrati {TASK_LIMIT} di {totalTaskCount} task.
+          </span>
+          <Button variant="ghost" size="sm" className="h-6 text-xs" asChild>
+            <Link to={`/tasks?projectId=${id}`}>Vedi tutti →</Link>
+          </Button>
+        </div>
+      )}
+      <Card>
+        <CardContent className="p-0">
+          {taskTree.map((node) => renderTaskNode(node, 0))}
+        </CardContent>
+      </Card>
+    </div>
   )
 
   // ---- Tab: Risks ----
@@ -465,9 +440,10 @@ export default function ProjectDetailPage() {
             <Link
               key={r.id}
               to={`/risks/${r.id}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors group"
             >
               <div className="flex items-center gap-3 min-w-0">
+                <RiskIcon className="h-4 w-4 text-destructive/70 shrink-0" />
                 <span className="text-sm font-medium truncate">
                   {r.title}
                 </span>
@@ -484,11 +460,11 @@ export default function ProjectDetailPage() {
                   P: {r.probability} / I: {r.impact}
                 </Badge>
                 {r.owner && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
                     {r.owner.firstName} {r.owner.lastName}
                   </span>
                 )}
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </Link>
           ))}
@@ -517,10 +493,10 @@ export default function ProjectDetailPage() {
             <Link
               key={d.id}
               to={`/documents/${d.id}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors group"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <DocIcon className="h-4 w-4 text-purple-500/70 shrink-0" />
                 <span className="text-sm font-medium truncate">
                   {d.title}
                 </span>
@@ -537,11 +513,11 @@ export default function ProjectDetailPage() {
                   v{d.version}
                 </Badge>
                 {d.createdBy && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
                     {d.createdBy.firstName} {d.createdBy.lastName}
                   </span>
                 )}
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </Link>
           ))}
@@ -563,40 +539,42 @@ export default function ProjectDetailPage() {
     <Card className="mt-4">
       <CardContent className="p-0">
         <div className="divide-y">
-          {members.map((m) => (
-            <div
-              key={m.id}
-              className="flex items-center justify-between px-4 py-3"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
-                  {m.user.firstName[0]}
-                  {m.user.lastName[0]}
+          {members.map((m) => {
+            const fullName = `${m.user.firstName} ${m.user.lastName}`
+            return (
+              <div
+                key={m.id}
+                className="flex items-center justify-between px-4 py-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar className="h-8 w-8 text-xs">
+                    <AvatarFallback className={cn(getAvatarColor(fullName), "text-white")}>
+                      {getUserInitials(m.user.firstName, m.user.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{fullName}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {m.user.email}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {m.user.firstName} {m.user.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {m.user.email}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0 ml-4">
-                <Badge variant="secondary" className="text-[10px] px-1.5">
-                  {PROJECT_ROLE_LABELS[m.projectRole] ?? m.projectRole}
-                </Badge>
-                {!m.user.isActive && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 text-muted-foreground"
-                  >
-                    Disattivato
+                <div className="flex items-center gap-2 shrink-0 ml-4">
+                  <Badge variant="secondary" className="text-[10px] px-1.5">
+                    {PROJECT_ROLE_LABELS[m.projectRole] ?? m.projectRole}
                   </Badge>
-                )}
+                  {!m.user.isActive && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 text-muted-foreground"
+                    >
+                      Disattivato
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </CardContent>
     </Card>
@@ -605,63 +583,21 @@ export default function ProjectDetailPage() {
   // ---- Sidebar ----
   const sidebar = p ? (
     <div className="space-y-4">
-      {/* Status section */}
+      {/* Related entities + suggestion combined */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Stato</CardTitle>
+          <CardTitle className="text-sm">Riepilogo</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-0">
-          <MetaRow icon={Signal} label="Stato">
-            <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
-          </MetaRow>
-          <MetaRow icon={Target} label="Priorità">
-            <StatusBadge status={p.priority} labels={TASK_PRIORITY_LABELS} />
-          </MetaRow>
-          <MetaRow icon={Calendar} label="Scadenza">
-            {p.targetEndDate ? formatDate(p.targetEndDate) : "—"}
-          </MetaRow>
-          <MetaRow icon={User} label="Responsabile">
-            {p.manager
-              ? `${p.manager.firstName} ${p.manager.lastName}`
-              : "—"}
-          </MetaRow>
-          <MetaRow icon={Calendar} label="Data Inizio">
-            {p.startDate ? formatDate(p.startDate) : "—"}
-          </MetaRow>
-          <MetaRow icon={Clock} label="Budget">
-            {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
-          </MetaRow>
-          <MetaRow icon={Users} label="Membri">
-            {members.length > 0 ? `${members.length}` : "—"}
-          </MetaRow>
-          <MetaRow icon={Calendar} label="Creato il">
-            {formatDate(p.createdAt)}
-          </MetaRow>
-        </CardContent>
-      </Card>
-
-      {/* Project tree */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Struttura Progetto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ProjectTreeSidebar projectId={p.id} />
-        </CardContent>
-      </Card>
-
-      {/* Related entities */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Entita Collegate</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <RelatedEntitiesSidebar items={relatedItems} />
+          {projectSuggestions.length > 0 && (
+            <>
+              <Separator />
+              <SidebarActionSuggestion suggestions={projectSuggestions} />
+            </>
+          )}
         </CardContent>
       </Card>
-
-      {/* Suggestion */}
-      <SidebarActionSuggestion suggestions={projectSuggestions} />
     </div>
   ) : undefined
 
@@ -677,51 +613,57 @@ export default function ProjectDetailPage() {
       ]}
       title={p?.name}
       subtitle={
-        p?.description
-          ? `${p.description.slice(0, 120)}${p.description.length > 120 ? "..." : ""}`
+        p
+          ? [
+              p.code,
+              p.description
+                ? p.description.slice(0, 120) + (p.description.length > 120 ? "..." : "")
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")
           : undefined
+      }
+      badges={
+        p ? (
+          <>
+            <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
+            <StatusBadge status={p.priority} labels={TASK_PRIORITY_LABELS} />
+          </>
+        ) : undefined
       }
       headerActions={
         p ? (
-          <>
-            <Button variant="outline" size="sm" asChild>
-              <Link to={`/projects/${id}/edit`}>
-                <Edit className="h-4 w-4 mr-1" />
-                Modifica
-              </Link>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Cambia Stato
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {Object.entries(PROJECT_STATUS_LABELS)
-                  .filter(([key]) => key !== p.status)
-                  .map(([key, label]) => (
-                    <DropdownMenuItem
-                      key={key}
-                      onClick={() => handleStatusChange(key)}
-                    >
-                      {label}
-                    </DropdownMenuItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/projects/${id}/edit`}>
+              <Edit className="h-4 w-4 mr-1" />
+              Modifica
+            </Link>
+          </Button>
         ) : undefined
       }
       beforeContent={
         p ? (
-          <ProjectWorkflowStepperWrapper
-            project={p}
-            stats={s}
-            tasks={tasks}
-            members={members}
-            docs={docs}
-            onAdvance={handleStatusChange}
-          />
+          <div className="space-y-2">
+            {p.status === "on_hold" && (
+              <div className="rounded-md border border-warning bg-warning/10 p-3 text-sm text-warning-foreground flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Progetto in pausa
+              </div>
+            )}
+            {p.status === "cancelled" && (
+              <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive-foreground flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                Progetto cancellato
+              </div>
+            )}
+            {phasesData && p.status === "active" && (
+              <ProjectPhasesStepper
+                phasesData={phasesData}
+                onAdvance={canManageProject ? handleAdvancePhase : undefined}
+              />
+            )}
+          </div>
         ) : undefined
       }
       sidebar={sidebar}
@@ -733,24 +675,77 @@ export default function ProjectDetailPage() {
                 label: "Panoramica",
                 content: (
                   <div className="space-y-4 pt-4">
-                    {/* Progress summary */}
+                    {/* Progress + status badges */}
                     <Card>
                       <CardContent className="p-5">
-                        <ProgressSummary
-                          progress={Math.round(completionPct)}
-                          total={s?.totalTasks ?? tasks.length}
-                          completed={s?.completedTasks ?? tasks.filter((t) => t.status === "done").length}
-                          statusBreakdown={Object.entries(TASK_STATUS_LABELS).map(([status, label]) => ({
-                            key: status,
-                            label,
-                            count: tasks.filter((t) => t.status === status).length,
-                            color: STATUS_COLORS_HSL[status] ?? STATUS_COLORS_HSL.todo,
-                          }))}
-                        />
+                        <div className="flex items-center gap-4 mb-4">
+                          <ProgressRing value={Math.round(completionPct)} size="lg" showLabel />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {s?.completedTasks ?? tasks.filter((t) => t.status === "done").length} di {totalTaskCount} completati
+                            </p>
+                            <p className="text-xs text-muted-foreground">{Math.round(completionPct)}% completamento</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(TASK_STATUS_LABELS).map(([status, label]) => {
+                            const count = tasks.filter((t) => t.status === status).length
+                            if (count === 0) return null
+                            return (
+                              <Badge
+                                key={status}
+                                variant="secondary"
+                                className={cn("text-xs px-2 py-0.5 tabular-nums", STATUS_COLORS[status])}
+                              >
+                                {label} {count}
+                              </Badge>
+                            )
+                          })}
+                        </div>
                       </CardContent>
                     </Card>
 
-                    {/* Full description if truncated in subtitle */}
+                    {/* Key info cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground mb-0.5">Inizio</p>
+                          <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-data)' }}>
+                            {p.startDate ? formatDate(p.startDate) : "—"}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground mb-0.5">Scadenza</p>
+                          <p className="text-sm font-medium">
+                            {p.targetEndDate ? (
+                              <DeadlineCell dueDate={p.targetEndDate} status={p.status} />
+                            ) : "—"}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
+                          <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-data)' }}>
+                            {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground mb-0.5">Responsabile</p>
+                          <p className="text-sm font-medium truncate">
+                            {p.manager
+                              ? `${p.manager.firstName} ${p.manager.lastName}`
+                              : "—"}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Full description if long */}
                     {p.description && p.description.length > 120 && (
                       <Card>
                         <CardContent className="p-5">
@@ -764,38 +759,13 @@ export default function ProjectDetailPage() {
                       </Card>
                     )}
 
-                    {/* Dettagli progetto */}
+                    {/* Project tree structure */}
                     <Card>
-                      <CardContent className="p-5">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold text-sm mb-3">Dettagli</h3>
-                          <MetaRow icon={Signal} label="Stato">
-                            <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
-                          </MetaRow>
-                          <MetaRow icon={Target} label="Priorità">
-                            <StatusBadge status={p.priority} labels={TASK_PRIORITY_LABELS} />
-                          </MetaRow>
-                          <MetaRow icon={Calendar} label="Data Inizio">
-                            {p.startDate ? formatDate(p.startDate) : "—"}
-                          </MetaRow>
-                          <MetaRow icon={Calendar} label="Scadenza">
-                            {p.targetEndDate ? formatDate(p.targetEndDate) : "—"}
-                          </MetaRow>
-                          <MetaRow icon={Clock} label="Budget">
-                            {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
-                          </MetaRow>
-                          <MetaRow icon={User} label="Responsabile">
-                            {p.manager
-                              ? `${p.manager.firstName} ${p.manager.lastName}`
-                              : "—"}
-                          </MetaRow>
-                          <MetaRow icon={Users} label="Membri">
-                            {members.length > 0 ? `${members.length}` : "—"}
-                          </MetaRow>
-                          <MetaRow icon={Calendar} label="Creato il">
-                            {formatDate(p.createdAt)}
-                          </MetaRow>
-                        </div>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Struttura Progetto</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ProjectTreeSidebar projectId={p.id} />
                       </CardContent>
                     </Card>
                   </div>
@@ -804,7 +774,7 @@ export default function ProjectDetailPage() {
               {
                 key: "tasks",
                 label: "Task",
-                count: s?.totalTasks,
+                count: totalTaskCount,
                 content: tasksTab,
               },
               {
