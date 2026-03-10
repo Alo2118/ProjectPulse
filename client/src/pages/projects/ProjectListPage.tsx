@@ -1,364 +1,241 @@
-/**
- * Project List Page - Table layout with progress and health indicators
- * @module pages/projects/ProjectListPage
- */
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { FolderKanban, ArrowUpDown } from "lucide-react"
+import { arrayMove } from "@dnd-kit/sortable"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
+import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { ProgressRing } from "@/components/common/ProgressRing"
+import { DeadlineCell } from "@/components/common/DeadlineCell"
+import { ProblemIndicators } from "@/components/common/ProblemIndicators"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { useProjectListQuery, useReorderProjects } from "@/hooks/api/useProjects"
+import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
+import {
+  PROJECT_STATUS_LABELS,
+  TASK_PRIORITY_LABELS,
+  PROJECT_STATUS_GROUP_ORDER,
+  COLLAPSED_BY_DEFAULT,
+} from "@/lib/constants"
+import { toast } from "sonner"
 
-import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { useProjectStore } from '@stores/projectStore'
-import { useAuthStore } from '@stores/authStore'
-import { Plus, Search, FolderKanban, Calendar, ChevronUp, ChevronDown } from 'lucide-react'
-import { StatusIcon } from '@/components/ui/StatusIcon'
-import { ProgressBar } from '@/components/ui/ProgressBar'
-import { EmptyState } from '@components/common/EmptyState'
-import { formatDate } from '@utils/dateFormatters'
-
-type SortKey = 'name' | 'status' | 'progress' | 'targetEndDate'
-type SortDir = 'asc' | 'desc'
-
-/** Returns a health badge class based on task stats and deadline */
-function healthClass(hasBlocked: boolean, isOverdue: boolean, pct: number): string {
-  if (hasBlocked || isOverdue) return 'text-red-600 dark:text-red-400 bg-red-500/10'
-  if (pct < 33) return 'text-amber-600 dark:text-amber-400 bg-amber-500/10'
-  return 'text-green-600 dark:text-green-400 bg-green-500/10'
+interface ProjectRow {
+  id: string
+  code: string
+  name: string
+  status: string
+  priority: string
+  sortOrder: number
+  targetEndDate?: string | null
+  owner?: { firstName: string; lastName: string } | null
+  stats?: {
+    completionPercentage?: number
+    totalTasks?: number
+    completedTasks?: number
+    blockedTasks?: number
+    openRisks?: number
+  } | null
+  _count?: { tasks?: number; risks?: number } | null
 }
 
-function healthLabel(hasBlocked: boolean, isOverdue: boolean, pct: number): string {
-  if (hasBlocked) return 'Bloccato'
-  if (isOverdue) return 'In ritardo'
-  if (pct >= 100) return 'Completo'
-  if (pct >= 66) return 'In linea'
-  return 'In corso'
-}
+const columns: Column<ProjectRow>[] = [
+  {
+    key: "name",
+    header: "Progetto",
+    sortable: true,
+    cell: (p) => {
+      const pct = p.stats?.completionPercentage ?? 0
+      const blockedTasks = p.stats?.blockedTasks ?? 0
+      const openRisks = p.stats?.openRisks ?? (p._count?.risks ?? 0)
+      const ownerName = p.owner
+        ? `${p.owner.firstName[0]}. ${p.owner.lastName}`
+        : null
+      const priorityLabel = TASK_PRIORITY_LABELS[p.priority] ?? p.priority
+
+      return (
+        <div className="min-w-0 py-1 space-y-0.5">
+          {/* Line 1: ring + name + problem indicators */}
+          <div className="flex items-center gap-2 min-w-0">
+            <ProgressRing value={pct} size="sm" showLabel animated={false} />
+            <span className="font-medium text-sm truncate leading-tight flex-1 min-w-0">
+              {p.name}
+            </span>
+            <ProblemIndicators
+              blockedTasks={blockedTasks > 0 ? blockedTasks : undefined}
+              openRisks={openRisks > 0 ? openRisks : undefined}
+            />
+          </div>
+
+          {/* Line 2: owner + priority */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground pl-9">
+            {ownerName && <span>{ownerName}</span>}
+            {ownerName && <span aria-hidden="true">·</span>}
+            <span>{priorityLabel}</span>
+          </div>
+
+          {/* Line 3: progress bar */}
+          <div className="pl-9 pr-2">
+            <Progress value={pct} className="h-1" />
+          </div>
+        </div>
+      )
+    },
+  },
+  {
+    key: "targetEndDate",
+    header: "Scadenza",
+    sortable: true,
+    className: "w-[130px]",
+    cell: (p) => (
+      <DeadlineCell dueDate={p.targetEndDate} status={p.status} />
+    ),
+  },
+]
+
+const filterConfig: FilterConfig[] = [
+  {
+    key: "search",
+    label: "Cerca",
+    type: "search",
+    placeholder: "Cerca progetti...",
+  },
+  {
+    key: "status",
+    label: "Stato",
+    type: "select",
+    options: Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => ({
+      value,
+      label,
+    })),
+  },
+  {
+    key: "priority",
+    label: "Priorità",
+    type: "select",
+    options: Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => ({
+      value,
+      label,
+    })),
+  },
+]
 
 export default function ProjectListPage() {
+  useSetPageContext({ domain: "project" })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const { projects, isLoading, fetchProjects } = useProjectStore()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { isPrivileged } = usePrivilegedRole()
+  const reorderMutation = useReorderProjects()
 
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [priorityFilter, setPriorityFilter] = useState<string>('')
-  const [sortKey, setSortKey] = useState<SortKey>('name')
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
-
-  useEffect(() => {
-    fetchProjects()
-  }, [fetchProjects])
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
+  const filters = {
+    page: searchParams.get("page") || "1",
+    limit: "20",
+    search: searchParams.get("search") || "",
+    status: searchParams.get("status") || "",
+    priority: searchParams.get("priority") || "",
+    sortBy: searchParams.get("sortBy") || "sortOrder",
+    sortOrder: searchParams.get("sortOrder") || "asc",
   }
 
-  const filteredProjects = useMemo(() => {
-    const filtered = projects.filter((project) => {
-      const matchesSearch =
-        searchTerm === '' ||
-        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const isManualOrder = filters.sortBy === "sortOrder"
+  const canDrag = isManualOrder && isPrivileged
 
-      const matchesStatus = statusFilter === '' || project.status === statusFilter
-      const matchesPriority = priorityFilter === '' || project.priority === priorityFilter
+  const { data, isLoading, error } = useProjectListQuery(filters)
 
-      return matchesSearch && matchesStatus && matchesPriority
+  const projects = (data?.data ?? []) as ProjectRow[]
+  const pagination = data?.pagination as
+    | { page: number; limit: number; total: number; pages: number }
+    | undefined
+
+  const handleFilterChange = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (value) params.set(key, value)
+    else params.delete(key)
+    if (key !== "page") params.set("page", "1")
+    setSearchParams(params)
+  }
+
+  const handleFilterClear = () => setSearchParams({})
+
+  const handlePageChange = (page: number) =>
+    handleFilterChange("page", String(page))
+
+  const handleSort = (key: string) => {
+    const newOrder =
+      filters.sortBy === key && filters.sortOrder === "asc" ? "desc" : "asc"
+    const params = new URLSearchParams(searchParams)
+    params.set("sortBy", key)
+    params.set("sortOrder", newOrder)
+    setSearchParams(params)
+  }
+
+  const handleResetToManualOrder = () => {
+    const params = new URLSearchParams(searchParams)
+    params.delete("sortBy")
+    params.delete("sortOrder")
+    setSearchParams(params)
+  }
+
+  const handleReorder = (activeId: string, overId: string) => {
+    const oldIndex = projects.findIndex((p) => p.id === activeId)
+    const newIndex = projects.findIndex((p) => p.id === overId)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(projects, oldIndex, newIndex)
+    const items = reordered.map((p, i) => ({ id: p.id, sortOrder: i }))
+
+    reorderMutation.mutate(items, {
+      onError: () => {
+        toast.error("Errore nel riordinamento")
+      },
     })
-
-    return [...filtered].sort((a, b) => {
-      let comparison = 0
-      if (sortKey === 'name') {
-        comparison = a.name.localeCompare(b.name)
-      } else if (sortKey === 'status') {
-        comparison = a.status.localeCompare(b.status)
-      } else if (sortKey === 'progress') {
-        const pctA = a.taskStats && a.taskStats.total > 0
-          ? (a.taskStats.completed / a.taskStats.total) * 100 : 0
-        const pctB = b.taskStats && b.taskStats.total > 0
-          ? (b.taskStats.completed / b.taskStats.total) * 100 : 0
-        comparison = pctA - pctB
-      } else if (sortKey === 'targetEndDate') {
-        const dateA = a.targetEndDate ? new Date(a.targetEndDate).getTime() : Infinity
-        const dateB = b.targetEndDate ? new Date(b.targetEndDate).getTime() : Infinity
-        comparison = dateA - dateB
-      }
-      return sortDir === 'asc' ? comparison : -comparison
-    })
-  }, [projects, searchTerm, statusFilter, priorityFilter, sortKey, sortDir])
-
-  const canCreateProject = !!user
-
-  // --- Skeleton ---
-  if (isLoading && projects.length === 0) {
-    return (
-      <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="skeleton h-8 w-32" />
-            <div className="skeleton h-4 w-64 mt-2" />
-          </div>
-          <div className="skeleton h-10 w-40" />
-        </div>
-        <div className="card p-4 flex flex-wrap gap-3">
-          <div className="skeleton h-10 flex-1 min-w-64" />
-          <div className="skeleton h-10 w-40" />
-          <div className="skeleton h-10 w-40" />
-        </div>
-        <div className="card overflow-hidden">
-          <div className="divide-y divide-gray-100 dark:divide-white/5">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center px-4 py-3 gap-4">
-                <div className="skeleton h-5 flex-1" />
-                <div className="skeleton h-5 w-24" />
-                <div className="skeleton h-3 w-40 rounded-full" />
-                <div className="skeleton h-5 w-20" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
   }
 
-  // Column header helper
-  const SortHeader = ({ label, colKey }: { label: string; colKey: SortKey }) => {
-    const active = sortKey === colKey
-    return (
-      <button
-        type="button"
-        onClick={() => handleSort(colKey)}
-        className="flex items-center gap-1 text-xs uppercase tracking-widest text-slate-400 font-medium text-left hover:text-slate-300 transition-colors"
-      >
-        {label}
-        {active ? (
-          sortDir === 'asc'
-            ? <ChevronUp className="w-3 h-3" aria-hidden="true" />
-            : <ChevronDown className="w-3 h-3" aria-hidden="true" />
-        ) : (
-          <ChevronDown className="w-3 h-3 opacity-30" aria-hidden="true" />
-        )}
-      </button>
-    )
-  }
+  const manualOrderButton = !isManualOrder ? (
+    <Button variant="outline" size="sm" onClick={handleResetToManualOrder}>
+      <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
+      Ordine manuale
+    </Button>
+  ) : null
+
+  // When a status filter is active, disable groupBy to show flat filtered results
+  const useGroupBy = !filters.status
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Progetti</h1>
-          <p className="page-subtitle mt-1">
-            Gestisci i tuoi progetti e monitora l&apos;avanzamento
-          </p>
-        </div>
-        {canCreateProject && (
-          <button
-            onClick={() => navigate('/projects/new')}
-            className="btn-primary flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuovo Progetto
-          </button>
-        )}
-      </div>
-
-      {/* Filters */}
-      <div className="card p-4">
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-52">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              <input
-                type="search"
-                placeholder="Cerca progetti..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-10 w-full"
-                aria-label="Cerca progetti"
-              />
-            </div>
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input w-auto"
-            aria-label="Filtra per stato"
-          >
-            <option value="">Tutti gli stati</option>
-            <option value="planning">Pianificazione</option>
-            <option value="design">Design</option>
-            <option value="verification">Verifica</option>
-            <option value="validation">Validazione</option>
-            <option value="transfer">Trasferimento</option>
-            <option value="maintenance">Manutenzione</option>
-            <option value="on_hold">In Pausa</option>
-            <option value="completed">Completato</option>
-          </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="input w-auto"
-            aria-label="Filtra per priorita"
-          >
-            <option value="">Tutte le priorita</option>
-            <option value="high">Alta</option>
-            <option value="medium">Media</option>
-            <option value="low">Bassa</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Projects Table */}
-      {filteredProjects.length === 0 ? (
-        <div className="card">
-          <EmptyState
-            icon={FolderKanban}
-            title={searchTerm || statusFilter || priorityFilter ? 'Nessun progetto trovato' : 'Nessun progetto'}
-            description={searchTerm || statusFilter || priorityFilter ? 'Prova a modificare i filtri' : 'Lancia il primo progetto!'}
-            action={
-              canCreateProject && !searchTerm && !statusFilter && !priorityFilter
-                ? { label: 'Crea Progetto', onClick: () => navigate('/projects/new') }
-                : undefined
+    <EntityList<ProjectRow>
+      title="Progetti"
+      icon={FolderKanban}
+      data={projects}
+      pagination={pagination}
+      isLoading={isLoading}
+      error={error ?? undefined}
+      columns={columns}
+      getId={(p) => p.id}
+      filterConfig={filterConfig}
+      filters={filters}
+      onFilterChange={handleFilterChange}
+      onFilterClear={handleFilterClear}
+      sortBy={filters.sortBy}
+      sortOrder={filters.sortOrder as "asc" | "desc"}
+      onSort={handleSort}
+      onPageChange={handlePageChange}
+      onRowClick={(p) => navigate(`/projects/${p.id}`)}
+      createHref="/projects/new"
+      createLabel="Nuovo Progetto"
+      emptyIcon={FolderKanban}
+      emptyTitle="Nessun progetto"
+      emptyDescription="Crea il tuo primo progetto"
+      headerExtra={manualOrderButton}
+      draggable={canDrag}
+      onReorder={canDrag ? handleReorder : undefined}
+      groupBy={
+        useGroupBy
+          ? {
+              getGroup: (p) => p.status,
+              order: PROJECT_STATUS_GROUP_ORDER,
+              labels: PROJECT_STATUS_LABELS,
+              collapsedByDefault: COLLAPSED_BY_DEFAULT,
             }
-          />
-        </div>
-      ) : (
-        <div className="card overflow-hidden">
-          {/* Table header */}
-          <div className="px-4 py-2.5 border-b border-cyan-500/5 grid grid-cols-[1fr_auto_180px_120px] gap-4 items-center">
-            <SortHeader label="Progetto" colKey="name" />
-            <SortHeader label="Stato" colKey="status" />
-            <SortHeader label="Progresso" colKey="progress" />
-            <SortHeader label="Scadenza" colKey="targetEndDate" />
-          </div>
-
-          {/* Table rows */}
-          <div className="divide-y divide-gray-100 dark:divide-white/5">
-            {filteredProjects.map((project, idx) => {
-              const pct = project.taskStats && project.taskStats.total > 0
-                ? Math.round((project.taskStats.completed / project.taskStats.total) * 100)
-                : 0
-              const hasBlocked = (project.taskStats?.blocked ?? 0) > 0
-              const isOverdue =
-                !!project.targetEndDate &&
-                new Date(project.targetEndDate) < new Date() &&
-                project.status !== 'completed'
-
-              const hClass = project.taskStats && project.taskStats.total > 0
-                ? healthClass(hasBlocked, isOverdue, pct)
-                : ''
-              const hLabel = project.taskStats && project.taskStats.total > 0
-                ? healthLabel(hasBlocked, isOverdue, pct)
-                : ''
-
-              return (
-                <motion.div
-                  key={project.id}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18, delay: idx * 0.03 }}
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                  className="grid grid-cols-[1fr_auto_180px_120px] gap-4 items-center px-4 py-3 border-t border-cyan-500/5 hover:bg-cyan-500/5 cursor-pointer transition-colors group"
-                  role="row"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      navigate(`/projects/${project.id}`)
-                    }
-                  }}
-                  aria-label={`Vai al progetto ${project.name}`}
-                >
-                  {/* Name + optional health dot */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    {project.taskStats && project.taskStats.total > 0 && (
-                      <span
-                        className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                          hasBlocked || isOverdue
-                            ? 'bg-red-500 animate-pulse'
-                            : pct >= 66
-                              ? 'bg-green-500'
-                              : 'bg-amber-500'
-                        }`}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <span className="text-sm font-medium text-slate-900 dark:text-white truncate block group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-                        {project.name}
-                      </span>
-                      {project.owner && (
-                        <span className="text-xs text-slate-400">
-                          {project.owner.firstName} {project.owner.lastName?.charAt(0)}.
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex items-center gap-2">
-                    <StatusIcon type="projectStatus" value={project.status} size="sm" showLabel />
-                    {hLabel && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${hClass}`}>
-                        {hLabel}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Progress */}
-                  <div className="w-full">
-                    {project.taskStats && project.taskStats.total > 0 ? (
-                      <div className="space-y-0.5">
-                        <ProgressBar value={pct} size="sm" glow />
-                        <span className="text-[10px] text-slate-400">
-                          {project.taskStats.completed}/{project.taskStats.total} task
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">Nessun task</span>
-                    )}
-                  </div>
-
-                  {/* Due date */}
-                  <div className="flex items-center gap-1 text-xs">
-                    {project.targetEndDate ? (
-                      <>
-                        <Calendar
-                          className={`w-3 h-3 flex-shrink-0 ${
-                            isOverdue
-                              ? 'text-red-500'
-                              : 'text-slate-400'
-                          }`}
-                          aria-hidden="true"
-                        />
-                        <span
-                          className={
-                            isOverdue
-                              ? 'text-red-500 dark:text-red-400 font-medium'
-                              : 'text-slate-400'
-                          }
-                        >
-                          {formatDate(project.targetEndDate)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-
-          {/* Footer count */}
-          <div className="px-4 py-2 border-t border-slate-100 dark:border-white/5 text-xs text-slate-400">
-            {filteredProjects.length} {filteredProjects.length === 1 ? 'progetto' : 'progetti'}
-          </div>
-        </div>
-      )}
-    </div>
+          : undefined
+      }
+    />
   )
 }
