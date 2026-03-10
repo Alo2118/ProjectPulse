@@ -35,7 +35,17 @@ export type {
 // ============================================================
 
 export type UserRole = 'admin' | 'direzione' | 'dipendente' | 'guest'
-export type ProjectStatus = 'planning' | 'design' | 'verification' | 'validation' | 'transfer' | 'maintenance' | 'completed' | 'on_hold' | 'cancelled'
+export type ProjectStatus = 'active' | 'on_hold' | 'cancelled' | 'completed'
+
+export interface ProjectPhase {
+  key: string
+  label: string
+  description: string
+  order: number
+  color: string
+  isFinal: boolean
+  isInitial: boolean
+}
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'blocked' | 'done' | 'cancelled'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical'
@@ -212,6 +222,8 @@ export interface ProjectQueryParams extends PaginationParams {
   priority?: string
   ownerId?: string
   search?: string
+  sortBy?: 'createdAt' | 'name' | 'targetEndDate' | 'priority' | 'status' | 'sortOrder'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface TaskQueryParams extends PaginationParams {
@@ -261,6 +273,7 @@ export interface ApiResponse<T> {
 // ============================================================
 
 export type Theme = 'light' | 'dark' | 'system'
+export type ThemeStyle = 'tech-hud' | 'basic' | 'classic'
 
 export interface UserWithoutPassword {
   id: string
@@ -270,6 +283,7 @@ export interface UserWithoutPassword {
   role: string
   avatarUrl: string | null
   theme: Theme
+  themeStyle: ThemeStyle
   isActive: boolean
   weeklyHoursTarget?: number | null
   createdAt: Date
