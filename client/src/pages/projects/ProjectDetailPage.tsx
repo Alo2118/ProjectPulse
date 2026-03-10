@@ -1,559 +1,836 @@
-/**
- * Project Detail Page - 2-column layout, no tabs
- * @module pages/projects/ProjectDetailPage
- */
-
-import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useProjectStore } from '@stores/projectStore'
-import { useAuthStore } from '@stores/authStore'
-import { useTimerToggle } from '@hooks/useTimerToggle'
-import { useTaskTreeStore } from '@stores/taskTreeStore'
-import api from '@services/api'
+import { useMemo } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
-  Edit2,
-  Loader2,
-  Calendar,
-  User,
-  AlertCircle,
-  FileText,
   AlertTriangle,
-  Clock,
-  Users,
+  Calendar,
   CheckSquare,
-  Plus,
+  Clock,
+  Edit,
   ExternalLink,
-  StickyNote,
-  Paperclip,
-  History,
-  Zap,
-  BarChart2,
-  FolderKanban,
-} from 'lucide-react'
-import { Note, Attachment } from '@/types'
-import { NoteSection } from '@/components/common/NoteSection'
-import { AttachmentSection } from '@/components/common/AttachmentSection'
-import { CollapsibleSection } from '@/components/common/CollapsibleSection'
-import { DetailPageHeader } from '@/components/common/DetailPageHeader'
-import { Breadcrumb } from '@/components/common/Breadcrumb'
-import { TaskTreeView } from '@/components/reports/TaskTreeView'
-import { ProjectMembersSection } from '@/components/projects/ProjectMembersSection'
-import { BudgetCard } from '@/components/projects/BudgetCard'
-import ActivityFeed from '@components/common/ActivityFeed'
-import QuickAutomationsPanel from '@components/features/QuickAutomationsPanel'
-import { StatusIcon } from '@/components/ui/StatusIcon'
-import { ProgressBar } from '@/components/ui/ProgressBar'
-import { PROJECT_PRIORITY_LABELS } from '@/constants'
-import { formatDateShort, formatDateRelative } from '@utils/dateFormatters'
+  FileText,
+  Signal,
+  Target,
+  User,
+  Users,
+} from "lucide-react"
+import { toast } from "sonner"
+import { EntityDetail } from "@/components/common/EntityDetail"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { MetaRow } from "@/components/common/MetaRow"
+import { ProjectTreeSidebar } from "@/components/common/ProjectTreeSidebar"
+import { RelatedEntitiesSidebar } from "@/components/common/RelatedEntitiesSidebar"
+import { SidebarActionSuggestion } from "@/components/common/SidebarActionSuggestion"
+import type { SidebarSuggestion } from "@/components/common/SidebarActionSuggestion"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  useProjectQuery,
+  useProjectStatsQuery,
+  useChangeProjectStatus,
+  useDeleteProject,
+} from "@/hooks/api/useProjects"
+import { useTaskListQuery } from "@/hooks/api/useTasks"
+import { useRisksByProjectQuery } from "@/hooks/api/useRisks"
+import { useDocumentsByProjectQuery } from "@/hooks/api/useDocuments"
+import { useProjectMembersQuery } from "@/hooks/api/useProjectMembers"
+import {
+  PROJECT_STATUS_LABELS,
+  TASK_PRIORITY_LABELS,
+  TASK_STATUS_LABELS,
+  TASK_TYPE_LABELS,
+  TASK_TYPE_COLORS,
+  RISK_STATUS_LABELS,
+  RISK_CATEGORY_LABELS,
+  DOCUMENT_STATUS_LABELS,
+  DOCUMENT_TYPE_LABELS,
+  PROJECT_ROLE_LABELS,
+  STATUS_COLORS_HSL,
+} from "@/lib/constants"
+import { formatDate } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { ProgressSummary } from "@/components/common/ProgressSummary"
+import { WorkflowStepper } from "@/components/common/WorkflowStepper"
+import { projectWorkflow } from "@/lib/workflows/projectWorkflow"
+import type { ValidationData } from "@/lib/workflow-engine"
+
+interface ProjectData {
+  id: string
+  code: string
+  name: string
+  description?: string | null
+  status: string
+  priority: string
+  startDate?: string | null
+  targetEndDate?: string | null
+  actualEndDate?: string | null
+  budgetHours?: number | null
+  managerId?: string | null
+  manager?: { firstName: string; lastName: string } | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface ProjectStats {
+  totalTasks?: number
+  completedTasks?: number
+  completionPercentage?: number
+  totalRisks?: number
+  totalDocuments?: number
+}
+
+interface TaskRow {
+  id: string
+  title: string
+  taskType: string
+  status: string
+  priority: string
+  dueDate?: string | null
+  parentTaskId?: string | null
+  assignee?: { firstName: string; lastName: string } | null
+}
+
+interface TaskNode extends TaskRow {
+  children: TaskNode[]
+}
+
+function buildTaskTree(tasks: TaskRow[]): TaskNode[] {
+  const map = new Map<string, TaskNode>()
+  const roots: TaskNode[] = []
+
+  for (const t of tasks) {
+    map.set(t.id, { ...t, children: [] })
+  }
+
+  for (const t of tasks) {
+    const node = map.get(t.id)!
+    if (t.parentTaskId && map.has(t.parentTaskId)) {
+      map.get(t.parentTaskId)!.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+
+  return roots
+}
+
+interface RiskRow {
+  id: string
+  code: string
+  title: string
+  category: string
+  probability: string
+  impact: string
+  status: string
+  owner?: { firstName: string; lastName: string } | null
+}
+
+interface DocumentRow {
+  id: string
+  code: string
+  title: string
+  type: string
+  status: string
+  version: number
+  createdBy?: { firstName: string; lastName: string } | null
+  updatedAt: string
+}
+
+interface MemberRow {
+  id: string
+  projectRole: string
+  user: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+    role: string
+    isActive: boolean
+  }
+}
+
+interface ProjectWorkflowStepperWrapperProps {
+  project: ProjectData
+  stats?: ProjectStats
+  tasks: TaskRow[]
+  members: MemberRow[]
+  docs: DocumentRow[]
+  onAdvance: (status: string) => void
+}
+
+function ProjectWorkflowStepperWrapper({
+  project,
+  stats,
+  tasks,
+  members,
+  docs,
+  onAdvance,
+}: ProjectWorkflowStepperWrapperProps) {
+  const validationData: ValidationData = {
+    milestoneCount: tasks.filter((t) => t.taskType === "milestone").length,
+    teamSize: members.length,
+    hasDescription: !!(project.description && project.description.trim().length > 0),
+    completionPercent: stats?.completionPercentage ?? 0,
+    blockedTaskCount: tasks.filter((t) => t.status === "blocked").length,
+    completedTaskCount: stats?.completedTasks ?? 0,
+    taskCount: stats?.totalTasks ?? 0,
+    attachmentCount: docs.length,
+    hoursLogged: 0,
+  }
+
+  // Determine the current project workflow phase key
+  const workflowPhaseKey = project.status
+
+  // Only render for workflow phases (not maintenance/completed/on_hold/cancelled)
+  const workflowPhaseKeys = projectWorkflow.phases.map((p) => p.key)
+  if (!workflowPhaseKeys.includes(workflowPhaseKey)) return null
+
+  return (
+    <WorkflowStepper
+      workflow={projectWorkflow}
+      currentPhase={workflowPhaseKey}
+      validationData={validationData}
+      onAdvance={onAdvance}
+      canAdvancePhase={true}
+    />
+  )
+}
+
+function TabSkeleton() {
+  return (
+    <div className="space-y-3 pt-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </div>
+  )
+}
+
+function isOverdue(dueDate: string): boolean {
+  return new Date(dueDate) < new Date()
+}
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
+  useSetPageContext({ domain: 'project', entityId: id })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const { currentProject, isLoading, fetchProject, clearCurrentProject } = useProjectStore()
-  const { canTrackTime, handleTimerToggle, runningTimerTaskId } = useTimerToggle()
-  const { treeData } = useTaskTreeStore()
 
-  const [notes, setNotes] = useState<Note[]>([])
-  const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [notesLoading, setNotesLoading] = useState(false)
-  const [attachmentsLoading, setAttachmentsLoading] = useState(false)
+  const { data: project, isLoading, error } = useProjectQuery(id!)
+  const { data: stats } = useProjectStatsQuery(id!)
+  const changeStatus = useChangeProjectStatus()
+  const deleteProject = useDeleteProject()
 
-  useEffect(() => {
-    if (id) {
-      fetchProject(id)
-      loadNotes(id)
-      loadAttachments(id)
+  // Tab data
+  const { data: tasksData, isLoading: tasksLoading } = useTaskListQuery({
+    projectId: id!,
+    includeSubtasks: true,
+    limit: 50,
+  })
+  const { data: risksData, isLoading: risksLoading } =
+    useRisksByProjectQuery(id!)
+  const { data: docsData, isLoading: docsLoading } =
+    useDocumentsByProjectQuery(id!)
+  const { data: membersData, isLoading: membersLoading } =
+    useProjectMembersQuery(id!)
+
+  const p = project as ProjectData | undefined
+  const s = stats as ProjectStats | undefined
+
+  const tasks = ((tasksData as Record<string, unknown>)?.data ?? []) as TaskRow[]
+  const risks = (risksData ?? []) as RiskRow[]
+  const docs = (docsData ?? []) as DocumentRow[]
+  const members = (membersData ?? []) as MemberRow[]
+
+  // ---- Sidebar: related entities ----
+  const relatedItems = useMemo(() => {
+    if (!p) return []
+    const blockedCount = tasks.filter((t) => t.status === "blocked").length
+    const inProgressCount = tasks.filter((t) => t.status === "in_progress").length
+    return [
+      {
+        icon: CheckSquare,
+        label: "Task",
+        total: s?.totalTasks ?? tasks.length,
+        domain: "task",
+        breakdowns: [
+          ...(inProgressCount > 0
+            ? [
+                {
+                  label: "in corso",
+                  count: inProgressCount,
+                  href: `/tasks?projectId=${id}&status=in_progress`,
+                  variant: "default" as const,
+                },
+              ]
+            : []),
+          ...(blockedCount > 0
+            ? [
+                {
+                  label: "bloccati",
+                  count: blockedCount,
+                  href: `/tasks?projectId=${id}&status=blocked`,
+                  variant: "destructive" as const,
+                },
+              ]
+            : []),
+        ],
+      },
+      {
+        icon: AlertTriangle,
+        label: "Rischi",
+        total: risks.length,
+        domain: "risk",
+      },
+      {
+        icon: FileText,
+        label: "Documenti",
+        total: docs.length,
+        domain: "document",
+      },
+    ]
+  }, [p, s, tasks, risks, docs, id])
+
+  // ---- Sidebar: suggestions ----
+  const projectSuggestions = useMemo((): SidebarSuggestion[] => {
+    if (!p) return []
+    const blockedCount = tasks.filter((t) => t.status === "blocked").length
+    const completionPctVal = s?.completionPercentage ?? 0
+
+    if (blockedCount > 0) {
+      return [
+        {
+          icon: "🔴",
+          message: `${blockedCount} task bloccati in questo progetto`,
+          actionLabel: "Vedi bloccati →",
+          actionHref: `/tasks?projectId=${id}&status=blocked`,
+        },
+      ]
     }
-    return () => clearCurrentProject()
-  }, [id, fetchProject, clearCurrentProject])
-
-  const loadNotes = async (projectId: string) => {
-    setNotesLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Note[] }>(
-        `/notes/project/${projectId}`
+    if (completionPctVal >= 100) {
+      return [
+        {
+          icon: "✅",
+          message: "Tutti i task completati",
+          actionLabel: "Chiudi progetto →",
+          actionHref: `/projects/${id}/edit`,
+        },
+      ]
+    }
+    if (p.targetEndDate) {
+      const daysLeft = Math.ceil(
+        (new Date(p.targetEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
       )
-      if (response.data.success) {
-        setNotes(response.data.data)
+      if (daysLeft >= 0 && daysLeft <= 7 && completionPctVal < 50) {
+        return [
+          {
+            icon: "⏰",
+            message: `Scadenza tra ${daysLeft}gg ma solo ${Math.round(completionPctVal)}% completato`,
+            actionLabel: "Vedi task →",
+            actionHref: `/tasks?projectId=${id}`,
+          },
+        ]
       }
-    } catch {
-      // silently ignore
-    } finally {
-      setNotesLoading(false)
     }
-  }
+    return []
+  }, [p, s, tasks, id])
 
-  const loadAttachments = async (projectId: string) => {
-    setAttachmentsLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Attachment[] }>(
-        `/attachments/project/${projectId}`
-      )
-      if (response.data.success) {
-        setAttachments(response.data.data)
+  const handleStatusChange = (status: string) => {
+    changeStatus.mutate(
+      { id: id!, status },
+      {
+        onSuccess: () => toast.success("Stato aggiornato"),
+        onError: () => toast.error("Errore nell'aggiornamento dello stato"),
       }
-    } catch {
-      // silently ignore
-    } finally {
-      setAttachmentsLoading(false)
-    }
-  }
-
-  const handleNoteAdded = useCallback((note: Note) => {
-    setNotes((prev) => [note, ...prev])
-  }, [])
-
-  const handleNoteDeleted = useCallback((noteId: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== noteId))
-  }, [])
-
-  const handleAttachmentAdded = useCallback((attachment: Attachment) => {
-    setAttachments((prev) => [attachment, ...prev])
-  }, [])
-
-  const handleAttachmentDeleted = useCallback((attachmentId: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== attachmentId))
-  }, [])
-
-  const canEdit = user?.role === 'admin' || user?.role === 'direzione' || currentProject?.ownerId === user?.id
-  const showInternalToggle = user?.role === 'admin' || user?.role === 'direzione'
-
-  // Stats from tree store (populated by TaskTreeView)
-  const projectStats = treeData?.projects?.[0]?.stats
-  const totalTasks = projectStats ? projectStats.total : 0
-  const completedTasks = projectStats?.completed ?? 0
-  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-  const inProgressCount = projectStats?.inProgress ?? 0
-  const blockedCount = projectStats?.blocked ?? 0
-  const totalHoursLogged = projectStats?.totalHours ?? 0
-  const estimatedHours = projectStats?.estimatedHours ?? 0
-
-  const daysUntilDeadline = currentProject?.targetEndDate
-    ? Math.ceil(
-        (new Date(currentProject.targetEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      )
-    : null
-
-  const isFinished = currentProject?.status === 'completed' || currentProject?.status === 'cancelled'
-  const isOverdue = daysUntilDeadline !== null && daysUntilDeadline < 0 && !isFinished
-  const isDueSoon = daysUntilDeadline !== null && daysUntilDeadline >= 0 && daysUntilDeadline <= 7 && !isFinished
-
-  if (isLoading && !currentProject) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
-      </div>
     )
   }
 
-  if (!currentProject) {
-    return (
-      <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-          Progetto non trovato
-        </h3>
-        <p className="text-slate-500 dark:text-slate-400 mb-4">
-          Il progetto richiesto non esiste o è stato eliminato.
-        </p>
-        <button onClick={() => navigate('/projects')} className="btn-primary">
-          Torna ai Progetti
-        </button>
-      </div>
-    )
+  const handleDelete = () => {
+    deleteProject.mutate(id!, {
+      onSuccess: () => {
+        toast.success("Progetto eliminato")
+        navigate("/projects")
+      },
+      onError: () => toast.error("Errore nell'eliminazione del progetto"),
+    })
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Progetti', href: '/projects' },
-          { label: currentProject.name },
-        ]}
-      />
+  const completionPct = s?.completionPercentage ?? 0
 
-      {/* Page Header */}
-      <DetailPageHeader title={currentProject.name} subtitle="Dettagli Progetto">
-        {canEdit && (
-          <button
-            onClick={() => navigate(`/projects/${id}/edit`)}
-            className="flex items-center px-3 py-2 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-          >
-            <Edit2 className="w-4 h-4 mr-1.5" />
-            Modifica
-          </button>
-        )}
-      </DetailPageHeader>
+  // ---- Tab: Tasks ----
+  const taskTree = buildTaskTree(tasks)
 
-      {/* ── Two-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ════════════════ LEFT COLUMN ════════════════ */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* ── Project name + description ── */}
-          <div className="card p-5 animate-section-reveal">
-            <div className="flex items-start gap-3 flex-wrap">
-              <h2 className="page-title flex-1">
-                {currentProject.name}
-              </h2>
-              <StatusIcon type="projectStatus" value={currentProject.status} size="md" showLabel />
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                {PROJECT_PRIORITY_LABELS[currentProject.priority]}
-              </span>
-            </div>
-
-            {currentProject.description && (
-              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
-                <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">
-                  {currentProject.description}
-                </p>
-              </div>
+  function renderTaskNode(node: TaskNode, depth: number) {
+    return (
+      <div key={node.id}>
+        <Link
+          to={`/tasks/${node.id}`}
+          className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors border-b last:border-b-0"
+          style={{ paddingLeft: `${16 + depth * 24}px` }}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {depth > 0 && (
+              <span className="text-muted-foreground/40 text-xs">└</span>
             )}
+            <span
+              className={cn(
+                "text-sm truncate",
+                node.taskType === "milestone"
+                  ? "font-semibold"
+                  : "font-medium"
+              )}
+            >
+              {node.title}
+            </span>
+            <Badge
+              variant="secondary"
+              className={cn(
+                "text-[10px] px-1.5 py-0 shrink-0",
+                TASK_TYPE_COLORS[node.taskType]
+              )}
+            >
+              {TASK_TYPE_LABELS[node.taskType] ?? node.taskType}
+            </Badge>
           </div>
-
-          {/* ── Progress summary ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '50ms' }}>
-            <div className="hud-panel-header mb-4">
-              <span>Avanzamento</span>
-            </div>
-
-            <div className="flex items-center gap-4 mb-3">
-              <div className="flex-1">
-                <ProgressBar value={progressPercentage} size="md" showLabel />
-              </div>
-              <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                {completedTasks}/{totalTasks} task
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            <StatusBadge status={node.status} labels={TASK_STATUS_LABELS} />
+            {node.dueDate && (
+              <span
+                className={cn(
+                  "text-xs",
+                  node.status !== "done" &&
+                    node.status !== "cancelled" &&
+                    isOverdue(node.dueDate) &&
+                    "text-destructive font-medium"
+                )}
+              >
+                {formatDate(node.dueDate)}
               </span>
-            </div>
+            )}
+            {node.assignee && (
+              <span className="text-xs text-muted-foreground">
+                {node.assignee.firstName} {node.assignee.lastName}
+              </span>
+            )}
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        </Link>
+        {node.children.length > 0 &&
+          node.children.map((child) => renderTaskNode(child, depth + 1))}
+      </div>
+    )
+  }
 
-            <div className="flex items-center gap-4 flex-wrap text-sm">
-              {inProgressCount > 0 && (
-                <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
-                  {inProgressCount} in corso
-                </span>
-              )}
-              {blockedCount > 0 && (
-                <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
-                  <span className="w-2 h-2 rounded-full bg-red-500" />
-                  {blockedCount} bloccati
-                </span>
-              )}
-              {completedTasks > 0 && (
-                <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
-                  {completedTasks} completati
-                </span>
-              )}
-            </div>
+  const tasksTab = tasksLoading ? (
+    <TabSkeleton />
+  ) : tasks.length === 0 ? (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <p className="text-sm text-muted-foreground mb-3">Nessun task associato</p>
+      <Button size="sm" asChild>
+        <Link to={`/tasks/new?projectId=${id}`}>Crea Task</Link>
+      </Button>
+    </div>
+  ) : (
+    <Card className="mt-4">
+      <CardContent className="p-0">
+        {taskTree.map((node) => renderTaskNode(node, 0))}
+      </CardContent>
+    </Card>
+  )
 
-            {/* Hours summary */}
-            {(totalHoursLogged > 0 || estimatedHours > 0) && (
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                  <Clock className="w-4 h-4" />
-                  <span>
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {Math.round(totalHoursLogged * 10) / 10}h
-                    </span>
-                    {estimatedHours > 0 && (
-                      <span> / {Math.round(estimatedHours * 10) / 10}h stimate</span>
-                    )}
+  // ---- Tab: Risks ----
+  const risksTab = risksLoading ? (
+    <TabSkeleton />
+  ) : risks.length === 0 ? (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <p className="text-sm text-muted-foreground mb-3">
+        Nessun rischio associato
+      </p>
+      <Button size="sm" asChild>
+        <Link to={`/risks/new?projectId=${id}`}>Crea Rischio</Link>
+      </Button>
+    </div>
+  ) : (
+    <Card className="mt-4">
+      <CardContent className="p-0">
+        <div className="divide-y">
+          {risks.map((r) => (
+            <Link
+              key={r.id}
+              to={`/risks/${r.id}`}
+              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-sm font-medium truncate">
+                  {r.title}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {RISK_CATEGORY_LABELS[r.category] ?? r.category}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-4">
+                <StatusBadge
+                  status={r.status}
+                  labels={RISK_STATUS_LABELS}
+                />
+                <Badge variant="outline" className="text-[10px] px-1.5">
+                  P: {r.probability} / I: {r.impact}
+                </Badge>
+                {r.owner && (
+                  <span className="text-xs text-muted-foreground">
+                    {r.owner.firstName} {r.owner.lastName}
                   </span>
+                )}
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  // ---- Tab: Documents ----
+  const documentsTab = docsLoading ? (
+    <TabSkeleton />
+  ) : docs.length === 0 ? (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <p className="text-sm text-muted-foreground mb-3">
+        Nessun documento associato
+      </p>
+      <Button size="sm" asChild>
+        <Link to={`/documents/new?projectId=${id}`}>Carica Documento</Link>
+      </Button>
+    </div>
+  ) : (
+    <Card className="mt-4">
+      <CardContent className="p-0">
+        <div className="divide-y">
+          {docs.map((d) => (
+            <Link
+              key={d.id}
+              to={`/documents/${d.id}`}
+              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium truncate">
+                  {d.title}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {DOCUMENT_TYPE_LABELS[d.type] ?? d.type}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-4">
+                <StatusBadge
+                  status={d.status}
+                  labels={DOCUMENT_STATUS_LABELS}
+                />
+                <Badge variant="outline" className="text-[10px] px-1.5">
+                  v{d.version}
+                </Badge>
+                {d.createdBy && (
+                  <span className="text-xs text-muted-foreground">
+                    {d.createdBy.firstName} {d.createdBy.lastName}
+                  </span>
+                )}
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  // ---- Tab: Members ----
+  const membersTab = membersLoading ? (
+    <TabSkeleton />
+  ) : members.length === 0 ? (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <p className="text-sm text-muted-foreground">
+        Nessun membro assegnato
+      </p>
+    </div>
+  ) : (
+    <Card className="mt-4">
+      <CardContent className="p-0">
+        <div className="divide-y">
+          {members.map((m) => (
+            <div
+              key={m.id}
+              className="flex items-center justify-between px-4 py-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
+                  {m.user.firstName[0]}
+                  {m.user.lastName[0]}
                 </div>
-                {estimatedHours > 0 && (
-                  <div className="flex-1 max-w-32">
-                    <ProgressBar
-                      value={Math.min(100, Math.round((totalHoursLogged / estimatedHours) * 100))}
-                      size="sm"
-                      color={totalHoursLogged > estimatedHours ? 'red' : undefined}
-                    />
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {m.user.firstName} {m.user.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {m.user.email}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-4">
+                <Badge variant="secondary" className="text-[10px] px-1.5">
+                  {PROJECT_ROLE_LABELS[m.projectRole] ?? m.projectRole}
+                </Badge>
+                {!m.user.isActive && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 text-muted-foreground"
+                  >
+                    Disattivato
+                  </Badge>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* ── Task Tree ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '100ms' }}>
-            <div className="hud-panel-header mb-4">
-              <span>Task</span>
-              {totalTasks > 0 && (
-                <span className="text-xs text-cyan-400 font-mono ml-1">({totalTasks})</span>
-              )}
             </div>
-            <div className="flex items-center justify-end gap-2 mb-3">
-              <Link
-                to={`/tasks?projectId=${id}`}
-                className="text-sm text-slate-500 hover:text-cyan-400 dark:hover:text-cyan-400 flex items-center gap-1 transition-colors"
-              >
-                Vedi tutti
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-              {canEdit && (
-                <button
-                  onClick={() => navigate(`/tasks/new?projectId=${id}`)}
-                  className="flex items-center px-3 py-1.5 text-sm bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Nuovo
-                </button>
-              )}
-            </div>
-            <TaskTreeView
-              projectId={id}
-              skipProjectLevel
-              mode="compact"
-              showSummary={false}
-              showControls={false}
-              showFilters={false}
-              canTrackTime={canTrackTime}
-              onTimerToggle={handleTimerToggle}
-              runningTimerId={runningTimerTaskId}
-            />
-          </div>
-
-          {/* ── Members ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '150ms' }}>
-            <CollapsibleSection
-              title="Membri del progetto"
-              icon={Users}
-              defaultExpanded={true}
-              borderTop={false}
-            >
-              <ProjectMembersSection projectId={id!} />
-            </CollapsibleSection>
-          </div>
-
-          {/* ── Automations ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '175ms' }}>
-            <CollapsibleSection
-              title="Automazioni"
-              icon={Zap}
-              defaultExpanded={false}
-              borderTop={false}
-            >
-              <QuickAutomationsPanel projectId={id!} />
-            </CollapsibleSection>
-          </div>
-
-          {/* ── Activity ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '200ms' }}>
-            <CollapsibleSection
-              title="Attivita'"
-              icon={History}
-              defaultExpanded={false}
-              borderTop={false}
-            >
-              <ActivityFeed entityType="project" entityId={id!} projectId={id!} />
-            </CollapsibleSection>
-          </div>
+          ))}
         </div>
+      </CardContent>
+    </Card>
+  )
 
-        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
-        <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-20 space-y-4">
+  // ---- Sidebar ----
+  const sidebar = p ? (
+    <div className="space-y-4">
+      {/* Status section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Stato</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-0">
+          <MetaRow icon={Signal} label="Stato">
+            <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
+          </MetaRow>
+          <MetaRow icon={Target} label="Priorità">
+            <StatusBadge status={p.priority} labels={TASK_PRIORITY_LABELS} />
+          </MetaRow>
+          <MetaRow icon={Calendar} label="Scadenza">
+            {p.targetEndDate ? formatDate(p.targetEndDate) : "—"}
+          </MetaRow>
+          <MetaRow icon={User} label="Responsabile">
+            {p.manager
+              ? `${p.manager.firstName} ${p.manager.lastName}`
+              : "—"}
+          </MetaRow>
+          <MetaRow icon={Calendar} label="Data Inizio">
+            {p.startDate ? formatDate(p.startDate) : "—"}
+          </MetaRow>
+          <MetaRow icon={Clock} label="Budget">
+            {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
+          </MetaRow>
+          <MetaRow icon={Users} label="Membri">
+            {members.length > 0 ? `${members.length}` : "—"}
+          </MetaRow>
+          <MetaRow icon={Calendar} label="Creato il">
+            {formatDate(p.createdAt)}
+          </MetaRow>
+        </CardContent>
+      </Card>
 
-            {/* ── Metadata card ── */}
-            <div className="card p-5 space-y-0 animate-section-reveal">
-              <div className="hud-panel-header mb-2">
-                <span>Informazioni</span>
-              </div>
+      {/* Project tree */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Struttura Progetto</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProjectTreeSidebar projectId={p.id} />
+        </CardContent>
+      </Card>
 
-              {/* Stato */}
-              <div className="meta-row">
-                <span className="meta-row-label flex items-center gap-1.5">
-                  <BarChart2 className="w-3.5 h-3.5" />
-                  Stato
-                </span>
-                <span className="meta-row-value">
-                  <StatusIcon type="projectStatus" value={currentProject.status} size="sm" showLabel />
-                </span>
-              </div>
+      {/* Related entities */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Entita Collegate</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RelatedEntitiesSidebar items={relatedItems} />
+        </CardContent>
+      </Card>
 
-              {/* Priorita */}
-              <div className="meta-row">
-                <span className="meta-row-label flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  Priorita
-                </span>
-                <span className="meta-row-value">
-                  {PROJECT_PRIORITY_LABELS[currentProject.priority]}
-                </span>
-              </div>
-
-              {/* Owner */}
-              {currentProject.owner && (
-                <div className="meta-row">
-                  <span className="meta-row-label flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5" />
-                    Owner
-                  </span>
-                  <span className="meta-row-value">
-                    {currentProject.owner.firstName} {currentProject.owner.lastName}
-                  </span>
-                </div>
-              )}
-
-              {/* Data inizio */}
-              {currentProject.startDate && (
-                <div className="meta-row">
-                  <span className="meta-row-label flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Inizio
-                  </span>
-                  <span className="meta-row-value">
-                    {formatDateShort(currentProject.startDate)}
-                  </span>
-                </div>
-              )}
-
-              {/* Data fine */}
-              {currentProject.targetEndDate && (
-                <div className="meta-row">
-                  <span className="meta-row-label flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Scadenza
-                  </span>
-                  <span className={`meta-row-value ${
-                    isOverdue
-                      ? 'text-red-500 dark:text-red-400'
-                      : isDueSoon
-                        ? 'text-amber-500 dark:text-amber-400'
-                        : ''
-                  }`}>
-                    {formatDateRelative(currentProject.targetEndDate)}
-                    {isOverdue && <AlertCircle className="w-3 h-3 inline ml-1" />}
-                  </span>
-                </div>
-              )}
-
-              {/* Task count */}
-              <div className="meta-row">
-                <span className="meta-row-label flex items-center gap-1.5">
-                  <CheckSquare className="w-3.5 h-3.5" />
-                  Task totali
-                </span>
-                <span className="meta-row-value">{totalTasks}</span>
-              </div>
-
-              {/* Hours */}
-              {(totalHoursLogged > 0 || estimatedHours > 0) && (
-                <div className="meta-row">
-                  <span className="meta-row-label flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    Ore
-                  </span>
-                  <span className="meta-row-value">
-                    {Math.round(totalHoursLogged * 10) / 10}h
-                    {estimatedHours > 0 && (
-                      <span className="text-xs text-slate-400 dark:text-slate-500 font-normal ml-1">
-                        / {Math.round(estimatedHours * 10) / 10}h
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* ── Budget card ── */}
-            <BudgetCard
-              budget={currentProject.budget !== null ? parseFloat(currentProject.budget) : null}
-              totalHoursLogged={totalHoursLogged}
-              estimatedHours={estimatedHours}
-            />
-
-            {/* ── Notes (collapsible) ── */}
-            <div className="card p-5">
-              <CollapsibleSection
-                title={`Note${notes.length > 0 ? ` (${notes.length})` : ''}`}
-                icon={StickyNote}
-                defaultExpanded={notes.length > 0}
-                borderTop={false}
-              >
-                <NoteSection
-                  entityType="project"
-                  entityId={id!}
-                  notes={notes}
-                  currentUser={user}
-                  isLoading={notesLoading}
-                  onNoteAdded={handleNoteAdded}
-                  onNoteDeleted={handleNoteDeleted}
-                  showInternalToggle={showInternalToggle}
-                />
-              </CollapsibleSection>
-            </div>
-
-            {/* ── Attachments (collapsible) ── */}
-            <div className="card p-5">
-              <CollapsibleSection
-                title={`Allegati${attachments.length > 0 ? ` (${attachments.length})` : ''}`}
-                icon={Paperclip}
-                defaultExpanded={attachments.length > 0}
-                borderTop={false}
-              >
-                <AttachmentSection
-                  entityType="project"
-                  entityId={id!}
-                  attachments={attachments}
-                  currentUser={user}
-                  isLoading={attachmentsLoading}
-                  onAttachmentAdded={handleAttachmentAdded}
-                  onAttachmentDeleted={handleAttachmentDeleted}
-                />
-              </CollapsibleSection>
-            </div>
-
-            {/* ── Quick links ── */}
-            <div className="card p-5">
-              <div className="hud-panel-header mb-3">
-                <span>Link rapidi</span>
-              </div>
-              <div className="space-y-1">
-                <Link
-                  to={`/risks?projectId=${id}`}
-                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                >
-                  <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/30 flex-shrink-0">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  Rischi
-                </Link>
-                <Link
-                  to={`/documents?projectId=${id}`}
-                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                >
-                  <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
-                    <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  Documenti
-                </Link>
-                <Link
-                  to={`/time-entries?projectId=${id}`}
-                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                >
-                  <div className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 flex-shrink-0">
-                    <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                  </div>
-                  Registrazione tempo
-                </Link>
-                <Link
-                  to={`/gantt?projectId=${id}`}
-                  className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                >
-                  <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
-                    <FolderKanban className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  Gantt
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Suggestion */}
+      <SidebarActionSuggestion suggestions={projectSuggestions} />
     </div>
+  ) : undefined
+
+  return (
+    <EntityDetail
+      isLoading={isLoading}
+      error={error ?? undefined}
+      notFound={!isLoading && !error && !p}
+      breadcrumbs={[
+        { label: "Home", href: "/" },
+        { label: "Progetti", href: "/projects", domain: "project" },
+        { label: p?.name ?? "..." },
+      ]}
+      title={p?.name}
+      subtitle={
+        p?.description
+          ? `${p.description.slice(0, 120)}${p.description.length > 120 ? "..." : ""}`
+          : undefined
+      }
+      headerActions={
+        p ? (
+          <>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/projects/${id}/edit`}>
+                <Edit className="h-4 w-4 mr-1" />
+                Modifica
+              </Link>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Cambia Stato
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {Object.entries(PROJECT_STATUS_LABELS)
+                  .filter(([key]) => key !== p.status)
+                  .map(([key, label]) => (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => handleStatusChange(key)}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        ) : undefined
+      }
+      beforeContent={
+        p ? (
+          <ProjectWorkflowStepperWrapper
+            project={p}
+            stats={s}
+            tasks={tasks}
+            members={members}
+            docs={docs}
+            onAdvance={handleStatusChange}
+          />
+        ) : undefined
+      }
+      sidebar={sidebar}
+      tabs={
+        p
+          ? [
+              {
+                key: "overview",
+                label: "Panoramica",
+                content: (
+                  <div className="space-y-4 pt-4">
+                    {/* Progress summary */}
+                    <Card>
+                      <CardContent className="p-5">
+                        <ProgressSummary
+                          progress={Math.round(completionPct)}
+                          total={s?.totalTasks ?? tasks.length}
+                          completed={s?.completedTasks ?? tasks.filter((t) => t.status === "done").length}
+                          statusBreakdown={Object.entries(TASK_STATUS_LABELS).map(([status, label]) => ({
+                            key: status,
+                            label,
+                            count: tasks.filter((t) => t.status === status).length,
+                            color: STATUS_COLORS_HSL[status] ?? STATUS_COLORS_HSL.todo,
+                          }))}
+                        />
+                      </CardContent>
+                    </Card>
+
+                    {/* Full description if truncated in subtitle */}
+                    {p.description && p.description.length > 120 && (
+                      <Card>
+                        <CardContent className="p-5">
+                          <h3 className="text-sm font-semibold mb-2">
+                            Descrizione completa
+                          </h3>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {p.description}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Dettagli progetto */}
+                    <Card>
+                      <CardContent className="p-5">
+                        <div className="space-y-1">
+                          <h3 className="font-semibold text-sm mb-3">Dettagli</h3>
+                          <MetaRow icon={Signal} label="Stato">
+                            <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
+                          </MetaRow>
+                          <MetaRow icon={Target} label="Priorità">
+                            <StatusBadge status={p.priority} labels={TASK_PRIORITY_LABELS} />
+                          </MetaRow>
+                          <MetaRow icon={Calendar} label="Data Inizio">
+                            {p.startDate ? formatDate(p.startDate) : "—"}
+                          </MetaRow>
+                          <MetaRow icon={Calendar} label="Scadenza">
+                            {p.targetEndDate ? formatDate(p.targetEndDate) : "—"}
+                          </MetaRow>
+                          <MetaRow icon={Clock} label="Budget">
+                            {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
+                          </MetaRow>
+                          <MetaRow icon={User} label="Responsabile">
+                            {p.manager
+                              ? `${p.manager.firstName} ${p.manager.lastName}`
+                              : "—"}
+                          </MetaRow>
+                          <MetaRow icon={Users} label="Membri">
+                            {members.length > 0 ? `${members.length}` : "—"}
+                          </MetaRow>
+                          <MetaRow icon={Calendar} label="Creato il">
+                            {formatDate(p.createdAt)}
+                          </MetaRow>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ),
+              },
+              {
+                key: "tasks",
+                label: "Task",
+                count: s?.totalTasks,
+                content: tasksTab,
+              },
+              {
+                key: "risks",
+                label: "Rischi",
+                count: s?.totalRisks,
+                content: risksTab,
+              },
+              {
+                key: "documents",
+                label: "Documenti",
+                count: s?.totalDocuments,
+                content: documentsTab,
+              },
+              {
+                key: "members",
+                label: "Membri",
+                count: members.length || undefined,
+                content: membersTab,
+              },
+            ]
+          : undefined
+      }
+      onDelete={handleDelete}
+      deleteConfirmMessage="Sei sicuro di voler eliminare questo progetto?"
+      isDeleting={deleteProject.isPending}
+    />
   )
 }

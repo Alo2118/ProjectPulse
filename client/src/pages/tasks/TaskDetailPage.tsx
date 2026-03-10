@@ -1,966 +1,528 @@
-/**
- * Task Detail Page - Two-column layout with metadata sidebar
- * @module pages/tasks/TaskDetailPage
- */
-
-import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { toast } from '@stores/toastStore'
-import { useTaskStore } from '@stores/taskStore'
-import { useAuthStore } from '@stores/authStore'
-import { useTimerToggle } from '@hooks/useTimerToggle'
-import { useTaskTreeStore } from '@stores/taskTreeStore'
-import api from '@services/api'
+import { useMemo } from "react"
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
+  Pencil,
   Calendar,
-  User,
   Clock,
-  Play,
-  Square,
-  Edit2,
+  User,
   FolderKanban,
-  AlertCircle,
+  Flag,
+  Layers,
+  AlertTriangle,
+  ExternalLink,
   GitBranch,
   MessageSquare,
-  ExternalLink,
   Timer,
-  StickyNote,
-  Paperclip,
-  AlertTriangle,
-  Target,
-  CheckSquare,
-  ListTodo,
-  Repeat2,
-  Copy,
-  Check,
-  History,
-  Loader2,
-  Tag as TagIcon,
-} from 'lucide-react'
-import { Comment, TaskStatus, Note, Attachment, Tag } from '@/types'
-import { StatusIcon } from '@/components/ui/StatusIcon'
-import { ProgressBar } from '@/components/ui/ProgressBar'
-import { ChecklistSection } from '@/components/tasks/ChecklistSection'
-import { CustomFieldsSection } from '@/components/tasks/CustomFieldsSection'
-import { CommentSection } from '@/components/tasks/CommentSection'
-import { TaskTreeView } from '@/components/reports/TaskTreeView'
-import { BlockedReasonModal } from '@/components/tasks/BlockedReasonModal'
-import { NoteSection } from '@/components/common/NoteSection'
-import { AttachmentSection } from '@/components/common/AttachmentSection'
-import { CollapsibleSection } from '@/components/common/CollapsibleSection'
-import { DetailPageHeader } from '@/components/common/DetailPageHeader'
-import { Breadcrumb } from '@/components/common/Breadcrumb'
-import { DepartmentBadge } from '@/components/ui/DepartmentBadge'
+} from "lucide-react"
+import { toast } from "sonner"
+import { EntityDetail } from "@/components/common/EntityDetail"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { MetaRow } from "@/components/common/MetaRow"
+import { ParentLink } from "@/components/common/ParentLink"
+import { RelatedEntitiesSidebar } from "@/components/common/RelatedEntitiesSidebar"
+import { SidebarActionSuggestion } from "@/components/common/SidebarActionSuggestion"
+import type { SidebarSuggestion } from "@/components/common/SidebarActionSuggestion"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
-  TASK_TYPE_LABELS,
-  TASK_TYPE_COLORS,
-} from '@/constants'
-import { useTagStore } from '@stores/tagStore'
-import { useWorkflowStore } from '@stores/workflowStore'
-import TagList from '@components/tags/TagList'
-import WorkflowStepper from '@components/tasks/WorkflowStepper'
-import ActivityFeed from '@components/common/ActivityFeed'
-import StatusTimeline from '@components/tasks/StatusTimeline'
-import { formatDate, formatDateRelative, formatHoursFromDecimal } from '@utils/dateFormatters'
-import { useTaskRoom } from '@hooks/useTaskRoom'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  useTaskQuery,
+  useChangeTaskStatus,
+  useDeleteTask,
+  useSubtasksQuery,
+} from "@/hooks/api/useTasks"
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_TYPE_LABELS, TASK_TYPE_COLORS } from "@/lib/constants"
+import { formatDate, formatDateTime } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { CommentSection } from "@/components/domain/tasks/CommentSection"
+import { ChecklistSection } from "@/components/domain/tasks/ChecklistSection"
+import { WorkflowStepper } from "@/components/common/WorkflowStepper"
+import { taskWorkflow } from "@/lib/workflows/taskWorkflow"
+import type { ValidationData } from "@/lib/workflow-engine"
 
-function formatHours(value: number | null | undefined): string {
-  return formatHoursFromDecimal(value)
+interface TaskData {
+  id: string
+  code: string
+  title: string
+  description?: string | null
+  taskType: string
+  status: string
+  priority: string
+  startDate?: string | null
+  dueDate?: string | null
+  estimatedHours?: number | null
+  actualHours?: number | null
+  blockedReason?: string | null
+  projectId?: string | null
+  assigneeId?: string | null
+  parentTaskId?: string | null
+  createdAt?: string | null
+  project?: { id: string; name: string; code: string } | null
+  assignee?: { id: string; firstName: string; lastName: string } | null
+  parentTask?: { id: string; code: string; title: string; taskType: string } | null
+  subtasksSummary?: { total: number; completed: number } | null
+  _count?: {
+    comments: number
+    timeEntries: number
+    subtasks: number
+  }
 }
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────
-
-function TaskDetailSkeleton() {
-  return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Breadcrumb skeleton */}
-      <div className="flex gap-2 items-center">
-        <div className="skeleton h-4 w-16 rounded" />
-        <div className="skeleton h-4 w-4 rounded" />
-        <div className="skeleton h-4 w-24 rounded" />
-        <div className="skeleton h-4 w-4 rounded" />
-        <div className="skeleton h-4 w-32 rounded" />
-      </div>
-
-      {/* Header skeleton */}
-      <div className="flex items-center gap-4">
-        <div className="skeleton w-9 h-9 rounded-lg" />
-        <div className="flex-1">
-          <div className="skeleton h-7 w-64 rounded-lg" />
-          <div className="skeleton h-4 w-32 mt-1 rounded" />
-        </div>
-        <div className="flex gap-1.5">
-          <div className="skeleton w-9 h-9 rounded-lg" />
-          <div className="skeleton w-9 h-9 rounded-lg" />
-          <div className="skeleton w-9 h-9 rounded-lg" />
-          <div className="skeleton w-9 h-9 rounded-lg" />
-        </div>
-      </div>
-
-      {/* Two-column skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="skeleton w-9 h-9 rounded-lg" />
-              <div className="skeleton h-4 w-24 rounded" />
-            </div>
-            <div className="skeleton h-7 w-3/4 rounded-lg" />
-            <div className="skeleton h-4 w-full mt-3 rounded" />
-            <div className="skeleton h-4 w-2/3 mt-2 rounded" />
-          </div>
-          <div className="card p-4">
-            <div className="flex gap-3 mb-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="skeleton h-8 w-20 rounded-lg" />
-              ))}
-            </div>
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="skeleton h-4 w-full rounded" />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right sidebar skeleton */}
-        <div className="lg:col-span-1">
-          <div className="card p-4 space-y-0">
-            {/* Stepper skeleton */}
-            <div className="flex gap-2 mb-4 pb-4 border-b border-slate-100 dark:border-slate-700/50">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-1">
-                  <div className="skeleton w-7 h-7 rounded-full" />
-                  {i < 3 && <div className="skeleton h-0.5 w-8 rounded" />}
-                </div>
-              ))}
-            </div>
-            {/* Meta rows skeleton */}
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
-                <div className="skeleton h-4 w-20 rounded" />
-                <div className="skeleton h-4 w-24 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+interface SubtaskRow {
+  id: string
+  code: string
+  title: string
+  status: string
+  priority: string
+  assignee?: { firstName: string; lastName: string } | null
 }
-
-// ─── Main Component ────────────────────────────────────────────────────────
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>()
+  useSetPageContext({ domain: 'task', entityId: id })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const { currentTask, isLoading, fetchTask, changeTaskStatus, clearCurrentTask, cloneTask } = useTaskStore()
-  const { canTrackTime, handleTimerToggle: timerToggleById, runningTimerTaskId } = useTimerToggle()
-  const { treeData } = useTaskTreeStore()
-  const { fetchProjectWorkflow, getAvailableTransitions, getStatusLabel } = useWorkflowStore()
 
-  const [comments, setComments] = useState<Comment[]>([])
-  const [commentsLoading, setCommentsLoading] = useState(false)
-  const [notes, setNotes] = useState<Note[]>([])
-  const [notesLoading, setNotesLoading] = useState(false)
-  const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [attachmentsLoading, setAttachmentsLoading] = useState(false)
-  const [taskTags, setTaskTags] = useState<Tag[]>([])
-  const { fetchEntityTags } = useTagStore()
-  const [showBlockedModal, setShowBlockedModal] = useState(false)
-  const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null)
-  const [isChangingStatus, setIsChangingStatus] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
-  const [isCloning, setIsCloning] = useState(false)
+  const { data: task, isLoading, error } = useTaskQuery(id ?? "")
+  const { data: subtasks } = useSubtasksQuery(id ?? "")
+  const changeStatus = useChangeTaskStatus()
+  const deleteTask = useDeleteTask()
 
-  useEffect(() => {
-    if (id) {
-      fetchTask(id)
-      loadComments(id)
-      loadNotes(id)
-      loadAttachments(id)
-      fetchEntityTags('task', id).then(setTaskTags)
+  const t = task as TaskData | undefined
+  const subtaskList = (subtasks ?? []) as SubtaskRow[]
+
+  const breadcrumbs = useMemo(() => {
+    const crumbs: Array<{ label: string; href?: string; domain?: string }> = [
+      { label: "Home", href: "/" },
+    ]
+    if (t?.project) {
+      crumbs.push({ label: "Progetti", href: "/projects", domain: "project" })
+      crumbs.push({
+        label: t.project.name,
+        href: `/projects/${t.project.id}`,
+      })
+    } else {
+      crumbs.push({ label: "Task", href: "/tasks" })
     }
-    return () => clearCurrentTask()
-  }, [id, fetchTask, clearCurrentTask, fetchEntityTags])
-
-  // Fetch project workflow for dynamic status transitions
-  useEffect(() => {
-    if (currentTask?.projectId) {
-      fetchProjectWorkflow(currentTask.projectId)
+    if (t?.parentTask) {
+      crumbs.push({
+        label: t.parentTask.title,
+        href: `/tasks/${t.parentTask.id}`,
+      })
     }
-  }, [currentTask?.projectId, fetchProjectWorkflow])
+    crumbs.push({ label: t?.title ?? "..." })
+    return crumbs
+  }, [t])
 
-  const loadComments = async (taskId: string) => {
-    setCommentsLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Comment[] }>(
-        `/comments/task/${taskId}`
-      )
-      if (response.data.success) {
-        setComments(response.data.data)
-      }
-    } catch {
-      toast.error('Errore', 'Impossibile caricare i commenti')
-    } finally {
-      setCommentsLoading(false)
-    }
-  }
-
-  const loadNotes = async (taskId: string) => {
-    setNotesLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Note[] }>(
-        `/notes/task/${taskId}`
-      )
-      if (response.data.success) {
-        setNotes(response.data.data)
-      }
-    } catch {
-      toast.error('Errore', 'Impossibile caricare le note')
-    } finally {
-      setNotesLoading(false)
-    }
-  }
-
-  const loadAttachments = async (taskId: string) => {
-    setAttachmentsLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Attachment[] }>(
-        `/attachments/task/${taskId}`
-      )
-      if (response.data.success) {
-        setAttachments(response.data.data)
-      }
-    } catch {
-      toast.error('Errore', 'Impossibile caricare gli allegati')
-    } finally {
-      setAttachmentsLoading(false)
-    }
-  }
-
-  const handleStatusChange = useCallback(
-    async (newStatus: TaskStatus) => {
-      if (!id) return
-
-      if (newStatus === 'blocked') {
-        setPendingStatus(newStatus)
-        setShowBlockedModal(true)
-        return
-      }
-
-      try {
-        await changeTaskStatus(id, newStatus)
-      } catch {
-        // silently ignore
-      }
-    },
-    [id, changeTaskStatus]
-  )
-
-  const handleBlockedConfirm = useCallback(
-    async (reason: string) => {
-      if (!id || !pendingStatus) return
-
-      setIsChangingStatus(true)
-      try {
-        await changeTaskStatus(id, pendingStatus, reason)
-        setShowBlockedModal(false)
-        setPendingStatus(null)
-      } catch {
-        // silently ignore
-      } finally {
-        setIsChangingStatus(false)
-      }
-    },
-    [id, pendingStatus, changeTaskStatus]
-  )
-
-  const handleBlockedCancel = useCallback(() => {
-    setShowBlockedModal(false)
-    setPendingStatus(null)
-  }, [])
-
-  const handleTimerToggle = useCallback(async () => {
+  const handleStatusChange = (newStatus: string) => {
     if (!id) return
-    await timerToggleById(id)
-  }, [id, timerToggleById])
+    changeStatus.mutate(
+      { id, status: newStatus },
+      {
+        onSuccess: () => toast.success("Stato aggiornato"),
+        onError: () => toast.error("Errore nell'aggiornamento dello stato"),
+      }
+    )
+  }
 
-  const handleSubtaskTimerToggle = useCallback(
-    async (taskId: string) => {
-      await timerToggleById(taskId)
-    },
-    [timerToggleById]
+  const handleDelete = () => {
+    if (!id) return
+    deleteTask.mutate(id, {
+      onSuccess: () => {
+        toast.success("Task eliminato")
+        navigate("/tasks")
+      },
+      onError: () => toast.error("Errore nell'eliminazione"),
+    })
+  }
+
+  const badges = t ? (
+    <>
+      <StatusBadge status={t.status} labels={TASK_STATUS_LABELS} />
+      <StatusBadge status={t.priority} labels={TASK_PRIORITY_LABELS} />
+      <Badge variant="secondary" className={TASK_TYPE_COLORS[t.taskType]}>
+        {TASK_TYPE_LABELS[t.taskType] ?? t.taskType}
+      </Badge>
+    </>
+  ) : null
+
+  const headerActions = t ? (
+    <>
+      <Select value={t.status} onValueChange={handleStatusChange}>
+        <SelectTrigger className="w-[160px] h-9">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button variant="outline" size="sm" asChild>
+        <Link to={`/tasks/${id}/edit`}>
+          <Pencil className="h-4 w-4 mr-1" />
+          Modifica
+        </Link>
+      </Button>
+    </>
+  ) : null
+
+  const detailsTab = t ? (
+    <div className="space-y-4 pt-4">
+      {/* Description */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-2">Descrizione</h3>
+          {t.description ? (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {t.description}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              Nessuna descrizione
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dettagli task */}
+      <Card>
+        <CardContent className="p-5">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-sm mb-3">Dettagli</h3>
+            <MetaRow icon={Layers} label="Stato">
+              <StatusBadge status={t.status} labels={TASK_STATUS_LABELS} />
+            </MetaRow>
+            <MetaRow icon={Flag} label="Priorità">
+              <StatusBadge status={t.priority} labels={TASK_PRIORITY_LABELS} />
+            </MetaRow>
+            <MetaRow icon={Layers} label="Tipo">
+              <Badge variant="secondary" className={TASK_TYPE_COLORS[t.taskType]}>
+                {TASK_TYPE_LABELS[t.taskType] ?? t.taskType}
+              </Badge>
+            </MetaRow>
+            {t.project && (
+              <MetaRow icon={FolderKanban} label="Progetto">
+                <Link
+                  to={`/projects/${t.project.id}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {t.project.name}
+                </Link>
+              </MetaRow>
+            )}
+            <MetaRow icon={User} label="Assegnatario">
+              {t.assignee
+                ? `${t.assignee.firstName} ${t.assignee.lastName}`
+                : "Non assegnato"}
+            </MetaRow>
+            <MetaRow icon={Calendar} label="Data Inizio">
+              {t.startDate ? formatDate(t.startDate) : "—"}
+            </MetaRow>
+            <MetaRow icon={Calendar} label="Scadenza">
+              <span
+                className={cn(
+                  t.dueDate &&
+                    t.status !== "done" &&
+                    t.status !== "cancelled" &&
+                    new Date(t.dueDate) < new Date() &&
+                    "text-destructive font-medium"
+                )}
+              >
+                {t.dueDate ? formatDate(t.dueDate) : "—"}
+              </span>
+            </MetaRow>
+            <MetaRow icon={Clock} label="Ore Stimate">
+              {t.estimatedHours != null ? `${t.estimatedHours}h` : "—"}
+            </MetaRow>
+            <MetaRow icon={Clock} label="Ore Effettive">
+              {t.actualHours != null ? `${t.actualHours}h` : "—"}
+            </MetaRow>
+            {t.createdAt && (
+              <MetaRow icon={Calendar} label="Creato il">
+                {formatDateTime(t.createdAt)}
+              </MetaRow>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Blocked reason */}
+      {t.status === "blocked" && t.blockedReason && (
+        <Card className="border-destructive/50">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-destructive mb-1">
+                  Motivo del blocco
+                </h3>
+                <p className="text-sm text-muted-foreground">{t.blockedReason}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  ) : null
+
+  const subtasksTab = (
+    <Card>
+      <CardContent className="p-5">
+        {subtaskList.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            Nessun sottotask
+          </p>
+        ) : (
+          <div className="divide-y">
+            {subtaskList.map((sub) => (
+              <Link
+                key={sub.id}
+                to={`/tasks/${sub.id}`}
+                className="flex items-center justify-between py-3 hover:bg-muted/50 -mx-2 px-2 rounded-md transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="font-mono text-xs text-muted-foreground shrink-0">
+                    {sub.code}
+                  </span>
+                  <span className="text-sm font-medium truncate">{sub.title}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={sub.status} labels={TASK_STATUS_LABELS} />
+                  <StatusBadge status={sub.priority} labels={TASK_PRIORITY_LABELS} />
+                  {sub.assignee && (
+                    <span className="text-xs text-muted-foreground">
+                      {sub.assignee.firstName} {sub.assignee.lastName}
+                    </span>
+                  )}
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 
-  const handleCommentAdded = useCallback((comment: Comment) => {
-    setComments((prev) => [comment, ...prev])
-  }, [])
+  const tabs = useMemo(
+    () => [
+      { key: "details", label: "Dettagli", content: detailsTab },
+      {
+        key: "subtasks",
+        label: "Sottotask",
+        content: subtasksTab,
+        count: t?.subtasksSummary?.total ?? subtaskList.length,
+      },
+      {
+        key: "comments",
+        label: "Commenti",
+        content: id ? <CommentSection taskId={id} /> : null,
+      },
+      {
+        key: "checklist",
+        label: "Checklist",
+        content: id ? <ChecklistSection taskId={id} /> : null,
+      },
+    ],
+    [detailsTab, subtasksTab, id, t, subtaskList.length]
+  )
 
-  const handleCommentDeleted = useCallback((commentId: string) => {
-    setComments((prev) => prev.filter((c) => c.id !== commentId))
-  }, [])
+  // ---- Sidebar: related entities ----
+  const taskRelatedItems = useMemo(() => {
+    if (!t) return []
+    return [
+      {
+        icon: GitBranch,
+        label: "Sottotask",
+        total: t._count?.subtasks ?? subtaskList.length,
+        domain: "subtask",
+      },
+      {
+        icon: MessageSquare,
+        label: "Commenti",
+        total: t._count?.comments ?? 0,
+        domain: "task",
+      },
+      {
+        icon: Timer,
+        label: "Ore registrate",
+        total: t._count?.timeEntries ?? 0,
+        domain: "task",
+      },
+    ]
+  }, [t, subtaskList.length])
 
-  // Real-time comment handlers — called by useTaskRoom when another user
-  // creates, edits, or deletes a comment on this task.
-  const handleRealtimeCommentCreated = useCallback(({ comment }: { comment: Comment; taskId: string }) => {
-    // Guard against duplicates (the author's own action already updated state via handleCommentAdded)
-    setComments((prev) =>
-      prev.some((c) => c.id === comment.id) ? prev : [comment, ...prev]
-    )
-  }, [])
+  // ---- Sidebar: suggestions ----
+  const taskSuggestions = useMemo((): SidebarSuggestion[] => {
+    if (!t || !id) return []
 
-  const handleRealtimeCommentUpdated = useCallback(({ comment }: { comment: Comment; taskId: string }) => {
-    setComments((prev) =>
-      prev.map((c) => (c.id === comment.id ? comment : c))
-    )
-  }, [])
+    const subtaskTotal = t._count?.subtasks ?? subtaskList.length
+    const subtaskDone = subtaskList.filter(
+      (s) => s.status === "done" || s.status === "cancelled"
+    ).length
+    const allSubtasksDone = subtaskTotal > 0 && subtaskDone === subtaskTotal
 
-  const handleRealtimeCommentDeleted = useCallback(({ commentId }: { commentId: string; taskId: string }) => {
-    setComments((prev) => prev.filter((c) => c.id !== commentId))
-  }, [])
-
-  // Join the task socket room to receive real-time comment updates from other users
-  useTaskRoom(id, {
-    onCommentCreated: handleRealtimeCommentCreated,
-    onCommentUpdated: handleRealtimeCommentUpdated,
-    onCommentDeleted: handleRealtimeCommentDeleted,
-  })
-
-  const handleNoteAdded = useCallback((note: Note) => {
-    setNotes((prev) => [note, ...prev])
-  }, [])
-
-  const handleNoteDeleted = useCallback((noteId: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== noteId))
-  }, [])
-
-  const handleAttachmentAdded = useCallback((attachment: Attachment) => {
-    setAttachments((prev) => [attachment, ...prev])
-  }, [])
-
-  const handleAttachmentDeleted = useCallback((attachmentId: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== attachmentId))
-  }, [])
-
-  const handleCopyLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setIsCopied(true)
-      toast.success('Link copiato', 'Il link al task è stato copiato negli appunti.')
-      setTimeout(() => setIsCopied(false), 2000)
-    } catch {
-      toast.error('Errore', 'Impossibile copiare il link.')
+    if (allSubtasksDone && t.status !== "done" && t.status !== "cancelled") {
+      return [
+        {
+          icon: "✅",
+          message: "Tutti i subtask completati — segna come completato?",
+          actionLabel: "Completa task →",
+          actionHref: `/tasks/${id}`,
+        },
+      ]
     }
-  }, [])
 
-  const handleCloneTask = useCallback(async () => {
-    if (!id) return
-    setIsCloning(true)
-    try {
-      const cloned = await cloneTask(id, false)
-      toast.success('Task duplicato', `Creato "${cloned.title}"`)
-      navigate(`/tasks/${cloned.id}`)
-    } catch {
-      // Error toast already shown in store
-    } finally {
-      setIsCloning(false)
+    const timeEntryCount = t._count?.timeEntries ?? 0
+    if (timeEntryCount === 0 && t.status !== "done" && t.status !== "cancelled") {
+      return [
+        {
+          icon: "⏱️",
+          message: "Nessuna ora registrata su questo task",
+          actionLabel: "Avvia timer →",
+          actionHref: `/time-tracking?taskId=${id}`,
+        },
+      ]
     }
-  }, [id, cloneTask, navigate])
 
-  // ── Derived state ─────────────────────────────────────────────────────────
+    return []
+  }, [t, id, subtaskList])
 
-  const isCreator = currentTask?.createdById === user?.id
-  const isAssignee = currentTask?.assignee?.id === user?.id
-  const isTaskOwner = isCreator || isAssignee
-  const canEdit = user?.role === 'admin' || user?.role === 'direzione' || isTaskOwner
-  const isTimerRunning = runningTimerTaskId === id
+  // ---- Sidebar ----
+  const sidebar = t ? (
+    <div className="space-y-4">
+      {/* Status section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Stato</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-0">
+          <MetaRow icon={Layers} label="Stato">
+            <StatusBadge status={t.status} labels={TASK_STATUS_LABELS} />
+          </MetaRow>
+          <MetaRow icon={Flag} label="Priorità">
+            <StatusBadge status={t.priority} labels={TASK_PRIORITY_LABELS} />
+          </MetaRow>
+          <MetaRow icon={Layers} label="Tipo">
+            <Badge variant="secondary" className={TASK_TYPE_COLORS[t.taskType]}>
+              {TASK_TYPE_LABELS[t.taskType] ?? t.taskType}
+            </Badge>
+          </MetaRow>
+          <MetaRow icon={User} label="Assegnatario">
+            {t.assignee
+              ? `${t.assignee.firstName} ${t.assignee.lastName}`
+              : "Non assegnato"}
+          </MetaRow>
+          <MetaRow icon={Calendar} label="Data Inizio">
+            {t.startDate ? formatDate(t.startDate) : "—"}
+          </MetaRow>
+          <MetaRow icon={Calendar} label="Scadenza">
+            <span
+              className={cn(
+                t.dueDate &&
+                  t.status !== "done" &&
+                  t.status !== "cancelled" &&
+                  new Date(t.dueDate) < new Date() &&
+                  "text-destructive font-medium"
+              )}
+            >
+              {t.dueDate ? formatDate(t.dueDate) : "—"}
+            </span>
+          </MetaRow>
+          <MetaRow icon={Clock} label="Ore Stimate">
+            {t.estimatedHours != null ? `${t.estimatedHours}h` : "—"}
+          </MetaRow>
+          <MetaRow icon={Clock} label="Ore Effettive">
+            {t.actualHours != null ? `${t.actualHours}h` : "—"}
+          </MetaRow>
+        </CardContent>
+      </Card>
 
-  const estimatedHours = currentTask?.estimatedHours ?? 0
-  const actualHours = currentTask?.actualHours ?? 0
-  const hoursProgress = estimatedHours > 0 ? Math.min((actualHours / estimatedHours) * 100, 100) : 0
-  const isOverBudget = actualHours > estimatedHours && estimatedHours > 0
+      {/* Parent project link */}
+      {t.project && (
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground mb-1.5">Progetto</p>
+            <ParentLink
+              name={t.project.name}
+              href={`/projects/${t.project.id}`}
+              domain="project"
+              className="text-sm font-medium"
+            />
+          </CardContent>
+        </Card>
+      )}
 
-  const daysUntilDeadline = currentTask?.dueDate
-    ? Math.ceil((new Date(currentTask.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null
+      {/* Related entities */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Dettagli</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RelatedEntitiesSidebar items={taskRelatedItems} />
+        </CardContent>
+      </Card>
 
-  const isFinished = currentTask?.status === 'done' || currentTask?.status === 'cancelled'
-  const isOverdue = daysUntilDeadline !== null && daysUntilDeadline < 0 && !isFinished
-  const isDueSoon = daysUntilDeadline !== null && daysUntilDeadline >= 0 && daysUntilDeadline <= 2 && !isFinished
-
-  // ── Loading state ─────────────────────────────────────────────────────────
-
-  if (isLoading && !currentTask) {
-    return <TaskDetailSkeleton />
-  }
-
-  if (!currentTask) {
-    return (
-      <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Task non trovato</h3>
-        <p className="text-slate-500 dark:text-slate-400 mb-4">
-          Il task richiesto non esiste o è stato eliminato.
-        </p>
-        <button onClick={() => navigate('/tasks')} className="btn-primary">
-          Torna ai Task
-        </button>
-      </div>
-    )
-  }
-
-  // ── Task type icon config ──────────────────────────────────────────────────
-
-  const taskTypeIcon = currentTask.taskType === 'milestone'
-    ? { icon: Target, bg: 'bg-amber-100 dark:bg-amber-900/30', color: 'text-amber-600 dark:text-amber-400' }
-    : currentTask.taskType === 'subtask'
-      ? { icon: ListTodo, bg: 'bg-slate-100 dark:bg-slate-700', color: 'text-slate-600 dark:text-slate-400' }
-      : { icon: CheckSquare, bg: 'bg-blue-100 dark:bg-blue-900/30', color: 'text-blue-600 dark:text-blue-400' }
-
-  const TaskTypeIconComponent = taskTypeIcon.icon
-  const projectId = currentTask.projectId ?? null
-
-  // ── Status transitions ────────────────────────────────────────────────────
-
-  const effectiveProjectId = projectId ?? ''
-  const transitions = (canEdit || isAssignee) && currentTask.status !== 'cancelled'
-    ? getAvailableTransitions(effectiveProjectId, currentTask.status)
-    : []
-
-  const subtaskCount = treeData?.subtasks?.length ?? 0
-
-  // ── Render ────────────────────────────────────────────────────────────────
+      {/* Suggestion */}
+      <SidebarActionSuggestion suggestions={taskSuggestions} />
+    </div>
+  ) : undefined
 
   return (
-    <div className="space-y-4">
-
-      {/* ── Breadcrumb ── */}
-      <Breadcrumb
-        items={[
-          { label: 'Task', href: '/tasks' },
-          ...(currentTask.project
-            ? [{ label: currentTask.project.name, href: `/projects/${currentTask.project.id}` }]
-            : []),
-          ...(currentTask.parentTask
-            ? [{ label: currentTask.parentTask.title || currentTask.parentTask.code, href: `/tasks/${currentTask.parentTask.id}` }]
-            : []),
-          { label: currentTask.title },
-        ]}
-      />
-
-      {/* ── Page Header with icon-button actions ── */}
-      <DetailPageHeader title="Dettagli Task" subtitle={currentTask.code}>
-        {/* Timer button — colored, icon-only on mobile */}
-        {canTrackTime && currentTask.taskType !== 'milestone' && (
-          <button
-            onClick={handleTimerToggle}
-            title={isTimerRunning ? 'Ferma timer' : 'Avvia timer'}
-            className={`flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-lg font-medium transition-all duration-200 active:scale-95 ${
-              isTimerRunning
-                ? 'bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500'
-                : 'bg-cyan-500 text-white hover:bg-cyan-600 dark:bg-cyan-600 dark:hover:bg-cyan-500'
-            }`}
-          >
-            {isTimerRunning ? (
-              <Square className="w-4 h-4" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            <span className="hidden sm:inline">
-              {isTimerRunning ? 'Stop' : 'Timer'}
-            </span>
-            {isTimerRunning && (
-              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            )}
-          </button>
-        )}
-
-        {/* Copy link */}
-        <button
-          onClick={handleCopyLink}
-          title="Copia link al task"
-          className={`btn-icon ${isCopied ? 'text-green-600 dark:text-green-400' : ''}`}
-        >
-          {isCopied ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Copy className="w-4 h-4" />
-          )}
-        </button>
-
-        {/* Duplicate */}
-        <button
-          onClick={handleCloneTask}
-          disabled={isCloning}
-          title="Duplica task"
-          className="btn-icon disabled:opacity-50"
-        >
-          {isCloning ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Copy className="w-4 h-4 rotate-[15deg]" />
-          )}
-        </button>
-
-        {/* Edit */}
-        {canEdit && (
-          <button
-            onClick={() => navigate(`/tasks/${id}/edit`)}
-            title="Modifica task"
-            className="btn-icon"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-        )}
-      </DetailPageHeader>
-
-      {/* ── Two-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ════════════════ LEFT COLUMN ════════════════ */}
-        <div className="lg:col-span-2 space-y-4">
-
-          {/* ── Title card ── */}
-          <div className="card p-5">
-            {/* Type badge + code */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`p-2 rounded-lg flex-shrink-0 ${taskTypeIcon.bg}`}>
-                <TaskTypeIconComponent className={`w-4 h-4 ${taskTypeIcon.color}`} />
-              </div>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${TASK_TYPE_COLORS[currentTask.taskType || 'task']}`}>
-                {TASK_TYPE_LABELS[currentTask.taskType || 'task']}
-              </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">{currentTask.code}</span>
-            </div>
-
-            {/* Title + recurring badge */}
-            <div className="flex items-start gap-2 flex-wrap">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-snug">
-                {currentTask.title}
-              </h2>
-              {currentTask.isRecurring && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium flex-shrink-0 mt-0.5">
-                  <Repeat2 className="w-3 h-3" />
-                  Ricorrente
-                </span>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="mt-3">
-              {currentTask.description ? (
-                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                  {currentTask.description}
-                </p>
-              ) : canEdit ? (
-                <button
-                  onClick={() => navigate(`/tasks/${id}/edit`)}
-                  className="text-sm text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors"
-                >
-                  + Aggiungi descrizione
-                </button>
-              ) : (
-                <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nessuna descrizione</p>
-              )}
-            </div>
-
-            {/* Milestone info banner */}
-            {currentTask.taskType === 'milestone' && (
-              <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                  <Target className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm">
-                    Questa milestone raccoglie task figlie. Il tempo e l'avanzamento sono calcolati automaticamente.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Blocked reason banner */}
-            {currentTask.status === 'blocked' && currentTask.blockedReason && (
-              <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Motivo del blocco</h4>
-                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-wrap">
-                      {currentTask.blockedReason}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── Checklist ── */}
-          {currentTask.taskType !== 'milestone' && (
-            <ChecklistSection taskId={currentTask.id} readOnly={!canEdit} />
-          )}
-
-          {/* ── Custom Fields ── */}
-          <CustomFieldsSection
-            taskId={currentTask.id}
-            projectId={currentTask.projectId}
-            readOnly={!canEdit}
+    <EntityDetail
+      isLoading={isLoading}
+      error={error ?? undefined}
+      notFound={!isLoading && !error && !t}
+      breadcrumbs={breadcrumbs}
+      title={t?.title}
+      subtitle={t?.code}
+      badges={badges}
+      headerActions={headerActions}
+      beforeContent={
+        t ? (
+          <WorkflowStepper
+            workflow={taskWorkflow}
+            currentPhase={t.status}
+            validationData={
+              {
+                hasAssignee: !!t.assigneeId,
+                hasDescription: !!(t.description && t.description.trim().length > 0),
+                hasChecklist: false,
+                checklistProgress: 100,
+                hoursLogged: t.actualHours ?? 0,
+                hasApprover: false,
+              } satisfies ValidationData
+            }
+            onAdvance={(nextPhase) => handleStatusChange(nextPhase)}
+            onBlock={(reason) => {
+              if (!id) return
+              changeStatus.mutate(
+                { id, status: "blocked", blockedReason: reason },
+                {
+                  onSuccess: () => toast.success("Task bloccato"),
+                  onError: () => toast.error("Errore nel blocco del task"),
+                }
+              )
+            }}
+            canAdvancePhase={!changeStatus.isPending}
           />
-
-          {/* ── Subtask section ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '100ms' }}>
-            <div className="hud-panel-header mb-4">
-              <span>Subtask</span>
-              {subtaskCount > 0 && (
-                <span className="text-xs text-cyan-400 font-mono ml-1">({subtaskCount})</span>
-              )}
-            </div>
-            {canEdit && (
-              <div className="flex justify-end mb-3">
-                <Link
-                  to={`/tasks/new?parentTaskId=${id}&projectId=${currentTask.projectId || ''}`}
-                  className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
-                >
-                  + Aggiungi subtask
-                </Link>
-              </div>
-            )}
-            <TaskTreeView
-              parentTaskId={id}
-              mode="compact"
-              showSummary={false}
-              showControls={false}
-              showFilters={false}
-              canTrackTime={canTrackTime}
-              onTimerToggle={handleSubtaskTimerToggle}
-              runningTimerId={runningTimerTaskId}
-            />
-          </div>
-
-          {/* ── Comments ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '150ms' }}>
-            <div className="hud-panel-header mb-4">
-              <span>Commenti</span>
-              {comments.length > 0 && (
-                <span className="text-xs text-cyan-400 font-mono ml-1">({comments.length})</span>
-              )}
-            </div>
-            <CommentSection
-              taskId={id || ''}
-              comments={comments}
-              currentUser={user}
-              isLoading={commentsLoading}
-              onCommentAdded={handleCommentAdded}
-              onCommentDeleted={handleCommentDeleted}
-            />
-          </div>
-
-          {/* ── Notes (collapsible) ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '200ms' }}>
-            <CollapsibleSection
-              title={`Note${notes.length > 0 ? ` (${notes.length})` : ''}`}
-              icon={StickyNote}
-              defaultExpanded={notes.length > 0}
-              borderTop={false}
-            >
-              <NoteSection
-                entityType="task"
-                entityId={id || ''}
-                notes={notes}
-                currentUser={user}
-                isLoading={notesLoading}
-                onNoteAdded={handleNoteAdded}
-                onNoteDeleted={handleNoteDeleted}
-                showInternalToggle={user?.role === 'admin' || user?.role === 'direzione'}
-              />
-            </CollapsibleSection>
-          </div>
-
-          {/* ── Attachments (collapsible) ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '250ms' }}>
-            <CollapsibleSection
-              title={`Allegati${attachments.length > 0 ? ` (${attachments.length})` : ''}`}
-              icon={Paperclip}
-              defaultExpanded={attachments.length > 0}
-              borderTop={false}
-            >
-              <AttachmentSection
-                entityType="task"
-                entityId={id || ''}
-                attachments={attachments}
-                currentUser={user}
-                isLoading={attachmentsLoading}
-                onAttachmentAdded={handleAttachmentAdded}
-                onAttachmentDeleted={handleAttachmentDeleted}
-              />
-            </CollapsibleSection>
-          </div>
-
-          {/* ── Activity (collapsible) ── */}
-          <div className="card p-5 animate-section-reveal" style={{ animationDelay: '300ms' }}>
-            <CollapsibleSection
-              title="Attivita'"
-              icon={History}
-              defaultExpanded={false}
-              borderTop={false}
-            >
-              <div className="space-y-4">
-                <StatusTimeline entityId={id!} projectId={projectId} />
-                <ActivityFeed entityType="task" entityId={id!} />
-              </div>
-            </CollapsibleSection>
-          </div>
-        </div>
-
-        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
-        <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-20 space-y-4">
-            <div className="card p-4">
-
-              {/* ── Workflow Stepper ── */}
-              <div className="pb-3 mb-1 border-b border-slate-100 dark:border-slate-700/50 overflow-x-auto scrollbar-hide">
-                <WorkflowStepper currentStatus={currentTask.status} projectId={projectId} />
-              </div>
-
-              {/* ── Current status + transitions ── */}
-              <div className="py-2.5 border-b border-slate-100 dark:border-slate-700/50">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <StatusIcon type="taskStatus" value={currentTask.status} size="sm" showLabel />
-                  {transitions.length > 0 && (
-                    <span className="text-slate-300 dark:text-slate-600 text-xs">→</span>
-                  )}
-                  {transitions.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChange(status as TaskStatus)}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
-                    >
-                      <StatusIcon type="taskStatus" value={status} size="sm" />
-                      <span>{getStatusLabel(effectiveProjectId, status)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Priorità ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <AlertCircle className="w-4 h-4" />
-                  Priorità
-                </span>
-                <span className="meta-row-value">
-                  <StatusIcon type="taskPriority" value={currentTask.priority} size="sm" showLabel />
-                </span>
-              </div>
-
-              {/* ── Assegnato ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <User className="w-4 h-4" />
-                  Assegnato
-                </span>
-                <span className="meta-row-value">
-                  {currentTask.assignee
-                    ? `${currentTask.assignee.firstName} ${currentTask.assignee.lastName}`
-                    : <span className="text-slate-400 dark:text-slate-500 font-normal">—</span>
-                  }
-                </span>
-              </div>
-
-              {/* ── Reparto ── */}
-              {currentTask.department && (
-                <div className="meta-row">
-                  <span className="meta-row-label">
-                    <FolderKanban className="w-4 h-4" />
-                    Reparto
-                  </span>
-                  <span className="meta-row-value">
-                    <DepartmentBadge department={currentTask.department} size="sm" />
-                  </span>
-                </div>
-              )}
-
-              {/* ── Data Inizio ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Calendar className="w-4 h-4" />
-                  Inizio
-                </span>
-                <span className="meta-row-value">
-                  {currentTask.startDate
-                    ? formatDate(currentTask.startDate)
-                    : <span className="text-slate-400 dark:text-slate-500 font-normal">—</span>
-                  }
-                </span>
-              </div>
-
-              {/* ── Scadenza ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Calendar className="w-4 h-4" />
-                  Scadenza
-                </span>
-                <span className={`meta-row-value flex items-center gap-1.5 justify-end ${
-                  isOverdue
-                    ? 'text-red-600 dark:text-red-400'
-                    : isDueSoon
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : ''
-                }`}>
-                  {currentTask.dueDate ? (
-                    <>
-                      {formatDateRelative(currentTask.dueDate)}
-                      {isOverdue && <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />}
-                    </>
-                  ) : (
-                    <span className="text-slate-400 dark:text-slate-500 font-normal">—</span>
-                  )}
-                </span>
-              </div>
-
-              {/* ── Ore ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Clock className="w-4 h-4" />
-                  Ore
-                </span>
-                <div className="flex items-center gap-2 text-right">
-                  {estimatedHours > 0 ? (
-                    <>
-                      <div className="w-16">
-                        <ProgressBar value={hoursProgress} size="sm" color={isOverBudget ? 'red' : 'blue'} />
-                      </div>
-                      <span className={`text-sm font-medium whitespace-nowrap ${isOverBudget ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>
-                        {formatHours(actualHours)} / {formatHours(estimatedHours)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="meta-row-value">
-                      {formatHours(actualHours)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Registrazioni ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Timer className="w-4 h-4" />
-                  Registrazioni
-                </span>
-                <span className="meta-row-value flex items-center gap-1.5 justify-end">
-                  {currentTask._count?.timeEntries ?? 0}
-                  {isTimerRunning && (
-                    <span className="flex items-center gap-1 text-red-500 dark:text-red-400 text-xs font-normal">
-                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                      Attivo
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              {/* ── Progetto ── */}
-              {currentTask.project && (
-                <div className="meta-row">
-                  <span className="meta-row-label">
-                    <FolderKanban className="w-4 h-4" />
-                    Progetto
-                  </span>
-                  <Link
-                    to={`/projects/${currentTask.project.id}`}
-                    className="text-sm font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors text-right truncate max-w-[9rem]"
-                  >
-                    {currentTask.project.name}
-                  </Link>
-                </div>
-              )}
-
-              {/* ── Parent task ── */}
-              {currentTask.parentTask && (
-                <div className="meta-row">
-                  <span className="meta-row-label">
-                    <GitBranch className="w-4 h-4" />
-                    Parent
-                  </span>
-                  <Link
-                    to={`/tasks/${currentTask.parentTask.id}`}
-                    className="text-sm font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors text-right truncate max-w-[9rem]"
-                  >
-                    {currentTask.parentTask.title || currentTask.parentTask.code}
-                  </Link>
-                </div>
-              )}
-
-              {/* ── Subtask count ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <ListTodo className="w-4 h-4" />
-                  Subtask
-                </span>
-                <span className="meta-row-value">{subtaskCount}</span>
-              </div>
-
-              {/* ── Commenti count ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <MessageSquare className="w-4 h-4" />
-                  Commenti
-                </span>
-                <span className="meta-row-value">{comments.length}</span>
-              </div>
-
-              {/* ── Tag ── */}
-              {taskTags.length > 0 && (
-                <div className="meta-row items-start">
-                  <span className="meta-row-label pt-0.5">
-                    <TagIcon className="w-4 h-4" />
-                    Tag
-                  </span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    <TagList tags={taskTags} size="sm" />
-                  </div>
-                </div>
-              )}
-
-              {/* ── Quick Links (vertical list) ── */}
-              <div className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-700/50 space-y-0.5">
-                <Link
-                  to={`/time-tracking?taskId=${id}`}
-                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                >
-                  <Clock className="w-4 h-4 text-green-500 dark:text-green-400 flex-shrink-0" />
-                  Time Entries
-                </Link>
-                {currentTask.project && (
-                  <Link
-                    to={`/projects/${currentTask.project.id}`}
-                    className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                  >
-                    <FolderKanban className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
-                    {currentTask.project.name}
-                  </Link>
-                )}
-                <Link
-                  to={`/tasks?projectId=${currentTask.projectId || ''}`}
-                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4 text-purple-500 dark:text-purple-400 flex-shrink-0" />
-                  Altri task del progetto
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Blocked Reason Modal ── */}
-      <BlockedReasonModal
-        isOpen={showBlockedModal}
-        taskTitle={currentTask.title}
-        isSubmitting={isChangingStatus}
-        onCancel={handleBlockedCancel}
-        onConfirm={handleBlockedConfirm}
-      />
-    </div>
+        ) : undefined
+      }
+      sidebar={sidebar}
+      tabs={tabs}
+      onDelete={handleDelete}
+      deleteConfirmMessage="Sei sicuro di voler eliminare questo task? Tutti i sottotask, commenti e checklist associati saranno eliminati."
+      isDeleting={deleteTask.isPending}
+    />
   )
 }
