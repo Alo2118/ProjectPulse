@@ -13,6 +13,8 @@ import * as workflowService from '../services/workflowService.js'
 import { assertProjectCapability } from '../services/permissionService.js'
 import { logger } from '../utils/logger.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { sendSuccess, sendCreated, sendError } from '../utils/responseHelpers.js'
+import { requireUserId } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -34,6 +36,7 @@ const workflowStatusSchema = z.object({
 const createSchema = z.object({
   name: z.string().min(1, 'Il nome è obbligatorio').max(200),
   description: z.string().max(1000).optional(),
+  domain: z.enum(['task', 'project']).default('task'),
   statuses: z
     .array(workflowStatusSchema)
     .min(2, 'Il workflow deve avere almeno 2 stati')
@@ -66,13 +69,14 @@ const assignSchema = z.object({
  * Returns all active workflow templates.
  */
 export async function getWorkflows(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
-    const workflows = await workflowService.getWorkflowTemplates()
-    res.json({ success: true, data: workflows })
+    const domain = typeof req.query.domain === 'string' ? req.query.domain : undefined
+    const workflows = await workflowService.getWorkflowTemplates(domain)
+    sendSuccess(res, workflows)
   } catch (error) {
     logger.error('Error fetching workflow templates', { error })
     next(error)
@@ -92,10 +96,10 @@ export async function getWorkflow(
     const { id } = req.params
     const workflow = await workflowService.getWorkflowTemplate(id)
     if (!workflow) {
-      res.status(404).json({ success: false, error: 'Workflow non trovato' })
+      sendError(res, 'Workflow non trovato', 404)
       return
     }
-    res.json({ success: true, data: workflow })
+    sendSuccess(res, workflow)
   } catch (error) {
     logger.error('Error fetching workflow template', { error })
     next(error)
@@ -115,24 +119,23 @@ export async function createWorkflow(
     const parsed = createSchema.safeParse(req.body)
     if (!parsed.success) {
       const firstError = parsed.error.errors[0]
-      res.status(400).json({
-        success: false,
-        error: firstError
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : 'Dati non validi',
-      })
+      sendError(
+        res,
+        firstError ? `${firstError.path.join('.')}: ${firstError.message}` : 'Dati non validi',
+        400
+      )
       return
     }
 
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
     const workflow = await workflowService.createWorkflowTemplate(
       parsed.data,
       userId
     )
-    res.status(201).json({ success: true, data: workflow })
+    sendCreated(res, workflow)
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, error: error.message })
+      sendError(res, error.message, error.statusCode)
       return
     }
     logger.error('Error creating workflow template', { error })
@@ -155,25 +158,24 @@ export async function updateWorkflow(
     const parsed = updateSchema.safeParse(req.body)
     if (!parsed.success) {
       const firstError = parsed.error.errors[0]
-      res.status(400).json({
-        success: false,
-        error: firstError
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : 'Dati non validi',
-      })
+      sendError(
+        res,
+        firstError ? `${firstError.path.join('.')}: ${firstError.message}` : 'Dati non validi',
+        400
+      )
       return
     }
 
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
     const workflow = await workflowService.updateWorkflowTemplate(
       id,
       parsed.data,
       userId
     )
-    res.json({ success: true, data: workflow })
+    sendSuccess(res, workflow)
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, error: error.message })
+      sendError(res, error.message, error.statusCode)
       return
     }
     logger.error('Error updating workflow template', { error })
@@ -193,10 +195,10 @@ export async function deleteWorkflow(
   try {
     const { id } = req.params
     await workflowService.deleteWorkflowTemplate(id)
-    res.json({ success: true, message: 'Workflow eliminato' })
+    sendSuccess(res, { message: 'Workflow eliminato' })
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, error: error.message })
+      sendError(res, error.message, error.statusCode)
       return
     }
     logger.error('Error deleting workflow template', { error })
@@ -217,7 +219,7 @@ export async function getProjectWorkflow(
   try {
     const { projectId } = req.params
     const workflow = await workflowService.getProjectWorkflow(projectId)
-    res.json({ success: true, data: workflow })
+    sendSuccess(res, workflow)
   } catch (error) {
     logger.error('Error fetching project workflow', { error })
     next(error)
@@ -239,12 +241,11 @@ export async function assignProjectWorkflow(
     const parsed = assignSchema.safeParse(req.body)
     if (!parsed.success) {
       const firstError = parsed.error.errors[0]
-      res.status(400).json({
-        success: false,
-        error: firstError
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : 'Dati non validi',
-      })
+      sendError(
+        res,
+        firstError ? `${firstError.path.join('.')}: ${firstError.message}` : 'Dati non validi',
+        400
+      )
       return
     }
 
@@ -258,10 +259,10 @@ export async function assignProjectWorkflow(
 
     // Return the now-effective workflow so the client can update immediately
     const effectiveWorkflow = await workflowService.getProjectWorkflow(projectId)
-    res.json({ success: true, data: effectiveWorkflow })
+    sendSuccess(res, effectiveWorkflow)
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, error: error.message })
+      sendError(res, error.message, error.statusCode)
       return
     }
     logger.error('Error assigning workflow to project', { error })
