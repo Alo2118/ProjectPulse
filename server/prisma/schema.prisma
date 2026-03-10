@@ -22,6 +22,7 @@ model User {
   lastName      String    @map("last_name")
   avatarUrl     String?   @map("avatar_url")
   theme         String    @default("system")
+  themeStyle    String    @default("tech-hud") @map("theme_style")
   isActive      Boolean   @default(true) @map("is_active")
   isDeleted     Boolean   @default(false) @map("is_deleted")
   isExternal    Boolean   @default(false) @map("is_external")
@@ -91,6 +92,10 @@ model Project {
   createdById     String    @map("created_by_id")
   templateId      String?   @map("template_id")
   workflowTemplateId String? @map("workflow_template_id")
+  phaseTemplateId String?  @map("phase_template_id")
+  phases          String?  @db.NVarChar(Max) @map("phases")
+  currentPhaseKey String?  @map("current_phase_key")
+  sortOrder       Int       @default(0) @map("sort_order")
   isDeleted       Boolean   @default(false) @map("is_deleted")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -100,6 +105,7 @@ model Project {
   createdBy   User             @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   template    ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   workflowTemplate WorkflowTemplate? @relation(fields: [workflowTemplateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  phaseTemplate WorkflowTemplate? @relation("ProjectPhaseTemplate", fields: [phaseTemplateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tasks            Task[]
   risks            Risk[]
   documents        Document[]
@@ -113,6 +119,7 @@ model Project {
   @@index([ownerId])
   @@index([status])
   @@index([isDeleted])
+  @@index([sortOrder])
   @@map("projects")
 }
 
@@ -165,6 +172,7 @@ model Task {
   estimatedHours    Decimal?  @map("estimated_hours") @db.Decimal(8, 2)
   actualHours       Decimal?  @map("actual_hours") @db.Decimal(8, 2)
   position          Int       @default(0)
+  phaseKey    String?  @map("phase_key")
   blockedReason     String?   @map("blocked_reason")
   isRecurring       Boolean   @default(false) @map("is_recurring")
   recurrencePattern String?   @map("recurrence_pattern") @db.NVarChar(Max)
@@ -688,11 +696,13 @@ model WorkflowTemplate {
   isSystem    Boolean  @default(false) @map("is_system")
   createdById String   @map("created_by_id")
   isActive    Boolean  @default(true) @map("is_active")
+  domain      String   @default("task") @map("domain")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   createdBy User      @relation("WorkflowCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   projects  Project[]
+  phaseProjects Project[] @relation("ProjectPhaseTemplate")
 
   @@index([isActive])
   @@map("workflow_templates")
@@ -779,4 +789,21 @@ model AutomationRecommendation {
   @@index([projectId])
   @@index([status])
   @@map("automation_recommendations")
+}
+
+// ============================================================
+// PERMISSION POLICIES - Role-based action permissions per domain
+// ============================================================
+
+model PermissionPolicy {
+  id        String   @id @default(uuid())
+  role      String   @db.NVarChar(50)
+  domain    String   @db.NVarChar(50)
+  action    String   @db.NVarChar(50)
+  allowed   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([role, domain, action])
+  @@map("permission_policies")
 }
