@@ -14,6 +14,9 @@ import {
   projectQuerySchema as querySchema,
   projectStatusChangeSchema as statusChangeSchema,
   reorderProjectsSchema,
+  updateProjectPhasesSchema,
+  advancePhaseSchema,
+  savePhasesAsTemplateSchema,
 } from '../schemas/projectSchemas.js'
 import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
@@ -220,6 +223,72 @@ export async function reorderProjects(req: Request, res: Response, next: NextFun
     await projectService.reorderProjects(items, userId)
 
     sendSuccess(res, null)
+  } catch (error) {
+    next(error)
+  }
+}
+
+// ============================================================
+// PHASE MANAGEMENT
+// ============================================================
+
+/**
+ * Gets project phases with milestone data
+ * @route GET /api/projects/:id/phases
+ */
+export async function getPhases(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params
+    const phases = await projectService.getProjectPhases(id)
+    sendSuccess(res, phases)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Updates project phases configuration
+ * @route PATCH /api/projects/:id/phases
+ */
+export async function updatePhases(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params
+    const { phases, transitions } = updateProjectPhasesSchema.parse(req.body)
+    const userId = requireUserId(req)
+    const project = await projectService.updateProjectPhases(id, phases, transitions, userId)
+    sendSuccess(res, project)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Advances project to the next phase
+ * @route PATCH /api/projects/:id/phase/advance
+ */
+export async function advancePhase(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params
+    const { targetPhaseKey } = advancePhaseSchema.parse(req.body)
+    const userId = requireUserId(req)
+    const project = await projectService.advancePhase(id, targetPhaseKey, userId)
+    sendSuccess(res, project)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Saves current project phases as a reusable template
+ * @route POST /api/projects/:id/phases/save-as-template
+ */
+export async function savePhasesAsTemplate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params
+    const { name, description } = savePhasesAsTemplateSchema.parse(req.body)
+    const userId = requireUserId(req)
+    const template = await projectService.savePhasesAsTemplate(id, name, description, userId)
+    sendCreated(res, template)
   } catch (error) {
     next(error)
   }
