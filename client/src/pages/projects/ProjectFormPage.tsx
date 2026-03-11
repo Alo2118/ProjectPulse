@@ -28,7 +28,7 @@ const schema = z.object({
   code: z.string().min(1, "Codice richiesto"),
   name: z.string().min(1, "Nome richiesto"),
   description: z.string().optional(),
-  status: z.string().default("planning"),
+  status: z.string().default("active"),
   priority: z.string().default("medium"),
   startDate: z.string().optional(),
   targetEndDate: z.string().optional(),
@@ -71,7 +71,7 @@ function ProjectEditForm({ id }: { id: string }) {
       code: "",
       name: "",
       description: "",
-      status: "planning",
+      status: "active",
       priority: "medium",
       startDate: "",
       targetEndDate: "",
@@ -85,7 +85,7 @@ function ProjectEditForm({ id }: { id: string }) {
         code: (p.code as string) ?? "",
         name: (p.name as string) ?? "",
         description: (p.description as string) ?? "",
-        status: (p.status as string) ?? "planning",
+        status: (p.status as string) ?? "active",
         priority: (p.priority as string) ?? "medium",
         startDate: p.startDate
           ? (p.startDate as string).slice(0, 10)
@@ -173,13 +173,13 @@ function ProjectEditForm({ id }: { id: string }) {
         </FormField>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Stato" error={errors.status?.message}>
+          <FormField label="Condizione" error={errors.status?.message}>
             <Select
               value={statusValue}
               onValueChange={(v) => setValue("status", v)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleziona stato" />
+                <SelectValue placeholder="Seleziona condizione" />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => (
