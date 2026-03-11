@@ -119,7 +119,6 @@ export async function updateProject(req: Request, res: Response, next: NextFunct
         name: data.name,
         description: data.description ?? undefined,
         ownerId: effectiveOwnerId,
-        status: data.status as ProjectStatus,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         targetEndDate: data.targetEndDate ? new Date(data.targetEndDate) : undefined,
         actualEndDate: data.actualEndDate ? new Date(data.actualEndDate) : undefined,
