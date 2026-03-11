@@ -96,8 +96,6 @@ const columns: Column<ProjectRow>[] = [
     sortable: true,
     className: "w-[150px]",
     cell: (p) => {
-      const conditionLabel = PROJECT_STATUS_LABELS[p.status] ?? p.status
-
       let phaseLabel: string | null = null
       if (p.phases && p.currentPhaseKey) {
         try {
@@ -115,7 +113,7 @@ const columns: Column<ProjectRow>[] = [
 
       return (
         <div className="flex flex-col gap-0.5">
-          <StatusBadge status={p.status} label={conditionLabel} />
+          <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
           {phaseLabel && (
             <span className="text-xs text-muted-foreground">{phaseLabel}</span>
           )}

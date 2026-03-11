@@ -19,7 +19,6 @@ import { Separator } from "@/components/ui/separator"
 import {
   useProjectQuery,
   useProjectStatsQuery,
-  useChangeProjectStatus,
   useDeleteProject,
   useProjectPhasesQuery,
   useAdvancePhase,
@@ -163,7 +162,6 @@ export default function ProjectDetailPage() {
   const { data: project, isLoading, error } = useProjectQuery(id!)
   const { data: stats } = useProjectStatsQuery(id!)
   const { data: phasesData } = useProjectPhasesQuery(id!)
-  const changeStatus = useChangeProjectStatus()
   const advancePhase = useAdvancePhase()
   const deleteProject = useDeleteProject()
   const { isPrivileged: canManageProject } = usePrivilegedRole()
@@ -298,16 +296,6 @@ export default function ProjectDetailPage() {
     }
     return []
   }, [p, s, tasks, id, emojis])
-
-  const handleStatusChange = (status: string) => {
-    changeStatus.mutate(
-      { id: id!, status },
-      {
-        onSuccess: () => toast.success("Condizione aggiornata"),
-        onError: () => toast.error("Errore nell'aggiornamento"),
-      }
-    )
-  }
 
   const handleAdvancePhase = (targetPhaseKey: string) => {
     advancePhase.mutate(
