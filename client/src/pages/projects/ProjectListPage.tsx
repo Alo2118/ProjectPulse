@@ -6,6 +6,7 @@ import { EntityList, type Column, type FilterConfig } from "@/components/common/
 import { ProgressRing } from "@/components/common/ProgressRing"
 import { DeadlineCell } from "@/components/common/DeadlineCell"
 import { ProblemIndicators } from "@/components/common/ProblemIndicators"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { useProjectListQuery, useReorderProjects } from "@/hooks/api/useProjects"
@@ -13,8 +14,6 @@ import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
   PROJECT_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
-  PROJECT_STATUS_GROUP_ORDER,
-  COLLAPSED_BY_DEFAULT,
 } from "@/lib/constants"
 import { toast } from "sonner"
 
@@ -26,6 +25,8 @@ interface ProjectRow {
   priority: string
   sortOrder: number
   targetEndDate?: string | null
+  phases?: string | null
+  currentPhaseKey?: string | null
   owner?: { firstName: string; lastName: string } | null
   stats?: {
     completionPercentage?: number
@@ -88,6 +89,39 @@ const columns: Column<ProjectRow>[] = [
     cell: (p) => (
       <DeadlineCell dueDate={p.targetEndDate} status={p.status} />
     ),
+  },
+  {
+    key: "status",
+    header: "Condizione",
+    sortable: true,
+    className: "w-[150px]",
+    cell: (p) => {
+      const conditionLabel = PROJECT_STATUS_LABELS[p.status] ?? p.status
+
+      let phaseLabel: string | null = null
+      if (p.phases && p.currentPhaseKey) {
+        try {
+          const parsed = JSON.parse(p.phases) as {
+            phases: Array<{ key: string; label: string }>
+          }
+          const phase = parsed.phases.find(
+            (ph: { key: string }) => ph.key === p.currentPhaseKey
+          )
+          phaseLabel = phase?.label ?? null
+        } catch {
+          // ignore parse errors
+        }
+      }
+
+      return (
+        <div className="flex flex-col gap-0.5">
+          <StatusBadge status={p.status} label={conditionLabel} />
+          {phaseLabel && (
+            <span className="text-xs text-muted-foreground">{phaseLabel}</span>
+          )}
+        </div>
+      )
+    },
   },
 ]
 
@@ -196,9 +230,6 @@ export default function ProjectListPage() {
     </Button>
   ) : null
 
-  // When a status filter is active, disable groupBy to show flat filtered results
-  const useGroupBy = !filters.status
-
   return (
     <EntityList<ProjectRow>
       title="Progetti"
@@ -226,16 +257,6 @@ export default function ProjectListPage() {
       headerExtra={manualOrderButton}
       draggable={canDrag}
       onReorder={canDrag ? handleReorder : undefined}
-      groupBy={
-        useGroupBy
-          ? {
-              getGroup: (p) => p.status,
-              order: PROJECT_STATUS_GROUP_ORDER,
-              labels: PROJECT_STATUS_LABELS,
-              collapsedByDefault: COLLAPSED_BY_DEFAULT,
-            }
-          : undefined
-      }
     />
   )
 }
