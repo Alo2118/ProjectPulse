@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Default fallback (office-classic light) */
+  :root,
+  :root[data-theme="office-classic"] {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 45.4 93.4% 47.5%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 188.7 94.5% 42.7%;
+    --info-foreground: 210 40% 98%;
+    --radius: 0.25rem;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
+  }
+
+  :root[data-theme="office-classic"].dark,
+  .dark:not([data-theme]) {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 48 96.5% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 188 94.5% 42.7%;
+    --info-foreground: 222.2 47.4% 11.2%;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  }
+
+  /* Asana Like Light */
+  :root[data-theme="asana-like"] {
+    --background: 0 0% 99%;
+    --foreground: 240 10% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 20%;
+    --primary: 350 80% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 340 20% 95%;
+    --secondary-foreground: 240 10% 20%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 5% 46%;
+    --accent: 340 20% 95%;
+    --accent-foreground: 240 10% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 350 80% 56%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 45.4 93.4% 47.5%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 199 89% 48%;
+    --info-foreground: 210 40% 98%;
+    --radius: 0.75rem;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 2px 8px 0 rgb(0 0 0 / 0.08);
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
+  }
+
+  :root[data-theme="asana-like"].dark {
+    --background: 240 10% 8%;
+    --foreground: 0 0% 95%;
+    --card: 240 10% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 240 10% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 350 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 240 10% 15%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 350 80% 60%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 48 96.5% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 199 89% 48%;
+    --info-foreground: 222.2 47.4% 11.2%;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 2px 8px 0 rgb(0 0 0 / 0.3);
+  }
+
+  /* Tech HUD Light */
+  :root[data-theme="tech-hud"] {
+    --background: 210 20% 98%;
+    --foreground: 215 25% 12%;
+    --card: 210 15% 96%;
+    --card-foreground: 215 25% 12%;
+    --popover: 210 15% 96%;
+    --popover-foreground: 215 25% 12%;
+    --primary: 211 89% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 15% 92%;
+    --secondary-foreground: 215 25% 25%;
+    --muted: 215 15% 92%;
+    --muted-foreground: 215 15% 50%;
+    --accent: 211 89% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 15% 88%;
+    --input: 215 15% 88%;
+    --ring: 211 89% 56%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+    --info: 211 89% 56%;
+    --info-foreground: 0 0% 100%;
+    --radius: 0.5rem;
+    --font-data: 'JetBrains Mono', monospace;
+    --font-heading: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --shadow-theme: 0 1px 4px 0 rgb(0 0 0 / 0.08);
+    --sidebar-width: 260px;
+    --header-height: 56px;
+  }
+
+  /* Tech HUD Dark */
+  :root[data-theme="tech-hud"].dark {
+    --background: 216 35% 4%;
+    --foreground: 212 40% 92%;
+    --card: 215 28% 9%;
+    --card-foreground: 212 40% 92%;
+    --popover: 214 22% 13%;
+    --popover-foreground: 212 40% 92%;
+    --primary: 211 89% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 22% 13%;
+    --secondary-foreground: 212 25% 55%;
+    --muted: 213 20% 18%;
+    --muted-foreground: 213 17% 44%;
+    --accent: 211 89% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 213 20% 16%;
+    --input: 215 25% 11%;
+    --ring: 211 89% 56%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 25 95% 53%;
+    --warning-foreground: 0 0% 100%;
+    --info: 211 89% 56%;
+    --info-foreground: 0 0% 100%;
+    --radius: 0.5rem;
+    --font-data: 'JetBrains Mono', monospace;
+    --font-heading: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --shadow-theme: 0 0 8px 0 rgba(45, 140, 240, 0.18);
+    --sidebar-width: 260px;
+    --header-height: 56px;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Context gradients — shared across all themes */
+:root {
+  --gradient-project: linear-gradient(90deg, #1d4ed8, #3b82f6);
+  --gradient-milestone: linear-gradient(90deg, #7e22ce, #a855f7);
+  --gradient-task: linear-gradient(90deg, #0e7490, #22d3ee);
+  --gradient-success: linear-gradient(90deg, #15803d, #22c55e);
+  --gradient-warning: linear-gradient(90deg, #c2410c, #f97316);
+  --gradient-danger: linear-gradient(90deg, #b91c1c, #ef4444);
+  --gradient-indigo: linear-gradient(90deg, #3730a3, #6366f1);
+}

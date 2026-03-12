@@ -346,3 +346,36 @@ export const COLLAPSED_BY_DEFAULT = [
   "closed",
   "todo",
 ]
+
+/** Gradient backgrounds per context domain — used by ProgressGradient */
+export const CONTEXT_GRADIENTS = {
+  project: 'bg-gradient-to-r from-blue-700 to-blue-500',
+  milestone: 'bg-gradient-to-r from-purple-700 to-purple-500',
+  task: 'bg-gradient-to-r from-cyan-700 to-cyan-400',
+  success: 'bg-gradient-to-r from-green-700 to-green-500',
+  warning: 'bg-gradient-to-r from-orange-700 to-orange-500',
+  danger: 'bg-gradient-to-r from-red-700 to-red-500',
+  indigo: 'bg-gradient-to-r from-indigo-700 to-indigo-500',
+} as const
+
+export type ContextGradient = keyof typeof CONTEXT_GRADIENTS
+
+/** Colors for NextActionChip */
+export const NEXT_ACTION_CONFIG = {
+  advance: { label: 'Avanza', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20', icon: 'ArrowRight' },
+  unblock: { label: 'Sblocca', color: 'bg-orange-500/10 text-orange-500 border-orange-500/20', icon: 'Unlock' },
+  approve: { label: 'Approva', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', icon: 'Check' },
+  report: { label: 'Report', color: 'bg-green-500/10 text-green-500 border-green-500/20', icon: 'BarChart3' },
+  review: { label: 'Revisione', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20', icon: 'Eye' },
+} as const
+
+export type NextAction = keyof typeof NEXT_ACTION_CONFIG
+
+/** Alert severity styling */
+export const ALERT_SEVERITY = {
+  critical: { label: 'Critico', dot: 'bg-red-500', border: 'border-l-red-500', bg: 'bg-red-500/5' },
+  warning: { label: 'Attenzione', dot: 'bg-orange-500', border: 'border-l-orange-500', bg: 'bg-orange-500/5' },
+  info: { label: 'Info', dot: 'bg-blue-500', border: 'border-l-blue-500', bg: 'bg-blue-500/5' },
+} as const
+
+export type AlertSeverity = keyof typeof ALERT_SEVERITY
