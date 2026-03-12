@@ -13,19 +13,16 @@ import { toast } from "sonner"
 import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { MetaRow } from "@/components/common/MetaRow"
-import { RISK_STATUS_LABELS, RISK_CATEGORY_LABELS, RISK_PROBABILITY_LABELS, RISK_IMPACT_LABELS, RISK_SCORE_MAP } from "@/lib/constants"
+import { RISK_STATUS_LABELS, RISK_CATEGORY_LABELS, RISK_SCALE_LABELS, RISK_LEVEL_LABELS, getRiskLevel } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
 import { useRiskQuery, useDeleteRisk } from "@/hooks/api/useRisks"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 
-function getRiskScoreLabel(probability: string, impact: string): string {
-  const score = (RISK_SCORE_MAP[probability] ?? 0) * (RISK_SCORE_MAP[impact] ?? 0)
-  if (score >= 6) return "Critico"
-  if (score >= 4) return "Alto"
-  if (score >= 2) return "Medio"
-  return "Basso"
+function getRiskScoreLabel(probability: number, impact: number): string {
+  const score = probability * impact
+  return RISK_LEVEL_LABELS[getRiskLevel(score)] ?? "Basso"
 }
 
 function RiskDetailPage() {
@@ -65,8 +62,8 @@ function RiskDetailPage() {
         risk ? (
           <>
             <StatusBadge status={risk.status} labels={RISK_STATUS_LABELS} />
-            <StatusBadge status={risk.probability} labels={RISK_PROBABILITY_LABELS} />
-            <StatusBadge status={risk.impact} labels={RISK_IMPACT_LABELS} />
+            <StatusBadge status={String(risk.probability)} labels={Object.fromEntries(Object.entries(RISK_SCALE_LABELS).map(([k,v]) => [k, `P: ${v}`]))} />
+            <StatusBadge status={String(risk.impact)} labels={Object.fromEntries(Object.entries(RISK_SCALE_LABELS).map(([k,v]) => [k, `I: ${v}`]))} />
           </>
         ) : undefined
       }
@@ -106,7 +103,7 @@ function RiskDetailPage() {
                         </h3>
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-bold text-foreground">
-                            {(RISK_SCORE_MAP[risk.probability] ?? 0) * (RISK_SCORE_MAP[risk.impact] ?? 0)}
+                            {risk.probability * risk.impact}
                           </span>
                           <span className="text-sm text-muted-foreground">
                             ({riskScore})
@@ -158,10 +155,10 @@ function RiskDetailPage() {
               {RISK_CATEGORY_LABELS[risk.category] ?? risk.category}
             </MetaRow>
             <MetaRow icon={AlertTriangle} label="Probabilita'">
-              <StatusBadge status={risk.probability} labels={RISK_PROBABILITY_LABELS} />
+              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.probability] ?? risk.probability} ({risk.probability}/5)</span>
             </MetaRow>
             <MetaRow icon={Activity} label="Impatto">
-              <StatusBadge status={risk.impact} labels={RISK_IMPACT_LABELS} />
+              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.impact] ?? risk.impact} ({risk.impact}/5)</span>
             </MetaRow>
             <MetaRow icon={FolderOpen} label="Progetto">
               {risk.project ? (

@@ -9,6 +9,7 @@ import { logger } from '../utils/logger.js'
 import { PaginatedResponse, EntityType, ReportStatus } from '../types/index.js'
 import { auditService } from './auditService.js'
 import { countTasksFromArray } from './statsService.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
 // ============================================================
 // TYPES
@@ -96,9 +97,9 @@ interface RiskSummary {
   title: string
   description: string | null
   category: string
-  probability: string
-  impact: string
-  riskLevel: number
+  probability: number
+  impact: number
+  score: number
   status: string
   mitigationPlan: string | null
   projectId: string
@@ -1095,9 +1096,6 @@ function computeProductivityMetrics(
 async function getProjectRisks(projectIds: string[]): Promise<RiskSummary[]> {
   if (projectIds.length === 0) return []
 
-  const probValue: Record<string, number> = { low: 1, medium: 2, high: 3 }
-  const impactValue: Record<string, number> = { low: 1, medium: 2, high: 3 }
-
   const risks = await prisma.risk.findMany({
     where: {
       projectId: { in: projectIds },
@@ -1127,9 +1125,9 @@ async function getProjectRisks(projectIds: string[]): Promise<RiskSummary[]> {
     title: r.title,
     description: r.description,
     category: r.category,
-    probability: r.probability,
-    impact: r.impact,
-    riskLevel: (probValue[r.probability] ?? 1) * (impactValue[r.impact] ?? 1),
+    probability: r.probability as number,
+    impact: r.impact as number,
+    score: (r.probability as number) * (r.impact as number),
     status: r.status,
     mitigationPlan: r.mitigationPlan,
     projectId: r.project.id,
@@ -1281,7 +1279,7 @@ export async function generateReportPreview(
   })
 
   if (!user) {
-    throw new Error('User not found')
+    throw new AppError('User not found', 404)
   }
 
   // Gather all data in parallel

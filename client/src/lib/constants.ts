@@ -75,22 +75,39 @@ export const RISK_CATEGORY_LABELS: Record<string, string> = {
   schedule: "Tempistica",
 }
 
-export const RISK_PROBABILITY_LABELS: Record<string, string> = {
-  low: "Bassa",
-  medium: "Media",
-  high: "Alta",
+export const RISK_SCALE_LABELS: Record<number, string> = {
+  1: 'Molto bassa',
+  2: 'Bassa',
+  3: 'Media',
+  4: 'Alta',
+  5: 'Molto alta',
 }
 
-export const RISK_IMPACT_LABELS: Record<string, string> = {
-  low: "Basso",
-  medium: "Medio",
-  high: "Alto",
+export const RISK_SCALE_MIN = 1
+export const RISK_SCALE_MAX = 5
+export const RISK_CRITICAL_THRESHOLD = 15
+export const RISK_HIGH_THRESHOLD = 10
+export const RISK_MEDIUM_THRESHOLD = 5
+
+export const RISK_LEVEL_LABELS: Record<string, string> = {
+  critical: 'Critico',
+  high: 'Alto',
+  medium: 'Medio',
+  low: 'Basso',
 }
 
-export const RISK_SCORE_MAP: Record<string, number> = {
-  low: 1,
-  medium: 2,
-  high: 3,
+export const RISK_LEVEL_COLORS: Record<string, string> = {
+  critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+}
+
+export function getRiskLevel(score: number): 'critical' | 'high' | 'medium' | 'low' {
+  if (score >= RISK_CRITICAL_THRESHOLD) return 'critical'
+  if (score >= RISK_HIGH_THRESHOLD) return 'high'
+  if (score >= RISK_MEDIUM_THRESHOLD) return 'medium'
+  return 'low'
 }
 
 // --- Document ---

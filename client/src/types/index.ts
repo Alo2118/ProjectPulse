@@ -21,10 +21,6 @@ export type TaskType = 'milestone' | 'task' | 'subtask'
 
 export type RiskStatus = 'open' | 'mitigated' | 'accepted' | 'closed'
 
-export type RiskProbability = 'low' | 'medium' | 'high'
-
-export type RiskImpact = 'low' | 'medium' | 'high'
-
 export type RiskCategory = 'technical' | 'regulatory' | 'resource' | 'schedule'
 
 export type InputCategory = 'bug' | 'feature_request' | 'improvement' | 'question' | 'other'
@@ -351,8 +347,8 @@ export interface Risk {
   title: string
   description: string | null
   category: RiskCategory
-  probability: RiskProbability
-  impact: RiskImpact
+  probability: number  // 1-5
+  impact: number       // 1-5
   status: RiskStatus
   mitigationPlan: string | null
   projectId: string
@@ -388,23 +384,7 @@ export interface RiskStats {
   openRisks: number
 }
 
-export interface RiskMatrix {
-  low: {
-    low: Risk[]
-    medium: Risk[]
-    high: Risk[]
-  }
-  medium: {
-    low: Risk[]
-    medium: Risk[]
-    high: Risk[]
-  }
-  high: {
-    low: Risk[]
-    medium: Risk[]
-    high: Risk[]
-  }
-}
+export type RiskMatrix = Record<number, Record<number, Risk[]>>
 
 export interface UserInput {
   id: string
@@ -757,9 +737,9 @@ export interface RiskSummary {
   title: string
   description: string | null
   category: string
-  probability: string
-  impact: string
-  riskLevel: number
+  probability: number
+  impact: number
+  score: number  // probability × impact (1-25)
   status: string
   mitigationPlan: string | null
   projectId: string
@@ -1570,4 +1550,61 @@ export interface FilterRule {
 export interface AdvancedFilter {
   logic: 'and' | 'or'
   rules: FilterRule[]
+}
+
+// ============================================================
+// DOCUMENT VERSION TYPES
+// ============================================================
+
+export interface DocumentVersion {
+  id: string
+  documentId: string
+  version: number
+  filePath: string
+  fileSize: number
+  mimeType: string
+  note: string | null
+  uploadedBy: { id: string; firstName: string; lastName: string }
+  createdAt: string
+}
+
+// ============================================================
+// RISK-TASK LINK TYPES
+// ============================================================
+
+export type RiskTaskLinkType = 'mitigation' | 'verification' | 'related'
+
+export interface RiskTaskLink {
+  id: string
+  riskId: string
+  taskId: string
+  linkType: RiskTaskLinkType
+  createdAt: string
+  createdBy: { id: string; firstName: string; lastName: string }
+}
+
+// ============================================================
+// ACTIVITY & KPI TYPES
+// ============================================================
+
+export interface ActivityItem {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string
+  field?: string
+  oldValue?: string
+  newValue?: string
+  user: { id: string; firstName: string; lastName: string }
+  createdAt: string
+}
+
+export interface KpiCard {
+  label: string
+  value: string | number
+  trend?: { value: string; direction: 'up' | 'down' | 'neutral' }
+  subtitle?: string
+  color: string
+  icon?: string
 }

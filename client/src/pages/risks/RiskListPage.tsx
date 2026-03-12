@@ -23,9 +23,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   RISK_STATUS_LABELS,
   RISK_CATEGORY_LABELS,
-  RISK_PROBABILITY_LABELS,
-  RISK_IMPACT_LABELS,
-  RISK_SCORE_MAP,
+  RISK_SCALE_LABELS,
+  getRiskLevel,
 } from "@/lib/constants"
 import type { KpiCard } from "@/components/common/KpiStrip"
 import { cn } from "@/lib/utils"
@@ -41,8 +40,8 @@ interface Risk {
   title: string
   description?: string | null
   category: string
-  probability: string
-  impact: string
+  probability: number
+  impact: number
   status: string
   mitigation?: string | null
   project?: { id: string; name: string } | null
@@ -56,10 +55,8 @@ interface Risk {
 // Score & severity helpers
 // ---------------------------------------------------------------------------
 
-function computeScore(probability: string, impact: string): number {
-  const p = RISK_SCORE_MAP[probability] ?? 1
-  const i = RISK_SCORE_MAP[impact] ?? 1
-  return p * i
+function computeScore(probability: number, impact: number): number {
+  return probability * impact
 }
 
 type RiskSeverity = "critical" | "high" | "medium" | "low" | "mitigated"
@@ -67,10 +64,7 @@ type RiskSeverity = "critical" | "high" | "medium" | "low" | "mitigated"
 function getRiskSeverity(risk: Risk): RiskSeverity {
   if (risk.status === "mitigated" || risk.status === "closed") return "mitigated"
   const score = computeScore(risk.probability, risk.impact)
-  if (score >= 7) return "critical"
-  if (score >= 5) return "high"
-  if (score >= 3) return "medium"
-  return "low"
+  return getRiskLevel(score)
 }
 
 const SEVERITY_LABELS: Record<RiskSeverity, string> = {
@@ -138,11 +132,13 @@ const RISK_STATUS_BADGE_CLASSES: Record<string, string> = {
 
 // Score badge classes
 function getScoreBadgeClass(score: number): string {
-  if (score >= 7)
+  if (score >= 15)
     return "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400"
-  if (score >= 4)
+  if (score >= 10)
     return "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
-  return "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+  if (score >= 5)
+    return "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+  return "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
 }
 
 // ---------------------------------------------------------------------------
@@ -289,8 +285,8 @@ function RiskDrawer({
   const severity = getRiskSeverity(risk)
   const score = computeScore(risk.probability, risk.impact)
   const dotColor = SEVERITY_DOT_COLOR[severity]
-  const probValue = RISK_SCORE_MAP[risk.probability] ?? 1
-  const impactValue = RISK_SCORE_MAP[risk.impact] ?? 1
+  const probValue = risk.probability
+  const impactValue = risk.impact
   const linkedTasks = risk.linkedTasks ?? []
 
   return (
@@ -343,18 +339,18 @@ function RiskDrawer({
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   Probabilità
                 </p>
-                <DotRating value={probValue} max={3} color={dotColor} />
+                <DotRating value={probValue} max={5} color={dotColor} />
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {RISK_PROBABILITY_LABELS[risk.probability] ?? risk.probability}
+                  {RISK_SCALE_LABELS[risk.probability] ?? String(risk.probability)}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   Impatto
                 </p>
-                <DotRating value={impactValue} max={3} color={dotColor} />
+                <DotRating value={impactValue} max={5} color={dotColor} />
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {RISK_IMPACT_LABELS[risk.impact] ?? risk.impact}
+                  {RISK_SCALE_LABELS[risk.impact] ?? String(risk.impact)}
                 </p>
               </div>
               <div>
@@ -615,10 +611,9 @@ function buildColumns(
       className: "w-[80px]",
       cell: (item) => {
         const severity = getRiskSeverity(item)
-        const val = RISK_SCORE_MAP[item.probability] ?? 1
         return (
-          <div title={RISK_PROBABILITY_LABELS[item.probability] ?? item.probability}>
-            <DotRating value={val} max={3} color={SEVERITY_DOT_COLOR[severity]} />
+          <div title={RISK_SCALE_LABELS[item.probability] ?? String(item.probability)}>
+            <DotRating value={item.probability} max={5} color={SEVERITY_DOT_COLOR[severity]} />
           </div>
         )
       },
@@ -629,10 +624,9 @@ function buildColumns(
       className: "w-[80px]",
       cell: (item) => {
         const severity = getRiskSeverity(item)
-        const val = RISK_SCORE_MAP[item.impact] ?? 1
         return (
-          <div title={RISK_IMPACT_LABELS[item.impact] ?? item.impact}>
-            <DotRating value={val} max={3} color={SEVERITY_DOT_COLOR[severity]} />
+          <div title={RISK_SCALE_LABELS[item.impact] ?? String(item.impact)}>
+            <DotRating value={item.impact} max={5} color={SEVERITY_DOT_COLOR[severity]} />
           </div>
         )
       },

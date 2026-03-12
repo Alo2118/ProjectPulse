@@ -48,8 +48,7 @@ import {
   TASK_STATUS_LABELS,
   RISK_STATUS_LABELS,
   RISK_CATEGORY_LABELS,
-  RISK_IMPACT_LABELS,
-  RISK_PROBABILITY_LABELS,
+  RISK_SCALE_LABELS,
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_TYPE_LABELS,
   PROJECT_ROLE_LABELS,
@@ -159,11 +158,10 @@ function buildTaskTree(tasks: TaskRow[]): TaskNode[] {
   return roots
 }
 
-function getRiskSeverityLevel(probability: string, impact: string): "high" | "medium" | "low" {
-  const scoreMap: Record<string, number> = { low: 1, medium: 2, high: 3 }
-  const score = (scoreMap[probability] ?? 1) * (scoreMap[impact] ?? 1)
-  if (score >= 6) return "high"
-  if (score >= 3) return "medium"
+function getRiskSeverityLevel(probability: number, impact: number): "high" | "medium" | "low" {
+  const score = probability * impact
+  if (score >= 15) return "high"
+  if (score >= 5) return "medium"
   return "low"
 }
 
@@ -879,8 +877,8 @@ export default function ProjectDetailPage() {
                               : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
                           )}
                         >
-                          P: {RISK_PROBABILITY_LABELS[r.probability] ?? r.probability} / I:{" "}
-                          {RISK_IMPACT_LABELS[r.impact] ?? r.impact}
+                          P: {RISK_SCALE_LABELS[r.probability] ?? r.probability} / I:{" "}
+                          {RISK_SCALE_LABELS[r.impact] ?? r.impact}
                         </Badge>
                         <StatusBadge status={r.status} labels={RISK_STATUS_LABELS} />
                         <Badge variant="secondary" className="text-[10px] px-1.5">
