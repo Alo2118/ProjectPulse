@@ -39,6 +39,7 @@ model DocumentVersion {
   uploadedBy   User     @relation("DocumentVersionUploader", fields: [uploadedById], references: [id])
 
   @@index([documentId])
+  @@map("document_versions")
 }
 ```
 
@@ -62,6 +63,7 @@ model RiskTask {
   @@unique([riskId, taskId])
   @@index([riskId])
   @@index([taskId])
+  @@map("risk_tasks")
 }
 ```
 
@@ -73,9 +75,42 @@ model RiskTask {
 |---------|-------|------|------|
 | `User` | `hourlyRate` | `Decimal?` | Tariffa oraria in €, nullable |
 | `Project` | `budget` | `Decimal?` | Budget monetario in €, nullable |
-| `Risk` | — | — | `probability` e `impact` cambiano validazione da 1-3 a 1-5 |
+| `Risk` | `probability` | `Int` | **BREAKING**: cambia da String (`'low'|'medium'|'high'`) a Int (1-5). Richiede migrazione dati |
+| `Risk` | `impact` | `Int` | **BREAKING**: cambia da String (`'low'|'medium'|'high'`) a Int (1-5). Richiede migrazione dati |
 
-### 1.4 Threshold rischi aggiornati
+### 1.4 Risk Scale Migration (CRITICA)
+
+La scala rischi attuale usa **stringhe** (`'low'`, `'medium'`, `'high'`) mappate a numeri nel codice. La nuova scala usa **interi 1-5** direttamente nel DB.
+
+**Migrazione dati**:
+```sql
+-- Step 1: Aggiungere colonne temporanee Int
+ALTER TABLE risks ADD probability_new INT;
+ALTER TABLE risks ADD impact_new INT;
+
+-- Step 2: Convertire valori esistenti
+UPDATE risks SET probability_new = CASE probability
+  WHEN 'low' THEN 1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5 END;
+UPDATE risks SET impact_new = CASE impact
+  WHEN 'low' THEN 1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5 END;
+
+-- Step 3: Drop colonne vecchie, rinomina nuove
+ALTER TABLE risks DROP COLUMN probability;
+ALTER TABLE risks DROP COLUMN impact;
+EXEC sp_rename 'risks.probability_new', 'probability', 'COLUMN';
+EXEC sp_rename 'risks.impact_new', 'impact', 'COLUMN';
+```
+
+**File da aggiornare** (tutti leggono probability/impact come stringhe):
+1. `constants/enums.ts` — rimuovere `RISK_PROBABILITIES`/`RISK_IMPACTS` string arrays, aggiungere `RISK_SCALE_MIN=1`, `RISK_SCALE_MAX=5`, Zod `z.number().int().min(1).max(5)`
+2. `schemas/riskSchemas.ts` — aggiornare validazione da `z.enum()` a `z.number().int().min(1).max(5)`
+3. `services/riskService.ts` — rimuovere `calculateRiskLevel()` string→number mapping, calcolare `score = probability * impact` direttamente
+4. `services/dashboardService.ts` — rimuovere `RISK_VALUE_MAP`, `isRiskCritical()` ora controlla `score >= 15`
+5. `services/analyticsService.ts` — aggiornare filtri `impact === 'high'` a `impact >= 4`
+6. `types/index.ts` — rimuovere `RiskProbability = 'low' | 'medium' | 'high'`, usare `number`
+7. Frontend `lib/constants.ts` — aggiornare label/colori per scala 1-5
+
+### 1.5 Threshold rischi aggiornati
 
 | Livello | Score range (1-5 × 1-5) | Colore |
 |---------|--------------------------|--------|
@@ -117,9 +152,11 @@ getTaskSummary(taskId)              → TaskSummary
 ```
 
 **Endpoint**:
-- `GET /api/stats/:domain` — KPI per lista (domain: projects, documents, risks, users, tasks)
 - `GET /api/stats/project/:id/summary` — KPI dettaglio progetto
 - `GET /api/stats/task/:id/summary` — Summary dettaglio task
+- `GET /api/stats/:domain` — KPI per lista (domain: projects, documents, risks, users, tasks)
+
+> **NOTA Route Ordering**: In Express, le route specifiche (`/project/:id/summary`, `/task/:id/summary`) DEVONO essere registrate PRIMA della route parametrica `/:domain`, altrimenti `:domain` cattura "project" e "task" come domain names.
 
 **Calcoli specifici**:
 
@@ -140,6 +177,8 @@ getTaskSummary(taskId)              → TaskSummary
 - `hoursRemaining` = max(0, estimated - logged)
 
 **Dashboard refactor**: `dashboardService.getStats()` delega a `statsService.getProjectStats()` + `statsService.getTaskStats()` + `statsService.getRiskStats()`. Elimina duplicazione.
+
+> **Fix pre-requisito `sendError`**: L'attuale `responseHelpers.sendError()` invia `{ success: false, error: message }` (chiave `error`), ma il middleware di errore invia `{ success: false, message: ... }` (chiave `message`). Prima di implementare i nuovi servizi, allineare `sendError` per usare `message` come il middleware. I nuovi servizi devono lanciare `AppError` (gestita dal middleware) e non chiamare `sendError` direttamente.
 
 ### 2.2 `activityService.ts` — Timeline Unificata
 
@@ -174,6 +213,11 @@ getFeed(userId, role, limit?)                     → ActivityItem[]
 
 **Migrazione dashboard**: `dashboardService.getRecentActivity()` delega a `activityService.getFeed()`.
 
+> **Type alignment**: L'attuale `dashboardService` ha un tipo `ActivityItem` più semplice (senza `field`, `oldValue`, `newValue`). Il nuovo `activityService.ActivityItem` è un superset. La migrazione deve:
+> 1. Esportare `ActivityItem` da `activityService` come tipo canonico
+> 2. Aggiornare `dashboardService` per importare e usare lo stesso tipo
+> 3. Aggiornare il frontend hook `useRecentActivity` per gestire i campi opzionali aggiuntivi (sono opzionali, quindi backward-compatible)
+
 ### 2.3 `enrichmentService.ts` — Arricchimento Liste (interno)
 
 **Scopo**: Aggiunge campi calcolati alle liste in batch, eliminando N+1 queries. Non ha endpoint proprio — è usato internamente dai service esistenti.
@@ -207,18 +251,26 @@ enrichKanbanCards(tasks[])      → tasks[] con:
 async enrichProjects(projects: Project[]) {
   const ids = projects.map(p => p.id)
 
-  // Una query per tutti i conteggi task
+  // Query separate per task e milestone (SQL Server adapter non supporta _count con where nidificato in groupBy)
   const taskCounts = await prisma.task.groupBy({
     by: ['projectId'],
-    where: { projectId: { in: ids }, isDeleted: false },
+    where: { projectId: { in: ids }, isDeleted: false, taskType: { not: 'milestone' } },
     _count: true
   })
 
-  // Una query per tutti i conteggi milestone
-  // Una query per team counts
-  // Una query per ore loggate
+  const milestoneCounts = await prisma.task.groupBy({
+    by: ['projectId'],
+    where: { projectId: { in: ids }, isDeleted: false, taskType: 'milestone' },
+    _count: true
+  })
+
+  // Una query per team counts (ProjectMember.groupBy)
+  // Una query per ore loggate (TimeEntry → task.projectId, aggregazione)
   // Mappa risultati su projects
 }
+```
+
+> **Nota SQL Server**: Prisma 7 con adapter SQL Server non supporta `_count: { where: {...} }` nidificato dentro `groupBy`. Usare sempre query `groupBy` separate con filtro `where` a livello top per distinguere milestone da task.
 ```
 
 **Dove si integra**:
@@ -330,17 +382,25 @@ Ritorna:
 
 ## 5. Risk Scale Update
 
+> **BREAKING CHANGE**: Vedi sezione 1.4 per migrazione dati completa (String→Int).
+
+### Riepilogo
+
+- **Prima**: `probability`/`impact` = `'low'|'medium'|'high'` (stringhe), score calcolato in-memory via `calculateRiskLevel()`
+- **Dopo**: `probability`/`impact` = `1-5` (interi), `score = probability × impact` (1-25)
+
 ### Validazione Zod
 
-Aggiornare `riskSchemas.ts`:
 ```typescript
-probability: z.number().int().min(1).max(5)
-impact: z.number().int().min(1).max(5)
+// constants/enums.ts — nuove costanti
+export const RISK_SCALE_MIN = 1
+export const RISK_SCALE_MAX = 5
+export const riskScaleSchema = z.number().int().min(RISK_SCALE_MIN).max(RISK_SCALE_MAX)
+
+// schemas/riskSchemas.ts — sostituisce z.enum(['low','medium','high'])
+probability: riskScaleSchema
+impact: riskScaleSchema
 ```
-
-### Calcolo score
-
-`score = probability × impact` (range 1-25)
 
 ### Soglie critiche
 
@@ -350,10 +410,6 @@ impact: z.number().int().min(1).max(5)
 | high | 10-14 | `bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400` |
 | medium | 5-9 | `bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400` |
 | low | 1-4 | `bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400` |
-
-### Migrazione dati esistenti
-
-I rischi esistenti con probability/impact 1-3 restano validi (sono un subset di 1-5). Nessuna migrazione dati necessaria, solo aggiornamento validazione.
 
 ### Dashboard attention threshold
 

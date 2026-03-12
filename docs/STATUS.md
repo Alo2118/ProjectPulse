@@ -89,20 +89,35 @@ sendError(res, message, code) // { success: false, message }
 
 ## Modelli DB Principali
 
+### Esistenti (nel DB)
+
 | Modello | Soft Delete | Codice | Note |
 |---------|:-----------:|--------|------|
-| Project | Si | PRJ-YYYY-NNN | status, currentPhaseKey, phases JSON, budget |
+| Project | Si | PRJ-YYYY-NNN | status, currentPhaseKey, phases JSON |
 | Task | Si | CODE-T/M/SNNN | taskType: milestone/task/subtask, phaseKey |
-| Risk | Si | CODE-RNNN | probability 1-5, impact 1-5, score P×I |
+| Risk | Si | CODE-RNNN | **ATTUALE**: probability/impact come stringhe ('low'/'medium'/'high'), score calcolato in-memory |
 | Document | Si | DOC-YYYY-NNN | version int, status workflow |
-| DocumentVersion | No | — | Storico revisioni per documento |
-| User | Si | — | hourlyRate, role, lastLoginAt |
+| User | Si | — | role, lastLoginAt |
 | TimeEntry | No | — | minutes, userId, taskId |
-| RiskTask | No | — | riskId, taskId, linkType |
 | ProjectMember | No | — | userId, projectId, role |
-| WorkflowTemplate | No | — | domain: 'task' | 'project' |
+| WorkflowTemplate | No | — | domain: 'task' \| 'project' |
 | AuditLog | No | — | action, entityType, entityId, userId |
 | AutomationRule | Si | — | trigger, conditions, actions |
+
+### Pianificati (da migrazione gap analysis)
+
+| Modello/Campo | Tipo | Note |
+|---------------|------|------|
+| `DocumentVersion` | Nuovo modello | Storico revisioni per documento |
+| `RiskTask` | Nuovo modello | Tabella ponte risk↔task con linkType |
+| `User.hourlyRate` | Nuovo campo `Decimal?` | Tariffa oraria in € |
+| `Project.budget` | Nuovo campo `Decimal?` | Budget monetario in € |
+| `Risk.probability` | **BREAKING** String→Int | Da 'low'/'medium'/'high' a 1-5 |
+| `Risk.impact` | **BREAKING** String→Int | Da 'low'/'medium'/'high' a 1-5 |
+
+### Bug noto: `sendError` response format
+
+`responseHelpers.sendError()` invia `{ success: false, error: message }` ma il middleware di errore invia `{ success: false, message: ... }`. Da allineare durante l'implementazione.
 
 ---
 
