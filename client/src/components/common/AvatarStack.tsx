@@ -3,7 +3,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface AvatarUser {
   id: string
-  name: string
+  name: string // "FirstName LastName"
+}
+
+function splitName(name: string): [string, string] {
+  const parts = name.trim().split(/\s+/)
+  return [parts[0] ?? '', parts.slice(1).join(' ') || '']
 }
 
 interface AvatarStackProps {
@@ -37,7 +42,7 @@ export function AvatarStack({
             className="font-heading font-bold"
             style={{ backgroundColor: getAvatarColor(user.name) }}
           >
-            {getUserInitials(user.name)}
+            {getUserInitials(...splitName(user.name))}
           </AvatarFallback>
         </Avatar>
       ))}

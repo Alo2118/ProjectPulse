@@ -1,21 +1,33 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
-import { Edit, ExternalLink, AlertTriangle, XCircle } from "lucide-react"
+import {
+  Edit,
+  AlertTriangle,
+  XCircle,
+  ChevronRight,
+  Clock,
+  Plus,
+  FileText,
+  Upload,
+  Users,
+  CheckSquare,
+  TrendingUp,
+  ArrowUpRight,
+} from "lucide-react"
 import { toast } from "sonner"
+import { motion, AnimatePresence } from "framer-motion"
 import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DeadlineCell } from "@/components/common/DeadlineCell"
-import { ProjectTreeSidebar } from "@/components/common/ProjectTreeSidebar"
-import { RelatedEntitiesSidebar } from "@/components/common/RelatedEntitiesSidebar"
-import { SidebarActionSuggestion } from "@/components/common/SidebarActionSuggestion"
-import type { SidebarSuggestion } from "@/components/common/SidebarActionSuggestion"
+import { StatusDot } from "@/components/common/StatusDot"
+import { ProjectPhasesStepper } from "@/components/common/WorkflowStepper"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
+import { Progress } from "@/components/ui/progress"
 import {
   useProjectQuery,
   useProjectStatsQuery,
@@ -27,24 +39,25 @@ import { useTaskListQuery } from "@/hooks/api/useTasks"
 import { useRisksByProjectQuery } from "@/hooks/api/useRisks"
 import { useDocumentsByProjectQuery } from "@/hooks/api/useDocuments"
 import { useProjectMembersQuery } from "@/hooks/api/useProjectMembers"
+import { useRecentActivityQuery, type RecentActivityItem } from "@/hooks/api/useDashboard"
 import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
   PROJECT_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
-  TASK_TYPE_LABELS,
-  TASK_TYPE_COLORS,
   RISK_STATUS_LABELS,
   RISK_CATEGORY_LABELS,
+  RISK_IMPACT_LABELS,
+  RISK_PROBABILITY_LABELS,
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_TYPE_LABELS,
   PROJECT_ROLE_LABELS,
   STATUS_COLORS,
 } from "@/lib/constants"
-import { cn, formatDate, getUserInitials, getAvatarColor } from "@/lib/utils"
-import { ProgressRing } from "@/components/common/ProgressRing"
-import { ProjectPhasesStepper } from "@/components/common/WorkflowStepper"
+import { cn, formatDate, formatRelative, getUserInitials, getAvatarColor } from "@/lib/utils"
+
+// ---- Interfaces ----
 
 interface ProjectData {
   id: string
@@ -80,11 +93,51 @@ interface TaskRow {
   dueDate?: string | null
   parentTaskId?: string | null
   assignee?: { firstName: string; lastName: string } | null
+  _count?: { subtasks?: number; children?: number }
 }
 
 interface TaskNode extends TaskRow {
   children: TaskNode[]
 }
+
+interface RiskRow {
+  id: string
+  code: string
+  title: string
+  description?: string | null
+  category: string
+  probability: string
+  impact: string
+  status: string
+  owner?: { firstName: string; lastName: string } | null
+}
+
+interface DocumentRow {
+  id: string
+  code: string
+  title: string
+  type: string
+  status: string
+  version: number
+  fileSize?: number | null
+  createdBy?: { firstName: string; lastName: string } | null
+  updatedAt: string
+}
+
+interface MemberRow {
+  id: string
+  projectRole: string
+  user: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+    role: string
+    isActive: boolean
+  }
+}
+
+// ---- Helpers ----
 
 function buildTaskTree(tasks: TaskRow[]): TaskNode[] {
   const map = new Map<string, TaskNode>()
@@ -106,40 +159,31 @@ function buildTaskTree(tasks: TaskRow[]): TaskNode[] {
   return roots
 }
 
-interface RiskRow {
-  id: string
-  code: string
-  title: string
-  category: string
-  probability: string
-  impact: string
-  status: string
-  owner?: { firstName: string; lastName: string } | null
+function getRiskSeverityLevel(probability: string, impact: string): "high" | "medium" | "low" {
+  const scoreMap: Record<string, number> = { low: 1, medium: 2, high: 3 }
+  const score = (scoreMap[probability] ?? 1) * (scoreMap[impact] ?? 1)
+  if (score >= 6) return "high"
+  if (score >= 3) return "medium"
+  return "low"
 }
 
-interface DocumentRow {
-  id: string
-  code: string
-  title: string
-  type: string
-  status: string
-  version: number
-  createdBy?: { firstName: string; lastName: string } | null
-  updatedAt: string
+const RISK_SEVERITY_STYLES: Record<string, string> = {
+  high: "bg-red-500 text-white",
+  medium: "bg-orange-400 text-white",
+  low: "bg-amber-300 text-amber-900",
 }
 
-interface MemberRow {
-  id: string
-  projectRole: string
-  user: {
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-    role: string
-    isActive: boolean
-  }
+const DOC_TYPE_ICON_COLOR: Record<string, string> = {
+  design_input: "text-blue-500",
+  design_output: "text-purple-500",
+  verification_report: "text-green-500",
+  validation_report: "text-teal-500",
+  change_control: "text-orange-500",
 }
+
+const TASK_LIMIT = 50
+
+// ---- Sub-components ----
 
 function TabSkeleton() {
   return (
@@ -151,13 +195,228 @@ function TabSkeleton() {
   )
 }
 
-const TASK_LIMIT = 50
+// KPI mini-card
+function KpiCard({
+  label,
+  value,
+  sub,
+  children,
+}: {
+  label: string
+  value: React.ReactNode
+  sub?: React.ReactNode
+  children?: React.ReactNode
+}) {
+  return (
+    <Card>
+      <CardContent className="p-3">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+          {label}
+        </p>
+        <p
+          className="text-xl font-semibold text-foreground leading-none"
+          style={{ fontFamily: "var(--font-data)" }}
+        >
+          {value}
+        </p>
+        {sub && <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>}
+        {children}
+      </CardContent>
+    </Card>
+  )
+}
+
+// Collapsible milestone card for the Tasks tab
+function MilestoneCard({
+  milestone,
+  isCurrentPhase,
+  projectId,
+}: {
+  milestone: TaskNode
+  isCurrentPhase: boolean
+  projectId: string
+}) {
+  const [open, setOpen] = useState(true)
+  const taskCount = milestone.children.length
+  const doneCount = milestone.children.filter((c) => c.status === "done").length
+  const pct = taskCount > 0 ? Math.round((doneCount / taskCount) * 100) : 0
+
+  return (
+    <Card
+      className={cn(
+        "overflow-hidden",
+        isCurrentPhase && "ring-2 ring-primary/40"
+      )}
+    >
+      {/* Milestone header */}
+      <div
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors",
+          "border-b border-border"
+        )}
+        onClick={() => setOpen((v) => !v)}
+        role="button"
+        aria-expanded={open}
+      >
+        {/* Chevron */}
+        <motion.div
+          animate={{ rotate: open ? 90 : 0 }}
+          transition={{ duration: 0.15 }}
+          className="shrink-0"
+        >
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </motion.div>
+
+        {/* Color bar */}
+        <div className="w-1 h-8 rounded-full bg-purple-400 shrink-0" />
+
+        {/* Name + meta */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">
+            {milestone.title}
+          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              {taskCount} task
+            </span>
+            {milestone.dueDate && (
+              <>
+                <span className="text-[10px] text-muted-foreground">·</span>
+                <DeadlineCell dueDate={milestone.dueDate} status={milestone.status} />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Status + progress */}
+        <div className="flex items-center gap-3 shrink-0">
+          <StatusBadge status={milestone.status} labels={TASK_STATUS_LABELS} />
+          <div className="w-20 hidden sm:block">
+            <div className="flex items-center gap-1.5">
+              <Progress value={pct} className="h-1.5 flex-1" />
+              <span className="text-[10px] tabular-nums text-muted-foreground w-7 text-right">
+                {pct}%
+              </span>
+            </div>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 shrink-0"
+            title="Aggiungi task"
+            onClick={(e) => {
+              e.stopPropagation()
+              window.location.href = `/tasks/new?projectId=${projectId}&parentTaskId=${milestone.id}`
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Task list */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            {milestone.children.length === 0 ? (
+              <div className="px-4 py-3 text-xs text-muted-foreground italic">
+                Nessun task in questa milestone
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {milestone.children.map((task) => (
+                  <TaskItem key={task.id} task={task} depth={1} />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
+  )
+}
+
+function TaskItem({ task, depth }: { task: TaskNode; depth: number }) {
+  const pl = depth === 1 ? "pl-10" : "pl-16"
+  return (
+    <>
+      <Link
+        to={`/tasks/${task.id}`}
+        className={cn(
+          "flex items-center gap-3 py-2.5 pr-4 hover:bg-muted/40 transition-colors group",
+          pl
+        )}
+      >
+        <StatusDot status={task.status} size="sm" />
+        <span className="flex-1 text-sm truncate text-foreground/90">{task.title}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <StatusBadge status={task.status} labels={TASK_STATUS_LABELS} />
+          {task.dueDate && (
+            <DeadlineCell dueDate={task.dueDate} status={task.status} />
+          )}
+          {task.assignee && (
+            <Avatar className="h-5 w-5">
+              <AvatarFallback
+                className={cn(
+                  "text-[9px] text-white",
+                  getAvatarColor(`${task.assignee.firstName} ${task.assignee.lastName}`)
+                )}
+              >
+                {getUserInitials(task.assignee.firstName, task.assignee.lastName)}
+              </AvatarFallback>
+            </Avatar>
+          )}
+          <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      </Link>
+      {task.children.map((sub) => (
+        <TaskItem key={sub.id} task={sub} depth={depth + 1} />
+      ))}
+    </>
+  )
+}
+
+// Activity feed item
+function ActivityRow({ item }: { item: RecentActivityItem }) {
+  const name = `${item.user.firstName} ${item.user.lastName}`
+  return (
+    <div className="flex items-start gap-3 py-2.5">
+      <Avatar className="h-6 w-6 mt-0.5 shrink-0">
+        <AvatarFallback
+          className={cn("text-[9px] text-white", getAvatarColor(name))}
+        >
+          {getUserInitials(item.user.firstName, item.user.lastName)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-foreground leading-snug">
+          <span className="font-medium">{name}</span>{" "}
+          <span className="text-muted-foreground">{item.action}</span>
+          {item.entityName && (
+            <span className="font-medium"> {item.entityName}</span>
+          )}
+        </p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          {formatRelative(item.createdAt)}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ---- Main component ----
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
-  useSetPageContext({ domain: 'project', entityId: id })
+  useSetPageContext({ domain: "project", entityId: id })
   const navigate = useNavigate()
-  const { icons, emojis } = useThemeConfig()
+  const { emojis } = useThemeConfig()
 
   const { data: project, isLoading, error } = useProjectQuery(id!)
   const { data: stats } = useProjectStatsQuery(id!)
@@ -166,18 +425,15 @@ export default function ProjectDetailPage() {
   const deleteProject = useDeleteProject()
   const { isPrivileged: canManageProject } = usePrivilegedRole()
 
-  // Tab data
   const { data: tasksData, isLoading: tasksLoading } = useTaskListQuery({
     projectId: id!,
     includeSubtasks: true,
     limit: TASK_LIMIT,
   })
-  const { data: risksData, isLoading: risksLoading } =
-    useRisksByProjectQuery(id!)
-  const { data: docsData, isLoading: docsLoading } =
-    useDocumentsByProjectQuery(id!)
-  const { data: membersData, isLoading: membersLoading } =
-    useProjectMembersQuery(id!)
+  const { data: risksData, isLoading: risksLoading } = useRisksByProjectQuery(id!)
+  const { data: docsData, isLoading: docsLoading } = useDocumentsByProjectQuery(id!)
+  const { data: membersData } = useProjectMembersQuery(id!)
+  const { data: activityData } = useRecentActivityQuery(8)
 
   const p = project as ProjectData | undefined
   const s = stats as ProjectStats | undefined
@@ -186,124 +442,44 @@ export default function ProjectDetailPage() {
   const risks = (risksData ?? []) as RiskRow[]
   const docs = (docsData ?? []) as DocumentRow[]
   const members = (membersData ?? []) as MemberRow[]
+  const activity = (activityData ?? []) as RecentActivityItem[]
 
   const totalTaskCount = s?.totalTasks ?? tasks.length
+  const completedCount = s?.completedTasks ?? tasks.filter((t) => t.status === "done").length
+  const completionPct = s?.completionPercentage ?? 0
   const tasksTruncated = totalTaskCount > TASK_LIMIT
 
-  // Domain icons from theme
-  const TaskIcon = icons.task
-  const MilestoneIcon = icons.milestone
-  const SubtaskIcon = icons.subtask
-  const RiskIcon = icons.risk
-  const DocIcon = icons.document
+  // Days left
+  const daysLeft = useMemo(() => {
+    if (!p?.targetEndDate) return null
+    return Math.ceil((new Date(p.targetEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  }, [p?.targetEndDate])
 
-  // Task type → icon mapping
-  const taskTypeIcon: Record<string, typeof TaskIcon> = {
-    milestone: MilestoneIcon,
-    task: TaskIcon,
-    subtask: SubtaskIcon,
-  }
+  // Milestone count
+  const milestoneCount = useMemo(
+    () => tasks.filter((t) => t.taskType === "milestone").length,
+    [tasks]
+  )
 
-  // ---- Sidebar: related entities ----
-  const relatedItems = useMemo(() => {
-    if (!p) return []
-    const blockedCount = tasks.filter((t) => t.status === "blocked").length
-    const inProgressCount = tasks.filter((t) => t.status === "in_progress").length
-    return [
-      {
-        icon: TaskIcon,
-        label: "Task",
-        total: totalTaskCount,
-        domain: "task",
-        breakdowns: [
-          ...(inProgressCount > 0
-            ? [
-                {
-                  label: "in corso",
-                  count: inProgressCount,
-                  href: `/tasks?projectId=${id}&status=in_progress`,
-                  variant: "default" as const,
-                },
-              ]
-            : []),
-          ...(blockedCount > 0
-            ? [
-                {
-                  label: "bloccati",
-                  count: blockedCount,
-                  href: `/tasks?projectId=${id}&status=blocked`,
-                  variant: "destructive" as const,
-                },
-              ]
-            : []),
-        ],
-      },
-      {
-        icon: RiskIcon,
-        label: "Rischi",
-        total: risks.length,
-        domain: "risk",
-      },
-      {
-        icon: DocIcon,
-        label: "Documenti",
-        total: docs.length,
-        domain: "document",
-      },
-    ]
-  }, [p, s, tasks, risks, docs, id, TaskIcon, RiskIcon, DocIcon, totalTaskCount])
+  // Open risk count
+  const openRisksCount = useMemo(
+    () => risks.filter((r) => r.status === "open").length,
+    [risks]
+  )
+  const criticalRisksCount = useMemo(() => {
+    return risks.filter((r) => {
+      const sev = getRiskSeverityLevel(r.probability, r.impact)
+      return sev === "high" && r.status === "open"
+    }).length
+  }, [risks])
 
-  // ---- Sidebar: suggestions ----
-  const projectSuggestions = useMemo((): SidebarSuggestion[] => {
-    if (!p) return []
-    const blockedCount = tasks.filter((t) => t.status === "blocked").length
-    const completionPctVal = s?.completionPercentage ?? 0
-
-    if (blockedCount > 0) {
-      return [
-        {
-          icon: emojis.blocked,
-          message: `${blockedCount} task bloccati in questo progetto`,
-          actionLabel: "Vedi bloccati →",
-          actionHref: `/tasks?projectId=${id}&status=blocked`,
-        },
-      ]
-    }
-    if (completionPctVal >= 100) {
-      return [
-        {
-          icon: emojis.completed,
-          message: "Tutti i task completati",
-          actionLabel: "Chiudi progetto →",
-          actionHref: `/projects/${id}/edit`,
-        },
-      ]
-    }
-    if (p.targetEndDate) {
-      const daysLeft = Math.ceil(
-        (new Date(p.targetEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      )
-      if (daysLeft >= 0 && daysLeft <= 7 && completionPctVal < 50) {
-        return [
-          {
-            icon: emojis.warning,
-            message: `Scadenza tra ${daysLeft}gg ma solo ${Math.round(completionPctVal)}% completato`,
-            actionLabel: "Vedi task →",
-            actionHref: `/tasks?projectId=${id}`,
-          },
-        ]
-      }
-    }
-    return []
-  }, [p, s, tasks, id, emojis])
-
+  // Advance phase handler
   const handleAdvancePhase = (targetPhaseKey: string) => {
     advancePhase.mutate(
       { id: id!, targetPhaseKey },
       {
         onSuccess: () => toast.success("Fase avanzata"),
-        onError: (err: Error) =>
-          toast.error(err.message || "Errore nell'avanzamento fase"),
+        onError: (err: Error) => toast.error(err.message || "Errore nell'avanzamento fase"),
       }
     )
   }
@@ -318,78 +494,292 @@ export default function ProjectDetailPage() {
     })
   }
 
-  const completionPct = s?.completionPercentage ?? 0
+  // ---- KPI Row ----
+  const kpiRow = p ? (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* Avanzamento */}
+      <KpiCard
+        label="Avanzamento"
+        value={`${Math.round(completionPct)}%`}
+        sub={`${completedCount} di ${totalTaskCount} task`}
+      >
+        <Progress value={Math.round(completionPct)} className="h-1 mt-2" />
+      </KpiCard>
 
-  // ---- Tab: Tasks ----
-  const taskTree = buildTaskTree(tasks)
+      {/* Task */}
+      <KpiCard
+        label="Task"
+        value={totalTaskCount}
+        sub={`${completedCount} chiusi · ${totalTaskCount - completedCount} aperti`}
+      />
 
-  function renderTaskNode(node: TaskNode, depth: number) {
-    const TypeIcon = taskTypeIcon[node.taskType] ?? TaskIcon
-    return (
-      <div key={node.id}>
-        <Link
-          to={`/tasks/${node.id}`}
-          className={cn(
-            "flex items-center justify-between py-2.5 hover:bg-muted/50 transition-colors border-b last:border-b-0 group",
-            depth > 0 && "border-l-2 border-muted ml-4"
-          )}
-          style={{ paddingLeft: `${depth > 0 ? 12 : 16}px`, paddingRight: 16 }}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <TypeIcon className={cn(
-              "h-3.5 w-3.5 shrink-0",
-              node.taskType === "milestone" ? "text-purple-500" : "text-muted-foreground"
-            )} />
-            <span
-              className={cn(
-                "text-sm truncate",
-                node.taskType === "milestone"
-                  ? "font-semibold"
-                  : "font-medium"
-              )}
-            >
-              {node.title}
-            </span>
-            <Badge
-              variant="secondary"
-              className={cn(
-                "text-[10px] px-1.5 py-0 shrink-0",
-                TASK_TYPE_COLORS[node.taskType]
-              )}
-            >
-              {TASK_TYPE_LABELS[node.taskType] ?? node.taskType}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-4">
-            <StatusBadge status={node.status} labels={TASK_STATUS_LABELS} />
-            {node.dueDate && (
-              <DeadlineCell dueDate={node.dueDate} status={node.status} />
+      {/* Ore loggate — placeholder, non abbiamo il dato diretto qui */}
+      <KpiCard
+        label="Ore loggate"
+        value={p.budgetHours != null ? `${p.budgetHours}h` : "—"}
+        sub="budget totale"
+      />
+
+      {/* Rischi aperti */}
+      <KpiCard
+        label="Rischi aperti"
+        value={openRisksCount}
+        sub={criticalRisksCount > 0 ? `${criticalRisksCount} critici` : "nessuno critico"}
+      />
+
+      {/* Team */}
+      <Card>
+        <CardContent className="p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+            Team
+          </p>
+          <div className="flex items-center gap-2">
+            {members.slice(0, 4).map((m) => {
+              const fullName = `${m.user.firstName} ${m.user.lastName}`
+              return (
+                <Avatar key={m.id} className="h-6 w-6 -ml-1 first:ml-0 ring-1 ring-background">
+                  <AvatarFallback
+                    className={cn("text-[9px] text-white", getAvatarColor(fullName))}
+                  >
+                    {getUserInitials(m.user.firstName, m.user.lastName)}
+                  </AvatarFallback>
+                </Avatar>
+              )
+            })}
+            {members.length > 4 && (
+              <span className="text-[10px] text-muted-foreground ml-1">+{members.length - 4}</span>
             )}
-            {node.assignee && (
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                {node.assignee.firstName} {node.assignee.lastName}
-              </span>
-            )}
-            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
+          <p className="text-[10px] text-muted-foreground mt-1">{members.length} membri</p>
+        </CardContent>
+      </Card>
+    </div>
+  ) : undefined
+
+  // ---- Condition banners + Phase stepper ----
+  const beforeContent = p ? (
+    <div className="space-y-2">
+      {p.status === "on_hold" && (
+        <div className="rounded-md border border-warning bg-warning/10 p-3 text-sm text-warning-foreground flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Progetto in pausa
+        </div>
+      )}
+      {p.status === "cancelled" && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive-foreground flex items-center gap-2">
+          <XCircle className="h-4 w-4 shrink-0" />
+          Progetto cancellato
+        </div>
+      )}
+      {phasesData && p.status === "active" && (
+        <ProjectPhasesStepper
+          phasesData={phasesData}
+          onAdvance={canManageProject ? handleAdvancePhase : undefined}
+        />
+      )}
+    </div>
+  ) : undefined
+
+  // ---- Header actions ----
+  const headerActions = p ? (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" asChild>
+        <Link to={`/time-tracking?projectId=${id}`}>
+          <Clock className="h-4 w-4 mr-1" />
+          Log ore
         </Link>
-        {node.children.length > 0 &&
-          node.children.map((child) => renderTaskNode(child, depth + 1))}
-      </div>
-    )
-  }
+      </Button>
+      <Button variant="outline" size="sm" asChild>
+        <Link to={`/tasks/new?projectId=${id}`}>
+          <Plus className="h-4 w-4 mr-1" />
+          Aggiungi task
+        </Link>
+      </Button>
+      {canManageProject && phasesData?.canAdvance && phasesData?.nextPhaseKey && (
+        <Button
+          size="sm"
+          onClick={() => handleAdvancePhase(phasesData.nextPhaseKey!)}
+          disabled={advancePhase.isPending}
+        >
+          Avanza fase
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      )}
+      {canManageProject && (
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`/projects/${id}/edit`}>
+            <Edit className="h-4 w-4 mr-1" />
+            Modifica
+          </Link>
+        </Button>
+      )}
+    </div>
+  ) : undefined
 
+  // ---- Task tree for tab ----
+  const taskTree = useMemo(() => buildTaskTree(tasks), [tasks])
+  const milestones = taskTree.filter((n) => n.taskType === "milestone")
+  const rootTasks = taskTree.filter((n) => n.taskType !== "milestone")
+
+  // ---- Tab: Panoramica ----
+  const overviewTab = p ? (
+    <div className="space-y-4 pt-4">
+      {/* Info grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">Inizio</p>
+            <p className="text-sm font-medium" style={{ fontFamily: "var(--font-data)" }}>
+              {p.startDate ? formatDate(p.startDate) : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">Scadenza</p>
+            <div className="flex justify-center">
+              {p.targetEndDate ? (
+                <DeadlineCell dueDate={p.targetEndDate} status={p.status} />
+              ) : (
+                <span className="text-sm font-medium">—</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">Budget</p>
+            <p className="text-sm font-medium" style={{ fontFamily: "var(--font-data)" }}>
+              {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">Responsabile</p>
+            <p className="text-sm font-medium truncate">
+              {p.manager ? `${p.manager.firstName} ${p.manager.lastName}` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Progress detail */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Avanzamento
+              </p>
+              <span
+                className="text-lg font-bold tabular-nums"
+                style={{ fontFamily: "var(--font-data)" }}
+              >
+                {Math.round(completionPct)}%
+              </span>
+            </div>
+            <Progress value={Math.round(completionPct)} className="h-2 mb-3" />
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(TASK_STATUS_LABELS).map(([status, label]) => {
+                const count = tasks.filter((t) => t.status === status).length
+                if (count === 0) return null
+                return (
+                  <Badge
+                    key={status}
+                    variant="secondary"
+                    className={cn("text-[10px] px-1.5 py-0 tabular-nums", STATUS_COLORS[status])}
+                  >
+                    {label} {count}
+                  </Badge>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity feed */}
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold mb-2">Attività recente</p>
+            {activity.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nessuna attività recente</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {activity.slice(0, 5).map((item) => (
+                  <ActivityRow key={item.id} item={item} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Description */}
+      {p.description && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold mb-2">Descrizione</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {p.description}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Team members */}
+      {members.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+              <Users className="h-4 w-4 text-green-500" />
+              Team ({members.length})
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {members.map((m) => {
+                const fullName = `${m.user.firstName} ${m.user.lastName}`
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-2 rounded-md border border-border p-2"
+                  >
+                    <Avatar className="h-7 w-7 shrink-0">
+                      <AvatarFallback
+                        className={cn("text-[10px] text-white", getAvatarColor(fullName))}
+                      >
+                        {getUserInitials(m.user.firstName, m.user.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate">{fullName}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {PROJECT_ROLE_LABELS[m.projectRole] ?? m.projectRole}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  ) : null
+
+  // ---- Tab: Tasks (milestone tree) ----
   const tasksTab = tasksLoading ? (
     <TabSkeleton />
   ) : tasks.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-12 text-center">
+      <CheckSquare className="h-8 w-8 text-muted-foreground/40 mb-3" />
       <p className="text-sm text-muted-foreground mb-3">Nessun task associato</p>
       <Button size="sm" asChild>
         <Link to={`/tasks/new?projectId=${id}`}>Crea Task</Link>
       </Button>
     </div>
   ) : (
-    <div className="space-y-2 mt-4">
+    <div className="space-y-3 mt-4">
       {tasksTruncated && (
         <div className="flex items-center gap-2 rounded-md border border-warning/50 bg-warning/10 px-3 py-2">
           <span className="text-xs text-warning">
@@ -400,11 +790,34 @@ export default function ProjectDetailPage() {
           </Button>
         </div>
       )}
-      <Card>
-        <CardContent className="p-0">
-          {taskTree.map((node) => renderTaskNode(node, 0))}
-        </CardContent>
-      </Card>
+
+      {/* Milestones */}
+      {milestones.map((ms) => (
+        <MilestoneCard
+          key={ms.id}
+          milestone={ms}
+          isCurrentPhase={false}
+          projectId={id!}
+        />
+      ))}
+
+      {/* Root tasks (no milestone parent) */}
+      {rootTasks.length > 0 && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="px-4 py-2 border-b border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Task senza milestone
+              </p>
+            </div>
+            <div className="divide-y divide-border">
+              {rootTasks.map((task) => (
+                <TaskItem key={task.id} task={task} depth={1} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 
@@ -413,180 +826,172 @@ export default function ProjectDetailPage() {
     <TabSkeleton />
   ) : risks.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <p className="text-sm text-muted-foreground mb-3">
-        Nessun rischio associato
-      </p>
-      <Button size="sm" asChild>
-        <Link to={`/risks/new?projectId=${id}`}>Crea Rischio</Link>
-      </Button>
+      <p className="text-sm text-muted-foreground mb-3">Nessun rischio associato</p>
+      {canManageProject && (
+        <Button size="sm" asChild>
+          <Link to={`/risks/new?projectId=${id}`}>Crea Rischio</Link>
+        </Button>
+      )}
     </div>
   ) : (
-    <Card className="mt-4">
-      <CardContent className="p-0">
-        <div className="divide-y">
-          {risks.map((r) => (
-            <Link
-              key={r.id}
-              to={`/risks/${r.id}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <RiskIcon className="h-4 w-4 text-destructive/70 shrink-0" />
-                <span className="text-sm font-medium truncate">
-                  {r.title}
-                </span>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {RISK_CATEGORY_LABELS[r.category] ?? r.category}
-                </span>
+    <div className="space-y-2 mt-4">
+      {risks.map((r) => {
+        const severity = getRiskSeverityLevel(r.probability, r.impact)
+        return (
+          <Card key={r.id}>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                {/* Severity box */}
+                <div
+                  className={cn(
+                    "h-8 w-8 rounded flex items-center justify-center shrink-0 text-[10px] font-bold uppercase",
+                    RISK_SEVERITY_STYLES[severity]
+                  )}
+                  title={severity === "high" ? "Alto" : severity === "medium" ? "Medio" : "Basso"}
+                >
+                  {severity === "high" ? "A" : severity === "medium" ? "M" : "B"}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/risks/${r.id}`}
+                        className="text-sm font-semibold hover:underline truncate block"
+                      >
+                        {r.title}
+                      </Link>
+                      {r.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                          {r.description}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-[10px] px-1.5",
+                            severity === "high"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : severity === "medium"
+                              ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                          )}
+                        >
+                          P: {RISK_PROBABILITY_LABELS[r.probability] ?? r.probability} / I:{" "}
+                          {RISK_IMPACT_LABELS[r.impact] ?? r.impact}
+                        </Badge>
+                        <StatusBadge status={r.status} labels={RISK_STATUS_LABELS} />
+                        <Badge variant="secondary" className="text-[10px] px-1.5">
+                          {RISK_CATEGORY_LABELS[r.category] ?? r.category}
+                        </Badge>
+                        {r.owner && (
+                          <span className="text-[10px] text-muted-foreground">
+                            Owner: {r.owner.firstName} {r.owner.lastName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    {canManageProject && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                          <Link to={`/risks/${r.id}`}>Gestisci</Link>
+                        </Button>
+                        {r.status === "open" && (
+                          <Button size="sm" variant="ghost" className="h-7 text-xs">
+                            Chiudi
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0 ml-4">
-                <StatusBadge
-                  status={r.status}
-                  labels={RISK_STATUS_LABELS}
-                />
-                <Badge variant="outline" className="text-[10px] px-1.5">
-                  P: {r.probability} / I: {r.impact}
-                </Badge>
-                {r.owner && (
-                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                    {r.owner.firstName} {r.owner.lastName}
-                  </span>
-                )}
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            </CardContent>
+          </Card>
+        )
+      })}
+    </div>
   )
 
   // ---- Tab: Documents ----
   const documentsTab = docsLoading ? (
     <TabSkeleton />
-  ) : docs.length === 0 ? (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <p className="text-sm text-muted-foreground mb-3">
-        Nessun documento associato
-      </p>
-      <Button size="sm" asChild>
-        <Link to={`/documents/new?projectId=${id}`}>Carica Documento</Link>
-      </Button>
-    </div>
   ) : (
-    <Card className="mt-4">
-      <CardContent className="p-0">
-        <div className="divide-y">
-          {docs.map((d) => (
-            <Link
-              key={d.id}
-              to={`/documents/${d.id}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <DocIcon className="h-4 w-4 text-purple-500/70 shrink-0" />
-                <span className="text-sm font-medium truncate">
-                  {d.title}
-                </span>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {DOCUMENT_TYPE_LABELS[d.type] ?? d.type}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0 ml-4">
-                <StatusBadge
-                  status={d.status}
-                  labels={DOCUMENT_STATUS_LABELS}
-                />
-                <Badge variant="outline" className="text-[10px] px-1.5">
-                  v{d.version}
-                </Badge>
-                {d.createdBy && (
-                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                    {d.createdBy.firstName} {d.createdBy.lastName}
-                  </span>
-                )}
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-
-  // ---- Tab: Members ----
-  const membersTab = membersLoading ? (
-    <TabSkeleton />
-  ) : members.length === 0 ? (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <p className="text-sm text-muted-foreground">
-        Nessun membro assegnato
-      </p>
-    </div>
-  ) : (
-    <Card className="mt-4">
-      <CardContent className="p-0">
-        <div className="divide-y">
-          {members.map((m) => {
-            const fullName = `${m.user.firstName} ${m.user.lastName}`
-            return (
-              <div
-                key={m.id}
-                className="flex items-center justify-between px-4 py-3"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar className="h-8 w-8 text-xs">
-                    <AvatarFallback className={cn(getAvatarColor(fullName), "text-white")}>
-                      {getUserInitials(m.user.firstName, m.user.lastName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{fullName}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {m.user.email}
-                    </p>
-                  </div>
+    <div
+      className="mt-4"
+      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}
+    >
+      {docs.map((d) => {
+        const iconColor = DOC_TYPE_ICON_COLOR[d.type] ?? "text-muted-foreground"
+        return (
+          <Link key={d.id} to={`/documents/${d.id}`}>
+            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
+              <CardContent className="p-4 flex flex-col gap-2">
+                <FileText className={cn("h-7 w-7", iconColor)} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate group-hover:underline">{d.title}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    v{d.version} · {formatDate(d.updatedAt)}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-4">
-                  <Badge variant="secondary" className="text-[10px] px-1.5">
-                    {PROJECT_ROLE_LABELS[m.projectRole] ?? m.projectRole}
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] px-1.5"
+                  >
+                    {DOCUMENT_TYPE_LABELS[d.type] ?? d.type}
                   </Badge>
-                  {!m.user.isActive && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1.5 text-muted-foreground"
-                    >
-                      Disattivato
-                    </Badge>
-                  )}
+                  <StatusBadge status={d.status} labels={DOCUMENT_STATUS_LABELS} />
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+              </CardContent>
+            </Card>
+          </Link>
+        )
+      })}
+
+      {/* Upload zone */}
+      <Link to={`/documents/new?projectId=${id}`}>
+        <Card className="h-full border-dashed hover:border-primary/50 transition-colors cursor-pointer">
+          <CardContent className="p-4 flex flex-col items-center justify-center gap-2 h-full min-h-[120px] text-center">
+            <Upload className="h-6 w-6 text-muted-foreground/50" />
+            <p className="text-xs text-muted-foreground">Carica documento</p>
+          </CardContent>
+        </Card>
+      </Link>
+    </div>
   )
 
-  // ---- Sidebar ----
-  const sidebar = p ? (
-    <div className="space-y-4">
-      {/* Related entities + suggestion combined */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Riepilogo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <RelatedEntitiesSidebar items={relatedItems} />
-          {projectSuggestions.length > 0 && (
-            <>
-              <Separator />
-              <SidebarActionSuggestion suggestions={projectSuggestions} />
-            </>
+  // ---- Badges in header ----
+  const headerBadges = p ? (
+    <>
+      <Badge
+        variant="secondary"
+        className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] px-1.5"
+      >
+        Progetto
+      </Badge>
+      <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
+      <StatusBadge status={p.priority} labels={TASK_PRIORITY_LABELS} />
+      {milestoneCount > 0 && (
+        <Badge variant="secondary" className="text-[10px] px-1.5">
+          {milestoneCount} milestone
+        </Badge>
+      )}
+      {p.targetEndDate && (
+        <span className="text-xs text-muted-foreground">
+          Scadenza: {formatDate(p.targetEndDate)}
+          {daysLeft !== null && daysLeft >= 0 && (
+            <span className={cn("ml-1 font-medium", daysLeft <= 14 ? "text-destructive" : "text-success")}>
+              tra {daysLeft}gg
+            </span>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </span>
+      )}
+    </>
   ) : undefined
 
   return (
@@ -605,159 +1010,25 @@ export default function ProjectDetailPage() {
           ? [
               p.code,
               p.description
-                ? p.description.slice(0, 120) + (p.description.length > 120 ? "..." : "")
+                ? p.description.slice(0, 100) + (p.description.length > 100 ? "..." : "")
                 : null,
             ]
               .filter(Boolean)
               .join(" · ")
           : undefined
       }
-      badges={
-        p ? (
-          <>
-            <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
-            <StatusBadge status={p.priority} labels={TASK_PRIORITY_LABELS} />
-          </>
-        ) : undefined
-      }
-      headerActions={
-        p ? (
-          <Button variant="outline" size="sm" asChild>
-            <Link to={`/projects/${id}/edit`}>
-              <Edit className="h-4 w-4 mr-1" />
-              Modifica
-            </Link>
-          </Button>
-        ) : undefined
-      }
-      beforeContent={
-        p ? (
-          <div className="space-y-2">
-            {p.status === "on_hold" && (
-              <div className="rounded-md border border-warning bg-warning/10 p-3 text-sm text-warning-foreground flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Progetto in pausa
-              </div>
-            )}
-            {p.status === "cancelled" && (
-              <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive-foreground flex items-center gap-2">
-                <XCircle className="h-4 w-4" />
-                Progetto cancellato
-              </div>
-            )}
-            {phasesData && p.status === "active" && (
-              <ProjectPhasesStepper
-                phasesData={phasesData}
-                onAdvance={canManageProject ? handleAdvancePhase : undefined}
-              />
-            )}
-          </div>
-        ) : undefined
-      }
-      sidebar={sidebar}
+      colorBar="linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.4))"
+      badges={headerBadges}
+      headerActions={headerActions}
+      kpiRow={kpiRow}
+      beforeContent={beforeContent}
       tabs={
         p
           ? [
               {
                 key: "overview",
                 label: "Panoramica",
-                content: (
-                  <div className="space-y-4 pt-4">
-                    {/* Progress + status badges */}
-                    <Card>
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-4 mb-4">
-                          <ProgressRing value={Math.round(completionPct)} size="lg" showLabel />
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              {s?.completedTasks ?? tasks.filter((t) => t.status === "done").length} di {totalTaskCount} completati
-                            </p>
-                            <p className="text-xs text-muted-foreground">{Math.round(completionPct)}% completamento</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(TASK_STATUS_LABELS).map(([status, label]) => {
-                            const count = tasks.filter((t) => t.status === status).length
-                            if (count === 0) return null
-                            return (
-                              <Badge
-                                key={status}
-                                variant="secondary"
-                                className={cn("text-xs px-2 py-0.5 tabular-nums", STATUS_COLORS[status])}
-                              >
-                                {label} {count}
-                              </Badge>
-                            )
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Key info cards */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <Card>
-                        <CardContent className="p-3 text-center">
-                          <p className="text-xs text-muted-foreground mb-0.5">Inizio</p>
-                          <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-data)' }}>
-                            {p.startDate ? formatDate(p.startDate) : "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-3 text-center">
-                          <p className="text-xs text-muted-foreground mb-0.5">Scadenza</p>
-                          <p className="text-sm font-medium">
-                            {p.targetEndDate ? (
-                              <DeadlineCell dueDate={p.targetEndDate} status={p.status} />
-                            ) : "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-3 text-center">
-                          <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
-                          <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-data)' }}>
-                            {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-3 text-center">
-                          <p className="text-xs text-muted-foreground mb-0.5">Responsabile</p>
-                          <p className="text-sm font-medium truncate">
-                            {p.manager
-                              ? `${p.manager.firstName} ${p.manager.lastName}`
-                              : "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Full description if long */}
-                    {p.description && p.description.length > 120 && (
-                      <Card>
-                        <CardContent className="p-5">
-                          <h3 className="text-sm font-semibold mb-2">
-                            Descrizione completa
-                          </h3>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                            {p.description}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Project tree structure */}
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Struttura Progetto</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ProjectTreeSidebar projectId={p.id} />
-                      </CardContent>
-                    </Card>
-                  </div>
-                ),
+                content: overviewTab,
               },
               {
                 key: "tasks",
@@ -768,25 +1039,19 @@ export default function ProjectDetailPage() {
               {
                 key: "risks",
                 label: "Rischi",
-                count: s?.totalRisks,
+                count: s?.totalRisks ?? risks.length,
                 content: risksTab,
               },
               {
                 key: "documents",
                 label: "Documenti",
-                count: s?.totalDocuments,
+                count: s?.totalDocuments ?? docs.length,
                 content: documentsTab,
-              },
-              {
-                key: "members",
-                label: "Membri",
-                count: members.length || undefined,
-                content: membersTab,
               },
             ]
           : undefined
       }
-      onDelete={handleDelete}
+      onDelete={canManageProject ? handleDelete : undefined}
       deleteConfirmMessage="Sei sicuro di voler eliminare questo progetto?"
       isDeleting={deleteProject.isPending}
     />

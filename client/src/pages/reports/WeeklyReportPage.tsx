@@ -1,1355 +1,1362 @@
-/**
- * Weekly Report Page - View and generate weekly reports
- * @module pages/reports/WeeklyReportPage
- */
-
-import { useEffect, useState, useMemo, type ElementType } from 'react'
-import { Link } from 'react-router-dom'
-import { useWeeklyReportStore } from '@stores/weeklyReportStore'
-import { useAuthStore } from '@stores/authStore'
-import { useToastStore } from '@stores/toastStore'
+import { useState, useMemo } from "react"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import { motion } from "framer-motion"
 import {
-  Loader2,
-  Clock,
-  CheckCircle,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  getISOWeek,
+  format,
+} from "date-fns"
+import { it } from "date-fns/locale"
+import {
+  Activity,
+  ChevronLeft,
+  ChevronRight,
   Download,
-  RefreshCw,
-  Users,
-  User,
-  Calendar,
-  FolderTree,
-  Repeat2,
+  Send,
+  Clock,
+  CheckSquare,
+  AlertTriangle,
   TrendingUp,
   TrendingDown,
-  Activity,
-  ShieldAlert,
+  Users,
   Flag,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-  Hourglass,
-  Ban,
-} from 'lucide-react'
-import type { WeeklyReportData, WeeklyReport, MilestoneRow } from '@/types'
-import { TaskTreeView } from '@components/reports/TaskTreeView'
-import { ProjectHealthCard } from '@/components/reports/ProjectHealthCard'
-import { formatDuration, formatHoursFromDecimal } from '@utils/dateFormatters'
+  ListChecks,
+  BarChart2,
+  CalendarDays,
+} from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts"
+import {
+  useWeeklyReportPreviewQuery,
+  useGenerateWeeklyReport,
+} from "@/hooks/api/useWeeklyReports"
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'short',
-  })
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+type RoleView = "direzione" | "dipendente"
+type PeriodView = "week" | "month" | "quarter"
+
+interface KpiCardData {
+  label: string
+  value: string
+  valueColor: string
+  delta?: string
+  deltaDir?: "up" | "down"
+  subtitle: string
+  barColor: string
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
-function getMilestoneStatusBadge(ms: MilestoneRow) {
-  if (ms.status === 'done')
-    return { label: 'Completata', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
-  if (ms.status === 'cancelled')
-    return { label: 'Annullata', cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' }
-  if (ms.isOverdue)
-    return { label: 'Scaduta', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
-  if (ms.daysLeft !== null && ms.daysLeft <= 7)
-    return { label: 'In scadenza', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' }
-  return { label: 'In corso', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' }
+interface ProjectRow {
+  name: string
+  dotColor: string
+  barColor: string
+  pct: number
+  status: string
+  statusClass: string
 }
 
-function SectionHeader({ icon: Icon, label, count }: { icon: ElementType; label: string; count?: number }) {
+interface RiskRow {
+  level: "Alto" | "Medio" | "Basso"
+  name: string
+  project: string
+  projectColor: string
+}
+
+interface TeamRow {
+  initials: string
+  name: string
+  avatarBg: string
+  avatarColor: string
+  barColor: string
+  barPct: number
+  hours: string
+  tasks: string
+}
+
+interface MilestoneRow {
+  dotColor: string
+  name: string
+  project: string
+  pct: number
+  pctColor: string
+  date: string
+  dateColor: string
+}
+
+interface TaskRow {
+  id: string
+  name: string
+  project: string
+  projectColor: string
+  status: "completato" | "in-corso" | "revisione" | "bloccato" | "da-iniziare"
+  op: string
+  opName: string
+  opBg: string
+  opColor: string
+  hours: number
+  deadline: string
+  closedAt: string
+}
+
+// ─── Static mock data ───────────────────────────────────────────────────────
+
+const HOURS_DATA = [
+  { day: "Lun", hours: 12 },
+  { day: "Mar", hours: 15 },
+  { day: "Mer", hours: 22 },
+  { day: "Gio", hours: 18 },
+  { day: "Ven", hours: 20 },
+  { day: "Sab", hours: 0 },
+  { day: "Dom", hours: 0 },
+]
+
+const DIREZIONE_KPIS: KpiCardData[] = [
+  {
+    label: "Task completati",
+    value: "12",
+    valueColor: "text-green-400",
+    delta: "↑ 4",
+    deltaDir: "up",
+    subtitle: "vs 8 settimana scorsa",
+    barColor: "from-green-800 to-green-500",
+  },
+  {
+    label: "Ore lavorate",
+    value: "87h",
+    valueColor: "text-blue-400",
+    delta: "↓ 5h",
+    deltaDir: "down",
+    subtitle: "su 3 risorse attive",
+    barColor: "from-blue-800 to-blue-500",
+  },
+  {
+    label: "Task aperti",
+    value: "34",
+    valueColor: "text-foreground",
+    delta: "↑ 2",
+    deltaDir: "up",
+    subtitle: "5 in scadenza questa settimana",
+    barColor: "from-slate-700 to-slate-500",
+  },
+  {
+    label: "Rischi attivi",
+    value: "3",
+    valueColor: "text-orange-400",
+    delta: "+1",
+    deltaDir: "up",
+    subtitle: "1 critico · 2 medi",
+    barColor: "from-orange-900 to-orange-500",
+  },
+  {
+    label: "Avanz. medio",
+    value: "58%",
+    valueColor: "text-indigo-300",
+    delta: "↑ 6%",
+    deltaDir: "up",
+    subtitle: "su 4 progetti attivi",
+    barColor: "from-indigo-900 to-indigo-500",
+  },
+]
+
+const DIPENDENTE_KPIS: KpiCardData[] = [
+  {
+    label: "Miei task chiusi",
+    value: "7",
+    valueColor: "text-green-400",
+    delta: "↑ 2",
+    deltaDir: "up",
+    subtitle: "vs 5 settimana scorsa",
+    barColor: "from-green-800 to-green-500",
+  },
+  {
+    label: "Ore lavorate",
+    value: "36h",
+    valueColor: "text-blue-400",
+    delta: "↑ 3h",
+    deltaDir: "up",
+    subtitle: "su ~40h settimanali",
+    barColor: "from-blue-800 to-blue-500",
+  },
+  {
+    label: "Task aperti",
+    value: "11",
+    valueColor: "text-foreground",
+    subtitle: "3 in scadenza questa settimana",
+    barColor: "from-slate-700 to-slate-500",
+  },
+  {
+    label: "In revisione",
+    value: "2",
+    valueColor: "text-yellow-400",
+    subtitle: "in attesa di approvazione",
+    barColor: "from-yellow-900 to-yellow-500",
+  },
+  {
+    label: "Progetti attivi",
+    value: "2",
+    valueColor: "text-indigo-300",
+    subtitle: "XR-200 · Med-Tracker",
+    barColor: "from-indigo-900 to-indigo-500",
+  },
+]
+
+const PROJECTS: ProjectRow[] = [
+  { name: "XR-200 Alpha", dotColor: "bg-blue-500", barColor: "from-blue-800 to-blue-500", pct: 62, status: "Attivo", statusClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  { name: "Med-Tracker v2", dotColor: "bg-green-500", barColor: "from-green-800 to-green-500", pct: 88, status: "Revisione", statusClass: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+  { name: "OrthoScan Pro", dotColor: "bg-purple-500", barColor: "from-purple-800 to-purple-500", pct: 34, status: "Attivo", statusClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  { name: "ImplantDB 3.1", dotColor: "bg-orange-500", barColor: "from-orange-900 to-orange-500", pct: 15, status: "Avvio", statusClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
+]
+
+const RISKS: RiskRow[] = [
+  { level: "Alto", name: "Ritardo fornitura PCB rev.4", project: "XR-200", projectColor: "text-blue-400" },
+  { level: "Medio", name: "Incompatibilità driver IMU su RTOS", project: "XR-200", projectColor: "text-blue-400" },
+  { level: "Medio", name: "Validazione IEC 62304 in ritardo", project: "Med-Track", projectColor: "text-green-400" },
+]
+
+const TEAM_ROWS: TeamRow[] = [
+  { initials: "MB", name: "Marco Bianchi", avatarBg: "bg-green-500/15", avatarColor: "text-green-400", barColor: "from-green-800 to-green-500", barPct: 82, hours: "36h", tasks: "7 task" },
+  { initials: "NR", name: "Nicola Rossi", avatarBg: "bg-blue-500/15", avatarColor: "text-blue-400", barColor: "from-blue-800 to-blue-500", barPct: 65, hours: "28h", tasks: "3 task" },
+  { initials: "GF", name: "Giulia Ferrari", avatarBg: "bg-purple-500/15", avatarColor: "text-purple-400", barColor: "from-purple-800 to-purple-500", barPct: 53, hours: "23h", tasks: "2 task" },
+]
+
+const MILESTONES: MilestoneRow[] = [
+  { dotColor: "bg-green-400", name: "Med-Tracker — M4 Validazione", project: "Med-Tracker v2", pct: 88, pctColor: "text-green-400", date: "14 mar", dateColor: "text-orange-400" },
+  { dotColor: "bg-blue-400", name: "XR-200 — M3 Sviluppo", project: "XR-200 Alpha", pct: 67, pctColor: "text-blue-400", date: "28 mar", dateColor: "text-muted-foreground" },
+  { dotColor: "bg-purple-400", name: "OrthoScan — M1 Analisi req.", project: "OrthoScan Pro", pct: 90, pctColor: "text-purple-400", date: "2 apr", dateColor: "text-muted-foreground" },
+]
+
+const TASK_DATA: TaskRow[] = [
+  { id: "T-038", name: "Integrazione librerie I2C — test ping", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 4, deadline: "20 mar", closedAt: "08 mar" },
+  { id: "T-039", name: "Review specifiche IEC 62368-1 §8.4", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 3, deadline: "10 mar", closedAt: "06 mar" },
+  { id: "T-040", name: "Stesura piano di validazione v0.3", project: "Med-Track", projectColor: "text-green-400", status: "completato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 5, deadline: "09 mar", closedAt: "07 mar" },
+  { id: "T-041", name: "Aggiornamento FMEA dispositivo", project: "Med-Track", projectColor: "text-green-400", status: "completato", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 2.5, deadline: "08 mar", closedAt: "08 mar" },
+  { id: "T-042", name: "Integrazione sensori IMU", project: "XR-200", projectColor: "text-blue-400", status: "in-corso", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 18, deadline: "20 mar", closedAt: "—" },
+  { id: "T-043", name: "Firmware core v0.8", project: "XR-200", projectColor: "text-blue-400", status: "revisione", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 12, deadline: "22 mar", closedAt: "—" },
+  { id: "T-044", name: "Raccolta requisiti utente OrthoScan", project: "OrthoScan", projectColor: "text-purple-400", status: "completato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 6, deadline: "07 mar", closedAt: "07 mar" },
+  { id: "T-045", name: "Analisi schema elettrico rev.3", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 2.5, deadline: "05 mar", closedAt: "05 mar" },
+  { id: "T-046", name: "Setup ambiente CI/CD Med-Tracker", project: "Med-Track", projectColor: "text-green-400", status: "in-corso", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 7, deadline: "14 mar", closedAt: "—" },
+  { id: "T-047", name: "Calibrazione filtro Kalman", project: "XR-200", projectColor: "text-blue-400", status: "da-iniziare", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 0, deadline: "25 mar", closedAt: "—" },
+  { id: "T-048", name: "Documentazione API modulo BLE", project: "Med-Track", projectColor: "text-green-400", status: "bloccato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 1, deadline: "12 mar", closedAt: "—" },
+  { id: "T-049", name: "Test integrazione database pazienti", project: "Med-Track", projectColor: "text-green-400", status: "revisione", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 4, deadline: "11 mar", closedAt: "—" },
+  { id: "T-050", name: "Prototipo UI schermata principale", project: "OrthoScan", projectColor: "text-purple-400", status: "in-corso", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 9, deadline: "20 mar", closedAt: "—" },
+  { id: "T-051", name: "Revisione SRS §3 — requisiti hw", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 3, deadline: "06 mar", closedAt: "06 mar" },
+  { id: "T-052", name: "Configurazione registro I2C @ 400kHz", project: "XR-200", projectColor: "text-blue-400", status: "in-corso", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 5.5, deadline: "20 mar", closedAt: "—" },
+  { id: "T-053", name: "Redazione manuale utente v0.1", project: "Med-Track", projectColor: "text-green-400", status: "bloccato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 2, deadline: "15 mar", closedAt: "—" },
+]
+
+const HEATMAP_DATA = [
+  2, 5, 8, 3, 6, 0, 0,
+  4, 7, 5, 9, 3, 0, 0,
+  6, 2, 8, 4, 7, 0, 0,
+  3, 6, 9, 5, 8, 0, 0,
+]
+
+const STATUS_CONFIG: Record<TaskRow["status"], { label: string; dotClass: string; badgeClass: string }> = {
+  completato:   { label: "Completato",   dotClass: "bg-green-500",  badgeClass: "bg-green-500/10 text-green-400 border-green-500/25" },
+  "in-corso":   { label: "In corso",     dotClass: "bg-blue-500",   badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  revisione:    { label: "Revisione",    dotClass: "bg-yellow-500", badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+  bloccato:     { label: "Bloccato",     dotClass: "bg-red-500",    badgeClass: "bg-red-500/10 text-red-400 border-red-500/25" },
+  "da-iniziare":{ label: "Da iniziare",  dotClass: "bg-slate-500",  badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
+}
+
+const RISK_CONFIG: Record<RiskRow["level"], { className: string }> = {
+  Alto:  { className: "bg-red-500/10 text-red-400 border-red-500/20" },
+  Medio: { className: "bg-orange-500/8 text-orange-400 border-orange-500/20" },
+  Basso: { className: "bg-yellow-500/8 text-yellow-400 border-yellow-500/20" },
+}
+
+// ─── Animation variants ──────────────────────────────────────────────────────
+
+const containerVariants = {
+  animate: { transition: { staggerChildren: 0.06 } },
+}
+
+const itemVariants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.2 } },
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function KpiCard({ kpi }: { kpi: KpiCardData }) {
   return (
-    <div className="flex items-center gap-2 mb-4">
-      <Icon className="w-5 h-5 text-cyan-400 flex-shrink-0" />
-      <h2 className="text-base font-semibold text-slate-800 dark:text-white">{label}</h2>
-      {count !== undefined && (
-        <span className="ml-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/60 text-xs font-medium text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-600/40">
-          {count}
-        </span>
-      )}
-    </div>
+    <Card className="relative overflow-hidden transition-colors hover:border-indigo-500/20">
+      <CardContent className="p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+          {kpi.label}
+        </p>
+        <div className="flex items-baseline gap-2 mb-0.5">
+          <span className={cn("text-2xl font-semibold leading-none tabular-nums", kpi.valueColor)}>
+            {kpi.value}
+          </span>
+          {kpi.delta && (
+            <span
+              className={cn(
+                "text-[10px] font-semibold inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded",
+                kpi.deltaDir === "up"
+                  ? "bg-green-500/10 text-green-400"
+                  : "bg-red-500/10 text-red-400"
+              )}
+            >
+              {kpi.deltaDir === "up" ? (
+                <TrendingUp className="h-2.5 w-2.5" />
+              ) : (
+                <TrendingDown className="h-2.5 w-2.5" />
+              )}
+              {kpi.delta}
+            </span>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground">{kpi.subtitle}</p>
+      </CardContent>
+      <div className={cn("absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r", kpi.barColor)} />
+    </Card>
   )
 }
 
-// ─── ReportPreview ─────────────────────────────────────────────────────────────
+interface HoursBarChartProps {
+  data: typeof HOURS_DATA
+  totalLabel: string
+  avgLabel: string
+  peakLabel: string
+}
 
-function ReportPreview({ data, selectedUserId }: { data: WeeklyReportData; selectedUserId?: string | null }) {
-  const [milestoneFilter, setMilestoneFilter] = useState<'all' | 'active' | 'overdue'>('all')
-  const [timeEntriesOpen, setTimeEntriesOpen] = useState(false)
-  const [activityUserTab, setActivityUserTab] = useState<string | null>(null)
-
-  // ── Filtered data (by selectedUserId) ────────────────────────────────────
-  const allCompleted = selectedUserId
-    ? data.tasks.completed.filter(t => t.assigneeId === selectedUserId)
-    : data.tasks.completed
-
-  const allInProgress = selectedUserId
-    ? data.tasks.inProgress.filter(t => t.assigneeId === selectedUserId)
-    : data.tasks.inProgress
-
-  const blockedTasksFiltered = selectedUserId
-    ? data.blockedTasks.filter(t => t.assigneeId === selectedUserId)
-    : data.blockedTasks
-
-  const plannedFiltered = selectedUserId
-    ? (data.plannedNextWeek ?? []).filter(t => t.assigneeId === selectedUserId)
-    : (data.plannedNextWeek ?? [])
-
-  // ── Global RAG status ────────────────────────────────────────────────────
-  const hasOffTrack = data.projectHealth?.some(p => p.status === 'off-track') ?? false
-  const hasAtRisk = data.projectHealth?.some(p => p.status === 'at-risk') ?? false
-  const hasBlockers = blockedTasksFiltered.length > 0
-  const hasOverdueMilestones = (data.milestonesTable ?? []).some(m => m.isOverdue)
-  const globalRag: 'green' | 'amber' | 'red' =
-    hasOffTrack || hasOverdueMilestones ? 'red' : hasAtRisk || hasBlockers ? 'amber' : 'green'
-
-  const ragConfig = {
-    green: { bg: 'bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-700', text: 'text-green-800 dark:text-green-300', badge: 'ON TRACK', icon: CheckCircle2 },
-    amber: { bg: 'bg-amber-50 dark:bg-amber-900/10 border-amber-300 dark:border-amber-700', text: 'text-amber-800 dark:text-amber-300', badge: 'A RISCHIO', icon: AlertCircle },
-    red:   { bg: 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-700',     text: 'text-red-800 dark:text-red-300',     badge: 'CRITICO',   icon: ShieldAlert },
-  }[globalRag]
-  const RagIcon = ragConfig.icon
-
-  // ── Executive bullets ────────────────────────────────────────────────────
-  const execBullets: string[] = []
-  execBullets.push(`${allCompleted.length} task completati questa settimana`)
-  execBullets.push(`${formatHoursFromDecimal(data.timeTracking.totalHours)} registrate`)
-  if (blockedTasksFiltered.length > 0)
-    execBullets.push(`${blockedTasksFiltered.length} task bloccati richiedono attenzione`)
-  const imminentMs = (data.milestonesTable ?? []).find(
-    m => m.status !== 'done' && m.status !== 'cancelled' && m.daysLeft !== null && m.daysLeft >= 0 && m.daysLeft <= 7
-  )
-  if (imminentMs)
-    execBullets.push(`Milestone "${imminentMs.title}" scade tra ${imminentMs.daysLeft} giorni`)
-  if (hasOffTrack)
-    execBullets.push(`${data.projectHealth!.filter(p => p.status === 'off-track').length} progett${data.projectHealth!.filter(p => p.status === 'off-track').length === 1 ? 'o' : 'i'} in ritardo`)
-
-  // ── Accomplished grouped by project ──────────────────────────────────────
-  const accomplishedByProject = useMemo(() => {
-    // Use ProjectHealthData.completedThisWeek when available (more precise)
-    const map = new Map<string, { projectName: string; tasks: { id: string; title: string; assigneeName: string | null }[] }>()
-    if (data.projectHealth) {
-      for (const ph of data.projectHealth) {
-        if (ph.completedThisWeek && ph.completedThisWeek.length > 0) {
-          const filtered = selectedUserId
-            ? ph.completedThisWeek.filter(t => {
-                const allComp = allCompleted.find(c => c.id === t.id)
-                return allComp !== undefined
-              })
-            : ph.completedThisWeek
-          if (filtered.length > 0) {
-            map.set(ph.projectId, { projectName: ph.projectName, tasks: filtered })
-          }
-        }
-      }
-    }
-    // Fallback: use tasks.completed grouped by projectName
-    if (map.size === 0 && allCompleted.length > 0) {
-      for (const t of allCompleted) {
-        const key = t.projectName ?? 'Nessun progetto'
-        const entry = map.get(key) ?? { projectName: key, tasks: [] }
-        entry.tasks.push({ id: t.id, title: t.title, assigneeName: t.assigneeName ?? null })
-        map.set(key, entry)
-      }
-    }
-    return Array.from(map.values())
-  }, [data.projectHealth, allCompleted, selectedUserId])
-
-  // ── Planned grouped by project ───────────────────────────────────────────
-  const plannedByProject = useMemo(() => {
-    const map = new Map<string, { projectName: string; tasks: typeof plannedFiltered }>()
-    for (const t of plannedFiltered) {
-      const key = t.projectId || t.projectName || 'Altro'
-      const entry = map.get(key) ?? { projectName: t.projectName ?? 'Nessun progetto', tasks: [] }
-      entry.tasks.push(t)
-      map.set(key, entry)
-    }
-    return Array.from(map.values())
-  }, [plannedFiltered])
-
-  // ── Milestones filtered ───────────────────────────────────────────────────
-  const milestones = data.milestonesTable ?? []
-  const filteredMilestones = milestones.filter(ms => {
-    if (milestoneFilter === 'active') return ms.status !== 'done' && ms.status !== 'cancelled'
-    if (milestoneFilter === 'overdue') return ms.isOverdue
-    return true
-  })
-
-  // ── Blocker analysis items ────────────────────────────────────────────────
-  const blockerItems = data.blockerAnalysis?.items ?? []
-  const filteredBlockers = selectedUserId
-    ? blockerItems.filter(b => b.assigneeId === selectedUserId)
-    : blockerItems
-
-  // ── Time entries grouped (for detail section) ─────────────────────────────
-  const entryUsers = useMemo(() => {
-    const entries = data.timeTracking.entries ?? []
-    const userMap = new Map<string, string>()
-    entries.forEach(e => userMap.set(e.userId, e.userName))
-    return Array.from(userMap, ([userId, userName]) => ({ userId, userName }))
-      .sort((a, b) => a.userName.localeCompare(b.userName))
-  }, [data.timeTracking.entries])
-
-  const groupedByProject = useMemo(() => {
-    let entries = data.timeTracking.entries ?? []
-    if (selectedUserId) entries = entries.filter(e => e.userId === selectedUserId)
-    if (activityUserTab) entries = entries.filter(e => e.userId === activityUserTab)
-
-    const projectMap = new Map<string, {
-      projectId: string; projectName: string
-      tasks: Map<string, { taskId: string; taskTitle: string; isRecurring: boolean; entries: Array<{ id: string; description: string | null; userName: string; duration: number | null }> }>
-    }>()
-    entries.forEach(entry => {
-      if (!projectMap.has(entry.projectId)) {
-        projectMap.set(entry.projectId, { projectId: entry.projectId, projectName: entry.projectName, tasks: new Map() })
-      }
-      const proj = projectMap.get(entry.projectId)!
-      if (!proj.tasks.has(entry.taskId)) {
-        proj.tasks.set(entry.taskId, { taskId: entry.taskId, taskTitle: entry.taskTitle, isRecurring: entry.isRecurring, entries: [] })
-      }
-      proj.tasks.get(entry.taskId)!.entries.push({ id: entry.id, description: entry.description, userName: entry.userName, duration: entry.duration })
-    })
-    return Array.from(projectMap.values()).map(p => ({ ...p, tasks: Array.from(p.tasks.values()) }))
-  }, [data.timeTracking.entries, selectedUserId, activityUserTab])
-
-  // ─────────────────────────────────────────────────────────────────────────
+function HoursBarChart({ data, totalLabel, avgLabel, peakLabel }: HoursBarChartProps) {
+  const maxHours = Math.max(...data.map((d) => d.hours))
   return (
-    <div className="space-y-5">
-
-      {/* ── SEZIONE 1: Sintesi Esecutiva ────────────────────────────────────── */}
-      <section aria-label="Sintesi esecutiva">
-        <div className={`rounded-xl border p-4 ${ragConfig.bg}`}>
-          <div className="flex items-center gap-3 mb-3">
-            <RagIcon className={`w-6 h-6 flex-shrink-0 ${ragConfig.text}`} />
-            <div>
-              <span className={`text-xs font-bold uppercase tracking-widest ${ragConfig.text}`}>{ragConfig.badge}</span>
-              <p className={`text-sm font-medium ${ragConfig.text}`}>
-                Stato generale della settimana
-              </p>
-            </div>
-          </div>
-          <ul className="space-y-1 ml-9">
-            {execBullets.map((b, i) => (
-              <li key={i} className={`text-sm flex items-start gap-1.5 ${ragConfig.text}`}>
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />
-                {b}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* ── SEZIONE 2: Dashboard Progetti ────────────────────────────────────── */}
-      {data.projectHealth && data.projectHealth.length > 0 && (
-        <section aria-label="Dashboard progetti" className="card p-5">
-          <SectionHeader icon={Activity} label="Dashboard Progetti" count={data.projectHealth.length} />
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase">Progetto</th>
-                  <th className="text-left py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase">Avanzamento</th>
-                  <th className="text-center py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase">Schedule</th>
-                  <th className="text-center py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase hidden md:table-cell">Task</th>
-                  <th className="text-center py-2 pr-4 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase hidden md:table-cell">Bloccati</th>
-                  <th className="text-right py-2 font-medium text-slate-500 dark:text-slate-400 text-xs uppercase hidden md:table-cell">Ore sett.</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {data.projectHealth.map(p => {
-                  const ragBadge = p.status === 'on-track'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : p.status === 'at-risk'
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  const ragLabel = p.status === 'on-track' ? 'On Track' : p.status === 'at-risk' ? 'A Rischio' : 'In Ritardo'
-                  return (
-                    <tr key={p.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="py-3 pr-4">
-                        <Link to={`/projects/${p.projectId}`} className="font-medium text-slate-900 dark:text-white hover:text-cyan-500 transition-colors">
-                          {p.projectName}
-                        </Link>
-                      </td>
-                      <td className="py-3 pr-4 min-w-[120px]">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full ${p.status === 'on-track' ? 'bg-green-500' : p.status === 'at-risk' ? 'bg-amber-500' : 'bg-red-500'}`}
-                              style={{ width: `${p.completionPercent}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 w-8 text-right">{p.completionPercent}%</span>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ragBadge}`}>
-                          {ragLabel}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-center text-xs text-slate-600 dark:text-slate-400 hidden md:table-cell">
-                        <span className="text-green-600 dark:text-green-400 font-medium">{p.tasksCompleted}</span>
-                        <span className="text-slate-400">/{p.tasksTotal}</span>
-                      </td>
-                      <td className="py-3 pr-4 text-center hidden md:table-cell">
-                        {p.tasksBlocked > 0
-                          ? <span className="text-red-600 dark:text-red-400 font-semibold text-xs">{p.tasksBlocked}</span>
-                          : <span className="text-slate-400 text-xs">—</span>}
-                      </td>
-                      <td className="py-3 text-right text-xs text-slate-600 dark:text-slate-400 hidden md:table-cell">
-                        {formatHoursFromDecimal(p.actualHours)}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-          {/* Cards for mobile — already handled by ProjectHealthCard */}
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {data.projectHealth.map(p => (
-              <ProjectHealthCard
-                key={p.projectId}
-                projectId={p.projectId}
-                name={p.projectName}
-                code={p.projectCode}
-                status={p.status}
-                completion={p.completionPercent}
-                tasks={{ total: p.tasksTotal, completed: p.tasksCompleted, blocked: p.tasksBlocked, inProgress: p.tasksInProgress }}
-                hours={p.actualHours}
-                nearestMilestone={p.nearestMilestone}
-                completedThisWeek={p.completedThisWeek}
-                inProgressTasks={p.inProgressTasks}
-                blockedTasksList={p.blockedTasksList}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── SEZIONE 3: Fatto questa settimana ───────────────────────────────── */}
-      <section aria-label="Fatto questa settimana" className="card p-5">
-        <SectionHeader icon={CheckCircle2} label="Fatto questa settimana" count={allCompleted.length} />
-        {accomplishedByProject.length > 0 ? (
-          <div className="space-y-4">
-            {accomplishedByProject.map(({ projectName, tasks }) => (
-              <div key={projectName}>
-                <div className="flex items-center gap-2 mb-2">
-                  <FolderTree className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">{projectName}</span>
-                  <span className="ml-1 text-xs text-slate-400">({tasks.length})</span>
-                </div>
-                <ul className="space-y-1.5 ml-5">
-                  {tasks.map(t => (
-                    <li key={t.id} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <Link to={`/tasks/${t.id}`} className="text-slate-800 dark:text-slate-200 hover:text-cyan-500 transition-colors">
-                          {t.title}
-                        </Link>
-                        {t.assigneeName && (
-                          <span className="text-xs text-slate-400 ml-1.5">— {t.assigneeName}</span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-400 text-center py-6">Nessuna attività completata questa settimana</p>
-        )}
-      </section>
-
-      {/* ── SEZIONE 4: Da fare la prossima settimana ────────────────────────── */}
-      <section aria-label="Pianificazione prossima settimana" className="card p-5">
-        <SectionHeader icon={Hourglass} label="Da fare la prossima settimana" count={plannedFiltered.length} />
-        {plannedByProject.length > 0 ? (
-          <div className="space-y-4">
-            {plannedByProject.map(({ projectName, tasks }) => (
-              <div key={projectName}>
-                <div className="flex items-center gap-2 mb-2">
-                  <FolderTree className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">{projectName}</span>
-                </div>
-                <ul className="space-y-1.5 ml-5">
-                  {tasks.map(t => (
-                    <li key={t.id} className="flex items-start gap-2 text-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0 mt-1.5" />
-                      <div className="min-w-0 flex-1">
-                        <Link to={`/tasks/${t.id}`} className="text-slate-800 dark:text-slate-200 hover:text-cyan-500 transition-colors">
-                          {t.title}
-                        </Link>
-                        {t.assigneeName && <span className="text-xs text-slate-400 ml-1.5">— {t.assigneeName}</span>}
-                        {t.dueDate && (
-                          <span className={`ml-1.5 text-xs ${t.isOverdue ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
-                            · {formatDate(t.dueDate)}{t.isOverdue ? ' (scaduta)' : ''}
-                          </span>
-                        )}
-                      </div>
-                      {t.isOverdue && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
-                          SCADUTO
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-400 text-center py-6">
-            Nessun task con scadenza nella prossima settimana
-          </p>
-        )}
-      </section>
-
-      {/* ── SEZIONE 5: Milestone e Deliverable ──────────────────────────────── */}
-      <section aria-label="Milestone e deliverable" className="card p-5">
-        <SectionHeader icon={Flag} label="Milestone e Deliverable" count={milestones.length} />
-
-        {/* Filter tabs */}
-        {milestones.length > 0 && (
-          <div className="flex gap-1 mb-4">
-            {(['all', 'active', 'overdue'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setMilestoneFilter(f)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  milestoneFilter === f
-                    ? 'bg-cyan-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {f === 'all' ? 'Tutte' : f === 'active' ? 'In corso' : 'In ritardo'}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {filteredMilestones.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Milestone</th>
-                  <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Progetto</th>
-                  <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Scadenza</th>
-                  <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Stato</th>
-                  <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden md:table-cell">Delta</th>
-                  <th className="text-center py-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden md:table-cell">Avanz.</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredMilestones.map(ms => {
-                  const badge = getMilestoneStatusBadge(ms)
-                  const dateColor = ms.isOverdue
-                    ? 'text-red-600 dark:text-red-400 font-semibold'
-                    : ms.daysLeft !== null && ms.daysLeft <= 7
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-slate-600 dark:text-slate-400'
-                  const delta = ms.daysLeft !== null
-                    ? ms.daysLeft < 0
-                      ? <span className="text-red-500 text-xs font-medium">-{Math.abs(ms.daysLeft)}gg</span>
-                      : ms.daysLeft === 0
-                      ? <span className="text-amber-500 text-xs font-medium">oggi</span>
-                      : <span className="text-slate-500 text-xs">+{ms.daysLeft}gg</span>
-                    : <span className="text-slate-400 text-xs">—</span>
-                  return (
-                    <tr key={ms.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                      <td className="py-2.5 pr-3">
-                        <Link to={`/tasks/${ms.id}`} className="font-medium text-slate-900 dark:text-white hover:text-cyan-500 transition-colors text-sm">
-                          {ms.title}
-                        </Link>
-                        <div className="text-xs text-slate-400">{ms.code}</div>
-                      </td>
-                      <td className="py-2.5 pr-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">
-                        {ms.projectName}
-                      </td>
-                      <td className={`py-2.5 pr-3 text-center text-xs ${dateColor}`}>
-                        {ms.baselineDate ? formatDate(ms.baselineDate) : '—'}
-                      </td>
-                      <td className="py-2.5 pr-3 text-center">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>
-                          {badge.label}
-                        </span>
-                      </td>
-                      <td className="py-2.5 pr-3 text-center hidden md:table-cell">{delta}</td>
-                      <td className="py-2.5 text-center hidden md:table-cell">
-                        <div className="flex items-center gap-1 justify-center">
-                          <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
-                            <div className="h-1.5 rounded-full bg-cyan-500" style={{ width: `${ms.completionPercent}%` }} />
-                          </div>
-                          <span className="text-xs text-slate-500">{ms.completionPercent}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-400 text-center py-6">Nessuna milestone{milestoneFilter !== 'all' ? ' con questo filtro' : ' nei progetti attivi'}</p>
-        )}
-      </section>
-
-      {/* ── SEZIONE 6: Rischi e Blocchi ──────────────────────────────────────── */}
-      <section aria-label="Rischi e blocchi" className="card p-5">
-        <SectionHeader icon={ShieldAlert} label="Rischi e Blocchi" />
-
-        {filteredBlockers.length === 0 && (!(data.risks) || data.risks.length === 0) ? (
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
-            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-            <p className="text-sm text-green-700 dark:text-green-400">Nessun blocco o rischio attivo — settimana verde!</p>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {/* Blocchi attivi */}
-            {filteredBlockers.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                  <Ban className="w-3.5 h-3.5" />
-                  Task bloccati ({filteredBlockers.length})
-                  {data.blockerAnalysis && (
-                    <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      data.blockerAnalysis.riskScore === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                      data.blockerAnalysis.riskScore === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    }`}>
-                      Rischio {data.blockerAnalysis.riskScore}
-                    </span>
-                  )}
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Task</th>
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Progetto</th>
-                        <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Bloccato da</th>
-                        <th className="text-left py-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden md:table-cell">Motivo</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {filteredBlockers.map(b => (
-                        <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td className="py-2.5 pr-3">
-                            <Link to={`/tasks/${b.id}`} className="font-medium text-slate-900 dark:text-white hover:text-cyan-500 text-sm">
-                              {b.title}
-                            </Link>
-                            {b.assigneeName && <div className="text-xs text-slate-400">{b.assigneeName}</div>}
-                          </td>
-                          <td className="py-2.5 pr-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">
-                            {b.projectName ?? '—'}
-                          </td>
-                          <td className="py-2.5 pr-3 text-center">
-                            <span className={`text-xs font-semibold ${b.daysBlocked > 5 ? 'text-red-600 dark:text-red-400' : b.daysBlocked > 2 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
-                              {b.daysBlocked}gg
-                            </span>
-                          </td>
-                          <td className="py-2.5 text-xs text-slate-500 dark:text-slate-400 hidden md:table-cell max-w-[200px] truncate">
-                            {b.blockedReason ?? '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {data.blockerAnalysis && data.blockerAnalysis.resolvedThisWeek > 0 && (
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {data.blockerAnalysis.resolvedThisWeek} blocchi risolti questa settimana
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Rischi aperti */}
-            {data.risks && data.risks.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  Rischi aperti ({data.risks.length})
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Rischio</th>
-                        <th className="text-left py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Progetto</th>
-                        <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Prob.</th>
-                        <th className="text-center py-2 pr-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Impatto</th>
-                        <th className="text-left py-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase hidden lg:table-cell">Mitigazione</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {data.risks.map(r => {
-                        const probCls = r.probability === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.probability === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                        const impCls = r.impact === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : r.impact === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                        return (
-                          <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            <td className="py-2.5 pr-3">
-                              <span className="font-medium text-slate-900 dark:text-white">{r.title}</span>
-                              <div className="text-xs text-slate-400">{r.code}</div>
-                            </td>
-                            <td className="py-2.5 pr-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">{r.projectName}</td>
-                            <td className="py-2.5 pr-3 text-center">
-                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${probCls}`}>{r.probability}</span>
-                            </td>
-                            <td className="py-2.5 pr-3 text-center">
-                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${impCls}`}>{r.impact}</span>
-                            </td>
-                            <td className="py-2.5 text-xs text-slate-500 dark:text-slate-400 hidden lg:table-cell max-w-[200px] truncate">
-                              {r.mitigationPlan ?? '—'}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* ── SEZIONE 7: Metriche Operative ────────────────────────────────────── */}
-      <section aria-label="Metriche operative" className="card p-5">
-        <SectionHeader icon={TrendingUp} label="Metriche Operative" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Ore totali', value: formatHoursFromDecimal(data.timeTracking.totalHours), icon: Clock, color: 'text-blue-600 dark:text-blue-400' },
-            { label: 'Giorni lavorati', value: data.productivity?.daysWorked ?? '—', icon: Calendar, color: 'text-slate-700 dark:text-slate-300' },
-            { label: 'Media ore/giorno', value: data.productivity ? formatHoursFromDecimal(data.productivity.avgHoursPerDay) : '—', icon: Clock, color: 'text-slate-700 dark:text-slate-300' },
-            { label: 'Task completati', value: allCompleted.length, icon: CheckCircle2, color: 'text-green-600 dark:text-green-400' },
-            { label: 'Task in corso', value: allInProgress.length, icon: Hourglass, color: 'text-purple-600 dark:text-purple-400' },
-            { label: 'Bloccati', value: blockedTasksFiltered.length, icon: Ban, color: blockedTasksFiltered.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500' },
-            { label: 'Commenti', value: data.comments.total, icon: Users, color: 'text-slate-600 dark:text-slate-400' },
-            { label: 'Consegne puntuali', value: data.productivity ? data.productivity.onTimeDeliveryRate + '%' : '—', icon: CheckCircle, color: 'text-green-600 dark:text-green-400' },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 flex items-start gap-3">
-              <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${color}`} />
-              <div>
-                <div className={`text-xl font-bold ${color}`}>{value}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Trend vs previous week */}
-        {data.previousWeek && (
-          <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1">
-              {data.timeTracking.totalHours >= data.previousWeek.totalHours
-                ? <TrendingUp className="w-3.5 h-3.5 text-green-500" />
-                : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
-              Ore vs sett. scorsa: {formatHoursFromDecimal(data.previousWeek.totalHours)}
-            </span>
-            <span className="flex items-center gap-1">
-              {allCompleted.length >= data.previousWeek.completedTasksCount
-                ? <TrendingUp className="w-3.5 h-3.5 text-green-500" />
-                : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
-              Task completati vs sett. scorsa: {data.previousWeek.completedTasksCount}
-            </span>
-          </div>
-        )}
-      </section>
-
-      {/* ── SEZIONE 8: Distribuzione Ore ──────────────────────────────────────── */}
-      {(data.timeTracking.byDay.length > 0 || data.timeTracking.byProject.length > 0) && (
-        <section aria-label="Distribuzione ore" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Bar chart giornaliero */}
-          {data.timeTracking.byDay.length > 0 && (
-            <div className="card p-5">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-slate-400" />
-                Ore per giorno
-              </h3>
-              <div className="flex items-end gap-1.5 h-32">
-                {data.timeTracking.byDay.map(day => {
-                  const maxMin = Math.max(...data.timeTracking.byDay.map(d => d.totalMinutes), 1)
-                  const pct = (day.totalMinutes / maxMin) * 100
-                  const hoursLabel = formatDuration(day.totalMinutes)
-                  const isWeekend = [0, 6].includes(new Date(day.date).getDay())
-                  return (
-                    <div key={day.date} title={`${formatDate(day.date)}: ${hoursLabel}`}
-                      className="flex-1 flex flex-col items-center gap-1 group">
-                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{hoursLabel}</span>
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-t h-24 flex flex-col justify-end overflow-hidden">
-                        <div
-                          className={`w-full rounded-t transition-all ${isWeekend ? 'bg-amber-400' : 'bg-green-500'}`}
-                          style={{ height: `${Math.max(pct, 4)}%` }}
-                        />
-                      </div>
-                      <span className="text-[9px] text-slate-400">{formatDate(day.date)}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Per progetto */}
-          {data.timeTracking.byProject.length > 0 && (
-            <div className="card p-5">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <FolderTree className="w-4 h-4 text-slate-400" />
-                Ore per progetto
-              </h3>
-              <div className="space-y-3">
-                {data.timeTracking.byProject.map((p, i) => {
-                  const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500']
-                  const totalMin = data.timeTracking.byProject.reduce((s, x) => s + x.totalMinutes, 0)
-                  const pct = totalMin > 0 ? (p.totalMinutes / totalMin) * 100 : 0
-                  return (
-                    <div key={p.projectId}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-700 dark:text-slate-300 truncate max-w-[60%]">{p.projectName}</span>
-                        <span className="text-slate-500 dark:text-slate-400 flex-shrink-0">{formatDuration(p.totalMinutes)} · {pct.toFixed(0)}%</span>
-                      </div>
-                      <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className={`h-2 rounded-full ${colors[i % colors.length]}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Team mode: ore per utente */}
-      {data.timeTracking.byUser && data.timeTracking.byUser.length > 0 && (
-        <section aria-label="Performance team" className="card p-5">
-          <SectionHeader icon={Users} label="Performance per Dipendente" />
-          <div className="space-y-3">
-            {[...data.timeTracking.byUser].sort((a, b) => b.totalMinutes - a.totalMinutes).map(u => {
-              const totalMin = data.timeTracking.byUser!.reduce((s, x) => s + x.totalMinutes, 0)
-              const pct = totalMin > 0 ? (u.totalMinutes / totalMin) * 100 : 0
+    <div className="space-y-3">
+      <ResponsiveContainer width="100%" height={80}>
+        <BarChart data={data} barCategoryGap="20%">
+          <XAxis
+            dataKey="day"
+            tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis hide />
+          <RechartsTooltip
+            cursor={{ fill: "hsl(var(--accent))" }}
+            contentStyle={{
+              background: "hsl(var(--card))",
+              border: "1px solid hsl(var(--border))",
+              borderRadius: "6px",
+              fontSize: 11,
+              color: "hsl(var(--foreground))",
+            }}
+            formatter={(value: number) => [`${value}h`, "Ore"]}
+          />
+          <Bar dataKey="hours" radius={[3, 3, 0, 0]}>
+            {data.map((entry, index) => {
+              const isWeekend = index >= 5
+              const isPeak = entry.hours === maxHours && entry.hours > 0
               return (
-                <div key={u.userId}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-700 dark:text-slate-300">{u.userName}</span>
-                    <span className="text-slate-500 dark:text-slate-400">{formatDuration(u.totalMinutes)} · {pct.toFixed(0)}%</span>
-                  </div>
-                  <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
+                <Cell
+                  key={`cell-${index}`}
+                  fill={
+                    isWeekend
+                      ? "hsl(var(--border))"
+                      : isPeak
+                      ? "#4ade80"
+                      : "#3b82f6"
+                  }
+                />
               )
             })}
-          </div>
-        </section>
-      )}
-
-      {/* ── SEZIONE 9: Dettaglio registrazioni (collassabile) ─────────────────── */}
-      <section aria-label="Dettaglio registrazioni ore">
-        <button
-          onClick={() => setTimeEntriesOpen(o => !o)}
-          className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-        >
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-400" />
-            Dettaglio registrazioni ore
-          </span>
-          {timeEntriesOpen
-            ? <ChevronUp className="w-4 h-4 text-slate-400" />
-            : <ChevronDown className="w-4 h-4 text-slate-400" />}
-        </button>
-
-        {timeEntriesOpen && (
-          <div className="mt-2 card p-5">
-            {/* User filter tabs */}
-            {entryUsers.length > 1 && (
-              <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
-                <button
-                  onClick={() => setActivityUserTab(null)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activityUserTab === null ? 'bg-cyan-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                >
-                  Tutti
-                </button>
-                {entryUsers.map(u => (
-                  <button
-                    key={u.userId}
-                    onClick={() => setActivityUserTab(u.userId)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${activityUserTab === u.userId ? 'bg-cyan-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                  >
-                    <User className="w-3 h-3" />
-                    {u.userName}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {groupedByProject.length > 0 ? (
-              <div className="space-y-4">
-                {groupedByProject.map(project => (
-                  <div key={project.projectId}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <FolderTree className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{project.projectName}</span>
-                    </div>
-                    <div className="ml-5 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                      {project.tasks.map(task => (
-                        <div key={task.taskId}>
-                          <Link to={`/tasks/${task.taskId}`} className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-cyan-500 mb-1">
-                            {task.isRecurring
-                              ? <Repeat2 className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                              : <span className="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />}
-                            <span>{task.taskTitle}</span>
-                            {task.isRecurring && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 font-medium">Ricorrente</span>
-                            )}
-                          </Link>
-                          <div className="ml-5 space-y-0.5">
-                            {task.entries.map(entry => (
-                              <div key={entry.id} className="flex items-start gap-2 py-0.5 text-xs">
-                                <Clock className="w-3 h-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                                <span className="flex-1 text-slate-600 dark:text-slate-400">
-                                  {entry.description ?? <span className="italic text-slate-400">Nessuna nota</span>}
-                                </span>
-                                <span className="text-slate-500 flex-shrink-0">{entry.duration ? formatDuration(entry.duration) : '—'}</span>
-                                <span className="text-cyan-500 font-medium hidden sm:inline flex-shrink-0">{entry.userName}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400 text-center py-4">Nessuna registrazione di tempo questa settimana</p>
-            )}
-          </div>
-        )}
-      </section>
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <div className="flex items-center gap-4 text-[10px]">
+        <span>
+          <span className="text-muted-foreground">Totale</span>
+          <span className="font-bold text-blue-400 ml-1.5">{totalLabel}</span>
+        </span>
+        <span>
+          <span className="text-muted-foreground">Media/giorno</span>
+          <span className="font-bold text-foreground ml-1.5">{avgLabel}</span>
+        </span>
+        <span>
+          <span className="text-muted-foreground">Picco</span>
+          <span className="font-bold text-green-400 ml-1.5">{peakLabel}</span>
+        </span>
+      </div>
     </div>
   )
 }
 
-// Report History Component
-function ReportHistory({
-  reports,
-  pagination,
-  onPageChange,
-  onSelect,
-}: {
-  reports: WeeklyReport[]
-  pagination: { page: number; pages: number } | null
-  onPageChange: (page: number) => void
-  onSelect: (id: string) => void
-}) {
-  if (reports.length === 0) {
-    return (
-      <div className="text-center py-8 text-slate-500">
-        <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-        <p>Nessun report generato</p>
-      </div>
-    )
-  }
+function DonutChart() {
+  const total = 44
+  const circ = 2 * Math.PI * 30
+  const segments = [
+    { value: 12, color: "#22c55e", label: "Completati", textColor: "text-green-400" },
+    { value: 14, color: "#3b82f6", label: "In corso", textColor: "text-blue-400" },
+    { value: 5,  color: "#eab308", label: "In revisione", textColor: "text-yellow-400" },
+    { value: 10, color: "#475569", label: "Da iniziare", textColor: "text-slate-400" },
+    { value: 3,  color: "#ef4444", label: "Bloccati", textColor: "text-red-400" },
+  ]
+
+  let offset = 0
+  const arcs = segments.map((seg) => {
+    const dash = (seg.value / total) * circ
+    const gap = circ - dash
+    const arc = { dash, gap, offset, ...seg }
+    offset += dash
+    return arc
+  })
 
   return (
-    <div className="space-y-4">
-      {reports.map((report) => (
-        <div
-          key={report.id}
-          className="card p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-          onClick={() => onSelect(report.id)}
+    <div className="flex items-center gap-4">
+      <svg width="90" height="90" viewBox="0 0 90 90" className="flex-shrink-0">
+        <circle
+          cx="45" cy="45" r="30"
+          fill="none"
+          stroke="hsl(var(--muted))"
+          strokeWidth="10"
+        />
+        {arcs.map((arc, i) => (
+          <circle
+            key={i}
+            cx="45" cy="45" r="30"
+            fill="none"
+            stroke={arc.color}
+            strokeWidth="10"
+            strokeDasharray={`${arc.dash} ${arc.gap}`}
+            strokeDashoffset={-arc.offset}
+            transform="rotate(-90 45 45)"
+          />
+        ))}
+        <text
+          x="45" y="41"
+          textAnchor="middle"
+          fill="hsl(var(--foreground))"
+          fontSize="14"
+          fontWeight="700"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-slate-900 dark:text-white">{report.code}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Settimana {report.weekNumber}/{report.year}
-              </p>
-              <p className="text-xs text-slate-400">
-                {formatDate(report.weekStartDate)} - {formatDate(report.weekEndDate)}
-              </p>
-            </div>
-            <div className="text-right">
-              <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                report.status === 'completed'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-              }`}>
-                {report.status === 'completed' ? 'Completato' : report.status}
-              </span>
-              {report.generatedAt && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Generato il {new Date(report.generatedAt).toLocaleDateString('it-IT')}
-                </p>
-              )}
+          {total}
+        </text>
+        <text
+          x="45" y="52"
+          textAnchor="middle"
+          fill="hsl(var(--muted-foreground))"
+          fontSize="7"
+        >
+          task
+        </text>
+      </svg>
+      <div className="flex flex-col gap-1.5 flex-1">
+        {segments.map((seg) => (
+          <div key={seg.label} className="flex items-center gap-2 text-[11px]">
+            <span
+              className="w-2 h-2 rounded-sm flex-shrink-0"
+              style={{ background: seg.color }}
+            />
+            <span className="text-muted-foreground flex-1">{seg.label}</span>
+            <span className={cn("font-semibold", seg.textColor)}>{seg.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ProjectRows({ projects }: { projects: ProjectRow[] }) {
+  return (
+    <div className="divide-y divide-border/50">
+      {projects.map((p) => (
+        <div key={p.name} className="flex items-center gap-2.5 py-2">
+          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", p.dotColor)} />
+          <span className="flex-1 text-xs font-medium truncate text-foreground">{p.name}</span>
+          <div className="w-20 flex-shrink-0">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn("h-full rounded-full bg-gradient-to-r", p.barColor)}
+                style={{ width: `${p.pct}%` }}
+              />
             </div>
           </div>
+          <span className="text-xs font-semibold w-8 text-right flex-shrink-0 text-foreground">
+            {p.pct}%
+          </span>
+          <Badge
+            variant="outline"
+            className={cn("text-[10px] px-1.5 py-0 flex-shrink-0", p.statusClass)}
+          >
+            {p.status}
+          </Badge>
         </div>
       ))}
+    </div>
+  )
+}
 
-      {pagination && pagination.pages > 1 && (
-        <div className="flex justify-center gap-2 mt-4">
-          {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => onPageChange(page)}
-              className={`px-3 py-1 rounded text-sm ${
-                page === pagination.page
-                  ? 'bg-cyan-500 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
+function RisksCard({ risks }: { risks: RiskRow[] }) {
+  return (
+    <div className="space-y-3">
+      <div className="divide-y divide-border/50">
+        {risks.map((r, i) => (
+          <div key={i} className="flex items-center gap-2 py-1.5">
+            <Badge
+              variant="outline"
+              className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 flex-shrink-0 min-w-[42px] text-center justify-center", RISK_CONFIG[r.level].className)}
             >
-              {page}
+              {r.level}
+            </Badge>
+            <span className="flex-1 text-xs font-medium truncate text-foreground">{r.name}</span>
+            <span className={cn("text-[10px] whitespace-nowrap flex-shrink-0", r.projectColor)}>
+              {r.project}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="h-px bg-border" />
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center bg-red-500/6 border border-red-500/15 rounded p-2">
+          <div className="text-base font-bold text-red-400">1</div>
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Critico</div>
+        </div>
+        <div className="text-center bg-orange-500/6 border border-orange-500/15 rounded p-2">
+          <div className="text-base font-bold text-orange-400">2</div>
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Medio</div>
+        </div>
+        <div className="text-center bg-slate-500/8 border border-slate-500/20 rounded p-2">
+          <div className="text-base font-bold text-slate-400">0</div>
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Basso</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TeamRows({ rows }: { rows: TeamRow[] }) {
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-[1fr_auto_auto] text-[9px] font-semibold uppercase tracking-wider text-muted-foreground pb-1 border-b border-border mb-1">
+        <span>Risorsa</span>
+        <span className="text-right min-w-[38px]">Ore</span>
+        <span className="text-right min-w-[55px]">Task chiusi</span>
+      </div>
+      <div className="divide-y divide-border/50">
+        {rows.map((r) => (
+          <div key={r.name} className="flex items-center gap-2.5 py-2">
+            <span
+              className={cn(
+                "w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0",
+                r.avatarBg,
+                r.avatarColor
+              )}
+            >
+              {r.initials}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium text-foreground">{r.name}</div>
+              <div className="h-1 rounded-full bg-muted overflow-hidden mt-1">
+                <div
+                  className={cn("h-full rounded-full bg-gradient-to-r", r.barColor)}
+                  style={{ width: `${r.barPct}%` }}
+                />
+              </div>
+            </div>
+            <span className="text-xs font-semibold text-blue-400 min-w-[36px] text-right">
+              {r.hours}
+            </span>
+            <span className="text-[10px] text-muted-foreground min-w-[50px] text-right">
+              {r.tasks}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="h-px bg-border" />
+      <div className="flex gap-4 text-[10px] pt-1">
+        <span>
+          <span className="text-muted-foreground">Totale team</span>
+          <span className="font-bold text-blue-400 ml-1.5">87h</span>
+        </span>
+        <span>
+          <span className="text-muted-foreground">Capacità</span>
+          <span className="font-bold text-foreground ml-1.5">120h</span>
+        </span>
+        <span>
+          <span className="text-muted-foreground">Utilizzo</span>
+          <span className="font-bold text-indigo-300 ml-1.5">72.5%</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function MilestoneItems({ items }: { items: MilestoneRow[] }) {
+  return (
+    <div className="space-y-1.5">
+      {items.map((m, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-2.5 px-3 py-2 bg-accent/30 border border-border rounded hover:border-indigo-500/25 transition-colors cursor-pointer"
+        >
+          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", m.dotColor)} />
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-foreground truncate">{m.name}</div>
+            <div className="text-[10px] text-muted-foreground">{m.project}</div>
+          </div>
+          <span className={cn("text-xs font-semibold whitespace-nowrap min-w-[32px] text-right", m.pctColor)}>
+            {m.pct}%
+          </span>
+          <span className={cn("text-[10px] whitespace-nowrap ml-2", m.dateColor)}>
+            {m.date}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+interface TaskTableProps {
+  tasks: TaskRow[]
+  filterStatus: string
+  filterOp: string
+  filterProject: string
+  onFilterStatus: (v: string) => void
+  onFilterOp: (v: string) => void
+  onFilterProject: (v: string) => void
+}
+
+function TaskTable({
+  tasks,
+  filterStatus,
+  filterOp,
+  filterProject,
+  onFilterStatus,
+  onFilterOp,
+  onFilterProject,
+}: TaskTableProps) {
+  const filtered = useMemo(() => {
+    return tasks.filter(
+      (t) =>
+        (!filterStatus || t.status === filterStatus) &&
+        (!filterOp || t.op === filterOp) &&
+        (!filterProject || t.project === filterProject)
+    )
+  }, [tasks, filterStatus, filterOp, filterProject])
+
+  const counts = useMemo(() => {
+    const done = tasks.filter((t) => t.status === "completato").length
+    const active = tasks.filter((t) => t.status === "in-corso").length
+    const review = tasks.filter((t) => t.status === "revisione").length
+    const blocked = tasks.filter((t) => t.status === "bloccato").length
+    return { done, active, review, blocked }
+  }, [tasks])
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2 flex-wrap">
+          <ListChecks className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Stato task — settimana corrente
+          </span>
+          <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-400 border-green-500/25">
+            {counts.done} chiusi
+          </Badge>
+          <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/25">
+            {counts.active} in corso
+          </Badge>
+          <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/25">
+            {counts.review} in revisione
+          </Badge>
+          <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-400 border-red-500/25">
+            {counts.blocked} bloccati
+          </Badge>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Select value={filterStatus} onValueChange={onFilterStatus}>
+            <SelectTrigger className="h-7 text-[11px] w-[130px]">
+              <SelectValue placeholder="Tutti gli stati" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Tutti gli stati</SelectItem>
+              <SelectItem value="completato">Completati</SelectItem>
+              <SelectItem value="in-corso">In corso</SelectItem>
+              <SelectItem value="revisione">In revisione</SelectItem>
+              <SelectItem value="bloccato">Bloccati</SelectItem>
+              <SelectItem value="da-iniziare">Da iniziare</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterOp} onValueChange={onFilterOp}>
+            <SelectTrigger className="h-7 text-[11px] w-[130px]">
+              <SelectValue placeholder="Tutti gli operatori" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Tutti gli operatori</SelectItem>
+              <SelectItem value="MB">Marco Bianchi</SelectItem>
+              <SelectItem value="NR">Nicola Rossi</SelectItem>
+              <SelectItem value="GF">Giulia Ferrari</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterProject} onValueChange={onFilterProject}>
+            <SelectTrigger className="h-7 text-[11px] w-[130px]">
+              <SelectValue placeholder="Tutti i progetti" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Tutti i progetti</SelectItem>
+              <SelectItem value="XR-200">XR-200 Alpha</SelectItem>
+              <SelectItem value="Med-Track">Med-Tracker v2</SelectItem>
+              <SelectItem value="OrthoScan">OrthoScan Pro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Table header */}
+      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_60px_90px_80px] px-4 py-2 bg-muted/50 border-b border-border text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span>Task</span>
+        <span>Progetto</span>
+        <span>Stato</span>
+        <span>Operatore</span>
+        <span className="text-right">Ore</span>
+        <span>Scadenza</span>
+        <span>Chiuso il</span>
+      </div>
+
+      {/* Table rows */}
+      {filtered.length === 0 ? (
+        <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+          Nessun task trovato
+        </div>
+      ) : (
+        filtered.map((t) => {
+          const s = STATUS_CONFIG[t.status]
+          return (
+            <div
+              key={t.id}
+              className="grid grid-cols-[2fr_1fr_1fr_1fr_60px_90px_80px] px-4 py-2 border-b border-border/40 last:border-0 items-center hover:bg-accent/30 transition-colors cursor-pointer text-xs"
+            >
+              <div className="flex items-center gap-1.5 pr-3 min-w-0">
+                <span className="font-mono text-[9px] text-muted-foreground flex-shrink-0">{t.id}</span>
+                <span className="truncate font-medium text-foreground">{t.name}</span>
+              </div>
+              <span className={cn("text-[11px] font-medium", t.projectColor)}>{t.project}</span>
+              <div className="flex items-center gap-1.5">
+                <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", s.dotClass)} />
+                <span className="text-[11px] font-medium text-foreground">{s.label}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0",
+                    t.opBg,
+                    t.opColor
+                  )}
+                >
+                  {t.op}
+                </span>
+                <span className="text-[11px] font-medium text-foreground truncate">{t.opName}</span>
+              </div>
+              <span className="text-right text-xs font-semibold text-blue-400">
+                {t.hours > 0 ? `${t.hours}h` : "—"}
+              </span>
+              <span className="text-[11px] text-orange-400">{t.deadline}</span>
+              <span className="text-[11px] text-muted-foreground">{t.closedAt}</span>
+            </div>
+          )
+        })
+      )}
+    </Card>
+  )
+}
+
+function ActivityHeatmap() {
+  const maxVal = Math.max(...HEATMAP_DATA)
+  const days = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+
+  return (
+    <div>
+      {/* Day labels */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {days.map((d) => (
+          <span key={d} className="text-[9px] text-muted-foreground text-center font-medium">
+            {d}
+          </span>
+        ))}
+      </div>
+      {/* Grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {HEATMAP_DATA.map((v, i) => {
+          const isWeekend = i % 7 >= 5
+          const intensity = maxVal > 0 ? v / maxVal : 0
+          return (
+            <div
+              key={i}
+              title={`${v} attività`}
+              className="aspect-square rounded cursor-default transition-opacity hover:opacity-70"
+              style={{
+                background:
+                  isWeekend || v === 0
+                    ? "hsl(var(--muted))"
+                    : `rgba(99,102,241,${0.15 + intensity * 0.85})`,
+                opacity: isWeekend ? 0.4 : 1,
+              }}
+            />
+          )
+        })}
+      </div>
+      {/* Legend */}
+      <div className="flex items-center gap-1.5 mt-3">
+        <span className="text-[10px] text-muted-foreground">Meno</span>
+        <div className="w-3 h-3 rounded-sm bg-muted" />
+        <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(99,102,241,0.2)" }} />
+        <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(99,102,241,0.4)" }} />
+        <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(99,102,241,0.65)" }} />
+        <div className="w-3 h-3 rounded-sm bg-indigo-500" />
+        <span className="text-[10px] text-muted-foreground">Più</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Dipendente-view task list ────────────────────────────────────────────────
+
+const DIP_TASKS = [
+  { name: "Integrazione sensori IMU", project: "XR-200", projectColor: "text-blue-400", dotClass: "bg-blue-500", badge: "In corso", badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  { name: "Configurazione registro I2C", project: "XR-200", projectColor: "text-blue-400", dotClass: "bg-blue-500", badge: "In corso", badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  { name: "Firmware core v0.8", project: "XR-200", projectColor: "text-blue-400", dotClass: "bg-yellow-500", badge: "Revisione", badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+  { name: "Test validazione modulo BLE", project: "Med-Track", projectColor: "text-green-400", dotClass: "bg-slate-500", badge: "Da iniziare", badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
+  { name: "Stesura SRS sezione 4", project: "Med-Track", projectColor: "text-green-400", dotClass: "bg-slate-500", badge: "Da iniziare", badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
+]
+
+const DIP_DEADLINES = [
+  { name: "Configurazione I2C @ 400kHz", context: "XR-200 · Task", dotClass: "bg-red-400", dateText: "20 mar · 9 gg", dateColor: "text-red-400", borderClass: "border-red-500/25" },
+  { name: "Firmware core v0.8", context: "XR-200 · In revisione", dotClass: "bg-orange-400", dateText: "22 mar · 11 gg", dateColor: "text-orange-400", borderClass: "" },
+  { name: "Calibrazione sensore asse Z", context: "XR-200 · Subtask", dotClass: "bg-blue-400", dateText: "25 mar · 14 gg", dateColor: "text-muted-foreground", borderClass: "" },
+  { name: "Test validazione BLE", context: "Med-Track · Task", dotClass: "bg-slate-400", dateText: "2 apr · 22 gg", dateColor: "text-muted-foreground", borderClass: "" },
+]
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+export default function WeeklyReportPage() {
+  useSetPageContext({ domain: "analytics" })
+
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [period, setPeriod] = useState<PeriodView>("week")
+  const [roleView, setRoleView] = useState<RoleView>("direzione")
+  const [filterStatus, setFilterStatus] = useState("")
+  const [filterOp, setFilterOp] = useState("")
+  const [filterProject, setFilterProject] = useState("")
+
+  const preview = useWeeklyReportPreviewQuery()
+  const generateReport = useGenerateWeeklyReport()
+
+  // Week date range derived from offset
+  const { weekStart, weekEnd, weekNumber, weekRangeLabel } = useMemo(() => {
+    const base = new Date()
+    const ws = startOfWeek(addWeeks(base, weekOffset), { weekStartsOn: 1 })
+    const we = endOfWeek(addWeeks(base, weekOffset), { weekStartsOn: 1 })
+    const wn = getISOWeek(ws)
+    const label = `${format(ws, "d MMM", { locale: it })} — ${format(we, "d MMM yyyy", { locale: it })}`
+    return { weekStart: ws, weekEnd: we, weekNumber: wn, weekRangeLabel: label }
+  }, [weekOffset])
+
+  // Merge preview data into KPIs where available
+  const previewData = preview.data as Record<string, unknown> | undefined
+  const completedCount = previewData
+    ? (Array.isArray(previewData.completedTasks)
+        ? previewData.completedTasks.length
+        : typeof previewData.completedTasksCount === "number"
+        ? previewData.completedTasksCount
+        : null)
+    : null
+
+  const totalHoursFromAPI =
+    previewData && typeof previewData.totalHours === "number"
+      ? previewData.totalHours
+      : null
+
+  const kpis: KpiCardData[] = useMemo(() => {
+    const base = [...DIREZIONE_KPIS]
+    if (completedCount !== null) {
+      base[0] = { ...base[0], value: String(completedCount) }
+    }
+    if (totalHoursFromAPI !== null) {
+      base[1] = { ...base[1], value: `${totalHoursFromAPI}h` }
+    }
+    return base
+  }, [completedCount, totalHoursFromAPI])
+
+  const handleExportPDF = () => {
+    toast.info("Esportazione PDF in corso…")
+  }
+
+  const handleSendReport = () => {
+    generateReport.mutate(undefined, {
+      onSuccess: () => toast.success("Report inviato con successo"),
+      onError: () => toast.error("Errore nell'invio del report"),
+    })
+  }
+
+  // Void to satisfy exhaustive-deps: weekStart/weekEnd are computed but only used for labels
+  void weekStart
+  void weekEnd
+
+  return (
+    <motion.div
+      className="space-y-0"
+      variants={containerVariants}
+      initial="animate"
+      animate="animate"
+    >
+      {/* ── Page Header ─────────────────────────────────────────── */}
+      <motion.div variants={itemVariants} className="flex items-start justify-between gap-4 pb-5">
+        <div>
+          <div className="flex items-center gap-2.5 mb-1">
+            <Badge
+              variant="outline"
+              className="text-[11px] font-semibold bg-indigo-500/12 text-indigo-300 border-indigo-500/25 flex items-center gap-1.5"
+            >
+              <Activity className="h-3 w-3" />
+              Report
+            </Badge>
+            <h1 className="text-[22px] font-bold text-foreground tracking-tight leading-none">
+              Weekly Overview
+            </h1>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Riepilogo settimanale attività, avanzamento progetti e ore lavorate
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={handleExportPDF}>
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Esporta PDF
+          </Button>
+          <Button
+            size="sm"
+            className="bg-indigo-600/80 hover:bg-indigo-600 text-white border-indigo-500/50"
+            onClick={handleSendReport}
+            disabled={generateReport.isPending}
+          >
+            <Send className="h-3.5 w-3.5 mr-1.5" />
+            Invia report
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* ── Week Selector Bar ────────────────────────────────────── */}
+      <motion.div variants={itemVariants} className="flex items-center gap-2.5 pb-5">
+        <button
+          onClick={() => setWeekOffset((o) => o - 1)}
+          className="w-7 h-7 flex items-center justify-center bg-card border border-border rounded hover:border-indigo-500/40 hover:text-indigo-300 text-muted-foreground transition-colors"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-sm font-semibold text-foreground min-w-[210px] text-center">
+          {weekRangeLabel}
+        </span>
+        <button
+          onClick={() => setWeekOffset((o) => o + 1)}
+          className="w-7 h-7 flex items-center justify-center bg-card border border-border rounded hover:border-indigo-500/40 hover:text-indigo-300 text-muted-foreground transition-colors"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+        <Badge
+          variant="outline"
+          className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border-indigo-500/25 ml-1"
+        >
+          Settimana {weekNumber}
+        </Badge>
+
+        {/* Period toggle */}
+        <div className="flex items-center gap-1 ml-4">
+          {(["week", "month", "quarter"] as PeriodView[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={cn(
+                "text-[11px] px-2.5 py-1 rounded transition-colors",
+                period === p
+                  ? "text-indigo-300 bg-indigo-500/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}
+            >
+              {p === "week" ? "Settimana" : p === "month" ? "Mese" : "Trimestre"}
             </button>
           ))}
         </div>
-      )}
-    </div>
-  )
-}
 
-export default function WeeklyReportPage() {
-  const {
-    currentWeekPreview,
-    currentWeekInfo,
-    reports,
-    teamReports,
-    selectedReport,
-    isLoading,
-    isGenerating,
-    isLoadingPreview,
-    error,
-    pagination,
-    teamPagination,
-    fetchCurrentWeekInfo,
-    fetchWeeklyPreview,
-    fetchMyReports,
-    fetchTeamReports,
-    fetchReportById,
-    generateReport,
-    clearSelectedReport,
-    clearError,
-  } = useWeeklyReportStore()
-
-  const { user } = useAuthStore()
-  const { addToast } = useToastStore()
-  const isDirezione = user?.role === 'direzione'
-  const [activeTab, setActiveTab] = useState<'preview' | 'projectTree' | 'myReports' | 'teamReports'>('preview')
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-  const [isExportingPDF, setIsExportingPDF] = useState(false)
-
-  useEffect(() => {
-    fetchCurrentWeekInfo()
-    fetchWeeklyPreview(isDirezione)
-    fetchMyReports()
-    fetchTeamReports()
-  }, [fetchCurrentWeekInfo, fetchWeeklyPreview, fetchMyReports, fetchTeamReports, isDirezione])
-
-  const handleGenerate = async () => {
-    try {
-      const report = await generateReport()
-      addToast({
-        type: 'success',
-        title: 'Report Generato',
-        message: `Report ${report.code} generato con successo!`,
-      })
-    } catch {
-      addToast({
-        type: 'error',
-        title: 'Errore',
-        message: 'Errore nella generazione del report',
-      })
-    }
-  }
-
-  const handleExportPDF = async () => {
-    if (isExportingPDF) return // Prevent double-click
-    
-    try {
-      if (!currentWeekPreview) {
-        addToast({
-          type: 'error',
-          title: 'Errore',
-          message: 'Nessun dato disponibile per l\'export',
-        })
-        return
-      }
-      
-      setIsExportingPDF(true)
-      addToast({
-        type: 'info',
-        title: 'Generazione PDF',
-        message: 'Generazione del PDF in corso...',
-      })
-      
-      // Lazy load PDF module (code splitting)
-      const { exportWeeklyReportReactPDF } = await import('@/utils/exportPDFReact')
-      const result = await exportWeeklyReportReactPDF(currentWeekPreview, selectedUserId)
-      
-      if (result.success) {
-        addToast({
-          type: 'success',
-          title: 'PDF Esportato',
-          message: `Report esportato con successo: ${result.filename}`,
-        })
-      } else {
-        addToast({
-          type: 'error',
-          title: 'Errore',
-          message: result.error || 'Errore nell\'esportazione del PDF',
-        })
-      }
-    } catch {
-      addToast({
-        type: 'error',
-        title: 'Errore',
-        message: 'Errore inaspettato durante l\'esportazione',
-      })
-    } finally {
-      setIsExportingPDF(false)
-    }
-  }
-
-  const handleExportSelectedReportPDF = async () => {
-    if (isExportingPDF) return // Prevent double-click
-    
-    try {
-      if (!selectedReport?.reportData) {
-        addToast({
-          type: 'error',
-          title: 'Errore',
-          message: 'Nessun dato disponibile per l\'export',
-        })
-        return
-      }
-      
-      setIsExportingPDF(true)
-      addToast({
-        type: 'info',
-        title: 'Generazione PDF',
-        message: 'Generazione del PDF in corso...',
-      })
-      
-      // Lazy load PDF module (code splitting)
-      const { exportWeeklyReportReactPDF } = await import('@/utils/exportPDFReact')
-      const result = await exportWeeklyReportReactPDF(selectedReport.reportData)
-      
-      if (result.success) {
-        addToast({
-          type: 'success',
-          title: 'PDF Esportato',
-          message: `Report esportato con successo: ${result.filename}`,
-        })
-      } else {
-        addToast({
-          type: 'error',
-          title: 'Errore',
-          message: result.error || 'Errore nell\'esportazione del PDF',
-        })
-      }
-    } catch {
-      addToast({
-        type: 'error',
-        title: 'Errore',
-        message: 'Errore inaspettato durante l\'esportazione',
-      })
-    } finally {
-      setIsExportingPDF(false)
-    }
-  }
-
-  const handleSelectReport = (id: string) => {
-    fetchReportById(id)
-  }
-
-  // Show selected report detail
-  if (selectedReport) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <button
-              onClick={clearSelectedReport}
-              className="text-sm text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 mb-2"
-            >
-              ← Torna alla lista
-            </button>
-            <h1 className="page-title">
-              {selectedReport.code}
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              Settimana {selectedReport.weekNumber}/{selectedReport.year}
-              {selectedReport.user && ` - ${selectedReport.user.firstName} ${selectedReport.user.lastName}`}
-            </p>
-          </div>
+        {/* Role toggle */}
+        <div className="flex items-center gap-1 bg-card border border-border rounded-md p-0.5 ml-auto">
           <button
-            onClick={handleExportSelectedReportPDF}
-            disabled={isExportingPDF}
-            className="btn-secondary flex items-center gap-2 self-start disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isExportingPDF ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generazione...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                Esporta PDF
-              </>
+            onClick={() => setRoleView("direzione")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-colors",
+              roleView === "direzione"
+                ? "bg-muted text-indigo-300"
+                : "text-muted-foreground"
             )}
-          </button>
-        </div>
-
-        {selectedReport.reportData && (
-          <ReportPreview data={selectedReport.reportData} />
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Report Settimanale</h1>
-          {currentWeekInfo && (
-            <p className="mt-1 text-slate-600 dark:text-slate-400">
-              Settimana {currentWeekInfo.weekNumber}/{currentWeekInfo.year} ({formatDate(currentWeekInfo.weekStartDate)} - {formatDate(currentWeekInfo.weekEndDate)})
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => fetchWeeklyPreview(isDirezione)}
-            disabled={isLoadingPreview}
-            className="btn-secondary flex items-center gap-2"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoadingPreview ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Aggiorna</span>
+            <Users className="h-2.5 w-2.5" />
+            Direzione
           </button>
           <button
-            onClick={handleExportPDF}
-            disabled={!currentWeekPreview || isExportingPDF}
-            className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isExportingPDF ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="hidden sm:inline">Generazione...</span>
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Esporta PDF</span>
-              </>
+            onClick={() => setRoleView("dipendente")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-colors",
+              roleView === "dipendente"
+                ? "bg-muted text-green-400"
+                : "text-muted-foreground"
             )}
-          </button>
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="btn-primary flex items-center gap-2"
           >
-            {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            <span className="hidden sm:inline">Genera Report</span>
-            <span className="sm:hidden">Genera</span>
+            <Users className="h-2.5 w-2.5" />
+            Dipendente
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-          <button onClick={clearError} className="text-sm text-red-500 underline mt-1">
-            Chiudi
-          </button>
-        </div>
+      {/* ══ VISTA DIREZIONE ══════════════════════════════════════════ */}
+      {roleView === "direzione" && (
+        <>
+          {/* KPI Strip */}
+          <motion.div variants={itemVariants} className="grid grid-cols-5 gap-2.5 pb-5">
+            {preview.isLoading
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-4">
+                      <Skeleton className="h-3 w-20 mb-2" />
+                      <Skeleton className="h-7 w-12 mb-1" />
+                      <Skeleton className="h-2.5 w-28" />
+                    </CardContent>
+                  </Card>
+                ))
+              : kpis.map((kpi) => <KpiCard key={kpi.label} kpi={kpi} />)}
+          </motion.div>
+
+          {/* Row 1: Ore per giorno + Task per stato */}
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" />
+                    Ore per giorno
+                  </div>
+                  <span className="text-[10px] font-normal normal-case">settimana corrente</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <HoursBarChart
+                  data={HOURS_DATA}
+                  totalLabel="87h"
+                  avgLabel="14.5h"
+                  peakLabel="Mer · 22h"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <BarChart2 className="h-3 w-3" />
+                  Task per stato
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <DonutChart />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Row 2: Avanzamento progetti + Rischi */}
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-3 w-3" />
+                    Avanzamento progetti
+                  </div>
+                  <span className="text-[10px] font-normal normal-case">4 attivi</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ProjectRows projects={PROJECTS} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3" />
+                    Rischi aperti
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 py-0 normal-case font-normal">
+                    Vedi tutti
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <RisksCard risks={RISKS} />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Row 3: Ore per risorsa + Milestone in scadenza */}
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-3 w-3" />
+                    Ore per risorsa
+                  </div>
+                  <span className="text-[10px] font-normal normal-case">settimana corrente</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <TeamRows rows={TEAM_ROWS} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Flag className="h-3 w-3" />
+                    Milestone prossime
+                  </div>
+                  <span className="text-[10px] font-normal normal-case">30 giorni</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <MilestoneItems items={MILESTONES} />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Full-width task table */}
+          <motion.div variants={itemVariants} className="pb-5">
+            <TaskTable
+              tasks={TASK_DATA}
+              filterStatus={filterStatus}
+              filterOp={filterOp}
+              filterProject={filterProject}
+              onFilterStatus={setFilterStatus}
+              onFilterOp={setFilterOp}
+              onFilterProject={setFilterProject}
+            />
+          </motion.div>
+
+          {/* Activity Heatmap */}
+          <motion.div variants={itemVariants} className="pb-5">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <CalendarDays className="h-3 w-3" />
+                    Attività ultime 4 settimane
+                  </div>
+                  <span className="text-[10px] font-normal normal-case">attività = ore log + task chiusi</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ActivityHeatmap />
+              </CardContent>
+            </Card>
+          </motion.div>
+        </>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 overflow-x-auto scrollbar-thin">
-        <button
-          onClick={() => setActiveTab('preview')}
-          className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'preview'
-              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          Preview Settimana
-        </button>
-        <button
-          onClick={() => setActiveTab('projectTree')}
-          className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
-            activeTab === 'projectTree'
-              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <FolderTree className="w-4 h-4" />
-          Vista Progetti
-        </button>
-        <button
-          onClick={() => setActiveTab('myReports')}
-          className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'myReports'
-              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          I Miei Report
-        </button>
-        <button
-          onClick={() => setActiveTab('teamReports')}
-          className={`flex-1 min-w-0 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
-            activeTab === 'teamReports'
-              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Report Team
-        </button>
-      </div>
+      {/* ══ VISTA DIPENDENTE ═════════════════════════════════════════ */}
+      {roleView === "dipendente" && (
+        <>
+          {/* KPI personali */}
+          <motion.div variants={itemVariants} className="grid grid-cols-5 gap-2.5 pb-5">
+            {DIPENDENTE_KPIS.map((kpi) => (
+              <KpiCard key={kpi.label} kpi={kpi} />
+            ))}
+          </motion.div>
 
-      {/* Content */}
-      {activeTab === 'preview' && (
-        isLoadingPreview && !currentWeekPreview ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
-          </div>
-        ) : currentWeekPreview ? (
-          <div className="space-y-4">
-            {/* User Filter (Team Mode Only) */}
-            {isDirezione && currentWeekPreview.timeTracking.byUser && currentWeekPreview.timeTracking.byUser.length > 0 && (
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                  Filtra per Utente
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setSelectedUserId(null)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      selectedUserId === null
-                        ? 'bg-cyan-500 text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    Tutti gli utenti
-                  </button>
-                  {currentWeekPreview.timeTracking.byUser.map((u) => (
-                    <button
-                      key={u.userId}
-                      onClick={() => setSelectedUserId(u.userId)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedUserId === u.userId
-                          ? 'bg-cyan-500 text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5" />
-                        <span>{u.userName}</span>
-                        <span className="text-xs opacity-75">({formatDuration(u.totalMinutes)})</span>
-                      </div>
-                    </button>
+          {/* Row 1: Ore personali + Task aperti miei */}
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" />
+                    Le mie ore per giorno
+                  </div>
+                  <div className="flex items-center gap-1.5 normal-case">
+                    <span className="w-4 h-4 rounded-full bg-green-500/15 text-green-400 flex items-center justify-center text-[8px] font-bold">MB</span>
+                    <span className="text-[11px] font-semibold text-foreground">Marco Bianchi</span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <HoursBarChart
+                  data={[
+                    { day: "Lun", hours: 7 },
+                    { day: "Mar", hours: 8 },
+                    { day: "Mer", hours: 9 },
+                    { day: "Gio", hours: 6 },
+                    { day: "Ven", hours: 6 },
+                    { day: "Sab", hours: 0 },
+                    { day: "Dom", hours: 0 },
+                  ]}
+                  totalLabel="36h"
+                  avgLabel="7.2h"
+                  peakLabel="4h"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <CheckSquare className="h-3 w-3" />
+                    Miei task aperti
+                  </div>
+                  <span className="text-[10px] font-normal normal-case">11 totali</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="divide-y divide-border/50">
+                  {DIP_TASKS.map((t, i) => (
+                    <div key={i} className="flex items-center gap-2 py-1.5">
+                      <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", t.dotClass)} />
+                      <span className="flex-1 text-xs font-medium truncate text-foreground">{t.name}</span>
+                      <span className={cn("text-[10px] whitespace-nowrap flex-shrink-0", t.projectColor)}>
+                        {t.project}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={cn("text-[10px] ml-1.5 flex-shrink-0", t.badgeClass)}
+                      >
+                        {t.badge}
+                      </Badge>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
-            <ReportPreview data={currentWeekPreview} selectedUserId={selectedUserId} />
-          </div>
-        ) : (
-          <div className="text-center py-8 text-slate-500">
-            <p>Nessun dato disponibile per questa settimana</p>
-          </div>
-        )
-      )}
+                <Button variant="ghost" size="sm" className="mt-2 h-6 text-[11px] px-2">
+                  Vedi tutti gli 11 task
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-      {activeTab === 'projectTree' && (
-        <div className="space-y-4">
-          {/* User Filter (Team Mode Only) */}
-          {isDirezione && currentWeekPreview?.timeTracking.byUser && currentWeekPreview.timeTracking.byUser.length > 0 && (
-            <div className="card p-4">
-              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                Filtra per Utente
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedUserId(null)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    selectedUserId === null
-                      ? 'bg-cyan-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  Tutti gli utenti
-                </button>
-                {currentWeekPreview.timeTracking.byUser.map((u) => (
-                  <button
-                    key={u.userId}
-                    onClick={() => setSelectedUserId(u.userId)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      selectedUserId === u.userId
-                        ? 'bg-cyan-500 text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <User className="w-3.5 h-3.5" />
-                      <span>{u.userName}</span>
-                      <span className="text-xs opacity-75">({formatDuration(u.totalMinutes)})</span>
+          {/* Row 2: I miei progetti + Scadenze imminenti */}
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <TrendingUp className="h-3 w-3" />
+                  I miei progetti
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-4">
+                <div className="divide-y divide-border/50">
+                  {[
+                    { name: "XR-200 Alpha", dotColor: "bg-blue-500", barColor: "from-blue-800 to-blue-500", pct: 62, pctColor: "text-blue-400", subtitle: "7 miei task · 4 in corso" },
+                    { name: "Med-Tracker v2", dotColor: "bg-green-500", barColor: "from-green-800 to-green-500", pct: 88, pctColor: "text-green-400", subtitle: "4 miei task · 1 in corso" },
+                  ].map((p) => (
+                    <div key={p.name} className="flex items-center gap-2.5 py-2">
+                      <span className={cn("w-2 h-2 rounded-full flex-shrink-0", p.dotColor)} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-foreground">{p.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{p.subtitle}</div>
+                      </div>
+                      <div className="w-20 flex-shrink-0">
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full bg-gradient-to-r", p.barColor)}
+                            style={{ width: `${p.pct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className={cn("text-xs font-semibold w-8 text-right", p.pctColor)}>
+                        {p.pct}%
+                      </span>
                     </div>
-                  </button>
+                  ))}
+                </div>
+
+                <div className="h-px bg-border" />
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Ore questa settimana per progetto
+                  </p>
+                  {[
+                    { name: "XR-200 Alpha", color: "text-blue-400", barColor: "from-blue-800 to-blue-500", pct: 75, hours: "27h" },
+                    { name: "Med-Tracker", color: "text-green-400", barColor: "from-green-800 to-green-500", pct: 25, hours: "9h" },
+                  ].map((p) => (
+                    <div key={p.name} className="flex items-center gap-2 mb-1.5">
+                      <span className={cn("text-xs min-w-[90px]", p.color)}>{p.name}</span>
+                      <div className="flex-1">
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full bg-gradient-to-r", p.barColor)}
+                            style={{ width: `${p.pct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className={cn("text-xs font-semibold min-w-[28px] text-right", p.color)}>
+                        {p.hours}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <CalendarDays className="h-3 w-3" />
+                  Scadenze imminenti
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-1.5">
+                {DIP_DEADLINES.map((d, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-2.5 px-3 py-2 bg-accent/30 border rounded hover:border-indigo-500/25 transition-colors cursor-pointer",
+                      d.borderClass || "border-border"
+                    )}
+                  >
+                    <span className={cn("w-2 h-2 rounded-full flex-shrink-0", d.dotClass)} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-foreground truncate">{d.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{d.context}</div>
+                    </div>
+                    <span className={cn("text-[10px] font-semibold whitespace-nowrap", d.dateColor)}>
+                      {d.dateText}
+                    </span>
+                  </div>
                 ))}
-              </div>
-            </div>
-          )}
-          <TaskTreeView myTasksOnly={!isDirezione} filterUserId={selectedUserId || undefined} />
-        </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </>
       )}
-
-      {activeTab === 'myReports' && (
-        isLoading && reports.length === 0 ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
-          </div>
-        ) : (
-          <ReportHistory
-            reports={reports}
-            pagination={pagination}
-            onPageChange={fetchMyReports}
-            onSelect={handleSelectReport}
-          />
-        )
-      )}
-
-      {activeTab === 'teamReports' && (
-        isLoading && teamReports.length === 0 ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
-          </div>
-        ) : (
-          <ReportHistory
-            reports={teamReports}
-            pagination={teamPagination}
-            onPageChange={fetchTeamReports}
-            onSelect={handleSelectReport}
-          />
-        )
-      )}
-    </div>
+    </motion.div>
   )
 }

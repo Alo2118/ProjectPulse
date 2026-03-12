@@ -1,70 +1,158 @@
-/**
- * ExportButton - Reusable CSV export button component
- * Triggers a file download from the export API endpoint.
- * @module components/features/ExportButton
- */
+import { useCallback } from "react"
+import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  useExportTasks,
+  useExportProjects,
+  useExportTimeEntries,
+} from "@/hooks/api/useExport"
 
-import { useState } from 'react'
-import { Download, Loader2 } from 'lucide-react'
-import api from '@/services/api'
-import { toast } from '@stores/toastStore'
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(url)
+}
+
+function buildFilenameForEntity(entityType: string): string {
+  const date = new Date().toISOString().slice(0, 10)
+  return `${entityType}-${date}.csv`
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type SupportedEntityType = "tasks" | "projects" | "time-entries"
 
 interface ExportButtonProps {
-  entity: 'tasks' | 'projects' | 'time-entries'
-  filters?: Record<string, string>
-  className?: string
-  label?: string
+  entityType: SupportedEntityType | string
+  filters?: Record<string, unknown>
 }
 
-export function ExportButton({
-  entity,
-  filters,
-  className = '',
-  label = 'Esporta CSV',
-}: ExportButtonProps) {
-  const [isLoading, setIsLoading] = useState(false)
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-  const handleExport = async () => {
-    if (isLoading) return
-    setIsLoading(true)
+export function ExportButton({ entityType, filters }: ExportButtonProps) {
+  const exportTasks = useExportTasks()
+  const exportProjects = useExportProjects()
+  const exportTimeEntries = useExportTimeEntries()
 
-    try {
-      const response = await api.get(`/export/${entity}`, {
-        params: filters,
-        responseType: 'blob',
-      })
+  const isBusy =
+    exportTasks.isPending ||
+    exportProjects.isPending ||
+    exportTimeEntries.isPending
 
-      const url = window.URL.createObjectURL(new Blob([response.data as BlobPart]))
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${entity}-export-${new Date().toISOString().split('T')[0]}.csv`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } catch (err) {
-      toast.error('Errore', 'Esportazione fallita')
-    } finally {
-      setIsLoading(false)
+  // Stringify filter values for the query-string params expected by the API.
+  const buildParams = useCallback((): Record<string, string> => {
+    if (!filters) return {}
+    const result: Record<string, string> = {}
+    for (const [key, val] of Object.entries(filters)) {
+      if (val !== null && val !== undefined && val !== "") {
+        result[key] = String(val)
+      }
     }
-  }
+    return result
+  }, [filters])
+
+  const handleCsvExport = useCallback(() => {
+    const params = buildParams()
+    const filename = buildFilenameForEntity(entityType)
+
+    const onSuccess = (data: Blob) => {
+      triggerBlobDownload(data, filename)
+    }
+
+    switch (entityType as SupportedEntityType) {
+      case "projects":
+        exportProjects.mutate(params, { onSuccess })
+        break
+      case "time-entries":
+        exportTimeEntries.mutate(params, { onSuccess })
+        break
+      default:
+        // tasks and any unknown entity type fall back to tasks endpoint
+        exportTasks.mutate(params, { onSuccess })
+        break
+    }
+  }, [entityType, buildParams, exportTasks, exportProjects, exportTimeEntries])
 
   return (
-    <button
-      onClick={handleExport}
-      disabled={isLoading}
-      className={`btn-secondary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${className}`}
-      title={`Esporta ${entity} come CSV`}
-      aria-label={`Esporta ${entity} come CSV`}
-    >
-      {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <Download className="w-4 h-4" />
-      )}
-      <span>{isLoading ? 'Esportando...' : label}</span>
-    </button>
+    <TooltipProvider>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2"
+            disabled={isBusy}
+            aria-label="Esporta dati"
+          >
+            {isBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Esporta
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem
+            onSelect={handleCsvExport}
+            disabled={isBusy}
+            className="gap-2"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+            Esporta CSV
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* Wrapper span required: Tooltip needs a focusable child but
+                  the DropdownMenuItem is disabled */}
+              <span className="block">
+                <DropdownMenuItem
+                  disabled
+                  className="gap-2 opacity-50"
+                  onSelect={(e) => e.preventDefault()}
+                  aria-disabled="true"
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Esporta PDF
+                </DropdownMenuItem>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Prossimamente</p>
+            </TooltipContent>
+          </Tooltip>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TooltipProvider>
   )
 }
-
-export default ExportButton

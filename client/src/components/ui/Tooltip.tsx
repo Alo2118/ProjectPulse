@@ -1,56 +1,30 @@
-import { useState, useRef, type ReactNode } from 'react'
+import * as React from "react"
+import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
-interface TooltipProps {
-  content: ReactNode
-  children: ReactNode
-  position?: 'top' | 'bottom' | 'left' | 'right'
-  className?: string
-}
+import { cn } from "@/lib/utils"
 
-const POSITION_CLASSES = {
-  top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-  bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-  left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-  right: 'left-full top-1/2 -translate-y-1/2 ml-2',
-} as const
+const TooltipProvider = TooltipPrimitive.Provider
 
-const ARROW_CLASSES = {
-  top: 'top-full left-1/2 -translate-x-1/2 border-t-slate-800 dark:border-t-slate-200 border-x-transparent border-b-transparent',
-  bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-slate-800 dark:border-b-slate-200 border-x-transparent border-t-transparent',
-  left: 'left-full top-1/2 -translate-y-1/2 border-l-slate-800 dark:border-l-slate-200 border-y-transparent border-r-transparent',
-  right: 'right-full top-1/2 -translate-y-1/2 border-r-slate-800 dark:border-r-slate-200 border-y-transparent border-l-transparent',
-} as const
+const Tooltip = TooltipPrimitive.Root
 
-export function Tooltip({ content, children, position = 'top', className = '' }: TooltipProps) {
-  const [isVisible, setIsVisible] = useState(false)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
+const TooltipTrigger = TooltipPrimitive.Trigger
 
-  const handleMouseEnter = () => {
-    timeoutRef.current = setTimeout(() => setIsVisible(true), 200)
-  }
-
-  const handleMouseLeave = () => {
-    clearTimeout(timeoutRef.current)
-    setIsVisible(false)
-  }
-
-  return (
-    <div
-      className={`relative inline-flex ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {children}
-      {isVisible && (
-        <div
-          className={`absolute z-50 ${POSITION_CLASSES[position]} pointer-events-none animate-fade-in`}
-        >
-          <div className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 text-xs rounded-lg px-3 py-2 shadow-lg max-w-80">
-            {content}
-          </div>
-          <div className={`absolute w-0 h-0 border-4 ${ARROW_CLASSES[position]}`} />
-        </div>
+const TooltipContent = React.forwardRef<
+  React.ComponentRef<typeof TooltipPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
+>(({ className, sideOffset = 4, ...props }, ref) => (
+  <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Content
+      ref={ref}
+      sideOffset={sideOffset}
+      className={cn(
+        "z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        className
       )}
-    </div>
-  )
-}
+      {...props}
+    />
+  </TooltipPrimitive.Portal>
+))
+TooltipContent.displayName = TooltipPrimitive.Content.displayName
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }

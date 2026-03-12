@@ -1,224 +1,218 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo } from "react"
+import { Link, Navigate } from "react-router-dom"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
-  BrainCircuit,
-  Wand2,
-  Download,
-  RefreshCw,
-  ChevronDown,
-} from 'lucide-react'
-import { usePlanningStore } from '@stores/planningStore'
-import { useProjectStore } from '@stores/projectStore'
-import { EstimationMetricsCard } from '@components/planning/EstimationMetricsCard'
-import { TeamCapacityChart } from '@components/planning/TeamCapacityChart'
-import { BottleneckAlerts } from '@components/planning/BottleneckAlerts'
+  Target,
+  Gauge,
+  TrendingUp,
+  AlertTriangle,
+  Plus,
+  PackageOpen,
+} from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { EmptyState } from "@/components/common/EmptyState"
+import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
+import { useEstimationMetricsQuery, useTeamCapacityQuery, useBottlenecksQuery } from "@/hooks/api/usePlanning"
+import { useProjectListQuery } from "@/hooks/api/useProjects"
 
-function getMonday(date: Date): Date {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = day === 0 ? 6 : day - 1
-  d.setDate(d.getDate() - diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function formatWeekLabel(monday: Date): string {
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  const fmt = (d: Date) =>
-    d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-  return `${fmt(monday)} – ${fmt(sunday)}`
+function MetricSkeleton() {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <Skeleton className="h-4 w-28 mb-2" />
+        <Skeleton className="h-8 w-20" />
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function PlanningDashboardPage() {
-  const navigate = useNavigate()
-  const {
-    estimationMetrics,
-    teamCapacity,
-    bottlenecks,
-    isLoadingMetrics,
-    isLoadingCapacity,
-    isLoadingBottlenecks,
-    fetchEstimationMetrics,
-    fetchTeamCapacity,
-    fetchBottlenecks,
-  } = usePlanningStore()
+  useSetPageContext({ domain: 'analytics' })
+  const { isPrivileged } = usePrivilegedRole()
+  const [selectedProjectId, setSelectedProjectId] = useState("")
 
-  const { projects, fetchProjects } = useProjectStore()
+  const metrics = useEstimationMetricsQuery()
+  const capacity = useTeamCapacityQuery()
+  const projects = useProjectListQuery({ limit: 100 })
+  const bottlenecks = useBottlenecksQuery(selectedProjectId)
 
-  const [weekOffset, setWeekOffset] = useState(0)
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const projectList = useMemo(() => {
+    const raw = projects.data
+    if (!raw) return []
+    const items = Array.isArray(raw) ? raw : raw.data
+    return (items as Array<{ id: string; name: string }>) ?? []
+  }, [projects.data])
 
-  const currentMonday = useMemo(() => {
-    const mon = getMonday(new Date())
-    mon.setDate(mon.getDate() + weekOffset * 7)
-    return mon
-  }, [weekOffset])
+  const capacityData = useMemo(() => {
+    if (!capacity.data) return []
+    return (capacity.data as Array<{ name: string; currentHours: number; targetHours: number }>).map(
+      (m) => ({
+        nome: m.name,
+        attuali: m.currentHours ?? 0,
+        target: m.targetHours ?? 0,
+      })
+    )
+  }, [capacity.data])
 
-  const weekLabel = useMemo(() => formatWeekLabel(currentMonday), [currentMonday])
+  const metricCards = useMemo(() => {
+    const m = metrics.data as Record<string, number> | undefined
+    if (!m) return []
+    return [
+      {
+        label: "Accuratezza Stime",
+        value: `${Math.round(m.estimationAccuracy ?? 0)}%`,
+        icon: Target,
+      },
+      {
+        label: "Velocita Media",
+        value: `${(m.averageVelocity ?? 0).toFixed(1)} task/sett`,
+        icon: Gauge,
+      },
+      {
+        label: "Tasso Completamento",
+        value: `${Math.round(m.completionRate ?? 0)}%`,
+        icon: TrendingUp,
+      },
+    ]
+  }, [metrics.data])
 
-  // Load projects for bottleneck selector
-  useEffect(() => {
-    if (projects.length === 0) fetchProjects()
-  }, [projects.length, fetchProjects])
+  const bottleneckItems = useMemo(() => {
+    if (!bottlenecks.data) return []
+    return bottlenecks.data as Array<{ id?: string; message: string; severity?: string }>
+  }, [bottlenecks.data])
 
-  // Load estimation metrics once
-  useEffect(() => {
-    fetchEstimationMetrics()
-  }, [fetchEstimationMetrics])
-
-  // Load team capacity when week changes
-  useEffect(() => {
-    fetchTeamCapacity(currentMonday.toISOString().split('T')[0])
-  }, [currentMonday, fetchTeamCapacity])
-
-  // Load bottlenecks when project selection changes
-  useEffect(() => {
-    if (selectedProjectId) {
-      fetchBottlenecks(selectedProjectId)
-    }
-  }, [selectedProjectId, fetchBottlenecks])
-
-  // Auto-select first project
-  useEffect(() => {
-    if (!selectedProjectId && projects.length > 0) {
-      const active = projects.find((p) => !['completed', 'cancelled'].includes(p.status))
-      if (active) setSelectedProjectId(active.id)
-    }
-  }, [projects, selectedProjectId])
-
-  const handleRefresh = useCallback(() => {
-    fetchEstimationMetrics()
-    fetchTeamCapacity(currentMonday.toISOString().split('T')[0])
-    if (selectedProjectId) fetchBottlenecks(selectedProjectId)
-  }, [fetchEstimationMetrics, fetchTeamCapacity, fetchBottlenecks, currentMonday, selectedProjectId])
+  if (isPrivileged === false) {
+    return <Navigate to="/" replace />
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
-            <BrainCircuit className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="page-title">
-              Pianificazione
-            </h1>
-            <p className="text-sm page-subtitle">
-              Metriche, capacità team e ottimizzazione workflow
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Pianificazione</h1>
+        <Button asChild>
+          <Link to="/planning/wizard">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuovo Piano
+          </Link>
+        </Button>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {metrics.isLoading
+          ? Array.from({ length: 3 }).map((_, i) => <MetricSkeleton key={i} />)
+          : metricCards.map((mc) => {
+              const Icon = mc.icon
+              return (
+                <Card key={mc.label}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">{mc.label}</p>
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground mt-2">{mc.value}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+      </div>
+
+      {/* Team Capacity */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Capacita Team</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {capacity.isLoading ? (
+            <Skeleton className="h-[300px] w-full" />
+          ) : capacityData.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Nessun dato disponibile
             </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={capacityData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis type="number" tick={{ fontSize: 12 }} />
+                <YAxis dataKey="nome" type="category" width={120} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="attuali" fill="#3b82f6" name="Ore Attuali" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="target" fill="#e2e8f0" name="Ore Target" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Bottleneck Alerts */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Colli di Bottiglia</CardTitle>
+            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <SelectTrigger className="w-[240px]">
+                <SelectValue placeholder="Seleziona progetto" />
+              </SelectTrigger>
+              <SelectContent>
+                {projectList.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleRefresh} className="btn-secondary flex items-center gap-1.5 text-sm">
-            <RefreshCw className="w-4 h-4" />
-            Aggiorna
-          </button>
-          <button
-            onClick={() => navigate('/planning/wizard')}
-            className="btn-primary flex items-center gap-1.5 text-sm"
-          >
-            <Wand2 className="w-4 h-4" />
-            Pianifica Progetto
-          </button>
-        </div>
-      </div>
-
-      {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left column: Estimation Metrics */}
-        <EstimationMetricsCard
-          byUser={estimationMetrics?.byUser ?? []}
-          byType={estimationMetrics?.byType ?? []}
-          overall={estimationMetrics?.overall ?? { avgAccuracyRatio: 0, totalTasksAnalyzed: 0, overrunRate: 0, avgVelocity: 0 }}
-          isLoading={isLoadingMetrics}
-        />
-
-        {/* Right column: Team Capacity */}
-        <TeamCapacityChart
-          data={teamCapacity}
-          weekLabel={weekLabel}
-          onPrevWeek={() => setWeekOffset((o) => o - 1)}
-          onNextWeek={() => setWeekOffset((o) => o + 1)}
-          isLoading={isLoadingCapacity}
-        />
-      </div>
-
-      {/* Bottleneck section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          {/* Project selector */}
-          <div className="flex items-center gap-2 mb-3">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Analisi progetto:
-            </label>
-            <div className="relative">
-              <select
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="input pr-8 text-sm min-w-[200px]"
-              >
-                <option value="">Seleziona progetto...</option>
-                {projects
-                  .filter((p) => !['completed', 'cancelled'].includes(p.status))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
-              <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        </CardHeader>
+        <CardContent>
+          {!selectedProjectId ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Seleziona un progetto per visualizzare i colli di bottiglia
+            </p>
+          ) : bottlenecks.isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
             </div>
-          </div>
-          <BottleneckAlerts data={bottlenecks} isLoading={isLoadingBottlenecks} />
-        </div>
-
-        {/* Quick actions */}
-        <div className="card p-5 space-y-3">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-            Azioni Rapide
-          </h3>
-          <div className="space-y-2">
-            <button
-              onClick={() => navigate('/planning/wizard')}
-              className="w-full flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 hover:from-violet-100 hover:to-purple-100 dark:hover:from-violet-900/30 dark:hover:to-purple-900/30 transition-colors text-left"
-            >
-              <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/40">
-                <Wand2 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Pianifica Progetto</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Wizard guidato con template</p>
-              </div>
-            </button>
-            <button
-              onClick={handleRefresh}
-              className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-left"
-            >
-              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40">
-                <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Aggiorna Metriche</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Ricalcola tutti i dati</p>
-              </div>
-            </button>
-            <button
-              disabled
-              className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-white/5 opacity-60 cursor-not-allowed text-left"
-            >
-              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
-                <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Esporta Report</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Prossimamente</p>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
+          ) : bottleneckItems.length === 0 ? (
+            <EmptyState
+              icon={PackageOpen}
+              title="Nessun collo di bottiglia"
+              description="Il progetto non presenta criticita al momento"
+            />
+          ) : (
+            <div className="space-y-2">
+              {bottleneckItems.map((b, i) => (
+                <div
+                  key={b.id ?? i}
+                  className="flex items-start gap-3 rounded-lg border border-border bg-muted/50 p-3"
+                >
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-sm text-foreground">{b.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

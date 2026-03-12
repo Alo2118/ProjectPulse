@@ -1,37 +1,25 @@
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface EmptyStateProps {
   icon: LucideIcon
   title: string
   description?: string
-  action?: {
-    label: string
-    onClick: () => void
-  }
-  compact?: boolean
-  className?: string
+  action?: { label: string; onClick: () => void }
 }
 
-export function EmptyState({ icon: Icon, title, description, action, compact = false, className = '' }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className={`text-center ${compact ? 'py-6' : 'py-12'} ${className}`}>
-      <div className={`mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center ${
-        compact ? 'w-12 h-12' : 'w-20 h-20'
-      }`}>
-        <Icon className={`text-slate-400 dark:text-slate-500 ${compact ? 'w-6 h-6' : 'w-10 h-10'}`} />
-      </div>
-      <h3 className={`font-medium text-slate-900 dark:text-white ${compact ? 'text-sm mb-1' : 'text-lg mb-2'}`}>
-        {title}
-      </h3>
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Icon className="h-12 w-12 text-muted-foreground/50 mb-4" />
+      <h3 className="text-lg font-semibold text-foreground">{title}</h3>
       {description && (
-        <p className={`text-slate-500 dark:text-slate-400 max-w-sm mx-auto ${compact ? 'text-xs' : 'text-sm mb-4'}`}>
-          {description}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground max-w-sm">{description}</p>
       )}
-      {action && !compact && (
-        <button onClick={action.onClick} className="btn-primary mt-4">
+      {action && (
+        <Button onClick={action.onClick} className="mt-4">
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   )

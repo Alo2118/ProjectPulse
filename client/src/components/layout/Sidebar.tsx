@@ -1,260 +1,253 @@
-import { useState, useCallback } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@stores/authStore'
-import { useDashboardStore } from '@stores/dashboardStore'
-import { useNotificationStore } from '@stores/notificationStore'
-import { useSearchStore } from '@stores/searchStore'
+import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { usePageContext, type Domain } from '@/hooks/ui/usePageContext'
 import {
-  LayoutDashboard,
+  Home,
   FolderKanban,
   CheckSquare,
   Clock,
+  MessageSquarePlus,
   AlertTriangle,
   FileText,
   BarChart3,
-  MessageSquarePlus,
-  CalendarDays,
-  ClipboardList,
-  Shield,
-  LayoutTemplate,
-  Building2,
-  Settings2,
-  FileDown,
-  GitBranch,
-  Zap,
   BrainCircuit,
+  ClipboardList,
   UserCog,
-  Bell,
-  Sun,
-  X,
-  ChevronRight,
-  Search,
+  Building2,
+  Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
   LogOut,
+  X,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { cn, getUserInitials, getAvatarColor } from '@/lib/utils'
+import { useUIStore } from '@/stores/uiStore'
+import { usePrivilegedRole } from '@/hooks/ui/usePrivilegedRole'
+import { useLogout } from '@/hooks/api/useAuth'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { SidebarNavItem } from './SidebarNavItem'
+import { SidebarNavGroup } from './SidebarNavGroup'
+import { ROLE_LABELS } from '@/lib/constants'
 
 interface NavItem {
-  name: string
-  href: string
-  icon: typeof LayoutDashboard
-  roles: string[]
-}
-
-interface NavGroup {
-  key: string
+  icon: LucideIcon
   label: string
-  collapsible: boolean
-  items: NavItem[]
+  href: string
+  badge?: number
+  domain?: Domain
 }
 
-const navigationGroups: NavGroup[] = [
-  {
-    key: 'primary',
-    label: '',
-    collapsible: false,
-    items: [
-      { name: 'La Mia Giornata', href: '/my-day', icon: Sun, roles: ['admin', 'direzione', 'dipendente'] },
-      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
-      { name: 'Progetti', href: '/projects', icon: FolderKanban, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
-      { name: 'Task', href: '/tasks', icon: CheckSquare, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
-      { name: 'Calendario', href: '/calendar', icon: CalendarDays, roles: ['admin', 'direzione', 'dipendente', 'guest'] },
-      { name: 'Tempo', href: '/time-tracking', icon: Clock, roles: ['admin', 'direzione', 'dipendente'] },
-    ],
-  },
-  {
-    key: 'gestione',
-    label: 'Gestione',
-    collapsible: true,
-    items: [
-      { name: 'Segnalazioni', href: '/inputs', icon: MessageSquarePlus, roles: ['admin', 'direzione', 'dipendente'] },
-      { name: 'Rischi', href: '/risks', icon: AlertTriangle, roles: ['admin', 'direzione'] },
-      { name: 'Documenti', href: '/documents', icon: FileText, roles: ['admin', 'direzione'] },
-    ],
-  },
-  {
-    key: 'analisi',
-    label: 'Analisi',
-    collapsible: true,
-    items: [
-      { name: 'Pianificazione', href: '/planning', icon: BrainCircuit, roles: ['admin', 'direzione'] },
-      { name: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['admin', 'direzione'] },
-      { name: 'Report Settimanale', href: '/reports/weekly', icon: ClipboardList, roles: ['admin', 'direzione', 'dipendente'] },
-    ],
-  },
-  {
-    key: 'admin',
-    label: 'Amministrazione',
-    collapsible: true,
-    items: [
-      { name: 'Utenti', href: '/users', icon: UserCog, roles: ['admin'] },
-      { name: 'Reparti', href: '/admin/departments', icon: Building2, roles: ['admin'] },
-      { name: 'Template', href: '/admin/templates', icon: LayoutTemplate, roles: ['admin'] },
-      { name: 'Campi Custom', href: '/admin/custom-fields', icon: Settings2, roles: ['admin', 'direzione'] },
-      { name: 'Import / Export', href: '/admin/import', icon: FileDown, roles: ['admin', 'direzione'] },
-      { name: 'Workflow', href: '/admin/workflows', icon: GitBranch, roles: ['admin'] },
-      { name: 'Automazioni', href: '/admin/automations', icon: Zap, roles: ['admin', 'direzione'] },
-      { name: 'Registro Audit', href: '/audit', icon: Shield, roles: ['admin', 'direzione'] },
-    ],
-  },
-]
-
-export default function Sidebar() {
-  const { user, logout } = useAuthStore()
+export function Sidebar() {
+  const collapsed = useUIStore((s) => s.sidebarCollapsed)
+  const mobileOpen = useUIStore((s) => s.mobileSidebarOpen)
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
+  const setMobileSidebar = useUIStore((s) => s.setMobileSidebar)
+  const { user, isPrivileged, isAdmin, isGuest } = usePrivilegedRole()
+  const logoutMutation = useLogout()
   const navigate = useNavigate()
-  const userRole = user?.role || 'dipendente'
-  const { mobileSidebarOpen, setMobileSidebarOpen } = useDashboardStore()
-  const unreadCount = useNotificationStore((s) => s.unreadCount)
-  const openSearch = useSearchStore((s) => s.open)
+  const pageContext = usePageContext()
 
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('sidebar-collapsed') || '{}')
-    } catch {
-      return {}
+  const primaryItems: NavItem[] = useMemo(
+    () => [{ icon: Home, label: 'Home', href: '/', domain: 'home' }],
+    []
+  )
+
+  const lavoroItems: NavItem[] = useMemo(
+    () => [
+      { icon: FolderKanban, label: 'Progetti', href: '/projects', domain: 'project' },
+      { icon: CheckSquare, label: 'Task', href: '/tasks', domain: 'task' },
+      { icon: Clock, label: 'Tempo', href: '/time-tracking', domain: 'time_entry' },
+    ],
+    []
+  )
+
+  const gestioneItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = [
+      { icon: MessageSquarePlus, label: 'Segnalazioni', href: '/inputs', domain: 'input' },
+    ]
+    if (isPrivileged) {
+      items.push(
+        { icon: AlertTriangle, label: 'Rischi', href: '/risks', domain: 'risk' },
+        { icon: FileText, label: 'Documenti', href: '/documents', domain: 'document' }
+      )
     }
-  })
+    return items
+  }, [isPrivileged])
 
-  const toggleGroup = useCallback((group: string) => {
-    setCollapsedGroups((prev) => {
-      const next = { ...prev, [group]: !prev[group] }
-      localStorage.setItem('sidebar-collapsed', JSON.stringify(next))
-      return next
+  const analisiItems: NavItem[] = useMemo(
+    () => [
+      { icon: BarChart3, label: 'Analytics', href: '/analytics', domain: 'analytics' },
+      { icon: BrainCircuit, label: 'Pianificazione', href: '/planning', domain: 'analytics' },
+      { icon: ClipboardList, label: 'Report', href: '/reports', domain: 'analytics' },
+    ],
+    []
+  )
+
+  const adminItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = []
+    if (isAdmin) {
+      items.push(
+        { icon: UserCog, label: 'Utenti', href: '/admin/users', domain: 'admin' },
+        { icon: Building2, label: 'Reparti', href: '/admin/departments', domain: 'admin' }
+      )
+    }
+    if (isPrivileged) {
+      items.push({ icon: Settings, label: 'Configurazione', href: '/admin/config', domain: 'admin' })
+    }
+    return items
+  }, [isAdmin, isPrivileged])
+
+  const renderNavItems = (items: NavItem[]) =>
+    items.map((item) => {
+      const domainMatch = pageContext && item.domain && item.domain === pageContext.domain
+      return (
+        <SidebarNavItem
+          key={item.href}
+          icon={item.icon}
+          label={item.label}
+          href={item.href}
+          badge={item.badge}
+          collapsed={collapsed}
+          contextColor={domainMatch ? pageContext.color : undefined}
+        />
+      )
     })
-  }, [])
 
-  const closeMobile = () => setMobileSidebarOpen(false)
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-    closeMobile()
-  }
+  const handleLogout = () => logoutMutation.mutate()
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="flex items-center justify-between h-14 px-5 border-b sidebar-border">
-        <span className="sidebar-logo">ProjectPulse</span>
-        <button
-          onClick={closeMobile}
-          className="lg:hidden btn-icon"
-          aria-label="Chiudi sidebar"
+    <div className="flex h-full flex-col bg-card">
+      {/* Logo / Brand */}
+      <div
+        className={cn(
+          'flex h-14 items-center border-b border-border px-4 shrink-0',
+          collapsed && 'justify-center px-2'
+        )}
+      >
+        {collapsed ? (
+          <span className="text-lg font-bold text-primary">PP</span>
+        ) : (
+          <span className="text-lg font-bold text-foreground">
+            Project<span className="text-primary">Pulse</span>
+          </span>
+        )}
+        {/* Mobile close button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto md:hidden h-8 w-8"
+          onClick={() => setMobileSidebar(false)}
         >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="px-3 py-3">
-        <button
-          onClick={() => { openSearch(); closeMobile() }}
-          className="sidebar-search"
-        >
-          <Search className="w-4 h-4" />
-          <span className="text-xs">Cerca...</span>
-          <kbd className="ml-auto hidden sm:inline-flex text-[10px] rounded px-1 py-0.5" style={{ color: 'var(--text-tertiary)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'var(--border-default)' }}>
-            Ctrl K
-          </kbd>
-        </button>
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 overflow-y-auto scrollbar-hide">
-        {navigationGroups.map((group) => {
-          const visibleItems = group.items.filter((item) =>
-            item.roles.includes(userRole)
-          )
-          if (visibleItems.length === 0) return null
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+        <TooltipProvider>
+          {/* Primary */}
+          <div className="space-y-0.5">{renderNavItems(primaryItems)}</div>
 
-          const isCollapsed = group.collapsible && collapsedGroups[group.key]
+          {/* Lavoro */}
+          <SidebarNavGroup label="Lavoro" collapsed={collapsed}>
+            {renderNavItems(lavoroItems)}
+          </SidebarNavGroup>
 
-          return (
-            <div key={group.key} className="mb-1">
-              {group.collapsible && group.label && (
-                <button
-                  onClick={() => toggleGroup(group.key)}
-                  className="flex items-center justify-between w-full px-3 pt-4 pb-1 group"
-                >
-                  <span className="nav-group-label">
-                    {group.label}
-                  </span>
-                  <ChevronRight
-                    className={`nav-group-chevron ${
-                      !isCollapsed ? 'rotate-90' : ''
-                    }`}
-                  />
-                </button>
-              )}
-              {!isCollapsed && (
-                <div className="space-y-0.5">
-                  {visibleItems.map((item) => (
-                    <NavLink
-                      key={item.name}
-                      to={item.href}
-                      onClick={closeMobile}
-                      className={({ isActive }) =>
-                        `nav-item ${isActive ? 'nav-item-active' : ''}`
-                      }
-                    >
-                      <item.icon className="w-4.5 h-4.5 mr-3 flex-shrink-0" />
-                      <span className="truncate">{item.name}</span>
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })}
+          {/* Gestione (privileged + non-guest) */}
+          {!isGuest && gestioneItems.length > 0 && (
+            <SidebarNavGroup label="Gestione" collapsed={collapsed}>
+              {renderNavItems(gestioneItems)}
+            </SidebarNavGroup>
+          )}
+
+          {/* Analisi (privileged only) */}
+          {isPrivileged && (
+            <SidebarNavGroup label="Analisi" collapsed={collapsed}>
+              {renderNavItems(analisiItems)}
+            </SidebarNavGroup>
+          )}
+
+          {/* Admin */}
+          {adminItems.length > 0 && (
+            <SidebarNavGroup label="Admin" collapsed={collapsed}>
+              {renderNavItems(adminItems)}
+            </SidebarNavGroup>
+          )}
+        </TooltipProvider>
       </nav>
 
       {/* Bottom section */}
-      <div className="px-3 py-2 border-t sidebar-border space-y-0.5">
-        {/* Notifications */}
-        <NavLink
-          to="/notifications"
-          onClick={closeMobile}
-          className={({ isActive }) =>
-            `nav-item ${isActive ? 'nav-item-active' : ''}`
-          }
-        >
-          <Bell className="w-4.5 h-4.5 mr-3 flex-shrink-0" />
-          <span>Notifiche</span>
-          {unreadCount > 0 && (
-            <span className="notification-badge">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
+      <div className="shrink-0 border-t border-border p-2 space-y-2">
+        {/* Collapse toggle (desktop only) */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'hidden md:flex w-full gap-2 text-muted-foreground hover:text-foreground',
+            collapsed && 'justify-center'
           )}
-        </NavLink>
+          onClick={toggleSidebar}
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <>
+              <PanelLeftClose className="h-4 w-4" />
+              <span className="text-xs">Comprimi</span>
+            </>
+          )}
+        </Button>
 
-        {/* User info */}
-        <div className="flex items-center gap-2 mt-2 px-2 py-2">
-          <button
-            onClick={() => { navigate('/profile'); closeMobile() }}
-            className="flex items-center gap-3 flex-1 min-w-0 rounded-lg p-1 -m-1 transition-colors sidebar-user-btn"
-            title="Modifica profilo"
+        <Separator />
+
+        {/* User card */}
+        {user && (
+          <div
+            className={cn(
+              'flex items-center gap-3 rounded-lg p-2',
+              collapsed && 'justify-center'
+            )}
           >
-            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', boxShadow: '0 0 0 2px var(--accent-primary-bg)' }}>
-              <span className="text-xs font-medium text-white">
-                {user?.firstName?.[0]}{user?.lastName?.[0]}
-              </span>
-            </div>
-            <div className="text-left min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs capitalize" style={{ color: 'var(--text-tertiary)' }}>
-                {user?.role}
-              </p>
-            </div>
-          </button>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-lg text-themed-tertiary hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 flex-shrink-0"
-            aria-label="Esci"
-            title="Esci"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigate('/profile')
+                setMobileSidebar(false)
+              }}
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white',
+                getAvatarColor(`${user.firstName} ${user.lastName}`)
+              )}
+            >
+              {getUserInitials(user.firstName, user.lastName)}
+            </button>
+
+            {!collapsed && (
+              <div className="flex flex-1 items-center gap-2 min-w-0">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <Badge variant="secondary" className="mt-0.5 text-[10px] px-1.5 py-0">
+                    {ROLE_LABELS[user.role] ?? user.role}
+                  </Badge>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -262,18 +255,23 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 sidebar hidden lg:block">
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-30 hidden md:flex flex-col border-r border-border transition-[width] duration-200 ease-in-out',
+          collapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]'
+        )}
+      >
         {sidebarContent}
       </aside>
 
       {/* Mobile overlay */}
-      {mobileSidebarOpen && (
+      {mobileOpen && (
         <>
           <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
-            onClick={closeMobile}
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setMobileSidebar(false)}
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-64 sidebar lg:hidden">
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-[var(--sidebar-width)] flex-col md:hidden">
             {sidebarContent}
           </aside>
         </>

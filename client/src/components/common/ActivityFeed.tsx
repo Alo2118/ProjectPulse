@@ -1,6 +1,11 @@
 import { cn, getUserInitials, getAvatarColor } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
+function splitName(name: string): [string, string] {
+  const parts = name.trim().split(/\s+/)
+  return [parts[0] ?? '', parts.slice(1).join(' ') || '']
+}
+
 export interface ActivityItem {
   id: string
   type: 'comment' | 'system'
@@ -31,7 +36,7 @@ export function ActivityFeed({ items, maxItems, className }: ActivityFeedProps) 
                 className="font-heading font-bold"
                 style={{ backgroundColor: getAvatarColor(item.userName) }}
               >
-                {getUserInitials(item.userName)}
+                {getUserInitials(...splitName(item.userName))}
               </AvatarFallback>
             </Avatar>
           ) : (

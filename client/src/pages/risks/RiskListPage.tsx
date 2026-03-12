@@ -1,12 +1,25 @@
-import { useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ShieldAlert } from "lucide-react"
+import {
+  ShieldAlert,
+  AlertTriangle,
+  Shield,
+  ShieldCheck,
+  CheckSquare,
+  Eye,
+  Pencil,
+} from "lucide-react"
+import { motion } from "framer-motion"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
-import { StatusDot } from "@/components/common/StatusDot"
-import { ParentLink } from "@/components/common/ParentLink"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   RISK_STATUS_LABELS,
   RISK_CATEGORY_LABELS,
@@ -14,23 +27,34 @@ import {
   RISK_IMPACT_LABELS,
   RISK_SCORE_MAP,
 } from "@/lib/constants"
+import type { KpiCard } from "@/components/common/KpiStrip"
 import { cn } from "@/lib/utils"
 import { useRiskListQuery } from "@/hooks/api/useRisks"
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface Risk {
   id: string
   code: string
   title: string
+  description?: string | null
   category: string
   probability: string
   impact: string
   status: string
-  project?: { id: string; name: string }
+  mitigation?: string | null
+  project?: { id: string; name: string } | null
   owner?: { id: string; firstName: string; lastName: string } | null
+  linkedTasks?: Array<{ id: string; title: string; status: string }> | null
   createdAt: string
+  updatedAt?: string
 }
 
-// --- Score helpers ---
+// ---------------------------------------------------------------------------
+// Score & severity helpers
+// ---------------------------------------------------------------------------
 
 function computeScore(probability: string, impact: string): number {
   const p = RISK_SCORE_MAP[probability] ?? 1
@@ -59,133 +83,642 @@ const SEVERITY_LABELS: Record<RiskSeverity, string> = {
 
 const SEVERITY_ORDER: RiskSeverity[] = ["critical", "high", "medium", "low", "mitigated"]
 
-// Max possible score = 3×3 = 9
-const MAX_SCORE = 9
-
 const SEVERITY_BADGE_CLASSES: Record<RiskSeverity, string> = {
-  critical: "bg-destructive/10 text-destructive border-destructive/20",
-  high: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
-  medium: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30",
+  critical:
+    "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30",
+  high: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
+  medium:
+    "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30",
   low: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
-  mitigated: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
+  mitigated:
+    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
 }
 
-const SEVERITY_PROGRESS_CLASSES: Record<RiskSeverity, string> = {
-  critical: "[&>div]:bg-destructive",
-  high: "[&>div]:bg-orange-500 dark:[&>div]:bg-orange-400",
-  medium: "[&>div]:bg-amber-500 dark:[&>div]:bg-amber-400",
-  low: "[&>div]:bg-slate-400 dark:[&>div]:bg-slate-500",
-  mitigated: "[&>div]:bg-green-500 dark:[&>div]:bg-green-400",
+const SEVERITY_DISPLAY_LABELS: Record<RiskSeverity, string> = {
+  critical: "Critico",
+  high: "Alto",
+  medium: "Medio",
+  low: "Basso",
+  mitigated: "Mitigato",
 }
 
-// --- Columns ---
+const SEVERITY_DOT_COLOR: Record<RiskSeverity, string> = {
+  critical: "bg-red-500",
+  high: "bg-orange-500",
+  medium: "bg-amber-500",
+  low: "bg-slate-400",
+  mitigated: "bg-green-500",
+}
 
-const columns: Column<Risk>[] = [
-  {
-    key: "title",
-    header: "Rischio",
-    sortable: true,
-    cell: (item) => {
-      const score = computeScore(item.probability, item.impact)
-      const severity = getRiskSeverity(item)
-      const scorePct = Math.round((score / MAX_SCORE) * 100)
-      const pLabel = RISK_PROBABILITY_LABELS[item.probability] ?? item.probability
-      const iLabel = RISK_IMPACT_LABELS[item.impact] ?? item.impact
-      const categoryLabel = RISK_CATEGORY_LABELS[item.category] ?? item.category
-      const ownerName = item.owner
-        ? `${item.owner.firstName[0]}. ${item.owner.lastName}`
-        : null
+const SEVERITY_ROW_BORDER: Record<RiskSeverity, string> = {
+  critical: "border-l-2 border-l-red-500/60",
+  high: "border-l-2 border-l-orange-500/50",
+  medium: "border-l-2 border-l-amber-500/40",
+  low: "border-l-2 border-l-slate-400/30",
+  mitigated: "border-l-2 border-l-green-500/30",
+}
 
-      return (
-        <div className="min-w-0 py-1 space-y-0.5">
-          {/* Line 1: status dot + P×I badge + title */}
-          <div className="flex items-center gap-2 min-w-0">
-            <StatusDot status={item.status} size="md" />
-            <span
-              className={cn(
-                "shrink-0 text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded border",
-                SEVERITY_BADGE_CLASSES[severity]
-              )}
-              title={`Probabilità: ${pLabel} · Impatto: ${iLabel}`}
-            >
-              P{RISK_SCORE_MAP[item.probability] ?? "?"}×I{RISK_SCORE_MAP[item.impact] ?? "?"}
-            </span>
-            <span className="font-medium text-sm truncate leading-tight flex-1 min-w-0">
-              {item.title}
-            </span>
-          </div>
+// Risk status labels (mockup uses "In mitigazione" for mitigated)
+const RISK_STATUS_DISPLAY: Record<string, string> = {
+  open: "Aperto",
+  mitigated: "In mitigazione",
+  accepted: "Accettato",
+  closed: "Chiuso",
+}
 
-          {/* Line 2: parent project + owner */}
-          <div className="flex items-center gap-1 text-xs text-muted-foreground pl-5">
-            {item.project ? (
-              <ParentLink
-                name={item.project.name}
-                href={`/projects/${item.project.id}`}
-                domain="project"
-              />
-            ) : null}
-            {item.project && ownerName && (
-              <span aria-hidden="true" className="text-muted-foreground/50">·</span>
+const RISK_STATUS_BADGE_CLASSES: Record<string, string> = {
+  open: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30",
+  mitigated:
+    "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/30",
+  accepted:
+    "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30",
+  closed:
+    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
+}
+
+// Score badge classes
+function getScoreBadgeClass(score: number): string {
+  if (score >= 7)
+    return "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+  if (score >= 4)
+    return "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
+  return "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function DotRating({
+  value,
+  max = 3,
+  color,
+}: {
+  value: number
+  max?: number
+  color: string
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: max }, (_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "h-1.5 w-1.5 rounded-full",
+            i < value ? color : "bg-muted border border-border"
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
+function OwnerCell({
+  owner,
+}: {
+  owner?: { id: string; firstName: string; lastName: string } | null
+}) {
+  if (!owner) return <span className="text-xs text-muted-foreground">—</span>
+  const initials = `${owner.firstName[0] ?? ""}${owner.lastName[0] ?? ""}`.toUpperCase()
+  const shortName = `${owner.firstName[0]}. ${owner.lastName}`
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <Avatar className="h-5 w-5 shrink-0">
+        <AvatarFallback className="text-[9px] font-bold">{initials}</AvatarFallback>
+      </Avatar>
+      <span className="text-xs text-muted-foreground truncate">{shortName}</span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Severity chip filter
+// ---------------------------------------------------------------------------
+
+type SevFilter = "all" | "critical" | "high" | "medium" | "low"
+type StaFilter = "all" | "open" | "mitigated" | "closed"
+
+const SEV_CHIPS: { value: SevFilter; label: string }[] = [
+  { value: "all", label: "Tutti" },
+  { value: "critical", label: "Critico" },
+  { value: "high", label: "Alto" },
+  { value: "medium", label: "Medio" },
+  { value: "low", label: "Basso" },
+]
+
+const STA_CHIPS: { value: StaFilter; label: string }[] = [
+  { value: "all", label: "Tutti" },
+  { value: "open", label: "Aperto" },
+  { value: "mitigated", label: "In mitigazione" },
+  { value: "closed", label: "Chiuso" },
+]
+
+const SEV_ACTIVE_CLASSES: Record<SevFilter, string> = {
+  all: "bg-accent text-foreground border-border",
+  critical: "bg-red-100 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/40",
+  high: "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/40",
+  medium: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40",
+  low: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/40",
+}
+
+const STA_ACTIVE_CLASSES: Record<StaFilter, string> = {
+  all: "bg-accent text-foreground border-border",
+  open: "bg-red-100 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/40",
+  mitigated: "bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/40",
+  closed: "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/40",
+}
+
+function ChipFilter<T extends string>({
+  label,
+  chips,
+  value,
+  onChange,
+  activeClasses,
+}: {
+  label: string
+  chips: { value: T; label: string }[]
+  value: T
+  onChange: (v: T) => void
+  activeClasses: Record<T, string>
+}) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
+        {label}
+      </span>
+      {chips.map((chip) => {
+        const isActive = value === chip.value
+        return (
+          <button
+            key={chip.value}
+            type="button"
+            onClick={() => onChange(chip.value)}
+            className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold border transition-all",
+              isActive
+                ? activeClasses[chip.value]
+                : "bg-muted/40 text-muted-foreground border-border hover:text-foreground hover:border-border/80"
             )}
-            {ownerName && <span className="truncate">{ownerName}</span>}
-          </div>
+          >
+            {chip.value === "critical" && (
+              <AlertTriangle className="h-2.5 w-2.5" />
+            )}
+            {chip.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
-          {/* Line 3: category badge + score bar */}
-          <div className="flex items-center gap-2 pl-5">
+// ---------------------------------------------------------------------------
+// Detail drawer (Sheet)
+// ---------------------------------------------------------------------------
+
+function RiskDrawer({
+  risk,
+  open,
+  onClose,
+}: {
+  risk: Risk | null
+  open: boolean
+  onClose: () => void
+}) {
+  if (!risk) return null
+
+  const severity = getRiskSeverity(risk)
+  const score = computeScore(risk.probability, risk.impact)
+  const dotColor = SEVERITY_DOT_COLOR[severity]
+  const probValue = RISK_SCORE_MAP[risk.probability] ?? 1
+  const impactValue = RISK_SCORE_MAP[risk.impact] ?? 1
+  const linkedTasks = risk.linkedTasks ?? []
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <SheetContent
+        side="right"
+        className="w-[420px] sm:max-w-[420px] p-0 flex flex-col overflow-hidden"
+      >
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-2 mb-2">
             <Badge
               variant="outline"
-              className="text-[10px] px-1.5 py-0 shrink-0 text-muted-foreground"
+              className={cn(
+                "text-[11px] font-semibold border",
+                SEVERITY_BADGE_CLASSES[severity]
+              )}
             >
-              {categoryLabel}
+              {severity === "critical" && (
+                <AlertTriangle className="h-2.5 w-2.5 mr-1" />
+              )}
+              {SEVERITY_DISPLAY_LABELS[severity]}
             </Badge>
-            <Progress
-              value={scorePct}
-              className={cn("h-1 flex-1 max-w-[80px]", SEVERITY_PROGRESS_CLASSES[severity])}
-            />
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[11px] font-semibold border",
+                RISK_STATUS_BADGE_CLASSES[risk.status] ??
+                  "bg-muted text-muted-foreground border-border"
+              )}
+            >
+              {RISK_STATUS_DISPLAY[risk.status] ?? risk.status}
+            </Badge>
           </div>
+          <SheetTitle className="text-[15px] font-bold leading-snug pr-8">
+            {risk.title}
+          </SheetTitle>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {risk.code}
+            {risk.project ? ` · ${risk.project.name}` : ""}
+          </p>
         </div>
-      )
-    },
-  },
-  {
-    key: "score",
-    header: "Rischio",
-    className: "w-[90px] text-right",
-    cell: (item) => {
-      const score = computeScore(item.probability, item.impact)
-      const severity = getRiskSeverity(item)
-      const severityLabel =
-        severity === "mitigated"
-          ? RISK_STATUS_LABELS[item.status] ?? item.status
-          : SEVERITY_LABELS[severity]
 
-      return (
-        <div className="flex flex-col items-end gap-0.5">
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {/* Parametri rischio */}
+          <DrawerSection title="Parametri rischio">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Probabilità
+                </p>
+                <DotRating value={probValue} max={3} color={dotColor} />
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {RISK_PROBABILITY_LABELS[risk.probability] ?? risk.probability}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Impatto
+                </p>
+                <DotRating value={impactValue} max={3} color={dotColor} />
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {RISK_IMPACT_LABELS[risk.impact] ?? risk.impact}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Score (P×I)
+                </p>
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-center w-7 h-5 rounded text-[11px] font-bold",
+                    getScoreBadgeClass(score)
+                  )}
+                >
+                  {score}
+                </span>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Responsabile
+                </p>
+                <OwnerCell owner={risk.owner} />
+              </div>
+            </div>
+          </DrawerSection>
+
+          {/* Descrizione */}
+          {risk.description && (
+            <DrawerSection title="Descrizione">
+              <div className="text-xs text-muted-foreground leading-relaxed bg-muted/40 rounded-md px-3 py-2.5 border border-border/60">
+                {risk.description}
+              </div>
+            </DrawerSection>
+          )}
+
+          {/* Piano di mitigazione */}
+          {risk.mitigation && (
+            <DrawerSection title="Piano di mitigazione">
+              <div className="text-xs text-muted-foreground leading-relaxed bg-indigo-500/[0.04] rounded-md px-3 py-2.5 border border-indigo-500/[0.12]">
+                {risk.mitigation}
+              </div>
+            </DrawerSection>
+          )}
+
+          {/* Task collegati */}
+          <DrawerSection title="Task collegati">
+            {linkedTasks.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground italic">
+                Nessun task collegato
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {linkedTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-muted/40 border border-border/60"
+                  >
+                    <CheckSquare className="h-3 w-3 text-cyan-500 shrink-0" />
+                    <span className="flex-1 text-xs font-medium truncate min-w-0">
+                      {task.title}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] px-1.5 py-0 shrink-0"
+                    >
+                      {task.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DrawerSection>
+
+          {/* Storico modifiche */}
+          <DrawerSection title="Storico modifiche">
+            <HistoryTimeline risk={risk} />
+          </DrawerSection>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function DrawerSection({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2.5 pb-1.5 border-b border-border/60">
+        {title}
+      </p>
+      {children}
+    </div>
+  )
+}
+
+// Minimal history from risk audit fields — the backend might not have a history
+// array. We synthesise a simple timeline from createdAt / updatedAt and status.
+function HistoryTimeline({ risk }: { risk: Risk }) {
+  const items = useMemo(() => {
+    const entries: { date: string; text: string; type: string }[] = []
+    if (risk.createdAt) {
+      entries.push({
+        date: new Date(risk.createdAt).toLocaleDateString("it-IT", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+        text: "Rischio identificato e registrato",
+        type: "open",
+      })
+    }
+    if (
+      risk.status === "mitigated" &&
+      risk.updatedAt &&
+      risk.updatedAt !== risk.createdAt
+    ) {
+      entries.push({
+        date: new Date(risk.updatedAt).toLocaleDateString("it-IT", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+        text: "Piano di mitigazione attivato",
+        type: "mitigated",
+      })
+    }
+    if (risk.status === "closed" && risk.updatedAt) {
+      entries.push({
+        date: new Date(risk.updatedAt).toLocaleDateString("it-IT", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+        text: "Rischio chiuso",
+        type: "closed",
+      })
+    }
+    return entries.reverse()
+  }, [risk])
+
+  if (items.length === 0) {
+    return (
+      <p className="text-[11px] text-muted-foreground italic">
+        Nessuno storico disponibile
+      </p>
+    )
+  }
+
+  const dotColor: Record<string, string> = {
+    open: "border-orange-400",
+    mitigated: "border-indigo-400",
+    closed: "border-green-400",
+    critical: "border-red-400",
+  }
+
+  return (
+    <div className="flex flex-col">
+      {items.map((item, i) => (
+        <div
+          key={i}
+          className={cn(
+            "flex gap-2.5 py-2",
+            i < items.length - 1 && "border-b border-border/40"
+          )}
+        >
+          <div
+            className={cn(
+              "mt-[3px] h-2 w-2 shrink-0 rounded-full border-2",
+              dotColor[item.type] ?? "border-muted-foreground"
+            )}
+          />
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap w-[72px] shrink-0">
+            {item.date}
+          </span>
+          <span className="text-[11px] text-muted-foreground leading-snug">
+            {item.text}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Column definitions
+// ---------------------------------------------------------------------------
+
+function buildColumns(
+  onDrawerOpen: (risk: Risk) => void,
+  navigate: (path: string) => void
+): Column<Risk>[] {
+  return [
+    {
+      key: "code",
+      header: "ID",
+      className: "w-[90px]",
+      cell: (item) => (
+        <span className="text-[11px] font-bold text-muted-foreground tabular-nums">
+          {item.code}
+        </span>
+      ),
+    },
+    {
+      key: "title",
+      header: "Titolo rischio",
+      sortable: true,
+      cell: (item) => {
+        const linkedCount = item.linkedTasks?.length ?? 0
+        return (
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-sm font-semibold leading-tight truncate">{item.title}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {linkedCount > 0
+                ? `${linkedCount} task collegat${linkedCount === 1 ? "o" : "i"}`
+                : "Nessun task collegato"}
+            </p>
+          </div>
+        )
+      },
+    },
+    {
+      key: "project",
+      header: "Progetto",
+      className: "w-[160px]",
+      cell: (item) =>
+        item.project ? (
+          <span className="text-xs text-muted-foreground">{item.project.name}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground/50">—</span>
+        ),
+    },
+    {
+      key: "severity",
+      header: "Severità",
+      className: "w-[100px]",
+      cell: (item) => {
+        const severity = getRiskSeverity(item)
+        return (
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[11px] font-semibold border gap-1",
+              SEVERITY_BADGE_CLASSES[severity]
+            )}
+          >
+            {severity === "critical" && <AlertTriangle className="h-2.5 w-2.5" />}
+            {SEVERITY_DISPLAY_LABELS[severity]}
+          </Badge>
+        )
+      },
+    },
+    {
+      key: "probability",
+      header: "Prob.",
+      className: "w-[80px]",
+      cell: (item) => {
+        const severity = getRiskSeverity(item)
+        const val = RISK_SCORE_MAP[item.probability] ?? 1
+        return (
+          <div title={RISK_PROBABILITY_LABELS[item.probability] ?? item.probability}>
+            <DotRating value={val} max={3} color={SEVERITY_DOT_COLOR[severity]} />
+          </div>
+        )
+      },
+    },
+    {
+      key: "impact",
+      header: "Impatto",
+      className: "w-[80px]",
+      cell: (item) => {
+        const severity = getRiskSeverity(item)
+        const val = RISK_SCORE_MAP[item.impact] ?? 1
+        return (
+          <div title={RISK_IMPACT_LABELS[item.impact] ?? item.impact}>
+            <DotRating value={val} max={3} color={SEVERITY_DOT_COLOR[severity]} />
+          </div>
+        )
+      },
+    },
+    {
+      key: "score",
+      header: "Score",
+      className: "w-[64px]",
+      cell: (item) => {
+        const score = computeScore(item.probability, item.impact)
+        return (
           <span
             className={cn(
-              "text-2xl font-bold tabular-nums leading-none",
-              severity === "critical" && "text-destructive",
-              severity === "high" && "text-orange-600 dark:text-orange-400",
-              severity === "medium" && "text-amber-600 dark:text-amber-400",
-              severity === "low" && "text-slate-500",
-              severity === "mitigated" && "text-green-600 dark:text-green-400"
+              "inline-flex items-center justify-center w-7 h-5 rounded text-[11px] font-bold tabular-nums",
+              getScoreBadgeClass(score)
             )}
           >
             {score}
           </span>
-          <span className="text-[10px] text-muted-foreground leading-none">{severityLabel}</span>
-        </div>
-      )
+        )
+      },
     },
-  },
-]
+    {
+      key: "status",
+      header: "Stato",
+      className: "w-[130px]",
+      cell: (item) => (
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[11px] font-semibold border",
+            RISK_STATUS_BADGE_CLASSES[item.status] ??
+              "bg-muted text-muted-foreground border-border"
+          )}
+        >
+          {RISK_STATUS_DISPLAY[item.status] ??
+            RISK_STATUS_LABELS[item.status] ??
+            item.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "owner",
+      header: "Responsabile",
+      className: "w-[130px]",
+      cell: (item) => <OwnerCell owner={item.owner} />,
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-[80px]",
+      cell: (item) => (
+        <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            title="Dettaglio"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDrawerOpen(item)
+            }}
+          >
+            <Eye className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            title="Modifica"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/risks/${item.id}/edit`)
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        </div>
+      ),
+    },
+  ]
+}
 
-// --- Filter config ---
-
-const STATUS_OPTIONS = Object.entries(RISK_STATUS_LABELS).map(([value, label]) => ({
-  value,
-  label,
-}))
+// ---------------------------------------------------------------------------
+// Filter config
+// ---------------------------------------------------------------------------
 
 const CATEGORY_OPTIONS = Object.entries(RISK_CATEGORY_LABELS).map(([value, label]) => ({
   value,
@@ -193,32 +726,102 @@ const CATEGORY_OPTIONS = Object.entries(RISK_CATEGORY_LABELS).map(([value, label
 }))
 
 const filterConfig: FilterConfig[] = [
-  { key: "search", label: "Cerca", type: "search", placeholder: "Cerca rischi..." },
-  { key: "status", label: "Stato", type: "select", options: STATUS_OPTIONS },
+  { key: "search", label: "Cerca", type: "search", placeholder: "Cerca per titolo, ID..." },
   { key: "category", label: "Categoria", type: "select", options: CATEGORY_OPTIONS },
 ]
 
-// --- Page ---
+// ---------------------------------------------------------------------------
+// KPI strip — computed from list data
+// ---------------------------------------------------------------------------
+
+function buildKpiCards(items: Risk[]): KpiCard[] {
+  const total = items.length
+  const criticalCount = items.filter((r) => getRiskSeverity(r) === "critical").length
+  const criticalOpenCount = items.filter(
+    (r) => getRiskSeverity(r) === "critical" && r.status === "open"
+  ).length
+  const mitCount = items.filter((r) => r.status === "mitigated").length
+  const closedCount = items.filter((r) => r.status === "closed").length
+  const closurePct = total > 0 ? `${Math.round((closedCount / total) * 100)}% tasso chiusura` : "0% tasso chiusura"
+
+  return [
+    {
+      label: "Totale rischi",
+      value: total,
+      color: "danger",
+      icon: ShieldAlert,
+      subtitle: `${criticalCount} critici · ${mitCount} in corso`,
+    },
+    {
+      label: "Critici",
+      value: criticalCount,
+      color: "danger",
+      icon: AlertTriangle,
+      subtitle: `${criticalOpenCount} aperti`,
+    },
+    {
+      label: "In mitigazione",
+      value: mitCount,
+      color: "indigo",
+      icon: Shield,
+      subtitle: "piani attivi",
+    },
+    {
+      label: "Chiusi",
+      value: closedCount,
+      color: "success",
+      icon: ShieldCheck,
+      subtitle: closurePct,
+    },
+  ]
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 function RiskListPage() {
   useSetPageContext({ domain: "risk" })
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // Server-side filters
   const filters = useMemo(
     () => ({
       search: searchParams.get("search") ?? "",
-      status: searchParams.get("status") ?? "",
       category: searchParams.get("category") ?? "",
       page: searchParams.get("page") ?? "1",
     }),
     [searchParams]
   )
 
+  // Client-side chip filters (not sent to API — applied locally)
+  const [sevFilter, setSevFilter] = useState<SevFilter>("all")
+  const [staFilter, setStaFilter] = useState<StaFilter>("all")
+
+  // Drawer state
+  const [drawerRisk, setDrawerRisk] = useState<Risk | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
   const { data, isLoading, error } = useRiskListQuery(filters)
 
-  const items: Risk[] = data?.data ?? []
+  const rawItems: Risk[] = data?.data ?? []
   const pagination = data?.pagination
+
+  // Apply client-side chip filters
+  const items = useMemo(() => {
+    return rawItems.filter((r) => {
+      const severity = getRiskSeverity(r)
+      const matchSev = sevFilter === "all" || severity === sevFilter
+      const matchSta =
+        staFilter === "all" ||
+        r.status === staFilter ||
+        (staFilter === "mitigated" && r.status === "mitigated")
+      return matchSev && matchSta
+    })
+  }, [rawItems, sevFilter, staFilter])
+
+  const kpiCards = useMemo(() => buildKpiCards(rawItems), [rawItems])
 
   const handleFilterChange = useCallback(
     (key: string, value: string) => {
@@ -238,6 +841,8 @@ function RiskListPage() {
 
   const handleFilterClear = useCallback(() => {
     setSearchParams(new URLSearchParams())
+    setSevFilter("all")
+    setStaFilter("all")
   }, [setSearchParams])
 
   const handlePageChange = useCallback(
@@ -245,40 +850,101 @@ function RiskListPage() {
     [handleFilterChange]
   )
 
-  // Disable groupBy when filtering by status (show flat results)
-  const useGroupBy = !filters.status
+  const handleDrawerOpen = useCallback((risk: Risk) => {
+    setDrawerRisk(risk)
+    setDrawerOpen(true)
+  }, [])
+
+  const handleDrawerClose = useCallback(() => {
+    setDrawerOpen(false)
+  }, [])
+
+  // Disable groupBy when a status chip is active
+  const useGroupBy = staFilter === "all" && sevFilter === "all"
+
+  const columns = useMemo(
+    () => buildColumns(handleDrawerOpen, navigate),
+    [handleDrawerOpen, navigate]
+  )
+
+  // Row-level left border by severity
+  const rowClassName = useCallback(
+    (item: Risk) => {
+      const severity = getRiskSeverity(item)
+      return cn("group/row", SEVERITY_ROW_BORDER[severity])
+    },
+    []
+  )
+
+  // Extra toolbar: chip filters
+  const chipFilters = (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18 }}
+      className="flex items-center gap-3 flex-wrap"
+    >
+      <div className="w-px h-5 bg-border shrink-0" />
+      <ChipFilter
+        label="Severità"
+        chips={SEV_CHIPS}
+        value={sevFilter}
+        onChange={setSevFilter}
+        activeClasses={SEV_ACTIVE_CLASSES}
+      />
+      <div className="w-px h-5 bg-border shrink-0" />
+      <ChipFilter
+        label="Stato"
+        chips={STA_CHIPS}
+        value={staFilter}
+        onChange={setStaFilter}
+        activeClasses={STA_ACTIVE_CLASSES}
+      />
+    </motion.div>
+  )
 
   return (
-    <EntityList<Risk>
-      title="Rischi"
-      icon={ShieldAlert}
-      data={items}
-      pagination={pagination}
-      isLoading={isLoading}
-      error={error as Error | null}
-      columns={columns}
-      getId={(item) => item.id}
-      filterConfig={filterConfig}
-      filters={filters}
-      onFilterChange={handleFilterChange}
-      onFilterClear={handleFilterClear}
-      onPageChange={handlePageChange}
-      onRowClick={(item) => navigate(`/risks/${item.id}`)}
-      createHref="/risks/new"
-      createLabel="Nuovo rischio"
-      emptyTitle="Nessun rischio"
-      emptyDescription="Non ci sono rischi registrati."
-      groupBy={
-        useGroupBy
-          ? {
-              getGroup: (r) => getRiskSeverity(r),
-              order: SEVERITY_ORDER,
-              labels: SEVERITY_LABELS,
-              collapsedByDefault: ["mitigated"],
-            }
-          : undefined
-      }
-    />
+    <>
+      <EntityList<Risk>
+        title="Registro Rischi"
+        icon={ShieldAlert}
+        data={items}
+        pagination={useGroupBy ? pagination : undefined}
+        isLoading={isLoading}
+        error={error as Error | null}
+        columns={columns}
+        getId={(item) => item.id}
+        filterConfig={filterConfig}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onFilterClear={handleFilterClear}
+        onPageChange={handlePageChange}
+        onRowClick={handleDrawerOpen}
+        createHref="/risks/new"
+        createLabel="Nuovo rischio"
+        emptyTitle="Nessun rischio"
+        emptyDescription="Non ci sono rischi corrispondenti ai filtri selezionati."
+        kpiStrip={kpiCards}
+        headerExtra={chipFilters}
+        rowClassName={rowClassName}
+        groupBy={
+          useGroupBy
+            ? {
+                getGroup: (r) => getRiskSeverity(r),
+                order: SEVERITY_ORDER,
+                labels: SEVERITY_LABELS,
+                collapsedByDefault: ["mitigated"],
+              }
+            : undefined
+        }
+      />
+
+      <RiskDrawer
+        risk={drawerRisk}
+        open={drawerOpen}
+        onClose={handleDrawerClose}
+      />
+    </>
   )
 }
 

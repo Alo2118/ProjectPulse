@@ -1,140 +1,255 @@
-import { useMemo } from 'react'
-import { Moon, Sun, Menu, Square } from 'lucide-react'
-import { useThemeStore } from '@stores/themeStore'
-import { useDashboardStore } from '@stores/dashboardStore'
-import { Link, useLocation } from 'react-router-dom'
-import { LiveTimer } from '@/components/ui/LiveTimer'
+import { useNavigate } from 'react-router-dom'
+import {
+  Menu,
+  Search,
+  Bell,
+  User as UserIcon,
+  LogOut,
+  Palette,
+  Monitor,
+  Sun,
+  Moon,
+  Check,
+} from 'lucide-react'
+import { cn, getUserInitials, getAvatarColor } from '@/lib/utils'
+import { useUIStore } from '@/stores/uiStore'
+import { useThemeStore } from '@/stores/themeStore'
+import { useNotificationUIStore } from '@/stores/notificationUiStore'
+import { useCurrentUser, useLogout } from '@/hooks/api/useAuth'
+import { usePageContext } from '@/hooks/ui/usePageContext'
+import { useThemeConfig } from '@/hooks/ui/useThemeConfig'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import type { ThemeStyle, ThemeMode } from '@/types'
 
-const pathLabels: Record<string, string> = {
-  'projects': 'Progetti',
-  'tasks': 'Task',
-  'time-tracking': 'Registra Tempo',
-  'team-time': 'Tempo Team',
-  'kanban': 'Kanban',
-  'gantt': 'Gantt',
-  'calendar': 'Calendario',
-  'risks': 'Rischi',
-  'documents': 'Documenti',
-  'inputs': 'Segnalazioni',
-  'planning': 'Pianificazione',
-  'analytics': 'Analytics',
-  'reports': 'Report',
-  'weekly': 'Settimanale',
-  'notifications': 'Notifiche',
-  'users': 'Utenti',
-  'admin': 'Amministrazione',
-  'departments': 'Reparti',
-  'templates': 'Template',
-  'custom-fields': 'Campi Custom',
-  'import': 'Import / Export',
-  'workflows': 'Workflow',
-  'automations': 'Automazioni',
-  'audit': 'Registro Audit',
-  'profile': 'Profilo',
-  'my-day': 'La Mia Giornata',
-  'dashboard': 'Dashboard',
-  'new': 'Nuovo',
-  'edit': 'Modifica',
+// --- Theme-adaptive header background colors (static maps for Tailwind) ---
+
+// Tech HUD: dark tinted bg with subtle glow border, light text
+const HEADER_HUD: Record<string, string> = {
+  blue:    'bg-blue-950/80 text-blue-100 border-b border-blue-500/30',
+  red:     'bg-red-950/80 text-red-100 border-b border-red-500/30',
+  purple:  'bg-purple-950/80 text-purple-100 border-b border-purple-500/30',
+  amber:   'bg-amber-950/80 text-amber-100 border-b border-amber-500/30',
+  emerald: 'bg-emerald-950/80 text-emerald-100 border-b border-emerald-500/30',
+  green:   'bg-green-950/80 text-green-100 border-b border-green-500/30',
+  indigo:  'bg-indigo-950/80 text-indigo-100 border-b border-indigo-500/30',
+  slate:   'bg-slate-950/80 text-slate-100 border-b border-slate-500/30',
 }
 
-export default function Header() {
-  const { theme, setTheme } = useThemeStore()
-  const { runningTimer, stopTimer, mobileSidebarOpen, setMobileSidebarOpen } = useDashboardStore()
-  const location = useLocation()
+// Asana Like: warm pastel bg light, rich tinted bg dark
+const HEADER_ASANA: Record<string, string> = {
+  blue:    'bg-blue-100/90 text-blue-900 border-b border-blue-300 dark:bg-blue-900/50 dark:text-blue-100 dark:border-blue-600/50',
+  red:     'bg-red-100/90 text-red-900 border-b border-red-300 dark:bg-red-900/50 dark:text-red-100 dark:border-red-600/50',
+  purple:  'bg-purple-100/90 text-purple-900 border-b border-purple-300 dark:bg-purple-900/50 dark:text-purple-100 dark:border-purple-600/50',
+  amber:   'bg-amber-100/90 text-amber-900 border-b border-amber-300 dark:bg-amber-900/50 dark:text-amber-100 dark:border-amber-600/50',
+  emerald: 'bg-emerald-100/90 text-emerald-900 border-b border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-100 dark:border-emerald-600/50',
+  green:   'bg-green-100/90 text-green-900 border-b border-green-300 dark:bg-green-900/50 dark:text-green-100 dark:border-green-600/50',
+  indigo:  'bg-indigo-100/90 text-indigo-900 border-b border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-100 dark:border-indigo-600/50',
+  slate:   'bg-slate-100/90 text-slate-900 border-b border-slate-300 dark:bg-slate-900/50 dark:text-slate-100 dark:border-slate-600/50',
+}
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
+// Office Classic: subtle tint + strong colored bottom border
+const HEADER_OFFICE: Record<string, string> = {
+  blue:    'bg-blue-50 text-foreground border-b-2 !border-b-blue-500 border-x-0 border-t-0 dark:bg-blue-950/50 dark:border-b-blue-400',
+  red:     'bg-red-50 text-foreground border-b-2 !border-b-red-500 border-x-0 border-t-0 dark:bg-red-950/50 dark:border-b-red-400',
+  purple:  'bg-purple-50 text-foreground border-b-2 !border-b-purple-500 border-x-0 border-t-0 dark:bg-purple-950/50 dark:border-b-purple-400',
+  amber:   'bg-amber-50 text-foreground border-b-2 !border-b-amber-500 border-x-0 border-t-0 dark:bg-amber-950/50 dark:border-b-amber-400',
+  emerald: 'bg-emerald-50 text-foreground border-b-2 !border-b-emerald-500 border-x-0 border-t-0 dark:bg-emerald-950/50 dark:border-b-emerald-400',
+  green:   'bg-green-50 text-foreground border-b-2 !border-b-green-500 border-x-0 border-t-0 dark:bg-green-950/50 dark:border-b-green-400',
+  indigo:  'bg-indigo-50 text-foreground border-b-2 !border-b-indigo-500 border-x-0 border-t-0 dark:bg-indigo-950/50 dark:border-b-indigo-400',
+  slate:   'bg-slate-50 text-foreground border-b-2 !border-b-slate-500 border-x-0 border-t-0 dark:bg-slate-950/50 dark:border-b-slate-400',
+}
+
+function getHeaderColorClasses(theme: ThemeStyle, domainColor: string): string {
+  switch (theme) {
+    case 'tech-hud':
+      return HEADER_HUD[domainColor] ?? ''
+    case 'asana-like':
+      return HEADER_ASANA[domainColor] ?? ''
+    case 'office-classic':
+      return HEADER_OFFICE[domainColor] ?? ''
+    default:
+      return ''
   }
+}
 
-  const breadcrumbs = useMemo(() => {
-    const segments = location.pathname.split('/').filter(Boolean)
-    const crumbs: { label: string; path: string }[] = []
-    let currentPath = ''
+const THEME_STYLE_LABELS: Record<ThemeStyle, string> = {
+  'office-classic': 'Office Classic',
+  'asana-like': 'Asana Like',
+  'tech-hud': 'Tech HUD',
+}
 
-    for (const segment of segments) {
-      currentPath += `/${segment}`
-      const label = pathLabels[segment]
-      if (label) {
-        crumbs.push({ label, path: currentPath })
-      }
-      // Skip numeric IDs in breadcrumb display
-    }
+const THEME_MODE_OPTIONS: Array<{ value: ThemeMode; label: string; icon: typeof Monitor }> = [
+  { value: 'light', label: 'Chiaro', icon: Sun },
+  { value: 'dark', label: 'Scuro', icon: Moon },
+  { value: 'system', label: 'Sistema', icon: Monitor },
+]
 
-    return crumbs
-  }, [location.pathname])
+const THEME_STYLES: ThemeStyle[] = ['office-classic', 'asana-like', 'tech-hud']
+
+export function Header() {
+  const navigate = useNavigate()
+  const setMobileSidebar = useUIStore((s) => s.setMobileSidebar)
+  const setCommandPalette = useUIStore((s) => s.setCommandPalette)
+  const { theme, mode, setTheme, setMode } = useThemeStore()
+  const setPanelOpen = useNotificationUIStore((s) => s.setPanelOpen)
+  const { data: user } = useCurrentUser()
+  const logoutMutation = useLogout()
+  const ctx = usePageContext()
+  const { getIconWrapper } = useThemeConfig()
+
+  const CtxIcon = ctx?.icon
+  const iconWrapperClass = ctx ? getIconWrapper(ctx.color) : ''
+  const domainColor = ctx?.color ?? ''
+  const headerColorClasses = domainColor ? getHeaderColorClasses(theme, domainColor) : ''
+  const hasColor = !!headerColorClasses
 
   return (
-    <header className="sticky top-0 z-40 h-14 header-bar">
-      <div className="flex items-center justify-between h-full px-6">
-        {/* Left: Mobile menu + Breadcrumb */}
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="lg:hidden btn-icon flex-shrink-0"
-            aria-label="Apri menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+    <header
+      className={cn(
+        'sticky top-0 z-20 flex h-[var(--header-height)] items-center gap-3 px-4 backdrop-blur-sm transition-colors duration-200',
+        hasColor
+          ? headerColorClasses
+          : 'border-b border-border bg-card/80'
+      )}
+    >
+      {/* Mobile menu button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden h-8 w-8 shrink-0"
+        onClick={() => setMobileSidebar(true)}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
 
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-1 text-sm min-w-0" aria-label="Breadcrumb">
-            {breadcrumbs.map((crumb, i) => (
-              <span key={crumb.path} className="flex items-center gap-1 animate-breadcrumb-slide">
-                {i > 0 && (
-                  <span className="mx-1" style={{ color: 'var(--border-default)' }}>/</span>
-                )}
-                {i === breadcrumbs.length - 1 ? (
-                  <span className="text-themed-primary font-medium truncate">{crumb.label}</span>
-                ) : (
-                  <Link
-                    to={crumb.path}
-                    className="text-themed-tertiary hover:text-themed-accent transition-colors truncate"
-                  >
-                    {crumb.label}
-                  </Link>
-                )}
-              </span>
-            ))}
-          </nav>
-        </div>
-
-        {/* Center: Running timer */}
-        {runningTimer && (
-          <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse flex-shrink-0" />
-            <Link
-              to="/time-tracking"
-              className="text-xs font-medium text-red-400 hover:text-red-300 truncate max-w-32"
-              title={runningTimer.task?.title}
-            >
-              {runningTimer.task?.title}
-            </Link>
-            <LiveTimer startTime={runningTimer.startTime} size="sm" className="text-red-400 font-mono text-xs" />
-            <button
-              onClick={() => stopTimer()}
-              className="p-0.5 rounded hover:bg-red-500/20 text-red-400 transition-colors"
-              title="Stop timer"
-              aria-label="Ferma timer"
-            >
-              <Square className="w-3 h-3" />
-            </button>
+      {/* Context-aware page title with domain icon */}
+      <div className="flex items-center gap-2 min-w-0">
+        {CtxIcon && (
+          <div className={cn('shrink-0', hasColor ? '' : iconWrapperClass)}>
+            <CtxIcon className="h-4.5 w-4.5" />
           </div>
         )}
+        <h1 className="text-base font-semibold truncate">
+          {ctx?.label ?? 'ProjectPulse'}
+        </h1>
+      </div>
 
-        {/* Right: Theme toggle */}
-        <div className="flex items-center">
-          <button
-            onClick={toggleTheme}
-            className="btn-icon"
-            aria-label={theme === 'dark' ? 'Passa a tema chiaro' : 'Passa a tema scuro'}
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4.5 h-4.5" />
-            ) : (
-              <Moon className="w-4.5 h-4.5" />
-            )}
-          </button>
-        </div>
+      {/* Right section */}
+      <div className="ml-auto flex items-center gap-1">
+        {/* Search */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('h-8 w-8', hasColor ? 'text-current/70 hover:text-current' : 'text-muted-foreground hover:text-foreground')}
+          onClick={() => setCommandPalette(true)}
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+
+        {/* Notifications */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('relative h-8 w-8', hasColor ? 'text-current/70 hover:text-current' : 'text-muted-foreground hover:text-foreground')}
+          onClick={() => setPanelOpen(true)}
+        >
+          <Bell className="h-4 w-4" />
+        </Button>
+
+        {/* Theme selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('h-8 w-8', hasColor ? 'text-current/70 hover:text-current' : 'text-muted-foreground hover:text-foreground')}
+            >
+              <Palette className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Tema
+            </DropdownMenuLabel>
+            {THEME_STYLES.map((s) => (
+              <DropdownMenuItem
+                key={s}
+                onClick={() => setTheme(s)}
+                className="flex items-center justify-between"
+              >
+                <span>{THEME_STYLE_LABELS[s]}</span>
+                {theme === s && <Check className="h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Modalità
+            </DropdownMenuLabel>
+            {THEME_MODE_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <DropdownMenuItem
+                key={value}
+                onClick={() => setMode(value)}
+                className="flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </span>
+                {mode === value && <Check className="h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* User dropdown */}
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative h-8 w-8 rounded-full p-0"
+              >
+                <div
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white',
+                    getAvatarColor(`${user.firstName} ${user.lastName}`)
+                  )}
+                >
+                  {getUserInitials(user.firstName, user.lastName)}
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium text-foreground">
+                  {user.firstName} {user.lastName}
+                </p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                Profilo
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => logoutMutation.mutate()}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Esci
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   )
