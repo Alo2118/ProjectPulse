@@ -51,10 +51,13 @@ import {
   RISK_STATUS_LABELS,
   RISK_CATEGORY_LABELS,
   RISK_SCALE_LABELS,
+  RISK_LEVEL_COLORS,
+  RISK_LEVEL_LABELS,
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_TYPE_LABELS,
   PROJECT_ROLE_LABELS,
   STATUS_COLORS,
+  getRiskLevel,
 } from "@/lib/constants"
 import { cn, formatDate, formatRelative, getUserInitials, getAvatarColor } from "@/lib/utils"
 
@@ -160,18 +163,7 @@ function buildTaskTree(tasks: TaskRow[]): TaskNode[] {
   return roots
 }
 
-function getRiskSeverityLevel(probability: number, impact: number): "high" | "medium" | "low" {
-  const score = probability * impact
-  if (score >= 15) return "high"
-  if (score >= 5) return "medium"
-  return "low"
-}
-
-const RISK_SEVERITY_STYLES: Record<string, string> = {
-  high: "bg-red-500 text-white",
-  medium: "bg-orange-400 text-white",
-  low: "bg-amber-300 text-amber-900",
-}
+// Risk severity uses centralized getRiskLevel() from constants
 
 const DOC_TYPE_ICON_COLOR: Record<string, string> = {
   design_input: "text-blue-500",
@@ -471,8 +463,8 @@ export default function ProjectDetailPage() {
   )
   const criticalRisksCount = useMemo(() => {
     return risks.filter((r) => {
-      const sev = getRiskSeverityLevel(r.probability, r.impact)
-      return sev === "high" && r.status === "open"
+      const level = getRiskLevel(Number(r.probability) * Number(r.impact))
+      return (level === "critical" || level === "high") && r.status === "open"
     }).length
   }, [risks])
 
@@ -839,20 +831,21 @@ export default function ProjectDetailPage() {
   ) : (
     <div className="space-y-2 mt-4">
       {risks.map((r) => {
-        const severity = getRiskSeverityLevel(r.probability, r.impact)
+        const score = Number(r.probability) * Number(r.impact)
+        const level = getRiskLevel(score)
         return (
           <Card key={r.id}>
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
-                {/* Severity box */}
+                {/* Score box */}
                 <div
                   className={cn(
-                    "h-8 w-8 rounded flex items-center justify-center shrink-0 text-[10px] font-bold uppercase",
-                    RISK_SEVERITY_STYLES[severity]
+                    "h-8 w-8 rounded flex items-center justify-center shrink-0 text-xs font-bold",
+                    RISK_LEVEL_COLORS[level]
                   )}
-                  title={severity === "high" ? "Alto" : severity === "medium" ? "Medio" : "Basso"}
+                  title={RISK_LEVEL_LABELS[level]}
                 >
-                  {severity === "high" ? "A" : severity === "medium" ? "M" : "B"}
+                  {score}
                 </div>
 
                 {/* Content */}
@@ -873,17 +866,9 @@ export default function ProjectDetailPage() {
                       <div className="flex flex-wrap items-center gap-1.5 mt-2">
                         <Badge
                           variant="secondary"
-                          className={cn(
-                            "text-[10px] px-1.5",
-                            severity === "high"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                              : severity === "medium"
-                              ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                          )}
+                          className={cn("text-[10px] px-1.5", RISK_LEVEL_COLORS[level])}
                         >
-                          P: {RISK_SCALE_LABELS[r.probability] ?? r.probability} / I:{" "}
-                          {RISK_SCALE_LABELS[r.impact] ?? r.impact}
+                          {RISK_LEVEL_LABELS[level]} · P:{r.probability} I:{r.impact}
                         </Badge>
                         <StatusBadge status={r.status} labels={RISK_STATUS_LABELS} />
                         <Badge variant="secondary" className="text-[10px] px-1.5">

@@ -13,12 +13,14 @@ import { toast } from "sonner"
 import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { MetaRow } from "@/components/common/MetaRow"
-import { RISK_STATUS_LABELS, RISK_CATEGORY_LABELS, RISK_SCALE_LABELS, RISK_LEVEL_LABELS, getRiskLevel } from "@/lib/constants"
+import { RISK_STATUS_LABELS, RISK_CATEGORY_LABELS, RISK_SCALE_LABELS, RISK_LEVEL_LABELS, RISK_LEVEL_COLORS, getRiskLevel } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
 import { useRiskQuery, useDeleteRisk } from "@/hooks/api/useRisks"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 
 function getRiskScoreLabel(probability: number, impact: number): string {
   const score = probability * impact
@@ -102,11 +104,17 @@ function RiskDetailPage() {
                           Punteggio rischio
                         </h3>
                         <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-foreground">
+                          <span className="text-lg font-bold text-foreground" style={{ fontFamily: "var(--font-data)" }}>
                             {risk.probability * risk.impact}
                           </span>
-                          <span className="text-sm text-muted-foreground">
-                            ({riskScore})
+                          <Badge
+                            variant="secondary"
+                            className={cn("text-xs", RISK_LEVEL_COLORS[getRiskLevel(risk.probability * risk.impact)])}
+                          >
+                            {riskScore}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            (P:{risk.probability} × I:{risk.impact})
                           </span>
                         </div>
                       </div>

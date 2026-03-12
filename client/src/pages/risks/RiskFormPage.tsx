@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { RISK_STATUS_LABELS } from "@/lib/constants"
+import { RISK_STATUS_LABELS, RISK_SCALE_LABELS } from "@/lib/constants"
 import {
   useRiskQuery,
   useCreateRisk,
@@ -30,17 +30,15 @@ const CATEGORY_OPTIONS = [
   { value: "schedule", label: "Tempistica" },
 ]
 
-const PROBABILITY_OPTIONS = [
-  { value: "low", label: "Bassa" },
-  { value: "medium", label: "Media" },
-  { value: "high", label: "Alta" },
-]
+const PROBABILITY_OPTIONS = Object.entries(RISK_SCALE_LABELS).map(([value, label]) => ({
+  value,
+  label: `${value} - ${label}`,
+}))
 
-const IMPACT_OPTIONS = [
-  { value: "low", label: "Basso" },
-  { value: "medium", label: "Medio" },
-  { value: "high", label: "Alto" },
-]
+const IMPACT_OPTIONS = Object.entries(RISK_SCALE_LABELS).map(([value, label]) => ({
+  value,
+  label: `${value} - ${label}`,
+}))
 
 const STATUS_OPTIONS = Object.entries(RISK_STATUS_LABELS).map(([value, label]) => ({
   value,
@@ -65,8 +63,8 @@ const INITIAL_FORM: FormState = {
   title: "",
   description: "",
   category: "technical",
-  probability: "medium",
-  impact: "medium",
+  probability: "3",
+  impact: "3",
   status: "open",
   mitigationPlan: "",
   projectId: "",
@@ -105,8 +103,8 @@ function RiskFormPage() {
         title: risk.title ?? "",
         description: risk.description ?? "",
         category: risk.category ?? "technical",
-        probability: risk.probability ?? "medium",
-        impact: risk.impact ?? "medium",
+        probability: String(risk.probability ?? 3),
+        impact: String(risk.impact ?? 3),
         status: risk.status ?? "open",
         mitigationPlan: risk.mitigationPlan ?? "",
         projectId: risk.projectId ?? "",
@@ -129,6 +127,8 @@ function RiskFormPage() {
 
     const payload = {
       ...form,
+      probability: Number(form.probability),
+      impact: Number(form.impact),
       projectId: form.projectId || undefined,
       ownerId: form.ownerId || undefined,
     }
