@@ -114,21 +114,7 @@ function getTodayEnd(): Date {
   return d
 }
 
-/**
- * Maps risk probability/impact string to numeric value (1-3 scale)
- * low=1, medium=2, high=3
- */
-const RISK_VALUE_MAP: Record<string, number> = { low: 1, medium: 2, high: 3 }
-
-/**
- * Calculates risk score as probability × impact.
- * Score > 6 means high×high = critical (max score is 9).
- */
-function isRiskCritical(probability: string, impact: string): boolean {
-  const probVal = RISK_VALUE_MAP[probability] ?? 1
-  const impactVal = RISK_VALUE_MAP[impact] ?? 1
-  return probVal * impactVal > 6
-}
+import { RISK_CRITICAL_THRESHOLD } from '../constants/enums.js'
 
 /**
  * Attempts to extract a human-readable entity name from stored AuditLog JSON data.
@@ -240,7 +226,7 @@ export async function getStats(userId: string, role: string): Promise<DashboardS
     }),
     // Open risks (all) — fetch for JS filtering
     isDipendente
-      ? Promise.resolve([] as Array<{ probability: string; impact: string }>)
+      ? Promise.resolve([] as Array<{ probability: number; impact: number }>)
       : prisma.risk.findMany({
           where: { isDeleted: false, status: 'open' },
           select: { probability: true, impact: true },
@@ -265,7 +251,7 @@ export async function getStats(userId: string, role: string): Promise<DashboardS
 
   const criticalRisks = isDipendente
     ? 0
-    : openRisksRaw.filter((r) => isRiskCritical(r.probability, r.impact)).length
+    : openRisksRaw.filter((r) => r.probability * r.impact >= RISK_CRITICAL_THRESHOLD).length
 
   const openRisks = isDipendente ? 0 : openRisksRaw.length
 
@@ -341,8 +327,8 @@ export async function getAttentionItems(
           [] as Array<{
             id: string
             title: string
-            probability: string
-            impact: string
+            probability: number
+            impact: number
             project: { id: string; name: string }
           }>
         )
@@ -414,7 +400,7 @@ export async function getAttentionItems(
 
   // 3. Critical risks
   for (const r of openRisksRaw) {
-    if (isRiskCritical(r.probability, r.impact)) {
+    if (r.probability * r.impact >= RISK_CRITICAL_THRESHOLD) {
       items.push({
         type: 'critical_risk',
         entityId: r.id,
@@ -422,7 +408,7 @@ export async function getAttentionItems(
         projectName: r.project.name,
         projectId: r.project.id,
         dueDate: null,
-        extra: `${r.probability}×${r.impact}`,
+        extra: `${r.probability}×${r.impact}=${r.probability * r.impact}`,
       })
     }
   }
