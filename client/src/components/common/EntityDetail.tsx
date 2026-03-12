@@ -51,6 +51,12 @@ interface EntityDetailProps {
   isDeleting?: boolean
   // Permissions (optional — if omitted, all actions are shown)
   permissions?: ResolvedPermissions
+  /** Editable badges in header (replaces static badges when interactive editing is needed) */
+  editableBadges?: React.ReactNode
+  /** KPI mini-cards row below header */
+  kpiRow?: React.ReactNode
+  /** Color bar above title (gradient CSS value) */
+  colorBar?: string
 }
 
 function DetailSkeleton() {
@@ -92,6 +98,9 @@ export function EntityDetail({
   deleteConfirmMessage,
   isDeleting = false,
   permissions,
+  editableBadges,
+  kpiRow,
+  colorBar,
 }: EntityDetailProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const ctx = usePageContext()
@@ -136,10 +145,15 @@ export function EntityDetail({
       {/* Breadcrumbs */}
       <Breadcrumbs items={breadcrumbs} />
 
+      {/* Color bar */}
+      {colorBar && <div className="h-1 w-full rounded-full" style={{ background: colorBar }} />}
+
       {/* Hero area */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          {badges && <div className="flex flex-wrap gap-2">{badges}</div>}
+          {(badges || editableBadges) && (
+            <div className="flex flex-wrap gap-2">{editableBadges ?? badges}</div>
+          )}
           {title && <h1 className="text-2xl font-bold text-foreground">{title}</h1>}
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
@@ -160,6 +174,9 @@ export function EntityDetail({
           </div>
         )}
       </div>
+
+      {/* KPI row */}
+      {kpiRow}
 
       {/* Slot between hero and content (e.g., workflow stepper) */}
       {beforeContent}

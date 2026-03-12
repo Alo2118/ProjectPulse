@@ -8,6 +8,9 @@ import { EmptyState } from "./EmptyState"
 import { ListFilters, type FilterConfig } from "./ListFilters"
 import { PaginationControls } from "./PaginationControls"
 import { GroupHeader } from "./GroupHeader"
+import { KpiStrip, type KpiCard } from "./KpiStrip"
+import { ViewToggle } from "./ViewToggle"
+import { RoleSwitcher } from "./RoleSwitcher"
 import { STATUS_VISUAL } from "@/lib/constants"
 import type { ResolvedPermissions } from "@/lib/permissions"
 
@@ -65,6 +68,19 @@ interface EntityListProps<T> {
   groupBy?: GroupByConfig<T>
   // Row customization
   rowClassName?: (item: T) => string | undefined
+  /** KPI cards displayed above filters */
+  kpiStrip?: KpiCard[]
+  /** Current view mode */
+  viewMode?: 'list' | 'grid'
+  /** Called when view mode changes */
+  onViewModeChange?: (mode: 'list' | 'grid') => void
+  /** Card renderer for grid view */
+  gridRenderItem?: (item: T) => React.ReactNode
+  /** Role switcher in toolbar */
+  roleSwitcher?: {
+    value: 'direzione' | 'dipendente'
+    onChange: (role: 'direzione' | 'dipendente') => void
+  }
 }
 
 const STORAGE_KEY_PREFIX = "entitylist-collapsed-"
@@ -116,6 +132,11 @@ export function EntityList<T>({
   onReorder,
   groupBy,
   rowClassName,
+  kpiStrip,
+  viewMode,
+  onViewModeChange,
+  gridRenderItem,
+  roleSwitcher,
 }: EntityListProps<T>) {
   const canCreate = permissions ? permissions.canCreate : true
   const handleSelectAll = () => {
@@ -177,6 +198,9 @@ export function EntityList<T>({
 
   return (
     <div className="space-y-3">
+      {/* KPI Strip */}
+      {kpiStrip && kpiStrip.length > 0 && <KpiStrip cards={kpiStrip} />}
+
       {/* Compact header — no duplicate icon (Header already shows context) */}
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
@@ -193,6 +217,12 @@ export function EntityList<T>({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {roleSwitcher && (
+            <RoleSwitcher value={roleSwitcher.value} onChange={roleSwitcher.onChange} />
+          )}
+          {onViewModeChange && viewMode && (
+            <ViewToggle value={viewMode} onChange={onViewModeChange} />
+          )}
           {headerExtra}
           {createHref && canCreate && (
             <Button size="sm" asChild>
@@ -283,26 +313,34 @@ export function EntityList<T>({
         </div>
       )}
 
-      {/* Flat table (no groupBy) */}
+      {/* Flat table or grid (no groupBy) */}
       {!groupBy && showTable && (
-        <div className="rounded-md border">
-          <DataTable
-            columns={columns}
-            data={data}
-            onRowClick={onRowClick}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onSort={onSort}
-            selectedIds={selectedIds}
-            onSelectToggle={onSelectToggle}
-            onSelectAll={onSelectAll ? () => handleSelectAll() : undefined}
-            getId={getId}
-            isLoading={isLoading}
-            draggable={draggable}
-            onReorder={onReorder}
-            rowClassName={rowClassName}
-          />
-        </div>
+        viewMode === 'grid' && gridRenderItem ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {data.map((item) => (
+              <div key={getId(item)}>{gridRenderItem(item)}</div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <DataTable
+              columns={columns}
+              data={data}
+              onRowClick={onRowClick}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={onSort}
+              selectedIds={selectedIds}
+              onSelectToggle={onSelectToggle}
+              onSelectAll={onSelectAll ? () => handleSelectAll() : undefined}
+              getId={getId}
+              isLoading={isLoading}
+              draggable={draggable}
+              onReorder={onReorder}
+              rowClassName={rowClassName}
+            />
+          </div>
+        )
       )}
 
       {/* Empty state */}
