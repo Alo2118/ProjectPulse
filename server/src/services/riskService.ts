@@ -9,6 +9,9 @@ import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
 import { notificationService } from './notificationService.js'
 import { evaluateRules } from './automation/index.js'
+import { riskWithRelationsSelect } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
+import { generateRiskCode } from '../utils/codeGenerator.js'
 import {
   CreateRiskInput,
   UpdateRiskInput,
@@ -16,10 +19,10 @@ import {
   EntityType,
   PaginationParams,
   RiskCategory,
-  RiskProbability,
-  RiskImpact,
   RiskStatus,
 } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
+import { RISK_CRITICAL_THRESHOLD, RISK_HIGH_THRESHOLD, RISK_MEDIUM_THRESHOLD } from '../constants/enums.js'
 
 // ============================================================
 // TYPES
@@ -29,86 +32,32 @@ export interface RiskQueryParams extends PaginationParams {
   projectId?: string
   category?: string
   status?: string
-  probability?: string
-  impact?: string
+  probability?: number
+  impact?: number
   ownerId?: string
   search?: string
 }
 
-// Select fields for risk queries (Rule 9: Query Optimization)
-const riskSelectFields = {
-  id: true,
-  code: true,
-  title: true,
-  description: true,
-  category: true,
-  probability: true,
-  impact: true,
-  status: true,
-  mitigationPlan: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-  projectId: true,
-  ownerId: true,
-  createdById: true,
-}
-
-const riskWithRelationsSelect = {
-  ...riskSelectFields,
-  project: {
-    select: { id: true, code: true, name: true },
-  },
-  owner: {
-    select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
-  },
-  createdBy: {
-    select: { id: true, firstName: true, lastName: true },
-  },
-}
 
 // ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
 
 /**
- * Calculates risk level based on probability and impact
- * Returns: 1-3 (low), 4-6 (medium), 7-9 (high)
+ * Calculates risk score as probability × impact (1-25 range)
  */
-export function calculateRiskLevel(probability: RiskProbability, impact: RiskImpact): number {
-  const probValue = { low: 1, medium: 2, high: 3 }
-  const impactValue = { low: 1, medium: 2, high: 3 }
-  return probValue[probability] * impactValue[impact]
+export function calculateRiskScore(probability: number, impact: number): number {
+  return probability * impact
 }
 
 /**
- * Gets risk level label from numeric value
+ * Gets risk level label from numeric score
  */
-export function getRiskLevelLabel(level: number): 'low' | 'medium' | 'high' {
-  if (level <= 2) return 'low'
-  if (level <= 4) return 'medium'
-  return 'high'
-}
-
-/**
- * Generates unique risk code based on project
- */
-async function generateRiskCode(projectCode: string, projectId: string): Promise<string> {
-  const lastRisk = await prisma.risk.findFirst({
-    where: { projectId },
-    orderBy: { code: 'desc' },
-    select: { code: true },
-  })
-
-  let nextNumber = 1
-  if (lastRisk?.code) {
-    const parts = lastRisk.code.split('-R')
-    if (parts.length > 1) {
-      nextNumber = parseInt(parts[1], 10) + 1
-    }
-  }
-
-  return `${projectCode}-R${String(nextNumber).padStart(3, '0')}`
+export function getRiskLevel(score: number): 'critical' | 'high' | 'medium' | 'low' {
+  if (score >= RISK_CRITICAL_THRESHOLD) return 'critical'
+  if (score >= RISK_HIGH_THRESHOLD) return 'high'
+  if (score >= RISK_MEDIUM_THRESHOLD) return 'medium'
+  return 'low'
 }
 
 // ============================================================
@@ -126,10 +75,13 @@ export async function createRisk(data: CreateRiskInput, userId: string) {
   })
 
   if (!project) {
-    throw new Error('Project not found')
+    throw new AppError('Project not found', 404)
   }
 
   const code = await generateRiskCode(project.code, project.id)
+
+  const probability = data.probability ?? 3
+  const impact = data.impact ?? 3
 
   // Use transaction for create + audit log (Rule 10)
   const risk = await prisma.$transaction(async (tx) => {
@@ -140,8 +92,8 @@ export async function createRisk(data: CreateRiskInput, userId: string) {
         description: data.description,
         projectId: data.projectId,
         category: (data.category as RiskCategory) || 'technical',
-        probability: (data.probability as RiskProbability) || 'medium',
-        impact: (data.impact as RiskImpact) || 'medium',
+        probability,
+        impact,
         mitigationPlan: data.mitigationPlan,
         ownerId: data.ownerId,
         createdById: userId,
@@ -152,19 +104,16 @@ export async function createRisk(data: CreateRiskInput, userId: string) {
     // Log to audit trail
     await auditService.logCreate(EntityType.RISK, newRisk.id, userId, { ...newRisk }, tx)
 
-    // Notify project owner if risk is high
-    const riskLevel = calculateRiskLevel(
-      newRisk.probability as RiskProbability,
-      newRisk.impact as RiskImpact
-    )
-    if (riskLevel >= 6 && project.ownerId !== userId) {
+    // Notify project owner if risk is critical
+    const score = probability * impact
+    if (score >= RISK_CRITICAL_THRESHOLD && project.ownerId !== userId) {
       await notificationService.createNotification(
         {
           userId: project.ownerId,
           type: 'risk_high',
           title: 'High Risk Identified',
           message: `A high-level risk has been identified: ${newRisk.title}`,
-          data: { riskId: newRisk.id, riskCode: newRisk.code, riskLevel },
+          data: { riskId: newRisk.id, riskCode: newRisk.code, riskScore: score },
         },
         tx
       )
@@ -190,17 +139,14 @@ export async function createRisk(data: CreateRiskInput, userId: string) {
   logger.info(`Risk created: ${risk.code}`, { riskId: risk.id, projectId: data.projectId, userId })
 
   // Fire risk_created automation trigger
-  const createdRiskLevel = calculateRiskLevel(
-    risk.probability as RiskProbability,
-    risk.impact as RiskImpact
-  )
+  const createdScore = probability * impact
   evaluateRules({
     type: 'risk_created',
     domain: 'risk',
     entityId: risk.id,
     projectId: data.projectId,
     userId,
-    data: { severity: getRiskLevelLabel(createdRiskLevel) },
+    data: { severity: getRiskLevel(createdScore) },
   }).catch(err => logger.error('Automation risk_created failed', { error: err }))
 
   return risk
@@ -221,8 +167,8 @@ export async function getRisks(
   if (projectId) where.projectId = projectId
   if (category) where.category = category as RiskCategory
   if (status) where.status = status as RiskStatus
-  if (probability) where.probability = probability as RiskProbability
-  if (impact) where.impact = impact as RiskImpact
+  if (probability !== undefined) where.probability = probability
+  if (impact !== undefined) where.impact = impact
   if (ownerId) where.ownerId = ownerId
   if (search) {
     where.OR = [
@@ -247,12 +193,7 @@ export async function getRisks(
 
   return {
     data: risks,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 
@@ -311,8 +252,8 @@ export async function updateRisk(riskId: string, data: UpdateRiskInput, userId: 
         title: data.title,
         description: data.description,
         category: data.category as RiskCategory | undefined,
-        probability: data.probability as RiskProbability | undefined,
-        impact: data.impact as RiskImpact | undefined,
+        probability: data.probability,
+        impact: data.impact,
         status: data.status as RiskStatus | undefined,
         mitigationPlan: data.mitigationPlan,
         ownerId: data.ownerId,
@@ -360,16 +301,13 @@ export async function updateRisk(riskId: string, data: UpdateRiskInput, userId: 
   }
 
   // Fire risk_level_changed if probability or impact changed
-  if (data.probability || data.impact) {
-    const oldLevel = getRiskLevelLabel(
-      calculateRiskLevel(existing.probability as RiskProbability, existing.impact as RiskImpact)
-    )
-    const newLevel = getRiskLevelLabel(
-      calculateRiskLevel(
-        (data.probability ?? existing.probability) as RiskProbability,
-        (data.impact ?? existing.impact) as RiskImpact
-      )
-    )
+  if (data.probability !== undefined || data.impact !== undefined) {
+    const oldScore = (existing.probability as number) * (existing.impact as number)
+    const newProb = data.probability ?? (existing.probability as number)
+    const newImp = data.impact ?? (existing.impact as number)
+    const newScore = newProb * newImp
+    const oldLevel = getRiskLevel(oldScore)
+    const newLevel = getRiskLevel(newScore)
     if (oldLevel !== newLevel) {
       evaluateRules({
         type: 'risk_level_changed',
@@ -464,7 +402,7 @@ export async function deleteRisk(riskId: string, userId: string): Promise<boolea
  * Gets risk statistics for a project
  */
 export async function getProjectRiskStats(projectId: string) {
-  const [byStatus, byCategory, total] = await Promise.all([
+  const [byStatus, byCategory, total, allOpenRisks] = await Promise.all([
     prisma.risk.groupBy({
       by: ['status'],
       where: { projectId, isDeleted: false },
@@ -478,20 +416,15 @@ export async function getProjectRiskStats(projectId: string) {
     prisma.risk.count({
       where: { projectId, isDeleted: false },
     }),
+    prisma.risk.findMany({
+      where: { projectId, isDeleted: false, status: { not: 'closed' } },
+      select: { probability: true, impact: true },
+    }),
   ])
 
-  // Get high-level risks count
-  const highLevelRisks = await prisma.risk.count({
-    where: {
-      projectId,
-      isDeleted: false,
-      status: { not: 'closed' },
-      OR: [
-        { probability: 'high', impact: { in: ['medium', 'high'] } },
-        { impact: 'high', probability: { in: ['medium', 'high'] } },
-      ],
-    },
-  })
+  const highLevelRisks = allOpenRisks.filter(
+    r => (r.probability as number) * (r.impact as number) >= RISK_HIGH_THRESHOLD
+  ).length
 
   const statusCounts = byStatus.reduce(
     (acc, item) => {
@@ -519,7 +452,7 @@ export async function getProjectRiskStats(projectId: string) {
 }
 
 /**
- * Gets risk matrix data for visualization
+ * Gets risk matrix data for visualization (5×5 integer grid)
  */
 export async function getRiskMatrix(projectId: string) {
   const risks = await prisma.risk.findMany({
@@ -528,26 +461,24 @@ export async function getRiskMatrix(projectId: string) {
       isDeleted: false,
       status: { not: 'closed' },
     },
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      probability: true,
-      impact: true,
-      status: true,
-    },
+    select: riskWithRelationsSelect,
   })
 
-  // Group risks by probability and impact for matrix
-  const matrix: Record<string, Record<string, typeof risks>> = {
-    low: { low: [], medium: [], high: [] },
-    medium: { low: [], medium: [], high: [] },
-    high: { low: [], medium: [], high: [] },
+  const matrix: Record<number, Record<number, typeof risks>> = {}
+  for (let p = 1; p <= 5; p++) {
+    matrix[p] = {}
+    for (let i = 1; i <= 5; i++) {
+      matrix[p][i] = []
+    }
   }
 
-  risks.forEach((risk) => {
-    matrix[risk.probability][risk.impact].push(risk)
-  })
+  for (const risk of risks) {
+    const p = risk.probability as number
+    const i = risk.impact as number
+    if (matrix[p] && matrix[p][i]) {
+      matrix[p][i].push(risk)
+    }
+  }
 
   return matrix
 }
@@ -562,6 +493,6 @@ export const riskService = {
   deleteRisk,
   getProjectRiskStats,
   getRiskMatrix,
-  calculateRiskLevel,
-  getRiskLevelLabel,
+  calculateRiskScore,
+  getRiskLevel,
 }
