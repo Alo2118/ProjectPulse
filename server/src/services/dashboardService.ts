@@ -5,6 +5,7 @@
 
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
+import * as activityService from './activityService.js'
 
 // ============================================================
 // TYPES
@@ -56,20 +57,6 @@ export interface MyTaskToday {
   project: { id: string; name: string } | null
 }
 
-export interface ActivityItem {
-  id: string
-  action: string
-  entityType: string
-  entityId: string
-  entityName: string | null
-  createdAt: string
-  user: {
-    id: string
-    firstName: string
-    lastName: string
-  }
-}
-
 // ============================================================
 // UTILITIES
 // ============================================================
@@ -116,25 +103,6 @@ function getTodayEnd(): Date {
 
 import { RISK_CRITICAL_THRESHOLD } from '../constants/enums.js'
 
-/**
- * Attempts to extract a human-readable entity name from stored AuditLog JSON data.
- * Tries newData first (create/update), then oldData (delete).
- */
-function extractEntityName(newData: string | null, oldData: string | null): string | null {
-  const raw = newData ?? oldData
-  if (!raw) return null
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed === 'object' && parsed !== null) {
-      const obj = parsed as Record<string, unknown>
-      const name = obj['name'] ?? obj['title'] ?? obj['code'] ?? null
-      return typeof name === 'string' ? name : null
-    }
-    return null
-  } catch {
-    return null
-  }
-}
 
 // ============================================================
 // INACTIVE PROJECT STATUSES
@@ -621,47 +589,15 @@ export async function getMyTasksToday(userId: string, days = 1): Promise<MyTaskT
 
 /**
  * Returns recent audit log activity.
- * Dipendente sees only their own activity.
- * Returns entityName extracted from stored JSON data where available.
+ * Delegates to the centralized activityService.getFeed() for a consistent
+ * activity feed format (includes field-level change details).
  */
 export async function getRecentActivity(
   userId: string,
   role: string,
   limit: number
-): Promise<ActivityItem[]> {
-  const isDipendente = role === 'dipendente'
-
-  const logs = await prisma.auditLog.findMany({
-    where: isDipendente ? { userId } : undefined,
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-    select: {
-      id: true,
-      action: true,
-      entityType: true,
-      entityId: true,
-      newData: true,
-      oldData: true,
-      createdAt: true,
-      user: {
-        select: { id: true, firstName: true, lastName: true },
-      },
-    },
-  })
-
-  return logs.map((log) => ({
-    id: log.id,
-    action: log.action,
-    entityType: log.entityType,
-    entityId: log.entityId,
-    entityName: extractEntityName(log.newData, log.oldData),
-    createdAt: log.createdAt.toISOString(),
-    user: {
-      id: log.user.id,
-      firstName: log.user.firstName,
-      lastName: log.user.lastName,
-    },
-  }))
+) {
+  return activityService.getFeed(userId, role, limit)
 }
 
 export const dashboardService = {
