@@ -151,7 +151,7 @@ export async function enrichProjects<T extends { id: string }>(
     },
     _sum: { estimatedHours: true },
   })
-  const estimatedMap = new Map(estimatedRows.map(r => [r.projectId!, r._sum?.estimatedHours ?? 0]))
+  const estimatedMap = new Map(estimatedRows.map(r => [r.projectId!, Number(r._sum?.estimatedHours ?? 0)]))
 
   return projects.map(p => {
     const stats = taskStatsMap.get(p.id) ?? { total: 0, done: 0, open: 0 }
@@ -182,7 +182,7 @@ export async function enrichProjects<T extends { id: string }>(
 /**
  * Batch-enriches tasks with subtask counts, hours logged, and completion %.
  */
-export async function enrichTasks<T extends { id: string; estimatedHours?: number | null }>(
+export async function enrichTasks<T extends { id: string; estimatedHours?: unknown }>(
   tasks: T[]
 ): Promise<(T & EnrichedTask)[]> {
   if (tasks.length === 0) return []
@@ -222,7 +222,7 @@ export async function enrichTasks<T extends { id: string; estimatedHours?: numbe
   return tasks.map(t => {
     const sub = subtaskMap.get(t.id) ?? { total: 0, done: 0 }
     const hoursLogged = hoursMap.get(t.id) ?? 0
-    const hoursEstimated = t.estimatedHours ?? 0
+    const hoursEstimated = t.estimatedHours ? Number(t.estimatedHours) : 0
     const completion = sub.total > 0
       ? Math.round((sub.done / sub.total) * 100)
       : 0

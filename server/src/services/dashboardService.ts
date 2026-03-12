@@ -282,13 +282,12 @@ export async function getStats(userId: string, role: string): Promise<DashboardS
 
         // Get unique user IDs and their hourly rates
         const userIds = [...new Set(timeEntries.map(te => te.userId))]
-        const users = userIds.length > 0
-          ? await prisma.user.findMany({
+        const users: Array<{ id: string; hourlyRate: unknown }> = userIds.length > 0
+          ? (await prisma.user.findMany({
               where: { id: { in: userIds } },
-              select: { id: true, hourlyRate: true },
-            })
+            })).map(u => ({ id: u.id, hourlyRate: (u as Record<string, unknown>)['hourlyRate'] }))
           : []
-        const rateMap = new Map(users.map(u => [u.id, u.hourlyRate ? Number(u.hourlyRate) : 0]))
+        const rateMap = new Map(users.map(u => [u.id, u.hourlyRate ? Number(u.hourlyRate) : 0] as const))
 
         const totalSpent = timeEntries.reduce((sum, te) => {
           const rate = rateMap.get(te.userId) ?? 0

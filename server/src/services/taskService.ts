@@ -25,7 +25,6 @@ import {
   CreateTaskInput,
   UpdateTaskInput,
   TaskQueryParams,
-  PaginatedResponse,
   EntityType,
   GanttQueryParams,
   GanttTask,
@@ -204,7 +203,7 @@ export async function createTask(data: CreateTaskInput, userId: string) {
  */
 export async function getTasks(
   params: TaskQueryParams
-): Promise<PaginatedResponse<Prisma.TaskGetPayload<{ select: typeof taskWithRelationsSelect }>>> {
+) {
   const { page = 1, limit = 20, projectId, taskType, status, priority, assigneeId, departmentId, search, standalone, parentTaskId, includeSubtasks } = params
 
   const where: Prisma.TaskWhereInput = {
