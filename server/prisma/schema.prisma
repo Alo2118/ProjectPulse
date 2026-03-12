@@ -27,6 +27,7 @@ model User {
   isDeleted     Boolean   @default(false) @map("is_deleted")
   isExternal    Boolean   @default(false) @map("is_external")
   weeklyHoursTarget  Float?   @default(40) @map("weekly_hours_target")
+  hourlyRate    Decimal?  @map("hourly_rate") @db.Decimal(8, 2)
   lastLoginAt   DateTime? @map("last_login_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -61,6 +62,8 @@ model User {
   createdWorkflows    WorkflowTemplate[]   @relation("WorkflowCreator")
   createdAutomations  AutomationRule[]     @relation("AutomationCreator")
   recommendationsDismissed AutomationRecommendation[] @relation("RecommendationDismisser")
+  uploadedVersions    DocumentVersion[] @relation("DocumentVersionUploader")
+  createdRiskTasks    RiskTask[] @relation("RiskTaskCreator")
 
   @@map("users")
 }
@@ -195,6 +198,7 @@ model Task {
   completions      TaskCompletion[]
   checklistItems   ChecklistItem[]
   customFieldValues CustomFieldValue[]
+  linkedRisks      RiskTask[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -304,8 +308,8 @@ model Risk {
   description    String?  @db.NVarChar(Max)
   projectId      String   @map("project_id")
   category       String   @default("technical")
-  probability    String   @default("medium")
-  impact         String   @default("medium")
+  probability    Int      @default(3)
+  impact         Int      @default(3)
   status         String   @default("open")
   mitigationPlan String?  @map("mitigation_plan")
   ownerId        String?  @map("owner_id")
@@ -315,9 +319,10 @@ model Risk {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
-  project   Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  owner     User?   @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  createdBy User    @relation("RiskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  owner        User?      @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy    User       @relation("RiskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  linkedTasks  RiskTask[]
 
   @@index([projectId])
   @@index([status])
@@ -350,11 +355,48 @@ model Document {
   project    Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy  User    @relation("DocumentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approvedBy User?   @relation("DocumentApprover", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  versions   DocumentVersion[]
 
   @@index([projectId])
   @@index([status])
   @@index([isDeleted])
   @@map("documents")
+}
+
+model DocumentVersion {
+  id           String   @id @default(uuid())
+  documentId   String   @map("document_id")
+  version      Int
+  filePath     String   @map("file_path")
+  fileSize     Int      @map("file_size")
+  mimeType     String   @map("mime_type")
+  note         String?  @db.NVarChar(Max)
+  uploadedById String   @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploadedBy User     @relation("DocumentVersionUploader", fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([documentId])
+  @@map("document_versions")
+}
+
+model RiskTask {
+  id          String   @id @default(uuid())
+  riskId      String   @map("risk_id")
+  taskId      String   @map("task_id")
+  linkType    String   @map("link_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById String   @map("created_by_id")
+
+  risk      Risk @relation(fields: [riskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  task      Task @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User @relation("RiskTaskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([riskId, taskId])
+  @@index([riskId])
+  @@index([taskId])
+  @@map("risk_tasks")
 }
 
 model Notification {

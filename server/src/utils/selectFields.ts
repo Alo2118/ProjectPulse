@@ -523,3 +523,65 @@ export const savedViewSelectFields = {
     select: userMinimalSelect,
   },
 } as const
+
+// ============================================================
+// DOCUMENT VERSION SELECT
+// ============================================================
+
+export const documentVersionSelect = {
+  id: true,
+  version: true,
+  filePath: true,
+  fileSize: true,
+  mimeType: true,
+  note: true,
+  createdAt: true,
+  uploadedBy: { select: userMinimalSelect },
+} as const
+
+// ============================================================
+// RISK TASK SELECT
+// ============================================================
+
+export const riskTaskSelect = {
+  id: true,
+  linkType: true,
+  createdAt: true,
+  createdBy: { select: userMinimalSelect },
+} as const
+
+export const riskTaskWithTaskSelect = {
+  ...riskTaskSelect,
+  task: {
+    select: {
+      id: true,
+      title: true,
+      code: true,
+      status: true,
+      taskType: true,
+    },
+  },
+} as const
+
+export const riskTaskWithRiskSelect = {
+  ...riskTaskSelect,
+  risk: {
+    select: {
+      id: true,
+      title: true,
+      code: true,
+      status: true,
+      probability: true,
+      impact: true,
+    },
+  },
+} as const
+
+// ============================================================
+// USER WITH HOURLY RATE SELECT
+// ============================================================
+
+export const userWithHourlyRateSelect = {
+  ...userWithAvatarSelect,
+  hourlyRate: true,
+} as const
