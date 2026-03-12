@@ -18,7 +18,7 @@ export interface DashboardStats {
 }
 
 export interface AttentionItem {
-  type: 'blocked_task' | 'due_soon' | 'critical_risk' | 'pending_review'
+  type: 'blocked_task' | 'due_soon' | 'critical_risk' | 'pending_review' | 'milestone_at_risk'
   entityId: string
   title: string
   projectName: string | null
@@ -115,12 +115,13 @@ export function useTodayTotalQuery() {
   })
 }
 
-export function useMyTasksTodayQuery() {
+export function useMyTasksTodayQuery(days = 1) {
   return useQuery({
-    queryKey: KEYS.myTasksToday(),
+    queryKey: [...KEYS.myTasksToday(), days] as const,
     queryFn: async () => {
       const { data } = await api.get<{ success: boolean; data: MyTaskToday[] }>(
-        '/dashboard/my-tasks-today'
+        '/dashboard/my-tasks-today',
+        { params: { days } }
       )
       return data.data
     },
