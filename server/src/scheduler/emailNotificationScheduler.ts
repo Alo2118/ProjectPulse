@@ -105,8 +105,8 @@ async function jobCriticalRisks(): Promise<void> {
   const risks = await prisma.risk.findMany({
     where: {
       isDeleted: false,
-      probability: { in: ['high', 'certain'] },
-      impact: { in: ['high', 'critical'] },
+      probability: { gte: 4 },
+      impact: { gte: 4 },
       status: { notIn: ['closed', 'mitigated'] },
     },
     select: {

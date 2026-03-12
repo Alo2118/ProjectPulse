@@ -371,9 +371,9 @@ export async function getRiskStats(userId?: string, role?: string): Promise<KpiC
     where: { ...where, status: 'open' },
     select: { probability: true, impact: true },
   })
-  const critical = openRisks.filter(r => r.probability * r.impact >= RISK_CRITICAL_THRESHOLD).length
+  const critical = openRisks.filter(r => Number(r.probability) * Number(r.impact) >= RISK_CRITICAL_THRESHOLD).length
   const high = openRisks.filter(r => {
-    const s = r.probability * r.impact
+    const s = Number(r.probability) * Number(r.impact)
     return s >= RISK_HIGH_THRESHOLD && s < RISK_CRITICAL_THRESHOLD
   }).length
 
@@ -460,7 +460,7 @@ export async function getProjectSummary(projectId: string): Promise<KpiCard[]> {
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
   const hoursLogged = timeEntries.reduce((sum, te) => sum + (te.duration ?? 0), 0) / 60
-  const hoursEstimated = tasks.reduce((sum, t) => sum + (t.estimatedHours ?? 0), 0)
+  const hoursEstimated = tasks.reduce((sum, t) => sum + Number(t.estimatedHours ?? 0), 0)
   const budgetHoursPercent = hoursEstimated > 0
     ? Math.round((hoursLogged / hoursEstimated) * 100)
     : null
@@ -529,7 +529,7 @@ export async function getTaskSummary(taskId: string): Promise<KpiCard[]> {
     : 0
 
   const hoursLogged = timeEntries.reduce((sum, te) => sum + (te.duration ?? 0), 0) / 60
-  const hoursEstimated = task?.estimatedHours ?? 0
+  const hoursEstimated = Number(task?.estimatedHours ?? 0)
   const hoursRemaining = Math.max(0, hoursEstimated - hoursLogged)
 
   const cards: KpiCard[] = []

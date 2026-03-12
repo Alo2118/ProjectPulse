@@ -10,6 +10,7 @@ import { prisma } from '../../models/prismaClient.js'
 import { logger } from '../../utils/logger.js'
 import * as automationService from '../automationService.js'
 import type { TriggerConfig, ConditionConfig, ActionConfig } from './types.js'
+import { AppError } from '../../middleware/errorMiddleware.js'
 
 // ============================================================
 // TYPES
@@ -58,10 +59,7 @@ async function analyzeLateTasks(): Promise<PatternResult[]> {
     if (totalTasks < 5) continue // need minimum sample
 
     // Count tasks where they were completed late (updatedAt > dueDate as approximation)
-    const lateCount = await prisma.$queryRawUnsafe<Array<{ cnt: bigint }>>(
-      `SELECT COUNT(*) as cnt FROM tasks WHERE project_id = @P1 AND is_deleted = 0 AND status = 'done' AND due_date IS NOT NULL AND updated_at > due_date`,
-      project.id
-    )
+    const lateCount = await prisma.$queryRaw<Array<{ cnt: bigint }>>`SELECT COUNT(*) as cnt FROM tasks WHERE project_id = ${project.id} AND is_deleted = 0 AND status = 'done' AND due_date IS NOT NULL AND updated_at > due_date`
     const late = Number(lateCount[0]?.cnt ?? 0)
     const percentage = (late / totalTasks) * 100
 
@@ -141,16 +139,14 @@ async function analyzeStuckTasks(): Promise<PatternResult[]> {
  */
 async function analyzeOrphanedParents(): Promise<PatternResult[]> {
   const results: PatternResult[] = []
-  const parentTasks = await prisma.$queryRawUnsafe<
+  const parentTasks = await prisma.$queryRaw<
     Array<{ id: string; code: string; title: string; project_id: string | null }>
-  >(
-    `SELECT t.id, t.code, t.title, t.project_id
+  >`SELECT t.id, t.code, t.title, t.project_id
      FROM tasks t
      WHERE t.is_deleted = 0
        AND t.status NOT IN ('done', 'cancelled')
        AND EXISTS (SELECT 1 FROM tasks sub WHERE sub.parent_task_id = t.id AND sub.is_deleted = 0)
        AND NOT EXISTS (SELECT 1 FROM tasks sub WHERE sub.parent_task_id = t.id AND sub.is_deleted = 0 AND sub.status NOT IN ('done', 'cancelled'))`
-  )
 
   if (parentTasks.length >= 1) {
     results.push({
@@ -187,7 +183,7 @@ async function analyzeUnownedHighRisks(): Promise<PatternResult[]> {
   const unownedRisks = await prisma.risk.count({
     where: {
       isDeleted: false,
-      impact: 'high',
+      impact: { gte: 4 },
       ownerId: null,
       status: { notIn: ['closed', 'mitigated'] },
     },
@@ -526,11 +522,10 @@ export async function getRecommendations(projectId?: string) {
     include: { project: { select: { id: true, name: true } } },
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return recs.map((r: any) => ({
+  return recs.map((r) => ({
     ...r,
-    evidence: JSON.parse(r.evidence as string),
-    suggestedRule: JSON.parse(r.suggestedRule as string),
+    evidence: JSON.parse(String(r.evidence)),
+    suggestedRule: JSON.parse(String(r.suggestedRule)),
   }))
 }
 
@@ -543,7 +538,7 @@ export async function applyRecommendation(id: string, userId: string) {
     where: { id },
   })
   if (!rec || rec.status !== 'pending') {
-    throw new Error('Recommendation not found or already processed')
+    throw new AppError('Recommendation not found or already processed', 404)
   }
 
   const suggestedRule = JSON.parse(rec.suggestedRule) as {
@@ -601,7 +596,7 @@ export async function dismissRecommendation(
     where: { id },
   })
   if (!rec || rec.status !== 'pending') {
-    throw new Error('Recommendation not found or already processed')
+    throw new AppError('Recommendation not found or already processed', 404)
   }
 
   await prisma.automationRecommendation.update({

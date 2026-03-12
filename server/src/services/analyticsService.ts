@@ -280,7 +280,7 @@ async function getProjectHealth(): Promise<ProjectHealth[]> {
   for (const risk of openRisks) {
     const current = projectRiskStats.get(risk.projectId) || { open: 0, high: 0 }
     current.open += 1
-    if (risk.probability >= 4 || risk.impact >= 4) {
+    if (Number(risk.probability) >= 4 || Number(risk.impact) >= 4) {
       current.high += 1
     }
     projectRiskStats.set(risk.projectId, current)
