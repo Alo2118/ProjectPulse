@@ -635,7 +635,7 @@ export default function TaskDetailPage() {
 
   const { data: task, isLoading, error } = useTaskQuery(id ?? "")
   const { data: subtasks } = useSubtasksQuery(id ?? "")
-  const { data: taskActivity } = useActivityQuery('task', id ?? '')
+  const { data: _taskActivity } = useActivityQuery('task', id ?? '')
   const changeStatus = useChangeTaskStatus()
   const deleteTask = useDeleteTask()
 

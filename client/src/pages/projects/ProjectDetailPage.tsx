@@ -50,7 +50,6 @@ import {
   TASK_STATUS_LABELS,
   RISK_STATUS_LABELS,
   RISK_CATEGORY_LABELS,
-  RISK_SCALE_LABELS,
   RISK_LEVEL_COLORS,
   RISK_LEVEL_LABELS,
   DOCUMENT_STATUS_LABELS,
@@ -427,7 +426,7 @@ export default function ProjectDetailPage() {
   const { data: membersData } = useProjectMembersQuery(id!)
   const { data: activityData } = useRecentActivityQuery(8)
   const { data: projectActivity } = useActivityQuery('project', id!)
-  const { data: summaryKpis } = useSummaryQuery('project', id!)
+  const { data: _summaryKpis } = useSummaryQuery('project', id!)
 
   const p = project as ProjectData | undefined
   const s = stats as ProjectStats | undefined

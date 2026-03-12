@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { KpiCard } from '@/types'
+import type { KpiCard } from '@/components/common/KpiStrip'
 
 const KEYS = {
   all: ['stats'] as const,

@@ -16,6 +16,7 @@ const ITEM_TYPE_CONFIG: Record<
   due_soon: { emoji: '⏰', label: 'In scadenza' },
   critical_risk: { emoji: '⚠️', label: 'Rischio critico' },
   pending_review: { emoji: '📄', label: 'In revisione' },
+  milestone_at_risk: { emoji: '🏁', label: 'Milestone a rischio' },
 }
 
 function getDetailHref(item: AttentionItem): string {
@@ -26,6 +27,8 @@ function getDetailHref(item: AttentionItem): string {
       return `/tasks/${item.entityId}`
     case 'critical_risk':
       return `/risks/${item.entityId}`
+    case 'milestone_at_risk':
+      return `/tasks/${item.entityId}`
     default:
       return '/'
   }
