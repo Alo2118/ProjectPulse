@@ -37,74 +37,8 @@ import {
 } from '../types/index.js'
 import { taskSelectFields, taskWithRelationsSelect } from '../utils/selectFields.js'
 import { getTaskStats } from './statsService.js'
-
-/**
- * Generates unique task code based on project, task type, and standalone prefix
- * Milestone: PRJ-M001, Task/Subtask: PRJ-T001, Standalone: STD-T001
- * @param projectCode - Project code (null for standalone)
- * @param projectId - Project ID (null for standalone)
- * @param taskType - Type of task (milestone, task, subtask)
- * @returns Generated task code
- */
-async function generateTaskCode(
-  projectCode: string | null,
-  projectId: string | null,
-  taskType: TaskType = 'task'
-): Promise<string> {
-  const prefix = projectCode ?? 'STD'
-  const typePrefix = taskType === 'milestone' ? 'M' : 'T'
-
-  const whereClause = projectId
-    ? { projectId, code: { startsWith: `${prefix}-${typePrefix}` } }
-    : { projectId: null, code: { startsWith: `STD-${typePrefix}` } }
-
-  logger.info('Generating task code:', { prefix, typePrefix, whereClause })
-
-  const lastTask = await prisma.task.findFirst({
-    where: whereClause,
-    orderBy: { code: 'desc' },
-    select: { code: true },
-  })
-
-  logger.info('Last task found:', { lastTask })
-
-  let nextNumber = 1
-  if (lastTask?.code) {
-    const parts = lastTask.code.split(`-${typePrefix}`)
-    if (parts.length > 1) {
-      nextNumber = parseInt(parts[1], 10) + 1
-    }
-  }
-
-  // Verify code is unique and increment if necessary
-  let generatedCode = `${prefix}-${typePrefix}${String(nextNumber).padStart(3, '0')}`
-  let attempts = 0
-  const maxAttempts = 100
-  
-  while (attempts < maxAttempts) {
-    const existing = await prisma.task.findUnique({
-      where: { code: generatedCode },
-      select: { id: true }
-    })
-    
-    if (!existing) {
-      break // Code is unique, we can use it
-    }
-    
-    // Code exists, try next number
-    nextNumber++
-    generatedCode = `${prefix}-${typePrefix}${String(nextNumber).padStart(3, '0')}`
-    attempts++
-  }
-  
-  if (attempts >= maxAttempts) {
-    throw new Error('Could not generate unique task code after max attempts')
-  }
-
-  logger.info('Generated unique task code:', { generatedCode, attempts })
-
-  return generatedCode
-}
+import { generateTaskCode } from '../utils/codeGenerator.js'
+import { enrichTasks, enrichKanbanCards } from './enrichmentService.js'
 
 /**
  * Creates a new task with audit logging
@@ -130,7 +64,7 @@ export async function createTask(data: CreateTaskInput, userId: string) {
     })
 
     if (!project) {
-      throw new Error('Project not found')
+      throw new AppError('Project not found', 404)
     }
     projectCode = project.code
     projectId = project.id
@@ -144,30 +78,30 @@ export async function createTask(data: CreateTaskInput, userId: string) {
     })
 
     if (!parentTask) {
-      throw new Error('Parent task not found')
+      throw new AppError('Parent task not found', 404)
     }
 
     // Validate hierarchy rules
     if (parentTask.taskType === 'milestone') {
       // Milestone can only contain tasks
       if (taskType === 'subtask') {
-        throw new Error('Milestone can only contain tasks, not subtasks directly')
+        throw new AppError('Milestone can only contain tasks, not subtasks directly', 400)
       }
       if (taskType === 'milestone') {
-        throw new Error('Milestone cannot contain other milestones')
+        throw new AppError('Milestone cannot contain other milestones', 400)
       }
       taskType = 'task' // Force to task if under milestone
     } else if (parentTask.taskType === 'task') {
       // Task can only contain subtasks
       if (taskType === 'milestone') {
-        throw new Error('Task cannot contain milestones')
+        throw new AppError('Task cannot contain milestones', 400)
       }
       if (taskType === 'task') {
         taskType = 'subtask' // Auto-convert to subtask if under task
       }
     } else if (parentTask.taskType === 'subtask') {
       // Subtask cannot contain children
-      throw new Error('Subtask cannot contain children')
+      throw new AppError('Subtask cannot contain children', 400)
     }
 
     // Inherit project from parent if not specified
@@ -192,14 +126,14 @@ export async function createTask(data: CreateTaskInput, userId: string) {
   } else {
     // No parent - milestone must have a project
     if (taskType === 'milestone' && !projectId) {
-      throw new Error('Milestone must belong to a project')
+      throw new AppError('Milestone must belong to a project', 400)
     }
   }
 
-  const code = await generateTaskCode(projectCode, projectId, taskType)
-
   // Use transaction for create + audit log (Rule 10)
   const task = await prisma.$transaction(async (tx) => {
+    const code = await generateTaskCode(projectCode, projectId, taskType, tx)
+
     const newTask = await tx.task.create({
       data: {
         code,
@@ -319,8 +253,11 @@ export async function getTasks(
     prisma.task.count({ where }),
   ])
 
+  // Enrich with subtask counts, hours logged, completion %
+  const enrichedData = await enrichTasks(tasks)
+
   return {
-    data: tasks,
+    data: enrichedData,
     pagination: {
       page,
       limit,
@@ -353,13 +290,16 @@ export async function getTasksKanban(projectId: string) {
     orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
   })
 
+  // Enrich with subtask counts (lightweight kanban enrichment)
+  const enrichedTasks = await enrichKanbanCards(tasks)
+
   // Group by status
   const grouped = {
-    todo: tasks.filter((t) => t.status === 'todo'),
-    in_progress: tasks.filter((t) => t.status === 'in_progress'),
-    review: tasks.filter((t) => t.status === 'review'),
-    blocked: tasks.filter((t) => t.status === 'blocked'),
-    done: tasks.filter((t) => t.status === 'done'),
+    todo: enrichedTasks.filter((t) => t.status === 'todo'),
+    in_progress: enrichedTasks.filter((t) => t.status === 'in_progress'),
+    review: enrichedTasks.filter((t) => t.status === 'review'),
+    blocked: enrichedTasks.filter((t) => t.status === 'blocked'),
+    done: enrichedTasks.filter((t) => t.status === 'done'),
   }
 
   return grouped
@@ -454,12 +394,12 @@ export async function updateTask(taskId: string, data: UpdateTaskInput, userId: 
 
     // Milestone cannot have a parent
     if (newTaskType === 'milestone' && (existing.parentTaskId || data.parentTaskId)) {
-      throw new Error('Milestone cannot have a parent task')
+      throw new AppError('Milestone cannot have a parent task', 400)
     }
 
     // Milestone must belong to a project
     if (newTaskType === 'milestone' && !existing.projectId && !data.projectId) {
-      throw new Error('Milestone must belong to a project')
+      throw new AppError('Milestone must belong to a project', 400)
     }
 
     // Check if task has children - cannot become subtask if it has children
@@ -468,7 +408,7 @@ export async function updateTask(taskId: string, data: UpdateTaskInput, userId: 
         where: { parentTaskId: taskId, isDeleted: false },
       })
       if (hasChildren > 0) {
-        throw new Error('Cannot convert to subtask: task has children')
+        throw new AppError('Cannot convert to subtask: task has children', 400)
       }
     }
   }
@@ -581,7 +521,7 @@ export async function changeTaskStatus(
 ) {
   // Validate blockedReason is required when status is 'blocked'
   if (newStatus === 'blocked' && !blockedReason?.trim()) {
-    throw new Error('Blocked reason is required when setting status to blocked')
+    throw new AppError('Blocked reason is required when setting status to blocked', 400)
   }
 
   const existing = await prisma.task.findFirst({
@@ -1102,12 +1042,12 @@ export async function createTaskDependency(
     prisma.task.findFirst({ where: { id: data.successorId, isDeleted: false }, select: { id: true, code: true, title: true } }),
   ])
 
-  if (!predecessor) throw new Error('Predecessor task not found')
-  if (!successor) throw new Error('Successor task not found')
+  if (!predecessor) throw new AppError('Predecessor task not found', 404)
+  if (!successor) throw new AppError('Successor task not found', 404)
 
   // Prevent self-reference
   if (data.predecessorId === data.successorId) {
-    throw new Error('A task cannot depend on itself')
+    throw new AppError('A task cannot depend on itself', 400)
   }
 
   // Check for circular dependency using BFS traversal
@@ -1120,7 +1060,7 @@ export async function createTaskDependency(
   while (queue.length > 0 && depth < MAX_BFS_DEPTH) {
     const current = queue.shift()!
     if (current === data.predecessorId) {
-      throw new Error('Circular dependency detected: adding this dependency would create a cycle')
+      throw new AppError('Circular dependency detected: adding this dependency would create a cycle', 400)
     }
     if (visited.has(current)) continue
     visited.add(current)
@@ -1225,7 +1165,7 @@ export async function reorderTasks(
       })
 
       if (!task) {
-        throw new Error(`Task ${item.taskId} not found or not assigned to user`)
+        throw new AppError(`Task ${item.taskId} not found or not assigned to user`, 404)
       }
 
       await tx.task.update({
@@ -1415,26 +1355,6 @@ async function getDescendantTasks(parentId: string): Promise<
     dueDate: Date | null
   }>
 > {
-  const children = await prisma.task.findMany({
-    where: { parentTaskId: parentId, isDeleted: false },
-    select: {
-      id: true,
-      taskType: true,
-      status: true,
-      estimatedHours: true,
-      actualHours: true,
-      startDate: true,
-      dueDate: true,
-    },
-  })
-
-  // Cast Prisma string fields to our typed aliases
-  const typedChildren = children.map((child) => ({
-    ...child,
-    taskType: child.taskType as TaskType,
-    status: child.status as TaskStatus,
-  }))
-
   const descendants: Array<{
     id: string
     taskType: TaskType
@@ -1443,12 +1363,33 @@ async function getDescendantTasks(parentId: string): Promise<
     actualHours: Prisma.Decimal | null
     startDate: Date | null
     dueDate: Date | null
-  }> = [...typedChildren]
+  }> = []
 
-  // Recursively get grandchildren
-  for (const child of typedChildren) {
-    const grandchildren = await getDescendantTasks(child.id)
-    descendants.push(...grandchildren)
+  let currentParentIds = [parentId]
+  const MAX_LEVELS = 20
+
+  for (let level = 0; level < MAX_LEVELS && currentParentIds.length > 0; level++) {
+    const levelTasks = await prisma.task.findMany({
+      where: { parentTaskId: { in: currentParentIds }, isDeleted: false },
+      select: {
+        id: true,
+        taskType: true,
+        status: true,
+        estimatedHours: true,
+        actualHours: true,
+        startDate: true,
+        dueDate: true,
+      },
+    })
+
+    const typed = levelTasks.map((child) => ({
+      ...child,
+      taskType: child.taskType as TaskType,
+      status: child.status as TaskStatus,
+    }))
+
+    descendants.push(...typed)
+    currentParentIds = levelTasks.map((t) => t.id)
   }
 
   return descendants
@@ -1514,37 +1455,38 @@ export async function bulkUpdateTasks(
   update: { status?: string; priority?: string; assigneeId?: string },
   userId: string
 ): Promise<number> {
-  let totalUpdated = 0
+  // Pre-fetch all existing tasks in one query
+  const existingTasks = await prisma.task.findMany({
+    where: { id: { in: ids }, isDeleted: false },
+    select: taskSelectFields,
+  })
+
+  if (existingTasks.length === 0) return 0
+
+  const updateData = {
+    ...(update.status !== undefined ? { status: update.status as TaskStatus } : {}),
+    ...(update.priority !== undefined ? { priority: update.priority as TaskPriority } : {}),
+    ...(update.assigneeId !== undefined ? { assigneeId: update.assigneeId } : {}),
+    updatedAt: new Date(),
+  }
 
   await prisma.$transaction(async (tx) => {
-    for (const taskId of ids) {
-      const existing = await tx.task.findFirst({
-        where: { id: taskId, isDeleted: false },
-        select: taskSelectFields,
-      })
+    // Batch update all tasks at once
+    const existingIds = existingTasks.map((t) => t.id)
+    await tx.task.updateMany({
+      where: { id: { in: existingIds } },
+      data: updateData,
+    })
 
-      if (!existing) continue
-
-      const updated = await tx.task.update({
-        where: { id: taskId },
-        data: {
-          ...(update.status !== undefined && { status: update.status as TaskStatus }),
-          ...(update.priority !== undefined && { priority: update.priority as TaskPriority }),
-          ...(update.assigneeId !== undefined && { assigneeId: update.assigneeId }),
-          updatedAt: new Date(),
-        },
-        select: taskSelectFields,
-      })
-
-      await auditService.logUpdate(EntityType.TASK, taskId, userId, { ...existing }, { ...updated }, tx)
-
-      totalUpdated++
+    // Audit log per task (required for detailed audit trail)
+    for (const existing of existingTasks) {
+      await auditService.logUpdate(EntityType.TASK, existing.id, userId, { ...existing }, { ...existing, ...updateData }, tx)
     }
   })
 
-  logger.info(`Bulk updated ${totalUpdated} tasks`, { ids, update, userId })
+  logger.info(`Bulk updated ${existingTasks.length} tasks`, { ids, update, userId })
 
-  return totalUpdated
+  return existingTasks.length
 }
 
 /**
@@ -1554,31 +1496,32 @@ export async function bulkUpdateTasks(
  * @returns Number of tasks deleted
  */
 export async function bulkDeleteTasks(ids: string[], userId: string): Promise<number> {
-  let totalDeleted = 0
+  // Pre-fetch all existing tasks in one query
+  const existingTasks = await prisma.task.findMany({
+    where: { id: { in: ids }, isDeleted: false },
+    select: taskSelectFields,
+  })
+
+  if (existingTasks.length === 0) return 0
+
+  const existingIds = existingTasks.map((t) => t.id)
 
   await prisma.$transaction(async (tx) => {
-    for (const taskId of ids) {
-      const existing = await tx.task.findFirst({
-        where: { id: taskId, isDeleted: false },
-        select: taskSelectFields,
-      })
+    // Batch soft-delete all tasks at once
+    await tx.task.updateMany({
+      where: { id: { in: existingIds } },
+      data: { isDeleted: true, updatedAt: new Date() },
+    })
 
-      if (!existing) continue
-
-      await tx.task.update({
-        where: { id: taskId },
-        data: { isDeleted: true, updatedAt: new Date() },
-      })
-
-      await auditService.logDelete(EntityType.TASK, taskId, userId, { ...existing }, tx)
-
-      totalDeleted++
+    // Audit log per task (required for detailed audit trail)
+    for (const existing of existingTasks) {
+      await auditService.logDelete(EntityType.TASK, existing.id, userId, { ...existing }, tx)
     }
   })
 
-  logger.info(`Bulk deleted ${totalDeleted} tasks`, { ids, userId })
+  logger.info(`Bulk deleted ${existingTasks.length} tasks`, { ids, userId })
 
-  return totalDeleted
+  return existingTasks.length
 }
 
 // ============================================================
@@ -1639,13 +1582,13 @@ export async function cloneTask(
   taskId: string,
   userId: string,
   options: { includeSubtasks?: boolean } = {}
-): Promise<any> {
+): Promise<Prisma.TaskGetPayload<{ select: typeof taskWithRelationsSelect }>> {
   const original = await prisma.task.findFirst({
     where: { id: taskId, isDeleted: false },
     select: taskWithRelationsSelect,
   })
 
-  if (!original) throw new Error('Task not found')
+  if (!original) throw new AppError('Task not found', 404)
 
   // Fetch tags separately (polymorphic TagAssignment)
   const originalTags = await prisma.tagAssignment.findMany({
@@ -1653,14 +1596,16 @@ export async function cloneTask(
     select: { tagId: true },
   })
 
-  const projectCode = (original as any).project?.code ?? null
-  const code = await generateTaskCode(
-    projectCode,
-    original.projectId ?? null,
-    original.taskType as TaskType
-  )
+  const projectCode = original.project?.code ?? null
 
   const cloned = await prisma.$transaction(async (tx) => {
+    const code = await generateTaskCode(
+      projectCode,
+      original.projectId ?? null,
+      original.taskType as TaskType,
+      tx
+    )
+
     const newTask = await tx.task.create({
       data: {
         code,
@@ -1708,6 +1653,16 @@ async function cloneSubtasksRecursive(
   userId: string,
   projectId: string | null
 ) {
+  // Fetch project code ONCE before iterating subtasks
+  const projectCode = projectId
+    ? (
+        await tx.project.findFirst({
+          where: { id: projectId },
+          select: { code: true },
+        })
+      )?.code ?? null
+    : null
+
   const subtasks = await tx.task.findMany({
     where: { parentTaskId: originalParentId, isDeleted: false },
     select: {
@@ -1725,15 +1680,7 @@ async function cloneSubtasksRecursive(
   })
 
   for (const sub of subtasks) {
-    const projectCode = projectId
-      ? (
-          await prisma.project.findFirst({
-            where: { id: projectId },
-            select: { code: true },
-          })
-        )?.code ?? null
-      : null
-    const code = await generateTaskCode(projectCode, projectId, sub.taskType as TaskType)
+    const code = await generateTaskCode(projectCode, projectId, sub.taskType as TaskType, tx)
     const newSub = await tx.task.create({
       data: {
         code,

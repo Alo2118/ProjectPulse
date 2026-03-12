@@ -20,6 +20,7 @@ import type { ProjectPhase } from '../types/index.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { projectWithRelationsSelect } from '../utils/selectFields.js'
 import { generateProjectCode } from '../utils/codeGenerator.js'
+import { enrichProjects } from './enrichmentService.js'
 
 /**
  * Creates a new project with audit logging
@@ -188,8 +189,11 @@ export async function getProjects(
     data = data.slice(skip, skip + limit)
   }
 
+  // Enrich with computed fields (progress, team, milestones, etc.)
+  const enrichedData = await enrichProjects(data)
+
   return {
-    data,
+    data: enrichedData,
     pagination: {
       page,
       limit,
