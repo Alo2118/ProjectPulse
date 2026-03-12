@@ -40,6 +40,7 @@ import {
   useSubtasksQuery,
 } from "@/hooks/api/useTasks"
 import { useTimeEntryListQuery } from "@/hooks/api/useTimeEntries"
+import { useActivityQuery } from "@/hooks/api/useActivity"
 import { useAttachmentListQuery } from "@/hooks/api/useAttachments"
 import {
   TASK_STATUS_LABELS,
@@ -634,6 +635,7 @@ export default function TaskDetailPage() {
 
   const { data: task, isLoading, error } = useTaskQuery(id ?? "")
   const { data: subtasks } = useSubtasksQuery(id ?? "")
+  const { data: taskActivity } = useActivityQuery('task', id ?? '')
   const changeStatus = useChangeTaskStatus()
   const deleteTask = useDeleteTask()
 

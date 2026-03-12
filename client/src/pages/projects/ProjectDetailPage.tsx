@@ -40,6 +40,8 @@ import { useRisksByProjectQuery } from "@/hooks/api/useRisks"
 import { useDocumentsByProjectQuery } from "@/hooks/api/useDocuments"
 import { useProjectMembersQuery } from "@/hooks/api/useProjectMembers"
 import { useRecentActivityQuery, type RecentActivityItem } from "@/hooks/api/useDashboard"
+import { useActivityQuery } from "@/hooks/api/useActivity"
+import { useSummaryQuery } from "@/hooks/api/useStats"
 import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
@@ -432,6 +434,8 @@ export default function ProjectDetailPage() {
   const { data: docsData, isLoading: docsLoading } = useDocumentsByProjectQuery(id!)
   const { data: membersData } = useProjectMembersQuery(id!)
   const { data: activityData } = useRecentActivityQuery(8)
+  const { data: projectActivity } = useActivityQuery('project', id!)
+  const { data: summaryKpis } = useSummaryQuery('project', id!)
 
   const p = project as ProjectData | undefined
   const s = stats as ProjectStats | undefined
@@ -441,6 +445,7 @@ export default function ProjectDetailPage() {
   const docs = (docsData ?? []) as DocumentRow[]
   const members = (membersData ?? []) as MemberRow[]
   const activity = (activityData ?? []) as RecentActivityItem[]
+  const scopedActivity = projectActivity ?? []
 
   const totalTaskCount = s?.totalTasks ?? tasks.length
   const completedCount = s?.completedTasks ?? tasks.filter((t) => t.status === "done").length
@@ -701,11 +706,11 @@ export default function ProjectDetailPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm font-semibold mb-2">Attività recente</p>
-            {activity.length === 0 ? (
+            {(scopedActivity.length > 0 ? scopedActivity : activity).length === 0 ? (
               <p className="text-xs text-muted-foreground">Nessuna attività recente</p>
             ) : (
               <div className="divide-y divide-border">
-                {activity.slice(0, 5).map((item) => (
+                {(scopedActivity.length > 0 ? scopedActivity : activity).slice(0, 5).map((item: RecentActivityItem) => (
                   <ActivityRow key={item.id} item={item} />
                 ))}
               </div>
@@ -1045,6 +1050,30 @@ export default function ProjectDetailPage() {
                 label: "Documenti",
                 count: s?.totalDocuments ?? docs.length,
                 content: documentsTab,
+              },
+              {
+                key: "activity",
+                label: "Attività",
+                count: scopedActivity.length > 0 ? scopedActivity.length : undefined,
+                content: (
+                  <div className="space-y-1 mt-4">
+                    {(scopedActivity.length > 0 ? scopedActivity : activity).length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <p className="text-sm text-muted-foreground">Nessuna attività registrata</p>
+                      </div>
+                    ) : (
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="divide-y divide-border">
+                            {(scopedActivity.length > 0 ? scopedActivity : activity).map((item: RecentActivityItem) => (
+                              <ActivityRow key={item.id} item={item} />
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                ),
               },
             ]
           : undefined
