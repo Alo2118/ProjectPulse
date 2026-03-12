@@ -270,8 +270,7 @@ async function getProjectHealth(): Promise<ProjectHealth[]> {
   ])
 
   // Aggregate risk stats per project
-  // Since groupBy doesn't give us probability*impact score per risk,
-  // fetch individual open risks to properly count high-impact ones
+  // Fetch individual open risks to count high-impact ones (probability >= 4 or impact >= 4)
   const openRisks = await prisma.risk.findMany({
     where: { projectId: { in: projectIds }, isDeleted: false, status: 'open' },
     select: { projectId: true, probability: true, impact: true },
@@ -281,7 +280,7 @@ async function getProjectHealth(): Promise<ProjectHealth[]> {
   for (const risk of openRisks) {
     const current = projectRiskStats.get(risk.projectId) || { open: 0, high: 0 }
     current.open += 1
-    if ((risk.probability as number) * (risk.impact as number) >= 10) {
+    if (risk.probability >= 4 || risk.impact >= 4) {
       current.high += 1
     }
     projectRiskStats.set(risk.projectId, current)
