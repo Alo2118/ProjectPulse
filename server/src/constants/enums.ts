@@ -62,13 +62,16 @@ export const workflowDomainSchema = z.enum(WORKFLOW_DOMAINS)
 
 export const RISK_STATUSES = ['open', 'mitigated', 'accepted', 'closed'] as const
 export const RISK_CATEGORIES = ['technical', 'regulatory', 'resource', 'schedule'] as const
-export const RISK_PROBABILITIES = ['low', 'medium', 'high'] as const
-export const RISK_IMPACTS = ['low', 'medium', 'high'] as const
+
+export const RISK_SCALE_MIN = 1
+export const RISK_SCALE_MAX = 5
+export const RISK_CRITICAL_THRESHOLD = 15
+export const RISK_HIGH_THRESHOLD = 10
+export const RISK_MEDIUM_THRESHOLD = 5
 
 export const riskStatusSchema = z.enum(RISK_STATUSES)
 export const riskCategorySchema = z.enum(RISK_CATEGORIES)
-export const riskProbabilitySchema = z.enum(RISK_PROBABILITIES)
-export const riskImpactSchema = z.enum(RISK_IMPACTS)
+export const riskScaleSchema = z.number().int().min(RISK_SCALE_MIN).max(RISK_SCALE_MAX)
 
 // ============================================================
 // DOCUMENT
