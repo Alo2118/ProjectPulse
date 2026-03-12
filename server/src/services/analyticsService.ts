@@ -265,24 +265,26 @@ async function getProjectHealth(): Promise<ProjectHealth[]> {
   const projectIds = projects.map((p) => p.id)
 
   // Use statsService for task counts (single source of truth)
-  const [projectTaskStats, riskStats] = await Promise.all([
+  const [projectTaskStats] = await Promise.all([
     getProjectTaskCountsMap(projectIds),
-    prisma.risk.groupBy({
-      by: ['projectId', 'impact', 'status'],
-      where: { projectId: { in: projectIds }, isDeleted: false },
-      _count: { id: true },
-    }),
   ])
 
   // Aggregate risk stats per project
+  // Since groupBy doesn't give us probability*impact score per risk,
+  // fetch individual open risks to properly count high-impact ones
+  const openRisks = await prisma.risk.findMany({
+    where: { projectId: { in: projectIds }, isDeleted: false, status: 'open' },
+    select: { projectId: true, probability: true, impact: true },
+  })
+
   const projectRiskStats = new Map<string, { open: number; high: number }>()
-  for (const stat of riskStats) {
-    const current = projectRiskStats.get(stat.projectId) || { open: 0, high: 0 }
-    if (stat.status === 'open') {
-      current.open += stat._count.id
-      if (stat.impact === 'high') current.high += stat._count.id
+  for (const risk of openRisks) {
+    const current = projectRiskStats.get(risk.projectId) || { open: 0, high: 0 }
+    current.open += 1
+    if ((risk.probability as number) * (risk.impact as number) >= 10) {
+      current.high += 1
     }
-    projectRiskStats.set(stat.projectId, current)
+    projectRiskStats.set(risk.projectId, current)
   }
 
   const now = new Date()
@@ -738,6 +740,88 @@ async function getBudgetOverview(): Promise<ProjectBudgetData[]> {
   })
 }
 
+export interface BurndownDataPoint {
+  date: string
+  remaining: number
+  ideal: number
+}
+
+export interface BurndownData {
+  totalTasks: number
+  series: BurndownDataPoint[]
+}
+
+async function getBurndownData(projectId: string, days = 30): Promise<BurndownData> {
+  if (days < 2) days = 2
+  // Count total tasks for the project (task + subtask, not deleted)
+  const totalTasks = await prisma.task.count({
+    where: {
+      projectId,
+      isDeleted: false,
+      taskType: { in: ['task', 'subtask'] },
+    },
+  })
+
+  // Get tasks completed within the period, grouped by date
+  const since = new Date()
+  since.setDate(since.getDate() - days)
+
+  const completedTasks = await prisma.task.findMany({
+    where: {
+      projectId,
+      isDeleted: false,
+      taskType: { in: ['task', 'subtask'] },
+      status: 'done',
+      updatedAt: { gte: since },
+    },
+    select: { updatedAt: true },
+  })
+
+  // Build a map of daily completed counts
+  const completedByDay = new Map<string, number>()
+  for (const t of completedTasks) {
+    const key = t.updatedAt.toISOString().split('T')[0]
+    completedByDay.set(key, (completedByDay.get(key) ?? 0) + 1)
+  }
+
+  // Count tasks completed before the period started (for accurate starting remaining)
+  const completedBeforePeriod = await prisma.task.count({
+    where: {
+      projectId,
+      isDeleted: false,
+      taskType: { in: ['task', 'subtask'] },
+      status: 'done',
+      updatedAt: { lt: since },
+    },
+  })
+
+  // Build daily series
+  const series: BurndownDataPoint[] = []
+  let remaining = totalTasks - completedBeforePeriod
+
+  for (let i = 0; i < days; i++) {
+    const d = new Date(since)
+    d.setDate(d.getDate() + i)
+    const key = d.toISOString().split('T')[0]
+
+    // Subtract tasks completed on this day
+    const completedToday = completedByDay.get(key) ?? 0
+    remaining -= completedToday
+
+    // Ideal line: linear from total remaining at start to 0
+    const startRemaining = totalTasks - completedBeforePeriod
+    const ideal = Math.max(0, Math.round(startRemaining - (startRemaining / (days - 1)) * i))
+
+    series.push({
+      date: key,
+      remaining: Math.max(0, remaining),
+      ideal,
+    })
+  }
+
+  return { totalTasks, series }
+}
+
 export const analyticsService = {
   getOverview,
   getTasksByStatus,
@@ -750,4 +834,5 @@ export const analyticsService = {
   getWeeklyHoursByUser,
   getDeliveryForecast,
   getBudgetOverview,
+  getBurndownData,
 }
