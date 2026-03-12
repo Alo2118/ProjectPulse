@@ -24,7 +24,7 @@ export interface DashboardStats {
   budgetUsedPercent: number | null
 }
 
-export type AttentionItemType = 'blocked_task' | 'due_soon' | 'critical_risk' | 'pending_review'
+export type AttentionItemType = 'blocked_task' | 'due_soon' | 'critical_risk' | 'pending_review' | 'milestone_at_risk'
 
 export interface AttentionItem {
   type: AttentionItemType
@@ -258,6 +258,35 @@ export async function getStats(userId: string, role: string): Promise<DashboardS
   const weeklyHours = Math.round((thisWeekMinutes / 60) * 100) / 100
   const prevWeeklyHours = Math.round((prevWeekMinutes / 60) * 100) / 100
 
+  // Budget calculation: sum(hours * hourlyRate) / sum(budget) across active projects
+  let budgetUsedPercent: number | null = null
+  try {
+    const projectsWithBudget = await prisma.project.findMany({
+      where: { isDeleted: false, status: 'active', budget: { not: null } },
+      select: { id: true, budget: true },
+    })
+
+    if (projectsWithBudget.length > 0) {
+      const totalBudget = projectsWithBudget.reduce((sum, p) => sum + Number(p.budget!), 0)
+      if (totalBudget > 0) {
+        const timeWithRates = await prisma.timeEntry.findMany({
+          where: {
+            task: { projectId: { in: projectsWithBudget.map(p => p.id) }, isDeleted: false },
+            isDeleted: false,
+          },
+          select: { duration: true, user: { select: { hourlyRate: true } } },
+        })
+        const totalSpent = timeWithRates.reduce((sum, te) => {
+          const rate = te.user?.hourlyRate ? Number(te.user.hourlyRate) : 0
+          return sum + ((te.duration ?? 0) / 60) * rate
+        }, 0)
+        budgetUsedPercent = Math.round((totalSpent / totalBudget) * 100)
+      }
+    }
+  } catch (err) {
+    logger.warn('Budget calculation failed, returning null', { error: err })
+  }
+
   logger.info('Dashboard stats fetched', { userId, role })
 
   return {
@@ -271,7 +300,7 @@ export async function getStats(userId: string, role: string): Promise<DashboardS
     criticalRisks,
     completedTasksThisWeek,
     teamMemberCount,
-    budgetUsedPercent: null, // Budget tracking not yet implemented
+    budgetUsedPercent,
   }
 }
 
@@ -427,6 +456,52 @@ export async function getAttentionItems(
     })
   }
 
+  // 5. Milestones at risk: due within 7 days, not done, has blocked/overdue subtasks
+  if (!isDipendente) {
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const riskyMilestones = await prisma.task.findMany({
+      where: {
+        taskType: 'milestone',
+        isDeleted: false,
+        status: { notIn: CLOSED_TASK_STATUSES },
+        dueDate: { gte: now, lte: sevenDaysFromNow },
+      },
+      select: {
+        id: true,
+        title: true,
+        dueDate: true,
+        projectId: true,
+        project: { select: { name: true } },
+        subtasks: {
+          where: {
+            isDeleted: false,
+            OR: [
+              { status: 'blocked' },
+              { dueDate: { lt: now }, status: { notIn: CLOSED_TASK_STATUSES } },
+            ],
+          },
+          select: { id: true },
+        },
+      },
+      orderBy: { dueDate: 'asc' },
+      take: limit,
+    })
+
+    for (const ms of riskyMilestones) {
+      if (ms.subtasks.length > 0) {
+        items.push({
+          type: 'milestone_at_risk',
+          entityId: ms.id,
+          title: ms.title,
+          projectName: ms.project?.name ?? null,
+          projectId: ms.projectId,
+          dueDate: ms.dueDate?.toISOString() ?? null,
+          extra: `${ms.subtasks.length} task problematic${ms.subtasks.length > 1 ? 'i' : 'o'}`,
+        })
+      }
+    }
+  }
+
   return items.slice(0, limit)
 }
 
@@ -480,9 +555,9 @@ export async function getTodayTotal(userId: string): Promise<TodayTotal> {
  * - Tasks due today that are still in todo status
  * Ordered: in_progress first, then by dueDate ASC. Limit 10.
  */
-export async function getMyTasksToday(userId: string): Promise<MyTaskToday[]> {
-  const todayStart = getTodayStart()
-  const todayEnd = getTodayEnd()
+export async function getMyTasksToday(userId: string, days = 1): Promise<MyTaskToday[]> {
+  const start = getTodayStart()
+  const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000 - 1)
 
   const tasks = await prisma.task.findMany({
     where: {
@@ -492,7 +567,7 @@ export async function getMyTasksToday(userId: string): Promise<MyTaskToday[]> {
         { status: 'in_progress' },
         {
           status: 'todo',
-          dueDate: { gte: todayStart, lte: todayEnd },
+          dueDate: { gte: start, lte: end },
         },
       ],
     },
