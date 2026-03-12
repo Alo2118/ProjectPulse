@@ -1,6 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 
+// --- Types ---
+
+export interface RiskPayload {
+  code: string
+  title: string
+  description?: string
+  category?: string
+  probability: number
+  impact: number
+  status?: string
+  mitigationPlan?: string
+  projectId?: string
+  ownerId?: string
+}
+
+export interface RiskMatrixCell {
+  probability: number
+  impact: number
+  count: number
+  risks: { id: string; title: string; status: string }[]
+}
+
+// --- Query Keys ---
+
 const KEYS = {
   all: ['risks'] as const,
   lists: () => [...KEYS.all, 'list'] as const,
@@ -56,10 +80,12 @@ export function useProjectRiskStatsQuery(projectId: string) {
 }
 
 export function useProjectRiskMatrixQuery(projectId: string) {
-  return useQuery({
+  return useQuery<RiskMatrixCell[]>({
     queryKey: KEYS.projectMatrix(projectId),
     queryFn: async () => {
-      const { data } = await api.get(`/risks/project/${projectId}/matrix`)
+      const { data } = await api.get<{ success: boolean; data: RiskMatrixCell[] }>(
+        `/risks/project/${projectId}/matrix`
+      )
       return data.data
     },
     enabled: !!projectId,
@@ -69,7 +95,7 @@ export function useProjectRiskMatrixQuery(projectId: string) {
 export function useCreateRisk() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
+    mutationFn: async (payload: RiskPayload) => {
       const { data } = await api.post('/risks', payload)
       return data.data
     },
@@ -82,7 +108,7 @@ export function useCreateRisk() {
 export function useUpdateRisk() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...payload }: { id: string } & Record<string, unknown>) => {
+    mutationFn: async ({ id, ...payload }: { id: string } & Partial<RiskPayload>) => {
       const { data } = await api.put(`/risks/${id}`, payload)
       return data.data
     },
