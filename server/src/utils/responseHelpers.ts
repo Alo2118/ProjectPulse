@@ -52,5 +52,5 @@ export function sendPaginated<T>(
  * @example sendError(res, 'Not found', 404)
  */
 export function sendError(res: Response, message: string, statusCode = 500): void {
-  res.status(statusCode).json({ success: false, error: message })
+  res.status(statusCode).json({ success: false, message })
 }
