@@ -15,7 +15,7 @@ import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { MetaRow } from "@/components/common/MetaRow"
 import { DOCUMENT_STATUS_LABELS, DOCUMENT_TYPE_LABELS, DOCUMENT_STATUS_TRANSITIONS } from "@/lib/constants"
-import { formatDate, formatFileSize } from "@/lib/utils"
+import { cn, formatDate, formatFileSize, formatRelative, getUserInitials, getAvatarColor } from "@/lib/utils"
 import {
   useDocumentQuery,
   useDeleteDocument,
@@ -36,6 +36,8 @@ import { documentWorkflow } from "@/lib/workflows/documentWorkflow"
 import type { ValidationData } from "@/lib/workflow-engine"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
+import { useActivityQuery } from "@/hooks/api/useActivity"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -46,6 +48,9 @@ function DocumentDetailPage() {
   const deleteMutation = useDeleteDocument()
   const statusMutation = useChangeDocumentStatus()
   const { isPrivileged: canApprove } = usePrivilegedRole()
+  const { data: docActivity } = useActivityQuery('document', id ?? '')
+  // Related entities hook available: useRelatedQuery('document', id, ['tasks', 'risks'])
+  // Wire into sidebar when related API endpoint is deployed
 
   const handleDelete = async () => {
     if (!id) return
@@ -229,6 +234,49 @@ function DocumentDetailPage() {
                       <p className="text-sm text-muted-foreground">
                         Nessuna nota disponibile.
                       </p>
+                    </CardContent>
+                  </Card>
+                ),
+              },
+              {
+                key: "activity",
+                label: "Attivita'",
+                count: docActivity?.length,
+                content: (
+                  <Card>
+                    <CardContent className="p-5">
+                      {!docActivity || docActivity.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">
+                          Nessuna attivita' registrata
+                        </p>
+                      ) : (
+                        <div className="divide-y divide-border">
+                          {docActivity.map((item) => {
+                            const a = item as { id: string; action: string; createdAt: string; user: { firstName: string; lastName: string } }
+                            const name = `${a.user.firstName} ${a.user.lastName}`
+                            return (
+                              <div key={a.id} className="flex items-start gap-3 py-2.5">
+                                <Avatar className="h-6 w-6 mt-0.5 shrink-0">
+                                  <AvatarFallback
+                                    className={cn("text-[9px] text-white", getAvatarColor(name))}
+                                  >
+                                    {getUserInitials(a.user.firstName, a.user.lastName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-foreground leading-snug">
+                                    <span className="font-medium">{name} </span>
+                                    <span className="text-muted-foreground">{a.action}</span>
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {formatRelative(a.createdAt)}
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ),
