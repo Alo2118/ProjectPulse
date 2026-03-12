@@ -251,7 +251,7 @@ export async function getStats(userId: string, role: string): Promise<DashboardS
 
   const criticalRisks = isDipendente
     ? 0
-    : openRisksRaw.filter((r) => r.probability * r.impact >= RISK_CRITICAL_THRESHOLD).length
+    : openRisksRaw.filter((r) => Number(r.probability) * Number(r.impact) >= RISK_CRITICAL_THRESHOLD).length
 
   const openRisks = isDipendente ? 0 : openRisksRaw.length
 
@@ -269,15 +269,29 @@ export async function getStats(userId: string, role: string): Promise<DashboardS
     if (projectsWithBudget.length > 0) {
       const totalBudget = projectsWithBudget.reduce((sum, p) => sum + Number(p.budget!), 0)
       if (totalBudget > 0) {
-        const timeWithRates = await prisma.timeEntry.findMany({
+        // Aggregate total hours per project, then multiply by average rate
+        // Use a simpler approach: sum all time entries with their user's hourly rate
+        const projectIds = projectsWithBudget.map(p => p.id)
+        const timeEntries = await prisma.timeEntry.findMany({
           where: {
-            task: { projectId: { in: projectsWithBudget.map(p => p.id) }, isDeleted: false },
+            task: { projectId: { in: projectIds }, isDeleted: false },
             isDeleted: false,
           },
-          select: { duration: true, user: { select: { hourlyRate: true } } },
+          select: { duration: true, userId: true },
         })
-        const totalSpent = timeWithRates.reduce((sum, te) => {
-          const rate = te.user?.hourlyRate ? Number(te.user.hourlyRate) : 0
+
+        // Get unique user IDs and their hourly rates
+        const userIds = [...new Set(timeEntries.map(te => te.userId))]
+        const users = userIds.length > 0
+          ? await prisma.user.findMany({
+              where: { id: { in: userIds } },
+              select: { id: true, hourlyRate: true },
+            })
+          : []
+        const rateMap = new Map(users.map(u => [u.id, u.hourlyRate ? Number(u.hourlyRate) : 0]))
+
+        const totalSpent = timeEntries.reduce((sum, te) => {
+          const rate = rateMap.get(te.userId) ?? 0
           return sum + ((te.duration ?? 0) / 60) * rate
         }, 0)
         budgetUsedPercent = Math.round((totalSpent / totalBudget) * 100)
@@ -429,7 +443,9 @@ export async function getAttentionItems(
 
   // 3. Critical risks
   for (const r of openRisksRaw) {
-    if (r.probability * r.impact >= RISK_CRITICAL_THRESHOLD) {
+    const prob = Number(r.probability)
+    const imp = Number(r.impact)
+    if (prob * imp >= RISK_CRITICAL_THRESHOLD) {
       items.push({
         type: 'critical_risk',
         entityId: r.id,
@@ -437,7 +453,7 @@ export async function getAttentionItems(
         projectName: r.project.name,
         projectId: r.project.id,
         dueDate: null,
-        extra: `${r.probability}×${r.impact}=${r.probability * r.impact}`,
+        extra: `${prob}×${imp}=${prob * imp}`,
       })
     }
   }
