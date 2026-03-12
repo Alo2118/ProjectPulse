@@ -36,6 +36,7 @@ import automationRoutes from './automationRoutes.js'
 import planningRoutes from './planningRoutes.js'
 import permissionRoutes from './permissionRoutes.js'
 import statsRoutes from './statsRoutes.js'
+import activityRoutes from './activityRoutes.js'
 import dashboardRoutes from './dashboardRoutes.js'
 
 const router = Router()
@@ -76,6 +77,7 @@ router.use('/', automationRoutes)
 router.use('/planning', planningRoutes)
 router.use('/permissions', permissionRoutes)
 router.use('/stats', statsRoutes)
+router.use('/activity', activityRoutes)
 router.use('/dashboard', dashboardRoutes)
 
 export default router
