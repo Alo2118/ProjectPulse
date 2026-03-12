@@ -21,6 +21,7 @@ import {
 } from "@/lib/constants"
 import { cn, formatDate, formatFileSize, getUserInitials, getAvatarColor } from "@/lib/utils"
 import { useDocumentListQuery } from "@/hooks/api/useDocuments"
+import { useStatsQuery } from "@/hooks/api/useStats"
 import type { KpiCard } from "@/components/common/KpiStrip"
 import {
   Sheet,
@@ -649,11 +650,12 @@ function DocumentListPage() {
   )
 
   const { data, isLoading, error } = useDocumentListQuery(filters)
+  const { data: serverKpiCards } = useStatsQuery('documents')
 
   const items: DocumentRow[] = data?.data ?? []
   const pagination = data?.pagination
 
-  // KPI calculations from full list (use pagination total when available)
+  // Client-side KPI calculations as fallback
   const allItems: DocumentRow[] = data?.data ?? []
   const totalDocs = pagination?.total ?? allItems.length
   const approvedCount = allItems.filter((d) => d.status === "approved").length
@@ -662,7 +664,7 @@ function DocumentListPage() {
   const approvedPct =
     allItems.length > 0 ? Math.round((approvedCount / allItems.length) * 100) : 0
 
-  const kpiCards: KpiCard[] = [
+  const clientKpiCards: KpiCard[] = [
     {
       label: "Totale documenti",
       value: totalDocs,
@@ -691,6 +693,9 @@ function DocumentListPage() {
       subtitle: "in compilazione",
     },
   ]
+
+  // Prefer server-computed KPIs, fall back to client-side
+  const kpiCards = serverKpiCards ?? clientKpiCards
 
   const handleFilterChange = useCallback(
     (key: string, value: string) => {

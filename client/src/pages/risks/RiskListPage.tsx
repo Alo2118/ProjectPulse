@@ -29,6 +29,7 @@ import {
 import type { KpiCard } from "@/components/common/KpiStrip"
 import { cn } from "@/lib/utils"
 import { useRiskListQuery } from "@/hooks/api/useRisks"
+import { useStatsQuery } from "@/hooks/api/useStats"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -798,6 +799,7 @@ function RiskListPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const { data, isLoading, error } = useRiskListQuery(filters)
+  const { data: serverKpiCards } = useStatsQuery('risks')
 
   const rawItems: Risk[] = data?.data ?? []
   const pagination = data?.pagination
@@ -815,7 +817,9 @@ function RiskListPage() {
     })
   }, [rawItems, sevFilter, staFilter])
 
-  const kpiCards = useMemo(() => buildKpiCards(rawItems), [rawItems])
+  // Prefer server-computed KPIs, fall back to client-side computed
+  const clientKpiCards = useMemo(() => buildKpiCards(rawItems), [rawItems])
+  const kpiCards = serverKpiCards ?? clientKpiCards
 
   const handleFilterChange = useCallback(
     (key: string, value: string) => {

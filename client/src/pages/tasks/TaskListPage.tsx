@@ -1,16 +1,25 @@
-import { useMemo } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useCallback, useMemo } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
   ListChecks,
   List,
   Table2,
   LayoutGrid,
-  GanttChart,
+  GanttChart as GanttChartIcon,
   CalendarDays,
-  Construction,
+  Plus,
+  Play,
+  CheckCircle2,
+  Trash2,
+  XCircle,
 } from "lucide-react"
+import { KanbanBoard } from "@/components/domain/tasks/KanbanBoard"
+import { GanttChart } from "@/components/domain/gantt/GanttChart"
+import { CalendarView } from "@/components/domain/calendar/CalendarView"
 import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { ListFilters } from "@/components/common/ListFilters"
 import { StatusDot } from "@/components/common/StatusDot"
 import { DeadlineCell } from "@/components/common/DeadlineCell"
 import { ProblemIndicators } from "@/components/common/ProblemIndicators"
@@ -18,7 +27,10 @@ import { ParentLink } from "@/components/common/ParentLink"
 import { RecurrenceBadge } from "@/components/common/RecurrenceBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useTaskListQuery } from "@/hooks/api/useTasks"
+import { useTaskListQuery, useBulkUpdateTasks, useBulkDeleteTasks } from "@/hooks/api/useTasks"
+import { useStatsQuery } from "@/hooks/api/useStats"
+import { useSelectionStore } from "@/stores/selectionStore"
+import { useListKeyboardNav } from "@/hooks/ui/useListKeyboardNav"
 import {
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
@@ -55,7 +67,7 @@ const VIEW_MODES = [
   { key: "list", label: "Lista", icon: List },
   { key: "table", label: "Tabella", icon: Table2 },
   { key: "board", label: "Board", icon: LayoutGrid },
-  { key: "gantt", label: "Gantt", icon: GanttChart },
+  { key: "gantt", label: "Gantt", icon: GanttChartIcon },
   { key: "calendar", label: "Calendario", icon: CalendarDays },
 ] as const
 
@@ -199,6 +211,13 @@ export default function TaskListPage() {
 
   const viewMode = searchParams.get("view") || "list"
 
+  // Selection store
+  const { selectedIds, toggle, selectAll, clear } = useSelectionStore()
+
+  // Bulk mutations
+  const bulkUpdate = useBulkUpdateTasks()
+  const bulkDelete = useBulkDeleteTasks()
+
   const filters = useMemo(
     () => ({
       page: searchParams.get("page") || "1",
@@ -214,11 +233,115 @@ export default function TaskListPage() {
   )
 
   const { data, isLoading, error } = useTaskListQuery(filters)
+  const { data: kpiCards } = useStatsQuery('tasks')
 
   const tasks = (data?.data ?? []) as TaskRow[]
   const pagination = data?.pagination as
     | { page: number; limit: number; total: number; pages: number }
     | undefined
+
+  // Keyboard navigation (only in list/table view)
+  const isListView = viewMode === "list" || viewMode === "table"
+  const handleKeyboardSelect = useCallback(
+    (task: TaskRow) => navigate(`/tasks/${task.id}`),
+    [navigate]
+  )
+  const { focusedIndex } = useListKeyboardNav({
+    items: tasks,
+    getId: (t) => t.id,
+    onSelect: handleKeyboardSelect,
+    enabled: isListView,
+  })
+
+  // Bulk action handlers
+  const selectedArray = useMemo(() => Array.from(selectedIds), [selectedIds])
+
+  const handleBulkStatus = useCallback(
+    (status: string) => {
+      if (selectedArray.length === 0) return
+      bulkUpdate.mutate(
+        { taskIds: selectedArray, updates: { status } },
+        {
+          onSuccess: () => {
+            toast.success(`${selectedArray.length} task aggiornati a "${TASK_STATUS_LABELS[status] ?? status}"`)
+            clear()
+          },
+          onError: () => {
+            toast.error("Errore nell'aggiornamento dei task")
+          },
+        }
+      )
+    },
+    [selectedArray, bulkUpdate, clear]
+  )
+
+  const handleBulkDelete = useCallback(() => {
+    if (selectedArray.length === 0) return
+    bulkDelete.mutate(
+      { taskIds: selectedArray },
+      {
+        onSuccess: () => {
+          toast.success(`${selectedArray.length} task eliminati`)
+          clear()
+        },
+        onError: () => {
+          toast.error("Errore nell'eliminazione dei task")
+        },
+      }
+    )
+  }, [selectedArray, bulkDelete, clear])
+
+  const handleSelectAll = useCallback(() => {
+    const allIds = tasks.map((t) => t.id)
+    selectAll(allIds)
+  }, [tasks, selectAll])
+
+  const isBulkLoading = bulkUpdate.isPending || bulkDelete.isPending
+
+  const bulkActions = (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleBulkStatus("in_progress")}
+        disabled={isBulkLoading}
+        className="gap-1.5"
+      >
+        <Play className="h-3.5 w-3.5" />
+        Avvia
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleBulkStatus("done")}
+        disabled={isBulkLoading}
+        className="gap-1.5"
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Completa
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleBulkDelete}
+        disabled={isBulkLoading}
+        className="gap-1.5 text-destructive hover:text-destructive"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Elimina
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={clear}
+        disabled={isBulkLoading}
+        className="gap-1.5"
+      >
+        <XCircle className="h-3.5 w-3.5" />
+        Deseleziona
+      </Button>
+    </>
+  )
 
   const handleFilterChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams)
@@ -278,26 +401,38 @@ export default function TaskListPage() {
     </div>
   )
 
-  if (viewMode !== "list" && viewMode !== "table") {
+  const projectId = searchParams.get("projectId") || undefined
+
+  if (viewMode === "board" || viewMode === "gantt" || viewMode === "calendar") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold text-foreground">Task</h1>
-          <div className="flex items-center gap-2">{viewToggle}</div>
+          <div className="flex items-center gap-2">
+            {viewToggle}
+            <Button size="sm" asChild>
+              <Link to="/tasks/new">
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Nuovo Task
+              </Link>
+            </Button>
+          </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Construction className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold text-foreground">
-            Vista {VIEW_MODES.find((m) => m.key === viewMode)?.label ?? viewMode}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">In arrivo nella Fase 9</p>
-        </div>
+        <ListFilters
+          filters={filterConfig}
+          values={filters}
+          onChange={handleFilterChange}
+          onClear={handleFilterClear}
+        />
+
+        {viewMode === "board" && <KanbanBoard projectId={projectId} />}
+        {viewMode === "gantt" && <GanttChart projectId={projectId} />}
+        {viewMode === "calendar" && <CalendarView projectId={projectId} />}
       </div>
     )
   }
 
-  // When a status filter is active, disable groupBy so filtered results are shown flat
   const useGroupBy = !filters.status
 
   return (
@@ -338,6 +473,12 @@ export default function TaskListPage() {
             }
           : undefined
       }
+      selectedIds={selectedIds}
+      onSelectToggle={toggle}
+      onSelectAll={handleSelectAll}
+      bulkActions={bulkActions}
+      focusedIndex={focusedIndex}
+      kpiStrip={kpiCards}
     />
   )
 }
