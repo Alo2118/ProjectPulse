@@ -7,6 +7,7 @@ import {
   updateUserSchema,
   updateProfileSchema,
   updateThemeSchema,
+  updatePreferencesSchema,
 } from '../schemas/userSchemas.js'
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
 import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
@@ -207,6 +208,40 @@ export const updateTheme = async (req: Request, res: Response, next: NextFunctio
     })
 
     sendSuccess(res, user)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateMyPreferences = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUserId(req)
+    const data = updatePreferencesSchema.parse(req.body)
+
+    const updateData: Record<string, unknown> = {}
+    if (data.theme !== undefined) updateData.theme = data.theme
+    if (data.themeStyle !== undefined) updateData.themeStyle = data.themeStyle
+    if (data.notificationPreferences !== undefined) {
+      updateData.notificationPreferences = JSON.stringify(data.notificationPreferences)
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        theme: true,
+        themeStyle: true,
+        notificationPreferences: true,
+      },
+    })
+
+    sendSuccess(res, {
+      ...user,
+      notificationPreferences: user.notificationPreferences
+        ? JSON.parse(user.notificationPreferences)
+        : null,
+    })
   } catch (error) {
     next(error)
   }

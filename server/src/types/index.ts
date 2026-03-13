@@ -274,6 +274,17 @@ export interface ApiResponse<T> {
 export type Theme = 'light' | 'dark' | 'system'
 export type ThemeStyle = 'tech-hud' | 'basic' | 'classic'
 
+export interface NotificationPreferences {
+  sound: boolean
+  desktop: boolean
+  types: {
+    task: boolean
+    risk: boolean
+    doc: boolean
+    automation: boolean
+  }
+}
+
 export interface UserWithoutPassword {
   id: string
   email: string
@@ -283,6 +294,7 @@ export interface UserWithoutPassword {
   avatarUrl: string | null
   theme: Theme
   themeStyle: ThemeStyle
+  notificationPreferences: NotificationPreferences | null
   isActive: boolean
   weeklyHoursTarget?: number | null
   createdAt: Date

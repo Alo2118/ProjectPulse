@@ -107,6 +107,9 @@ export async function login(
       avatarUrl: user.avatarUrl,
       theme: user.theme as Theme,
       themeStyle: user.themeStyle as ThemeStyle,
+      notificationPreferences: user.notificationPreferences
+        ? JSON.parse(user.notificationPreferences)
+        : null,
       isActive: user.isActive,
       createdAt: user.createdAt,
       lastLoginAt: new Date(),
@@ -206,6 +209,7 @@ export async function getCurrentUser(userId: string): Promise<UserWithoutPasswor
       avatarUrl: true,
       theme: true,
       themeStyle: true,
+      notificationPreferences: true,
       isActive: true,
       createdAt: true,
       lastLoginAt: true,
@@ -218,6 +222,9 @@ export async function getCurrentUser(userId: string): Promise<UserWithoutPasswor
     ...user,
     theme: user.theme as Theme,
     themeStyle: user.themeStyle as ThemeStyle,
+    notificationPreferences: user.notificationPreferences
+      ? JSON.parse(user.notificationPreferences)
+      : null,
   }
 }
 

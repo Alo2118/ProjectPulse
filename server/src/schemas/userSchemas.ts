@@ -45,3 +45,18 @@ export const updateThemeSchema = z
   .refine((data) => data.theme || data.themeStyle, {
     message: 'At least one of theme or themeStyle must be provided',
   })
+
+export const updatePreferencesSchema = z.object({
+  theme: themeSchema.optional(),
+  themeStyle: themeStyleSchema.optional(),
+  notificationPreferences: z.object({
+    sound: z.boolean(),
+    desktop: z.boolean(),
+    types: z.object({
+      task: z.boolean(),
+      risk: z.boolean(),
+      doc: z.boolean(),
+      automation: z.boolean(),
+    }),
+  }).optional(),
+})
