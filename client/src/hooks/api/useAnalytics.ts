@@ -14,6 +14,7 @@ const KEYS = {
   deliveryForecast: () => [...KEYS.all, 'delivery-forecast'] as const,
   budgetOverview: () => [...KEYS.all, 'budget-overview'] as const,
   myWeeklyHours: () => [...KEYS.all, 'my-weekly-hours'] as const,
+  burndown: (projectId: string | null, days: number) => [...KEYS.all, 'burndown', projectId, days] as const,
 }
 
 export function useAnalyticsOverviewQuery() {
@@ -123,6 +124,20 @@ export function useMyWeeklyHoursQuery() {
       const { data } = await api.get('/analytics/my-weekly-hours')
       return data.data
     },
+  })
+}
+
+export function useBurndownQuery(projectId: string | null, days = 30) {
+  return useQuery({
+    queryKey: KEYS.burndown(projectId, days),
+    queryFn: async () => {
+      const { data } = await api.get(`/analytics/burndown/${projectId}`, { params: { days } })
+      return data.data as {
+        totalTasks: number
+        series: Array<{ date: string; remaining: number; ideal: number }>
+      }
+    },
+    enabled: !!projectId,
   })
 }
 

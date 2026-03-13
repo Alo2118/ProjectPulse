@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Navigate } from "react-router-dom"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
@@ -9,6 +9,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Flame,
 } from "lucide-react"
 import {
   PieChart,
@@ -25,7 +26,10 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
   useAnalyticsOverviewQuery,
@@ -34,7 +38,13 @@ import {
   useHoursByProjectQuery,
   useTaskCompletionTrendQuery,
   useTopContributorsQuery,
+  useDeliveryForecastQuery,
+  useBudgetOverviewQuery,
+  useBurndownQuery,
 } from "@/hooks/api/useAnalytics"
+import { useProjectListQuery } from "@/hooks/api/useProjects"
+import { BurndownChart } from "@/components/domain/analytics/BurndownChart"
+import { ProgressGradient } from "@/components/common/ProgressGradient"
 import { TASK_STATUS_LABELS, STATUS_COLORS_HSL } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 
@@ -115,12 +125,18 @@ export default function AnalyticsPage() {
   useSetPageContext({ domain: 'analytics' })
   const { isPrivileged } = usePrivilegedRole()
 
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+
   const overview = useAnalyticsOverviewQuery()
   const deltas = useAnalyticsOverviewWithDeltaQuery()
   const tasksByStatus = useTasksByStatusQuery()
   const hoursByProject = useHoursByProjectQuery()
   const completionTrend = useTaskCompletionTrendQuery(30)
   const topContributors = useTopContributorsQuery()
+  const deliveryForecast = useDeliveryForecastQuery()
+  const budgetOverview = useBudgetOverviewQuery()
+  const projectList = useProjectListQuery({ limit: 100 })
+  const burndown = useBurndownQuery(selectedProjectId)
 
   const kpis = useMemo(() => {
     const o = overview.data
@@ -187,6 +203,35 @@ export default function AnalyticsPage() {
       task: item.completedTasks,
     }))
   }, [topContributors.data])
+
+  const projects = useMemo(() => {
+    if (!projectList.data?.data) return []
+    return (projectList.data.data as Array<{ id: string; name: string; code: string }>)
+  }, [projectList.data])
+
+  const forecastData = useMemo(() => {
+    if (!deliveryForecast.data) return []
+    return deliveryForecast.data as Array<{
+      projectId: string
+      projectName: string
+      velocityTasksPerWeek: number
+      remainingTasks: number
+      estimatedCompletionDays: number | null
+      healthStatus: 'healthy' | 'at_risk' | 'critical'
+    }>
+  }, [deliveryForecast.data])
+
+  const budgetData = useMemo(() => {
+    if (!budgetOverview.data) return []
+    return budgetOverview.data as Array<{
+      projectId: string
+      projectName: string
+      totalHoursLogged: number
+      estimatedHours: number
+      budgetUsedPercent: number
+      status: 'on_track' | 'at_risk' | 'over_budget'
+    }>
+  }, [budgetOverview.data])
 
   if (isPrivileged === false) {
     return <Navigate to="/" replace />
@@ -341,6 +386,150 @@ export default function AnalyticsPage() {
           </Card>
         )}
       </div>
+
+      {/* Burndown Chart with Project Selector */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Flame className="h-4 w-4 text-muted-foreground" />
+              Burndown per Progetto
+            </CardTitle>
+            <Select
+              value={selectedProjectId ?? ""}
+              onValueChange={(val) => setSelectedProjectId(val || null)}
+            >
+              <SelectTrigger className="w-[260px]">
+                <SelectValue placeholder="Seleziona progetto..." />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <BurndownChart
+            data={burndown.data}
+            isLoading={burndown.isLoading && !!selectedProjectId}
+            isError={burndown.isError}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Delivery Forecast */}
+      {deliveryForecast.isLoading ? (
+        <ChartSkeleton />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Previsione Consegne</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {deliveryForecast.isError ? (
+              <ChartError message="Errore nel caricamento previsioni" />
+            ) : forecastData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Nessun progetto attivo con dati sufficienti
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Progetto</TableHead>
+                    <TableHead className="text-right">Velocita'</TableHead>
+                    <TableHead className="text-right">Rimanenti</TableHead>
+                    <TableHead className="text-right">Stima (gg)</TableHead>
+                    <TableHead className="text-right">Stato</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {forecastData.map((row) => (
+                    <TableRow key={row.projectId}>
+                      <TableCell className="font-medium">{row.projectName}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {row.velocityTasksPerWeek.toFixed(1)} task/sett
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {row.remainingTasks}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {row.estimatedCompletionDays !== null ? `${row.estimatedCompletionDays} gg` : '\u2014'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge
+                          className={cn(
+                            row.healthStatus === 'healthy' && 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+                            row.healthStatus === 'at_risk' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+                            row.healthStatus === 'critical' && 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+                          )}
+                        >
+                          {row.healthStatus === 'healthy' ? 'In linea' : row.healthStatus === 'at_risk' ? 'A rischio' : 'Critico'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Budget Overview */}
+      {budgetOverview.isLoading ? (
+        <ChartSkeleton />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Budget Ore per Progetto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {budgetOverview.isError ? (
+              <ChartError message="Errore nel caricamento budget" />
+            ) : budgetData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Nessun progetto con budget ore configurato
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {budgetData.map((row) => (
+                  <div key={row.projectId} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{row.projectName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs tabular-nums text-muted-foreground">
+                          {row.totalHoursLogged}h / {row.estimatedHours}h
+                        </span>
+                        <Badge
+                          className={cn(
+                            'text-xs',
+                            row.status === 'on_track' && 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+                            row.status === 'at_risk' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+                            row.status === 'over_budget' && 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+                          )}
+                        >
+                          {row.status === 'on_track' ? 'In budget' : row.status === 'at_risk' ? 'Attenzione' : 'Sforato'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <ProgressGradient
+                      value={row.budgetUsedPercent}
+                      context={row.status === 'over_budget' ? 'danger' : row.status === 'at_risk' ? 'warning' : 'project'}
+                      height="md"
+                      showLabel
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
