@@ -10,9 +10,14 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCurrentUser } from "@/hooks/api/useAuth"
 import { useUpdateProfile } from "@/hooks/api/useUsers"
 import { getUserInitials, getAvatarColor } from "@/lib/utils"
+import { useThemeStore } from "@/stores/themeStore"
+import { useNotificationUIStore } from "@/stores/notificationUiStore"
+import type { ThemeStyle, ThemeMode } from "@/types"
 interface ProfileForm {
   firstName: string
   lastName: string
@@ -23,6 +28,9 @@ export default function ProfilePage() {
   useSetPageContext({ domain: 'user' })
   const { data: user, isLoading } = useCurrentUser()
   const updateProfile = useUpdateProfile()
+
+  const { theme, mode, setTheme, setMode } = useThemeStore()
+  const { soundEnabled, desktopEnabled, toggleSound, toggleDesktop } = useNotificationUIStore()
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<ProfileForm>({
@@ -187,21 +195,90 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Sidebar info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Impostazioni</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Ore settimanali</span>
-              <span className="ml-auto font-medium text-foreground">
-                {user.weeklyHoursTarget ?? 40}h
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Impostazioni */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Impostazioni</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Ore settimanali</span>
+                <span className="ml-auto font-medium text-foreground">
+                  {user.weeklyHoursTarget ?? 40}h
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Aspetto */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Aspetto</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tema</Label>
+                <Select
+                  value={theme}
+                  onValueChange={(v) => setTheme(v as ThemeStyle)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="office-classic">Office Classic</SelectItem>
+                    <SelectItem value="asana-like">Asana Like</SelectItem>
+                    <SelectItem value="tech-hud">Tech HUD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Modalità</Label>
+                <Select
+                  value={mode}
+                  onValueChange={(v) => setMode(v as ThemeMode)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Chiaro</SelectItem>
+                    <SelectItem value="dark">Scuro</SelectItem>
+                    <SelectItem value="system">Sistema</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notifiche */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Notifiche</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sound-toggle">Suono notifiche</Label>
+                <Switch
+                  id="sound-toggle"
+                  checked={soundEnabled}
+                  onCheckedChange={toggleSound}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="desktop-toggle">Notifiche desktop</Label>
+                <Switch
+                  id="desktop-toggle"
+                  checked={desktopEnabled}
+                  onCheckedChange={toggleDesktop}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
