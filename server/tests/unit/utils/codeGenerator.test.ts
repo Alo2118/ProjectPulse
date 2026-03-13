@@ -12,14 +12,14 @@
  * - generateInputCode(client?) → INPUT-YYYY-NNN
  */
 
-import { prisma } from '../../src/models/prismaClient.js'
+import { prisma } from '../../../src/models/prismaClient'
 import {
   generateProjectCode,
   generateDocumentCode,
   generateTaskCode,
   generateRiskCode,
   generateInputCode,
-} from '../../src/utils/codeGenerator.js'
+} from '../../../src/utils/codeGenerator'
 
 const mockedPrisma = prisma as jest.Mocked<typeof prisma>
 

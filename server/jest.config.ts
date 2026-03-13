@@ -1,7 +1,7 @@
 import type { Config } from 'jest'
 
 const config: Config = {
-  preset: 'ts-jest/presets/default-esm',
+  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
@@ -14,24 +14,10 @@ const config: Config = {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
-        useESM: true,
-        tsconfig: {
-          target: 'ES2022',
-          module: 'ESNext',
-          moduleResolution: 'bundler',
-          esModuleInterop: true,
-          strict: true,
-          skipLibCheck: true,
-          rootDir: '.',
-          baseUrl: '.',
-          paths: {
-            '@/*': ['src/*'],
-          },
-        },
+        tsconfig: 'tsconfig.test.json',
       },
     ],
   },
-  extensionsToTreatAsEsm: ['.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   clearMocks: true,
   restoreMocks: true,

@@ -8,7 +8,7 @@
 
 import { Request, Response, NextFunction } from 'express'
 import { ZodError, ZodIssue } from 'zod'
-import { AppError, errorMiddleware } from '../../src/middleware/errorMiddleware.js'
+import { AppError, errorMiddleware } from '../../../src/middleware/errorMiddleware'
 
 // ---- Helpers to create mock Express objects ----
 function mockResponse(): Response {
