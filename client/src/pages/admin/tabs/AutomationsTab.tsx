@@ -1,9 +1,12 @@
 import { useState } from "react"
-import { Loader2, Plus, Trash2, Zap } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion"
+import { ChevronDown, Loader2, Plus, Trash2, Zap } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable, type Column } from "@/components/common/DataTable"
 import { FormField } from "@/components/common/FormField"
 import { EmptyState } from "@/components/common/EmptyState"
+import { RecommendationsPanel } from "@/components/domain/automation/RecommendationsPanel"
+import { AutomationLogsViewer } from "@/components/domain/automation/AutomationLogsViewer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -92,6 +95,7 @@ export function AutomationsTab() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null)
   const [form, setForm] = useState<AutomationForm>(INITIAL_FORM)
   const [errors, setErrors] = useState<{ name?: string; conditions?: string; actions?: string }>({})
 
@@ -213,24 +217,46 @@ export function AutomationsTab() {
       key: "actions",
       header: "",
       cell: (item) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive"
-          onClick={() => {
-            setDeletingId(item.id)
-            setDeleteOpen(true)
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              setExpandedRuleId((prev) => (prev === item.id ? null : item.id))
+            }}
+            title="Mostra log esecuzioni"
+          >
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                expandedRuleId === item.id ? "rotate-180" : ""
+              }`}
+            />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation()
+              setDeletingId(item.id)
+              setDeleteOpen(true)
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
-      className: "w-[60px] text-right",
+      className: "w-[100px] text-right",
     },
   ]
 
   return (
     <div className="space-y-6">
+      {/* Recommendations */}
+      <RecommendationsPanel />
+
       {/* Templates section */}
       {templateList.length > 0 && (
         <div className="space-y-3">
@@ -283,8 +309,35 @@ export function AutomationsTab() {
             action={{ label: "Nuova regola", onClick: openCreate }}
           />
         ) : (
-          <div className="rounded-md border">
-            <DataTable columns={columns} data={items} getId={(item) => item.id} isLoading={isLoading} />
+          <div className="space-y-0">
+            <div className="rounded-md border">
+              <DataTable columns={columns} data={items} getId={(item) => item.id} isLoading={isLoading} />
+            </div>
+            <AnimatePresence mode="wait">
+              {expandedRuleId && (
+                <motion.div
+                  key={expandedRuleId}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card className="mt-3">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">
+                        Log esecuzioni &mdash;{" "}
+                        <span className="text-muted-foreground font-normal">
+                          {items.find((i) => i.id === expandedRuleId)?.name ?? expandedRuleId}
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <AutomationLogsViewer ruleId={expandedRuleId} />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
