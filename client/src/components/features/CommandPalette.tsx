@@ -22,9 +22,16 @@ import {
   CommandItem,
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { useUIStore } from "@/stores/uiStore"
 import { useSearchQuery, type SearchDomain } from "@/hooks/api/useSearch"
 import { cn } from "@/lib/utils"
+import {
+  TASK_STATUS_LABELS,
+  PROJECT_STATUS_LABELS,
+  RISK_STATUS_LABELS,
+  DOCUMENT_STATUS_LABELS,
+} from "@/lib/constants"
 
 const DOMAIN_TABS: Array<{ value: SearchDomain; label: string; icon: React.ElementType }> = [
   { value: "all", label: "Tutto", icon: Search },
@@ -158,12 +165,16 @@ export function CommandPalette() {
                     key={t.id}
                     value={`task-${t.id}`}
                     onSelect={() => handleSelect(`/tasks/${t.id}`)}
+                    className="flex items-center gap-2"
                   >
-                    <CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground mr-1.5">
-                      {t.code}
+                    <CheckSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{t.title}</span>
+                      <span className="text-xs text-muted-foreground">{t.code}</span>
                     </span>
-                    <span>{t.title}</span>
+                    {t.status && (
+                      <StatusBadge status={t.status} labels={TASK_STATUS_LABELS} />
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -176,9 +187,16 @@ export function CommandPalette() {
                     key={p.id}
                     value={`project-${p.id}`}
                     onSelect={() => handleSelect(`/projects/${p.id}`)}
+                    className="flex items-center gap-2"
                   >
-                    <FolderKanban className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{p.name}</span>
+                    <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{p.name}</span>
+                      <span className="text-xs text-muted-foreground">{p.code}</span>
+                    </span>
+                    {p.status && (
+                      <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -191,10 +209,12 @@ export function CommandPalette() {
                     key={u.id}
                     value={`user-${u.id}`}
                     onSelect={() => handleSelect(`/users/${u.id}`)}
+                    className="flex items-center gap-2"
                   >
-                    <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {u.firstName} {u.lastName}
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{u.firstName} {u.lastName}</span>
+                      <span className="text-xs text-muted-foreground">{u.email}</span>
                     </span>
                   </CommandItem>
                 ))}
@@ -208,12 +228,16 @@ export function CommandPalette() {
                     key={r.id}
                     value={`risk-${r.id}`}
                     onSelect={() => handleSelect(`/risks/${r.id}`)}
+                    className="flex items-center gap-2"
                   >
-                    <AlertTriangle className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground mr-1.5">
-                      {r.code}
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{r.title}</span>
+                      <span className="text-xs text-muted-foreground">{r.code}</span>
                     </span>
-                    <span>{r.title}</span>
+                    {r.status && (
+                      <StatusBadge status={r.status} labels={RISK_STATUS_LABELS} />
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -226,12 +250,16 @@ export function CommandPalette() {
                     key={d.id}
                     value={`document-${d.id}`}
                     onSelect={() => handleSelect(`/documents/${d.id}`)}
+                    className="flex items-center gap-2"
                   >
-                    <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground mr-1.5">
-                      {d.code}
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{d.title}</span>
+                      <span className="text-xs text-muted-foreground">{d.code}</span>
                     </span>
-                    <span>{d.title}</span>
+                    {d.status && (
+                      <StatusBadge status={d.status} labels={DOCUMENT_STATUS_LABELS} />
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
