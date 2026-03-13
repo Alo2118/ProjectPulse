@@ -21,6 +21,7 @@ import { AppError } from '../middleware/errorMiddleware.js'
 import { projectWithRelationsSelect } from '../utils/selectFields.js'
 import { generateProjectCode } from '../utils/codeGenerator.js'
 import { enrichProjects } from './enrichmentService.js'
+import { buildPrismaScopeWhere } from '../utils/scopeFilter.js'
 
 /**
  * Creates a new project with audit logging
@@ -118,9 +119,9 @@ export async function createProject(data: CreateProjectInput, userId: string) {
 const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
 
 export async function getProjects(
-  params: ProjectQueryParams
+  params: ProjectQueryParams & { userId?: string; role?: string }
   ) {
-  const { page = 1, limit = 10, status, priority, ownerId, search, sortBy = 'createdAt', sortOrder = 'desc' } = params
+  const { page = 1, limit = 10, status, priority, ownerId, search, sortBy = 'createdAt', sortOrder = 'desc', userId, role } = params
 
   const where: Prisma.ProjectWhereInput = {
     isDeleted: false, // Rule 11: Soft Delete filter
@@ -135,6 +136,21 @@ export async function getProjects(
       { code: { contains: search } },
       { description: { contains: search } },
     ]
+  }
+
+  // Scope=mine filter: non-direzione users see only their own records
+  if (userId && role) {
+    const scopeWhere = await buildPrismaScopeWhere(userId, role, 'project')
+    if (scopeWhere) {
+      // Merge scope OR with existing where using AND to avoid OR collision with search
+      if (where.OR) {
+        const searchOr = where.OR
+        delete where.OR
+        where.AND = [{ OR: searchOr }, scopeWhere]
+      } else {
+        Object.assign(where, scopeWhere)
+      }
+    }
   }
 
   const skip = (page - 1) * limit

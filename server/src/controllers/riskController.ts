@@ -37,6 +37,8 @@ export async function getRisks(req: Request, res: Response, next: NextFunction):
       search: params.search,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)

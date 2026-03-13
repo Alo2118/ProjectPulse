@@ -14,6 +14,7 @@ import { buildPagination } from '../utils/paginate.js'
 import { generateDocumentCode } from '../utils/codeGenerator.js'
 import { EntityType, PaginatedResponse, PaginationParams, DocumentType, DocumentStatus } from '../types/index.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { buildPrismaScopeWhere } from '../utils/scopeFilter.js'
 
 // ============================================================
 // TYPES
@@ -107,9 +108,9 @@ export async function createDocument(
  * Retrieves documents with pagination and filters
  */
 export async function getDocuments(
-  params: DocumentQueryParams
+  params: DocumentQueryParams & { userId?: string; role?: string }
 ): Promise<PaginatedResponse<Prisma.DocumentGetPayload<{ select: typeof documentWithRelationsSelect }>>> {
-  const { page = 1, limit = 20, projectId, type, status, search } = params
+  const { page = 1, limit = 20, projectId, type, status, search, userId, role } = params
 
   const where: Prisma.DocumentWhereInput = {
     isDeleted: false,
@@ -124,6 +125,20 @@ export async function getDocuments(
       { code: { contains: search } },
       { description: { contains: search } },
     ]
+  }
+
+  // Scope=mine filter: non-direzione users see only their own records
+  if (userId && role) {
+    const scopeWhere = await buildPrismaScopeWhere(userId, role, 'document')
+    if (scopeWhere) {
+      if (where.OR) {
+        const searchOr = where.OR
+        delete where.OR
+        where.AND = [{ OR: searchOr }, scopeWhere]
+      } else {
+        Object.assign(where, scopeWhere)
+      }
+    }
   }
 
   const skip = (page - 1) * limit

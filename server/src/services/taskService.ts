@@ -38,6 +38,7 @@ import { taskSelectFields, taskWithRelationsSelect } from '../utils/selectFields
 import { getTaskStats } from './statsService.js'
 import { generateTaskCode } from '../utils/codeGenerator.js'
 import { enrichTasks, enrichKanbanCards } from './enrichmentService.js'
+import { buildPrismaScopeWhere } from '../utils/scopeFilter.js'
 
 /**
  * Creates a new task with audit logging
@@ -202,9 +203,9 @@ export async function createTask(data: CreateTaskInput, userId: string) {
  * @returns Paginated tasks
  */
 export async function getTasks(
-  params: TaskQueryParams
+  params: TaskQueryParams & { userId?: string; role?: string }
 ) {
-  const { page = 1, limit = 20, projectId, taskType, status, priority, assigneeId, departmentId, search, standalone, parentTaskId, includeSubtasks } = params
+  const { page = 1, limit = 20, projectId, taskType, status, priority, assigneeId, departmentId, search, standalone, parentTaskId, includeSubtasks, userId, role } = params
 
   const where: Prisma.TaskWhereInput = {
     isDeleted: false, // Rule 11: Soft Delete filter
@@ -237,6 +238,20 @@ export async function getTasks(
       { code: { contains: search } },
       { description: { contains: search } },
     ]
+  }
+
+  // Scope=mine filter: non-direzione users see only their own records
+  if (userId && role) {
+    const scopeWhere = await buildPrismaScopeWhere(userId, role, 'task')
+    if (scopeWhere) {
+      if (where.OR) {
+        const searchOr = where.OR
+        delete where.OR
+        where.AND = [{ OR: searchOr }, scopeWhere]
+      } else {
+        Object.assign(where, scopeWhere)
+      }
+    }
   }
 
   const skip = (page - 1) * limit
@@ -862,7 +877,7 @@ export async function assignSubtasksRecursively(
 /**
  * Gets standalone tasks (no project) with pagination
  */
-export async function getStandaloneTasks(params: TaskQueryParams) {
+export async function getStandaloneTasks(params: TaskQueryParams & { userId?: string; role?: string }) {
   return getTasks({ ...params, standalone: true })
 }
 

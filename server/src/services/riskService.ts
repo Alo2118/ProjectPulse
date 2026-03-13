@@ -23,6 +23,7 @@ import {
 } from '../types/index.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { RISK_CRITICAL_THRESHOLD, RISK_HIGH_THRESHOLD, RISK_MEDIUM_THRESHOLD } from '../constants/enums.js'
+import { buildPrismaScopeWhere } from '../utils/scopeFilter.js'
 
 // ============================================================
 // TYPES
@@ -156,9 +157,9 @@ export async function createRisk(data: CreateRiskInput, userId: string) {
  * Retrieves risks with pagination and filters
  */
 export async function getRisks(
-  params: RiskQueryParams
+  params: RiskQueryParams & { userId?: string; role?: string }
 ): Promise<PaginatedResponse<Prisma.RiskGetPayload<{ select: typeof riskWithRelationsSelect }>>> {
-  const { page = 1, limit = 20, projectId, category, status, probability, impact, ownerId, search } = params
+  const { page = 1, limit = 20, projectId, category, status, probability, impact, ownerId, search, userId, role } = params
 
   const where: Prisma.RiskWhereInput = {
     isDeleted: false, // Rule 11: Soft Delete filter
@@ -176,6 +177,20 @@ export async function getRisks(
       { code: { contains: search } },
       { description: { contains: search } },
     ]
+  }
+
+  // Scope=mine filter: non-direzione users see only their own records
+  if (userId && role) {
+    const scopeWhere = await buildPrismaScopeWhere(userId, role, 'risk')
+    if (scopeWhere) {
+      if (where.OR) {
+        const searchOr = where.OR
+        delete where.OR
+        where.AND = [{ OR: searchOr }, scopeWhere]
+      } else {
+        Object.assign(where, scopeWhere)
+      }
+    }
   }
 
   const skip = (page - 1) * limit

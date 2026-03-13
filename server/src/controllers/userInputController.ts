@@ -85,6 +85,8 @@ export async function getUserInputs(req: Request, res: Response, next: NextFunct
       search: params.search,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)

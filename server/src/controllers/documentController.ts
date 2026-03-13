@@ -36,6 +36,8 @@ export async function getDocuments(req: Request, res: Response, next: NextFuncti
       search: params.search,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)

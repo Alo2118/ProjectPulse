@@ -41,6 +41,8 @@ export async function getProjects(req: Request, res: Response, next: NextFunctio
       limit: params.limit,
       sortBy: params.sortBy,
       sortOrder: params.sortOrder,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)

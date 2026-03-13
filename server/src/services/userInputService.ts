@@ -13,6 +13,7 @@ import { userInputWithRelationsSelect } from '../utils/selectFields.js'
 import { buildPagination } from '../utils/paginate.js'
 import { PaginatedResponse, EntityType, PaginationParams, InputCategory, InputStatus, TaskPriority } from '../types/index.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { buildPrismaScopeWhere } from '../utils/scopeFilter.js'
 import {
   generateInputCode,
   generateStandaloneTaskCode,
@@ -160,9 +161,9 @@ export async function createUserInput(data: CreateUserInputData, userId: string)
  * Retrieves user inputs with pagination and filters
  */
 export async function getUserInputs(
-  params: UserInputQueryParams
+  params: UserInputQueryParams & { userId?: string; role?: string }
 ): Promise<PaginatedResponse<Prisma.UserInputGetPayload<{ select: typeof userInputWithRelationsSelect }>>> {
-  const { page = 1, limit = 20, status, category, priority, createdById, search } = params
+  const { page = 1, limit = 20, status, category, priority, createdById, search, userId, role } = params
 
   const where: Prisma.UserInputWhereInput = {
     isDeleted: false,
@@ -178,6 +179,20 @@ export async function getUserInputs(
       { code: { contains: search } },
       { description: { contains: search } },
     ]
+  }
+
+  // Scope=mine filter: non-direzione users see only their own records
+  if (userId && role) {
+    const scopeWhere = await buildPrismaScopeWhere(userId, role, 'userInput')
+    if (scopeWhere) {
+      if (where.OR) {
+        const searchOr = where.OR
+        delete where.OR
+        where.AND = [{ OR: searchOr }, scopeWhere]
+      } else {
+        Object.assign(where, scopeWhere)
+      }
+    }
   }
 
   const skip = (page - 1) * limit

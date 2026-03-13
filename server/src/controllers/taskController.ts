@@ -47,6 +47,8 @@ export async function getTasks(req: Request, res: Response, next: NextFunction):
       includeSubtasks: params.includeSubtasks,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)
@@ -353,6 +355,8 @@ export async function getStandaloneTasks(req: Request, res: Response, next: Next
       search: params.search,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)
