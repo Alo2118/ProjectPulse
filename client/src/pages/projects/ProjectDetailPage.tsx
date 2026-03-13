@@ -44,6 +44,8 @@ import { useSummaryQuery } from "@/hooks/api/useStats"
 import { useRelatedQuery } from "@/hooks/api/useRelated"
 import { TagEditor } from "@/components/common/TagEditor"
 import { ActivityTab } from "@/components/common/ActivityTab"
+import { BudgetTab } from "@/components/domain/projects/BudgetTab"
+import { TeamTab } from "@/components/domain/projects/TeamTab"
 import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
@@ -1073,6 +1075,17 @@ export default function ProjectDetailPage() {
                 label: "Task",
                 count: totalTaskCount,
                 content: tasksTab,
+              },
+              {
+                key: "budget",
+                label: "Budget",
+                content: <BudgetTab projectId={id!} />,
+              },
+              {
+                key: "team",
+                label: "Team",
+                count: members.length,
+                content: <TeamTab projectId={id!} />,
               },
               {
                 key: "risks",
