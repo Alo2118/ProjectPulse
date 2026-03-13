@@ -28,6 +28,7 @@ const PlanningWizardPage = lazy(() => import('@/pages/planning/PlanningWizardPag
 const WeeklyReportPage = lazy(() => import('@/pages/reports/WeeklyReportPage'))
 const UserListPage = lazy(() => import('@/pages/admin/UserListPage'))
 const UserFormPage = lazy(() => import('@/pages/admin/UserFormPage'))
+const UserDetailPage = lazy(() => import('@/pages/admin/UserDetailPage'))
 const DepartmentListPage = lazy(() => import('@/pages/admin/DepartmentListPage'))
 const AdminConfigPage = lazy(() => import('@/pages/admin/AdminConfigPage'))
 const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'))
@@ -94,6 +95,7 @@ export default function App() {
                   <Route path="/reports" element={<WeeklyReportPage />} />
                   <Route path="/admin/users" element={<UserListPage />} />
                   <Route path="/admin/users/new" element={<UserFormPage />} />
+                  <Route path="/admin/users/:id" element={<UserDetailPage />} />
                   <Route path="/admin/users/:id/edit" element={<UserFormPage />} />
                   <Route path="/admin/departments" element={<DepartmentListPage />} />
                   <Route path="/admin/config" element={<AdminConfigPage />} />
