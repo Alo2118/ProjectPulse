@@ -42,6 +42,7 @@ import { useProjectMembersQuery } from "@/hooks/api/useProjectMembers"
 import { useRecentActivityQuery, type RecentActivityItem } from "@/hooks/api/useDashboard"
 import { useActivityQuery } from "@/hooks/api/useActivity"
 import { useSummaryQuery } from "@/hooks/api/useStats"
+import { useRelatedQuery } from "@/hooks/api/useRelated"
 import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
@@ -427,6 +428,7 @@ export default function ProjectDetailPage() {
   const { data: activityData } = useRecentActivityQuery(8)
   const { data: projectActivity } = useActivityQuery('project', id!)
   const { data: _summaryKpis } = useSummaryQuery('project', id!)
+  const { data: relatedData } = useRelatedQuery('project', id!, ['risks', 'documents', 'team'])
 
   const p = project as ProjectData | undefined
   const s = stats as ProjectStats | undefined
@@ -1061,6 +1063,68 @@ export default function ProjectDetailPage() {
               },
             ]
           : undefined
+      }
+      sidebar={
+        relatedData ? (
+          <div className="space-y-4">
+            {/* Related risks */}
+            {Array.isArray(relatedData.risks) && relatedData.risks.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Rischi correlati
+                </p>
+                <div className="space-y-1.5">
+                  {(relatedData.risks as Array<{ id: string; title: string; status?: string }>).slice(0, 5).map((r) => (
+                    <Link
+                      key={r.id}
+                      to={`/risks/${r.id}`}
+                      className="flex items-center gap-2 text-xs hover:text-primary transition-colors"
+                    >
+                      <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />
+                      <span className="truncate">{r.title}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Related documents */}
+            {Array.isArray(relatedData.documents) && relatedData.documents.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Documenti correlati
+                </p>
+                <div className="space-y-1.5">
+                  {(relatedData.documents as Array<{ id: string; title: string }>).slice(0, 5).map((d) => (
+                    <Link
+                      key={d.id}
+                      to={`/documents/${d.id}`}
+                      className="flex items-center gap-2 text-xs hover:text-primary transition-colors"
+                    >
+                      <FileText className="h-3 w-3 text-purple-500 shrink-0" />
+                      <span className="truncate">{d.title}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Related team */}
+            {Array.isArray(relatedData.team) && relatedData.team.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Team
+                </p>
+                <div className="space-y-1.5">
+                  {(relatedData.team as Array<{ id: string; firstName?: string; lastName?: string; name?: string }>).slice(0, 5).map((u) => (
+                    <div key={u.id} className="flex items-center gap-2 text-xs">
+                      <Users className="h-3 w-3 text-green-500 shrink-0" />
+                      <span className="truncate">{u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : undefined
       }
       onDelete={canManageProject ? handleDelete : undefined}
       deleteConfirmMessage="Sei sicuro di voler eliminare questo progetto?"

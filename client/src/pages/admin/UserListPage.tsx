@@ -19,6 +19,10 @@ import { toast } from "sonner"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import { useUserListQuery, useUpdateUser } from "@/hooks/api/useUsers"
+import { useStatsQuery } from "@/hooks/api/useStats"
+import { useRelatedQuery } from "@/hooks/api/useRelated"
+import { useActivityQuery } from "@/hooks/api/useActivity"
+import { KpiStrip } from "@/components/common/KpiStrip"
 import { EmptyState } from "@/components/common/EmptyState"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -159,6 +163,64 @@ function TableSkeleton() {
   )
 }
 
+// ─── User Drawer Body (needs hooks, must be a component) ─────────────────────
+
+function UserDrawerBody({ user }: { user: UserRow }) {
+  const { data: relatedData } = useRelatedQuery('user', user.id, ['projects'])
+  const { data: userActivity } = useActivityQuery('user', user.id, 10)
+
+  const relatedProjects = relatedData?.projects as Array<{ id: string; name: string }> | undefined
+
+  return (
+    <div className="space-y-5">
+      {/* Related projects (from useRelatedQuery) */}
+      {relatedProjects && relatedProjects.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 pb-1.5 border-b border-border/50">
+            Progetti associati
+          </p>
+          <div className="space-y-1.5">
+            {relatedProjects.slice(0, 6).map((p) => (
+              <div key={p.id} className="flex items-center gap-2 text-xs text-foreground">
+                <Briefcase className="h-3 w-3 text-blue-500 shrink-0" />
+                <span className="truncate">{p.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent activity */}
+      {userActivity && userActivity.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 pb-1.5 border-b border-border/50">
+            Attivita' recente
+          </p>
+          <div className="space-y-2">
+            {userActivity.slice(0, 5).map((item) => {
+              const a = item as { id: string; action: string; entityName?: string; createdAt: string }
+              return (
+                <div key={a.id} className="flex items-start gap-2">
+                  <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-foreground">
+                      <span className="text-muted-foreground">{a.action}</span>
+                      {a.entityName && <span className="font-medium"> {a.entityName}</span>}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatRelative(a.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function UserListPage() {
@@ -182,6 +244,7 @@ export default function UserListPage() {
 
   const { data, isLoading, error } = useUserListQuery({ limit: 100 })
   const updateUser = useUpdateUser()
+  const { data: serverKpiCards } = useStatsQuery('users')
 
   const allUsers: UserRow[] = data?.data ?? []
 
@@ -318,8 +381,12 @@ export default function UserListPage() {
 
           {/* ── Tab 1: Utenti ── */}
           <TabsContent value="users" className="mt-0 pt-5">
-            {/* KPI strip */}
-            {isLoading ? (
+            {/* KPI strip — prefer server-computed, fall back to client */}
+            {serverKpiCards ? (
+              <div className="mb-5">
+                <KpiStrip cards={serverKpiCards} />
+              </div>
+            ) : isLoading ? (
               <KpiSkeleton />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
@@ -862,6 +929,9 @@ export default function UserListPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Related projects & activity */}
+                <UserDrawerBody user={drawer.user} />
 
                 {/* Last login info */}
                 {drawer.user.lastLoginAt && (

@@ -37,7 +37,9 @@ import type { ValidationData } from "@/lib/workflow-engine"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { useActivityQuery } from "@/hooks/api/useActivity"
+import { useRelatedQuery } from "@/hooks/api/useRelated"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 
 function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -49,8 +51,7 @@ function DocumentDetailPage() {
   const statusMutation = useChangeDocumentStatus()
   const { isPrivileged: canApprove } = usePrivilegedRole()
   const { data: docActivity } = useActivityQuery('document', id ?? '')
-  // Related entities hook available: useRelatedQuery('document', id, ['tasks', 'risks'])
-  // Wire into sidebar when related API endpoint is deployed
+  const { data: relatedData } = useRelatedQuery('document', id ?? '', ['versions', 'tasks'])
 
   const handleDelete = async () => {
     if (!id) return
@@ -217,9 +218,26 @@ function DocumentDetailPage() {
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">
                           Storico versioni
                         </h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground mb-2">
                           Versione corrente: v{doc.version}
                         </p>
+                        {relatedData?.versions && Array.isArray(relatedData.versions) && relatedData.versions.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {(relatedData.versions as Array<{ id: string; version: number; createdAt: string; status?: string }>).map((v) => (
+                              <div key={v.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-[10px]">v{v.version}</Badge>
+                                  {v.status && (
+                                    <StatusBadge status={v.status} labels={DOCUMENT_STATUS_LABELS} />
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground">{formatDate(v.createdAt)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">Nessuna versione precedente</p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -324,6 +342,27 @@ function DocumentDetailPage() {
             <MetaRow icon={Calendar} label="Data">
               {formatDate(doc.createdAt)}
             </MetaRow>
+            {/* Related tasks */}
+            {relatedData?.tasks && Array.isArray(relatedData.tasks) && relatedData.tasks.length > 0 && (
+              <>
+                <Separator className="my-3" />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Task correlati
+                </p>
+                <div className="space-y-1.5">
+                  {(relatedData.tasks as Array<{ id: string; title: string }>).slice(0, 5).map((t) => (
+                    <Link
+                      key={t.id}
+                      to={`/tasks/${t.id}`}
+                      className="flex items-center gap-2 text-xs hover:text-primary transition-colors"
+                    >
+                      <FileText className="h-3 w-3 text-blue-500 shrink-0" />
+                      <span className="truncate">{t.title}</span>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ) : undefined
       }

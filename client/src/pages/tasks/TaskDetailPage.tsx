@@ -41,6 +41,8 @@ import {
 } from "@/hooks/api/useTasks"
 import { useTimeEntryListQuery } from "@/hooks/api/useTimeEntries"
 import { useActivityQuery } from "@/hooks/api/useActivity"
+import { useSummaryQuery } from "@/hooks/api/useStats"
+import { KpiStrip } from "@/components/common/KpiStrip"
 import { useAttachmentListQuery } from "@/hooks/api/useAttachments"
 import {
   TASK_STATUS_LABELS,
@@ -636,6 +638,7 @@ export default function TaskDetailPage() {
   const { data: task, isLoading, error } = useTaskQuery(id ?? "")
   const { data: subtasks } = useSubtasksQuery(id ?? "")
   const { data: _taskActivity } = useActivityQuery('task', id ?? '')
+  const { data: summaryKpis } = useSummaryQuery('task', id ?? '')
   const changeStatus = useChangeTaskStatus()
   const deleteTask = useDeleteTask()
 
@@ -801,7 +804,12 @@ export default function TaskDetailPage() {
   ) : null
 
   // ---- KPI row ----
-  const kpiRow = t ? <KpiRow t={t} subtaskList={subtaskList} /> : undefined
+  const kpiRow = t ? (
+    <div className="space-y-3">
+      {summaryKpis && summaryKpis.length > 0 && <KpiStrip cards={summaryKpis} />}
+      <KpiRow t={t} subtaskList={subtaskList} />
+    </div>
+  ) : undefined
 
   // ---- Tabs ----
   const tabs = useMemo(

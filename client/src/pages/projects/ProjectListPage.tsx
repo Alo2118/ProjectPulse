@@ -14,6 +14,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useProjectListQuery, useReorderProjects } from '@/hooks/api/useProjects'
 import { useDashboardStatsQuery } from '@/hooks/api/useDashboard'
+import { useStatsQuery } from '@/hooks/api/useStats'
 import { usePrivilegedRole } from '@/hooks/ui/usePrivilegedRole'
 import {
   PROJECT_STATUS_LABELS,
@@ -292,6 +293,7 @@ export default function ProjectListPage() {
 
   const { data, isLoading, error } = useProjectListQuery(filters)
   const statsQuery = useDashboardStatsQuery()
+  const { data: serverKpiCards } = useStatsQuery('projects')
 
   const projects = (data?.data ?? []) as ProjectRow[]
   const pagination = data?.pagination as
@@ -300,8 +302,8 @@ export default function ProjectListPage() {
 
   const stats = statsQuery.data
 
-  // KPI strip cards
-  const kpiCards: KpiCard[] = stats
+  // KPI strip cards — prefer server-computed, fall back to dashboard-derived
+  const clientKpiCards: KpiCard[] = stats
     ? [
         {
           label: 'Progetti attivi',
@@ -339,6 +341,8 @@ export default function ProjectListPage() {
         },
       ]
     : []
+
+  const kpiCards = serverKpiCards ?? (clientKpiCards.length > 0 ? clientKpiCards : undefined)
 
   // Handlers
   const handleFilterChange = (key: string, value: string) => {
@@ -419,7 +423,7 @@ export default function ProjectListPage() {
       headerExtra={manualOrderButton}
       draggable={canDrag}
       onReorder={canDrag ? handleReorder : undefined}
-      kpiStrip={kpiCards.length > 0 ? kpiCards : undefined}
+      kpiStrip={kpiCards}
       viewMode={viewMode}
       onViewModeChange={setViewMode}
       gridRenderItem={(p) => (
