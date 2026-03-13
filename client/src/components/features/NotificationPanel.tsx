@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { CheckCheck } from "lucide-react"
 import {
@@ -63,6 +63,36 @@ export function NotificationPanel() {
     markAllRead.mutate()
   }, [markAllRead])
 
+  const grouped = useMemo(() => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    const weekAgo = new Date(today)
+    weekAgo.setDate(today.getDate() - 7)
+
+    const groups: { label: string; items: NotificationData[] }[] = []
+    const todayItems: NotificationData[] = []
+    const yesterdayItems: NotificationData[] = []
+    const weekItems: NotificationData[] = []
+    const olderItems: NotificationData[] = []
+
+    for (const n of notifications) {
+      const d = new Date(n.createdAt)
+      if (d >= today) todayItems.push(n)
+      else if (d >= yesterday) yesterdayItems.push(n)
+      else if (d >= weekAgo) weekItems.push(n)
+      else olderItems.push(n)
+    }
+
+    if (todayItems.length) groups.push({ label: "Oggi", items: todayItems })
+    if (yesterdayItems.length) groups.push({ label: "Ieri", items: yesterdayItems })
+    if (weekItems.length) groups.push({ label: "Questa settimana", items: weekItems })
+    if (olderItems.length) groups.push({ label: "Precedenti", items: olderItems })
+
+    return groups
+  }, [notifications])
+
   return (
     <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
       <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-md">
@@ -117,14 +147,21 @@ export function NotificationPanel() {
               </div>
             )}
 
-            {!isLoading &&
-              notifications.map((n) => (
-                <NotificationItem
-                  key={n.id}
-                  notification={n}
-                  onRead={handleRead}
-                  onNavigate={handleNavigate}
-                />
+            {!isLoading && notifications.length > 0 &&
+              grouped.map((group) => (
+                <div key={group.label}>
+                  <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {group.label}
+                  </p>
+                  {group.items.map((n) => (
+                    <NotificationItem
+                      key={n.id}
+                      notification={n}
+                      onRead={handleRead}
+                      onNavigate={handleNavigate}
+                    />
+                  ))}
+                </div>
               ))}
           </div>
         </ScrollArea>
