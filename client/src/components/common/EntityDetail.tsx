@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
+import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
 import { Breadcrumbs } from "./Breadcrumbs"
 import { EmptyState } from "./EmptyState"
 import { usePageContext } from "@/hooks/ui/usePageContext"
@@ -104,6 +105,7 @@ export function EntityDetail({
 }: EntityDetailProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const ctx = usePageContext()
+  const { effects } = useThemeConfig()
 
   // Permission guards (default to showing everything when not provided)
   const canDelete = permissions ? permissions.canDelete : true
@@ -141,21 +143,29 @@ export function EntityDetail({
   }
 
   return (
-    <div className={cn("space-y-6", ctx && `border-t-2 border-${ctx.color}-500`)}>
+    <div className={cn("space-y-6 rounded-lg p-4", effects.cardShadow, effects.cardBorder, ctx && `border-t-2 border-${ctx.color}-500`)}>
       {/* Breadcrumbs */}
       <Breadcrumbs items={breadcrumbs} />
 
-      {/* Color bar */}
-      {colorBar && <div className="h-1 w-full rounded-full" style={{ background: colorBar }} />}
-
       {/* Hero area */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          {(badges || editableBadges) && (
-            <div className="flex flex-wrap gap-2">{editableBadges ?? badges}</div>
+        <div className="flex items-start gap-3">
+          {/* Color bar — 4px vertical gradient bar from mockup */}
+          {colorBar && (
+            <div
+              className="w-1 min-h-[48px] rounded-sm shrink-0 mt-0.5"
+              style={{ background: colorBar }}
+            />
           )}
-          {title && <h1 className="text-2xl font-bold text-foreground">{title}</h1>}
-          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          <div className="space-y-1">
+            {(badges || editableBadges) && (
+              <div className="flex flex-wrap gap-2">{editableBadges ?? badges}</div>
+            )}
+            {title && (
+              <h1 className="text-page-title text-foreground">{title}</h1>
+            )}
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          </div>
         </div>
         {(headerActions || (onDelete && canDelete)) && (
           <div className="flex items-center gap-2 shrink-0">
@@ -176,7 +186,11 @@ export function EntityDetail({
       </div>
 
       {/* KPI row */}
-      {kpiRow}
+      {kpiRow && (
+        <div className={cn("rounded-lg", effects.kpiStyle)}>
+          {kpiRow}
+        </div>
+      )}
 
       {/* Slot between hero and content (e.g., workflow stepper) */}
       {beforeContent}
@@ -189,10 +203,10 @@ export function EntityDetail({
             <Tabs defaultValue={tabs[0].key}>
               <TabsList>
                 {tabs.map((tab) => (
-                  <TabsTrigger key={tab.key} value={tab.key}>
+                  <TabsTrigger key={tab.key} value={tab.key} className={cn(effects.cardHover)}>
                     {tab.label}
                     {tab.count != null && (
-                      <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
+                      <span className="ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground tabular-nums">
                         {tab.count}
                       </span>
                     )}
@@ -212,7 +226,7 @@ export function EntityDetail({
 
         {/* Right: sidebar */}
         {sidebar && (
-          <div>{sidebar}</div>
+          <div className={cn("rounded-lg p-3", effects.kpiStyle)}>{sidebar}</div>
         )}
       </div>
 
