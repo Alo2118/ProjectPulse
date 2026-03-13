@@ -157,6 +157,19 @@ export function useAcknowledgeInput() {
   })
 }
 
+export function useReplyToInput() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ inputId, content }: { inputId: string; content: string }) => {
+      const { data } = await api.post(`/inputs/${inputId}/reply`, { content })
+      return data.data
+    },
+    onSuccess: (_data, { inputId }) => {
+      qc.invalidateQueries({ queryKey: KEYS.detail(inputId) })
+    },
+  })
+}
+
 export function useRejectInput() {
   const qc = useQueryClient()
   return useMutation({

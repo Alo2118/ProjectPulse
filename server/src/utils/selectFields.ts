@@ -496,6 +496,15 @@ export const userInputWithRelationsSelect = {
   convertedProject: {
     select: projectRefSelect,
   },
+  replies: {
+    orderBy: { createdAt: 'asc' as const },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      user: { select: userWithAvatarSelect },
+    },
+  },
 } as const
 
 // ============================================================

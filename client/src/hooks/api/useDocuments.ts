@@ -9,6 +9,7 @@ const KEYS = {
   detail: (id: string) => [...KEYS.details(), id] as const,
   byProject: (projectId: string) => [...KEYS.all, 'project', projectId] as const,
   projectStats: (projectId: string) => [...KEYS.all, 'project-stats', projectId] as const,
+  versions: (id: string) => [...KEYS.all, 'versions', id] as const,
 }
 
 export function useDocumentListQuery(filters: Record<string, unknown> = {}) {
@@ -111,6 +112,18 @@ export function useChangeDocumentStatus() {
       qc.invalidateQueries({ queryKey: KEYS.lists() })
       qc.invalidateQueries({ queryKey: KEYS.detail(variables.id) })
     },
+  })
+}
+
+export function useDocumentVersionsQuery(documentId: string | undefined) {
+  return useQuery({
+    queryKey: KEYS.versions(documentId ?? ''),
+    queryFn: async () => {
+      const { data } = await api.get(`/documents/${documentId}/versions`)
+      return data.data
+    },
+    enabled: !!documentId,
+    staleTime: 60_000,
   })
 }
 

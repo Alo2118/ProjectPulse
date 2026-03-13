@@ -665,6 +665,44 @@ export async function deleteUserInput(inputId: string, userId: string, userRole:
 }
 
 /**
+ * Adds a reply to a user input (conversation thread)
+ */
+export async function addReply(inputId: string, userId: string, content: string) {
+  const input = await prisma.userInput.findFirst({
+    where: { id: inputId, isDeleted: false },
+  })
+
+  if (!input) {
+    throw new AppError('Input not found', 404)
+  }
+
+  const reply = await prisma.userInputReply.create({
+    data: { inputId, userId, content },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      user: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true } },
+    },
+  })
+
+  // Notify the original author if the reply is from someone else
+  if (input.createdById !== userId) {
+    await notificationService.createNotification({
+      userId: input.createdById,
+      type: 'input_reply',
+      title: 'Nuova risposta alla tua richiesta',
+      message: `Hai ricevuto una nuova risposta alla tua richiesta "${input.title}"`,
+      data: { entityType: 'userInput', entityId: inputId },
+    })
+  }
+
+  logger.info(`Reply added to input ${input.code}`, { inputId, replyId: reply.id, userId })
+
+  return reply
+}
+
+/**
  * Gets user input statistics
  */
 export async function getUserInputStats() {
@@ -724,4 +762,5 @@ export const userInputService = {
   rejectInput,
   deleteUserInput,
   getUserInputStats,
+  addReply,
 }

@@ -65,6 +65,10 @@ const rejectSchema = z.object({
   reason: z.string().min(1, 'Reason is required'),
 })
 
+const replySchema = z.object({
+  content: z.string().min(1, 'Content is required').max(5000),
+})
+
 // ============================================================
 // CONTROLLER FUNCTIONS
 // ============================================================
@@ -375,6 +379,24 @@ export async function getUserInputStats(_req: Request, res: Response, next: Next
     const stats = await userInputService.getUserInputStats()
 
     sendSuccess(res, stats)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Adds a reply to a user input
+ * @route POST /api/inputs/:id/reply
+ */
+export async function addReply(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params
+    const { content } = replySchema.parse(req.body)
+    const userId = requireUserId(req)
+
+    const reply = await userInputService.addReply(id, userId, content)
+
+    sendCreated(res, reply)
   } catch (error) {
     next(error)
   }
