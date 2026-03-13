@@ -9,6 +9,9 @@ import {
   Plus,
   BarChart3,
   Loader2,
+  Clock,
+  Search,
+  X,
 } from "lucide-react"
 import {
   CommandDialog,
@@ -18,16 +21,31 @@ import {
   CommandGroup,
   CommandItem,
 } from "@/components/ui/command"
+import { Button } from "@/components/ui/button"
 import { useUIStore } from "@/stores/uiStore"
-import { useSearchQuery } from "@/hooks/api/useSearch"
+import { useSearchQuery, type SearchDomain } from "@/hooks/api/useSearch"
+import { cn } from "@/lib/utils"
+
+const DOMAIN_TABS: Array<{ value: SearchDomain; label: string; icon: React.ElementType }> = [
+  { value: "all", label: "Tutto", icon: Search },
+  { value: "tasks", label: "Task", icon: CheckSquare },
+  { value: "projects", label: "Progetti", icon: FolderKanban },
+  { value: "users", label: "Utenti", icon: Users },
+  { value: "risks", label: "Rischi", icon: AlertTriangle },
+  { value: "documents", label: "Documenti", icon: FileText },
+]
 
 export function CommandPalette() {
   const open = useUIStore((s) => s.commandPaletteOpen)
   const setOpen = useUIStore((s) => s.setCommandPalette)
+  const recentSearches = useUIStore((s) => s.recentSearches)
+  const addRecentSearch = useUIStore((s) => s.addRecentSearch)
+  const clearRecentSearches = useUIStore((s) => s.clearRecentSearches)
   const navigate = useNavigate()
 
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
+  const [activeDomain, setActiveDomain] = useState<SearchDomain>("all")
 
   // Debounce query by 300ms
   useEffect(() => {
@@ -37,35 +55,37 @@ export function CommandPalette() {
     return () => clearTimeout(timer)
   }, [query])
 
-  // Keyboard shortcut: Cmd+K / Ctrl+K
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault()
-        setOpen(!open)
-      }
-    }
-    document.addEventListener("keydown", handler)
-    return () => document.removeEventListener("keydown", handler)
-  }, [open, setOpen])
-
-  const { data: results, isLoading } = useSearchQuery(debouncedQuery)
+  const { data: results, isLoading } = useSearchQuery(debouncedQuery, activeDomain)
 
   const handleSelect = useCallback(
     (path: string) => {
+      if (debouncedQuery.length >= 2) {
+        addRecentSearch(debouncedQuery)
+      }
       navigate(path)
       setOpen(false)
       setQuery("")
+      setActiveDomain("all")
     },
-    [navigate, setOpen]
+    [navigate, setOpen, debouncedQuery, addRecentSearch]
   )
 
   const handleOpenChange = useCallback(
     (value: boolean) => {
       setOpen(value)
-      if (!value) setQuery("")
+      if (!value) {
+        setQuery("")
+        setActiveDomain("all")
+      }
     },
     [setOpen]
+  )
+
+  const handleRecentSearchClick = useCallback(
+    (recentQuery: string) => {
+      setQuery(recentQuery)
+    },
+    []
   )
 
   const tasks = results?.tasks ?? []
@@ -82,6 +102,7 @@ export function CommandPalette() {
     documents.length > 0
 
   const showSearch = debouncedQuery.length >= 2
+  const showRecentSearches = !showSearch && recentSearches.length > 0
 
   return (
     <CommandDialog open={open} onOpenChange={handleOpenChange}>
@@ -90,6 +111,31 @@ export function CommandPalette() {
         value={query}
         onValueChange={setQuery}
       />
+
+      {/* Domain filter tabs */}
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-border">
+        {DOMAIN_TABS.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setActiveDomain(tab.value)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                "hover:bg-accent hover:text-accent-foreground",
+                activeDomain === tab.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground"
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
       <CommandList>
         {showSearch && isLoading && (
           <div className="flex items-center justify-center py-6">
@@ -191,6 +237,40 @@ export function CommandPalette() {
               </CommandGroup>
             )}
           </>
+        )}
+
+        {/* Recent searches (shown when input is empty) */}
+        {showRecentSearches && (
+          <CommandGroup
+            heading={
+              <span className="flex items-center justify-between w-full">
+                <span>Ricerche recenti</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto py-0 px-1 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    clearRecentSearches()
+                  }}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancella cronologia
+                </Button>
+              </span>
+            }
+          >
+            {recentSearches.map((recent) => (
+              <CommandItem
+                key={`recent-${recent.timestamp}`}
+                value={`recent-${recent.query}`}
+                onSelect={() => handleRecentSearchClick(recent.query)}
+              >
+                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span>{recent.query}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
         )}
 
         {!showSearch && (

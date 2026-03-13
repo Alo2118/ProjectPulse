@@ -16,6 +16,7 @@ import { useUIStore } from '@/stores/uiStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { useNotificationUIStore } from '@/stores/notificationUiStore'
 import { useCurrentUser, useLogout } from '@/hooks/api/useAuth'
+import { useUnreadCountQuery } from '@/hooks/api/useNotifications'
 import { usePageContext } from '@/hooks/ui/usePageContext'
 import { useThemeConfig } from '@/hooks/ui/useThemeConfig'
 import { Button } from '@/components/ui/button'
@@ -101,6 +102,7 @@ export function Header() {
   const { theme, mode, setTheme, setMode } = useThemeStore()
   const setPanelOpen = useNotificationUIStore((s) => s.setPanelOpen)
   const { data: user } = useCurrentUser()
+  const { data: unreadCount } = useUnreadCountQuery()
   const logoutMutation = useLogout()
   const ctx = usePageContext()
   const { getIconWrapper } = useThemeConfig()
@@ -162,6 +164,16 @@ export function Header() {
           onClick={() => setPanelOpen(true)}
         >
           <Bell className="h-4 w-4" />
+          {(() => {
+            const count = (unreadCount as { count?: number } | undefined)?.count ?? 0
+            return count > 0 ? (
+              <span
+                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground"
+              >
+                {count > 99 ? '99+' : count}
+              </span>
+            ) : null
+          })()}
         </Button>
 
         {/* Theme selector */}

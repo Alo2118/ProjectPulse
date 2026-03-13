@@ -13,6 +13,8 @@ import { NotificationPanel } from '@/components/features/NotificationPanel'
 import { KeyboardShortcutsModal } from '@/components/features/KeyboardShortcutsModal'
 import { RadialMenu, useRadialMenu } from '@/components/features/RadialMenu'
 import { usePageContext } from '@/hooks/ui/usePageContext'
+import { useCurrentUser } from '@/hooks/api/useAuth'
+import { useSocket } from '@/hooks/useSocket'
 
 interface AppShellProps {
   children: ReactNode
@@ -38,6 +40,11 @@ function AppShellInner({ children }: AppShellProps) {
   const setCommandPalette = useUIStore((s) => s.setCommandPalette)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const ctx = usePageContext()
+
+  // Real-time socket connection — requires authenticated user
+  const { data: currentUser } = useCurrentUser()
+  const token = localStorage.getItem('accessToken')
+  useSocket(token ?? null, currentUser?.id ?? null)
 
   const { isOpen, position, openMenu, closeMenu } = useRadialMenu()
 

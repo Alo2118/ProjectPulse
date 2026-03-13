@@ -37,6 +37,16 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
+    heading: "Lista",
+    entries: [
+      { keys: ["J"], description: "Elemento successivo" },
+      { keys: ["K"], description: "Elemento precedente" },
+      { keys: ["↓"], description: "Elemento successivo" },
+      { keys: ["↑"], description: "Elemento precedente" },
+      { keys: ["Enter"], description: "Apri elemento selezionato" },
+    ],
+  },
+  {
     heading: "Azioni",
     entries: [
       { keys: ["N"], description: "Nuovo elemento" },
