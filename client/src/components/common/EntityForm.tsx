@@ -85,8 +85,19 @@ export function EntityForm({
   // When editing (not new) and canEdit is false, disable submit
   const submitDisabled = isSubmitting || (!isNew && !canEdit)
 
+  const borderColorMap: Record<string, string> = {
+    blue: "border-blue-500",
+    amber: "border-amber-500",
+    red: "border-red-500",
+    purple: "border-purple-500",
+    emerald: "border-emerald-500",
+    green: "border-green-500",
+    indigo: "border-indigo-500",
+    slate: "border-slate-500",
+  }
+
   return (
-    <div className={cn("space-y-6", ctx && `border-t-2 border-${ctx.color}-500`)}>
+    <div className={cn("space-y-6", ctx && "border-t-2", ctx && borderColorMap[ctx.color])}>
       {/* Breadcrumbs */}
       <Breadcrumbs items={breadcrumbs} />
 

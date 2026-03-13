@@ -25,7 +25,7 @@ export function useUnreadCountQuery() {
       const { data } = await api.get('/notifications/unread-count')
       return data.data
     },
-    refetchInterval: 60_000,
+    refetchInterval: 300_000, // 5 min fallback — socket handles real-time updates
   })
 }
 

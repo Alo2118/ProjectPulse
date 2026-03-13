@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { AlertCircle, Inbox, Plus } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -81,6 +81,8 @@ interface EntityListProps<T> {
     value: 'direzione' | 'dipendente'
     onChange: (role: 'direzione' | 'dipendente') => void
   }
+  /** Keyboard-navigated focused row index */
+  focusedIndex?: number
 }
 
 const STORAGE_KEY_PREFIX = "entitylist-collapsed-"
@@ -137,7 +139,9 @@ export function EntityList<T>({
   onViewModeChange,
   gridRenderItem,
   roleSwitcher,
+  focusedIndex,
 }: EntityListProps<T>) {
+  const nav = useNavigate()
   const canCreate = permissions ? permissions.canCreate : true
   const handleSelectAll = () => {
     onSelectAll?.()
@@ -338,6 +342,7 @@ export function EntityList<T>({
               draggable={draggable}
               onReorder={onReorder}
               rowClassName={rowClassName}
+              focusedIndex={focusedIndex}
             />
           </div>
         )
@@ -353,11 +358,7 @@ export function EntityList<T>({
             createHref && canCreate
               ? {
                   label: createLabel ?? "Crea nuovo",
-                  onClick: () => {
-                    const link = document.createElement("a")
-                    link.href = createHref
-                    link.click()
-                  },
+                  onClick: () => nav(createHref),
                 }
               : undefined
           }

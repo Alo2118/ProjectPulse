@@ -54,6 +54,8 @@ interface DataTableProps<T> {
   onReorder?: (activeId: string, overId: string) => void
   // Row customization
   rowClassName?: (item: T) => string | undefined
+  // Keyboard navigation
+  focusedIndex?: number
 }
 
 function SortIcon({ column, sortBy, sortOrder }: { column: string; sortBy?: string; sortOrder?: "asc" | "desc" }) {
@@ -167,6 +169,7 @@ export function DataTable<T>({
   draggable = false,
   onReorder,
   rowClassName,
+  focusedIndex,
 }: DataTableProps<T>) {
   const theme = useThemeStore((s) => s.theme)
   const hasSelection = onSelectToggle != null && getId != null
@@ -271,6 +274,7 @@ export function DataTable<T>({
             : data.map((item, idx) => {
                 const id = getId ? getId(item) : String(idx)
                 const isSelected = selectedIds?.has(id) ?? false
+                const isFocused = focusedIndex === idx
                 const useStagger = data.length <= 20
                 const RowComp = useStagger ? motion.tr : 'tr'
                 const motionProps = useStagger ? {
@@ -287,6 +291,7 @@ export function DataTable<T>({
                       "transition-colors hover:border-primary/20",
                       theme === "tech-hud" && "hover:bg-primary/5 hover:shadow-[inset_0_0_12px_hsl(var(--primary)/0.06)]",
                       theme === "asana-like" && "hover:bg-accent/50",
+                      isFocused && "ring-2 ring-primary ring-inset bg-primary/5",
                       rowClassName?.(item)
                     )}
                     onClick={() => onRowClick?.(item)}

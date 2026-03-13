@@ -1,6 +1,6 @@
 # Immersive Context UX — Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Transform ProjectPulse into a context-aware app with multi-theme system, radial menu, progress visualization, guided workflows, and dynamic permission management.
 
@@ -22,7 +22,7 @@ This chunk establishes the 3-theme × 2-mode system. Everything else builds on t
 - Modify: `client/src/stores/themeStore.ts`
 - Modify: `client/src/types/index.ts`
 
-- [ ] **Step 1: Update types**
+- [x] **Step 1: Update types**
 
 Add to `client/src/types/index.ts`:
 
@@ -33,7 +33,7 @@ export type ThemeMode = "light" | "dark" | "system"
 
 Remove old `Theme` type if it exists (was `'light' | 'dark'`).
 
-- [ ] **Step 2: Rewrite themeStore**
+- [x] **Step 2: Rewrite themeStore**
 
 Replace `client/src/stores/themeStore.ts` with:
 
@@ -75,13 +75,13 @@ export const useThemeStore = create<ThemeState>()(
 )
 ```
 
-- [ ] **Step 3: Verify build compiles**
+- [x] **Step 3: Verify build compiles**
 
 Run: `cd client && npx tsc --noEmit 2>&1 | head -20`
 
 Fix any type errors from old `Theme` type references.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/stores/themeStore.ts client/src/types/index.ts
@@ -95,7 +95,7 @@ git commit -m "feat(theme): update themeStore for multi-theme support (3 themes 
 **Files:**
 - Modify: `client/src/components/layout/ThemeProvider.tsx`
 
-- [ ] **Step 1: Rewrite ThemeProvider**
+- [x] **Step 1: Rewrite ThemeProvider**
 
 The ThemeProvider must now:
 1. Set `data-theme` attribute on `<html>` from `themeStore.theme`
@@ -133,11 +133,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 ```
 
-- [ ] **Step 2: Verify theme toggle still works**
+- [x] **Step 2: Verify theme toggle still works**
 
 Run: `cd client && npx tsc --noEmit 2>&1 | head -20`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/layout/ThemeProvider.tsx
@@ -151,11 +151,11 @@ git commit -m "feat(theme): update ThemeProvider for data-theme attribute + mode
 **Files:**
 - Modify: `client/src/styles/globals.css`
 
-- [ ] **Step 1: Read current globals.css**
+- [x] **Step 1: Read current globals.css**
 
 Read `client/src/styles/globals.css` to understand the current variable structure.
 
-- [ ] **Step 2: Restructure with data-theme selectors**
+- [x] **Step 2: Restructure with data-theme selectors**
 
 Replace the `:root` and `.dark` blocks with 6 blocks. Each theme defines all the same CSS variables. Add new variables: `--font-data`, `--shadow-theme`.
 
@@ -223,11 +223,11 @@ Structure:
 :root:not([data-theme]).dark { /* same as office-classic dark */ }
 ```
 
-- [ ] **Step 3: Verify all 6 variants render**
+- [x] **Step 3: Verify all 6 variants render**
 
 Run: `cd client && npm run dev` and toggle themes in browser devtools by setting `data-theme` attribute on `<html>`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/styles/globals.css
@@ -241,7 +241,7 @@ git commit -m "feat(theme): add 6 CSS variable sets (3 themes × 2 modes)"
 **Files:**
 - Create: `client/src/lib/theme-config.ts`
 
-- [ ] **Step 1: Create theme config**
+- [x] **Step 1: Create theme config**
 
 ```typescript
 import type { LucideIcon } from 'lucide-react'
@@ -377,11 +377,11 @@ export const THEME_ANIMATIONS: Record<ThemeStyle, {
 }
 ```
 
-- [ ] **Step 2: Verify types compile**
+- [x] **Step 2: Verify types compile**
 
 Run: `cd client && npx tsc --noEmit 2>&1 | head -20`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/lib/theme-config.ts
@@ -395,7 +395,7 @@ git commit -m "feat(theme): create theme-config with icons, emojis, and animatio
 **Files:**
 - Create: `client/src/hooks/ui/useThemeConfig.ts`
 
-- [ ] **Step 1: Create the hook**
+- [x] **Step 1: Create the hook**
 
 ```typescript
 import { useMemo } from 'react'
@@ -420,7 +420,7 @@ export function useThemeConfig() {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/hooks/ui/useThemeConfig.ts
@@ -434,11 +434,11 @@ git commit -m "feat(theme): create useThemeConfig hook for theme-aware icons/emo
 **Files:**
 - Modify: `client/src/components/layout/Header.tsx`
 
-- [ ] **Step 1: Read current Header.tsx**
+- [x] **Step 1: Read current Header.tsx**
 
 Read `client/src/components/layout/Header.tsx` to understand current layout.
 
-- [ ] **Step 2: Replace theme toggle with theme/mode selector**
+- [x] **Step 2: Replace theme toggle with theme/mode selector**
 
 Add a dropdown in the Header that lets users pick:
 - **Theme:** Office Classic / Asana Like / Tech HUD (3 options)
@@ -448,11 +448,11 @@ Use shadcn `DropdownMenu` with two groups. Replace the existing sun/moon toggle 
 
 Import `useThemeStore` and use `setTheme`/`setMode`. Show current theme name + mode icon.
 
-- [ ] **Step 3: Verify toggle works visually**
+- [x] **Step 3: Verify toggle works visually**
 
 Run dev server, click through all 6 combinations, verify colors change.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/components/layout/Header.tsx
@@ -468,7 +468,7 @@ git commit -m "feat(theme): add theme/mode selector dropdown in Header"
 **Files:**
 - Create: `client/src/hooks/ui/usePageContext.ts`
 
-- [ ] **Step 1: Create the PageContext**
+- [x] **Step 1: Create the PageContext**
 
 ```typescript
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
@@ -549,7 +549,7 @@ export function usePageContext(): PageContextValue | null {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/hooks/ui/usePageContext.ts
@@ -563,13 +563,13 @@ git commit -m "feat(context): create PageContext provider and useSetPageContext/
 **Files:**
 - Modify: `client/src/components/layout/AppShell.tsx`
 
-- [ ] **Step 1: Read current AppShell.tsx**
+- [x] **Step 1: Read current AppShell.tsx**
 
-- [ ] **Step 2: Wrap children with PageContextProvider**
+- [x] **Step 2: Wrap children with PageContextProvider**
 
 Import `PageContextProvider` from `@/hooks/ui/usePageContext` and wrap the content area.
 
-- [ ] **Step 3: Add context header bar**
+- [x] **Step 3: Add context header bar**
 
 Read `usePageContext()` in a child component inside AppShell. Add a `<div>` above `<main>` that renders a 3px-high colored bar when a context is active:
 
@@ -581,7 +581,7 @@ function ContextBar() {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/components/layout/AppShell.tsx
@@ -595,9 +595,9 @@ git commit -m "feat(context): integrate PageContextProvider and context bar into
 **Files:**
 - Modify: `client/src/components/layout/Sidebar.tsx`
 
-- [ ] **Step 1: Read current Sidebar.tsx**
+- [x] **Step 1: Read current Sidebar.tsx**
 
-- [ ] **Step 2: Use PageContext for active item coloring**
+- [x] **Step 2: Use PageContext for active item coloring**
 
 Import `usePageContext`. When the active nav item matches the current context domain, apply domain-colored left border and background instead of generic `bg-accent`:
 
@@ -612,7 +612,7 @@ const isContextMatch = ctx && item.domain === ctx.domain
 
 This requires adding a `domain` property to the sidebar nav items configuration.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/layout/Sidebar.tsx
@@ -626,15 +626,15 @@ git commit -m "feat(context): color sidebar active item with domain context colo
 **Files:**
 - Modify: `client/src/components/common/Breadcrumbs.tsx`
 
-- [ ] **Step 1: Read current Breadcrumbs.tsx**
+- [x] **Step 1: Read current Breadcrumbs.tsx**
 
-- [ ] **Step 2: Add optional icon + domain color to breadcrumb segments**
+- [x] **Step 2: Add optional icon + domain color to breadcrumb segments**
 
 Extend the breadcrumb segment type to accept an optional `icon` (LucideIcon) and `domain` (string). When provided, render the icon before the label with the domain's color.
 
 The pages will pass domain-specific breadcrumbs using `useThemeConfig()` to get the correct icon.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/common/Breadcrumbs.tsx
@@ -649,9 +649,9 @@ git commit -m "feat(context): add domain icons and colors to Breadcrumbs"
 - Modify: `client/src/components/common/EntityDetail.tsx`
 - Modify: `client/src/components/common/EntityForm.tsx`
 
-- [ ] **Step 1: Read both files**
+- [x] **Step 1: Read both files**
 
-- [ ] **Step 2: Add top border accent from PageContext**
+- [x] **Step 2: Add top border accent from PageContext**
 
 In both components, read `usePageContext()` and apply a 2px top border with the domain color to the main card/container:
 
@@ -661,7 +661,7 @@ const ctx = usePageContext()
 className={cn('...existing', ctx && `border-t-2 border-${ctx.color}-500`)}
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/common/EntityDetail.tsx client/src/components/common/EntityForm.tsx
@@ -675,11 +675,11 @@ git commit -m "feat(context): add domain-colored top border accent to EntityDeta
 **Files:**
 - Modify: All page files in `client/src/pages/`
 
-- [ ] **Step 1: List all page files**
+- [x] **Step 1: List all page files**
 
 Run: `find client/src/pages -name '*.tsx' -type f | sort`
 
-- [ ] **Step 2: Add useSetPageContext to each page**
+- [x] **Step 2: Add useSetPageContext to each page**
 
 For each page, add as first hook call:
 
@@ -710,11 +710,11 @@ For detail pages, also pass `entityId` from route params:
 useSetPageContext({ domain: 'project', entityId: id })
 ```
 
-- [ ] **Step 3: Verify build compiles**
+- [x] **Step 3: Verify build compiles**
 
 Run: `cd client && npx tsc --noEmit 2>&1 | head -30`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/pages/
@@ -730,11 +730,11 @@ git commit -m "feat(context): add useSetPageContext to all 28 pages"
 **Files:**
 - Modify: `server/prisma/schema.prisma`
 
-- [ ] **Step 1: Read current schema.prisma end section**
+- [x] **Step 1: Read current schema.prisma end section**
 
 Read the last 50 lines to find where to add the new model.
 
-- [ ] **Step 2: Add PermissionPolicy model**
+- [x] **Step 2: Add PermissionPolicy model**
 
 ```prisma
 model PermissionPolicy {
@@ -751,11 +751,11 @@ model PermissionPolicy {
 }
 ```
 
-- [ ] **Step 3: Generate migration**
+- [x] **Step 3: Generate migration**
 
 Run: `cd server && npx prisma migrate dev --name add_permission_policies`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add server/prisma/schema.prisma server/prisma/migrations/
@@ -773,7 +773,7 @@ git commit -m "feat(permissions): add PermissionPolicy model and migration"
 - Create: `server/src/routes/permissionRoutes.ts`
 - Modify: `server/src/app.ts`
 
-- [ ] **Step 1: Create Zod schemas**
+- [x] **Step 1: Create Zod schemas**
 
 ```typescript
 // server/src/schemas/permissionSchemas.ts
@@ -797,7 +797,7 @@ export const updatePoliciesSchema = z.object({
 export { ROLES, DOMAINS, ACTIONS }
 ```
 
-- [ ] **Step 2: Create permission service**
+- [x] **Step 2: Create permission service**
 
 `server/src/services/permissionService.ts`:
 
@@ -811,7 +811,7 @@ Default policies match the permission matrix from the design spec.
 
 Key: admin role always gets `allowed: true` for all actions. This is enforced at service level — PUT cannot set admin policies to `false`.
 
-- [ ] **Step 3: Create controller**
+- [x] **Step 3: Create controller**
 
 `server/src/controllers/permissionController.ts`:
 
@@ -822,7 +822,7 @@ Three handlers:
 - `updatePolicies` — PUT, admin only, validates no admin downgrade
 - `resetPolicies` — POST, admin only
 
-- [ ] **Step 4: Create routes**
+- [x] **Step 4: Create routes**
 
 `server/src/routes/permissionRoutes.ts`:
 
@@ -843,7 +843,7 @@ router.post('/policies/reset', ctrl.resetPolicies)
 export default router
 ```
 
-- [ ] **Step 5: Mount routes in app.ts**
+- [x] **Step 5: Mount routes in app.ts**
 
 Add to `server/src/app.ts`:
 ```typescript
@@ -852,11 +852,11 @@ import permissionRoutes from './routes/permissionRoutes.js'
 app.use('/api/permissions', permissionRoutes)
 ```
 
-- [ ] **Step 6: Seed default policies**
+- [x] **Step 6: Seed default policies**
 
 Add to `server/prisma/seed.ts` a function that calls `permissionService.seedDefaults()`. Run: `npm run db:seed`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/src/schemas/permissionSchemas.ts server/src/services/permissionService.ts server/src/controllers/permissionController.ts server/src/routes/permissionRoutes.ts server/src/app.ts server/prisma/seed.ts
@@ -872,7 +872,7 @@ git commit -m "feat(permissions): add permission policies CRUD backend (schema, 
 - Create: `client/src/hooks/ui/usePermissions.ts`
 - Create: `client/src/hooks/api/usePermissionPolicies.ts`
 
-- [ ] **Step 1: Create TanStack Query hooks for policies**
+- [x] **Step 1: Create TanStack Query hooks for policies**
 
 `client/src/hooks/api/usePermissionPolicies.ts`:
 
@@ -911,7 +911,7 @@ export function useResetPolicies() {
 }
 ```
 
-- [ ] **Step 2: Create permission engine (pure logic)**
+- [x] **Step 2: Create permission engine (pure logic)**
 
 `client/src/lib/permissions.ts`:
 
@@ -925,7 +925,7 @@ Logic:
 
 Export `ALL_PERMISSIONS` constant and `resolvePermissions` function.
 
-- [ ] **Step 3: Create usePermissions hook**
+- [x] **Step 3: Create usePermissions hook**
 
 `client/src/hooks/ui/usePermissions.ts`:
 
@@ -968,7 +968,7 @@ export function usePermissions(domain?: Domain, entity?: EntityRef) {
 
 Note: The `user` integration depends on the existing auth hook pattern. Read `hooks/api/useAuth.ts` to find how the current user is exposed, then use that.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/lib/permissions.ts client/src/hooks/ui/usePermissions.ts client/src/hooks/api/usePermissionPolicies.ts
@@ -984,11 +984,11 @@ git commit -m "feat(permissions): create frontend permission engine, usePermissi
 - Create: `client/src/pages/admin/tabs/PermissionsCompareDialog.tsx`
 - Modify: `client/src/pages/admin/AdminConfigPage.tsx`
 
-- [ ] **Step 1: Read AdminConfigPage.tsx**
+- [x] **Step 1: Read AdminConfigPage.tsx**
 
 Understand current tab structure.
 
-- [ ] **Step 2: Create PermissionsTab**
+- [x] **Step 2: Create PermissionsTab**
 
 `client/src/pages/admin/tabs/PermissionsTab.tsx`:
 
@@ -1008,18 +1008,18 @@ Uses:
 - shadcn: Select, Card, Checkbox, Button, AlertDialog (for reset confirm)
 - Icons from `useThemeConfig()`
 
-- [ ] **Step 3: Create PermissionsCompareDialog**
+- [x] **Step 3: Create PermissionsCompareDialog**
 
 `client/src/pages/admin/tabs/PermissionsCompareDialog.tsx`:
 
 Dialog that shows all 4 roles side-by-side per domain in a table.
 Uses shadcn Dialog + Table. Read-only view.
 
-- [ ] **Step 4: Add Permissions tab to AdminConfigPage**
+- [x] **Step 4: Add Permissions tab to AdminConfigPage**
 
 Import PermissionsTab and add as a new tab in AdminConfigPage.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/pages/admin/tabs/PermissionsTab.tsx client/src/pages/admin/tabs/PermissionsCompareDialog.tsx client/src/pages/admin/AdminConfigPage.tsx
@@ -1035,7 +1035,7 @@ git commit -m "feat(permissions): add Permissions tab to AdminConfigPage with co
 **Files:**
 - Create: `client/src/components/common/ProgressRing.tsx`
 
-- [ ] **Step 1: Create ProgressRing**
+- [x] **Step 1: Create ProgressRing**
 
 SVG-based circular progress indicator. Props per spec: `value`, `size`, `showLabel`, `showValue`, `total`, `completed`, `animated`, `colorMode`.
 
@@ -1050,7 +1050,7 @@ Theme adaptation via `useThemeConfig()`:
 
 Animation: Framer Motion `useSpring` to animate `strokeDashoffset` on mount.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/components/common/ProgressRing.tsx
@@ -1064,7 +1064,7 @@ git commit -m "feat(progress): create ProgressRing SVG component with theme adap
 **Files:**
 - Create: `client/src/components/common/StatusDistribution.tsx`
 
-- [ ] **Step 1: Create StatusDistribution**
+- [x] **Step 1: Create StatusDistribution**
 
 Two variants:
 - `bar`: Horizontal stacked bar using `<div>` segments with flex widths
@@ -1083,7 +1083,7 @@ Theme adaptation:
 - Asana Like: pill bar segments, gap 2px
 - Tech HUD: no gap, glow on segments
 
-- [ ] **Step 2: Add STATUS_COLORS_HSL to constants.ts**
+- [x] **Step 2: Add STATUS_COLORS_HSL to constants.ts**
 
 ```typescript
 // In lib/constants.ts
@@ -1097,7 +1097,7 @@ export const STATUS_COLORS_HSL: Record<string, string> = {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/common/StatusDistribution.tsx client/src/lib/constants.ts
@@ -1111,7 +1111,7 @@ git commit -m "feat(progress): create StatusDistribution component (bar + donut 
 **Files:**
 - Create: `client/src/components/common/TrendSparkline.tsx`
 
-- [ ] **Step 1: Create TrendSparkline**
+- [x] **Step 1: Create TrendSparkline**
 
 SVG-based mini line chart. Props per spec: `data`, `size`, `color`, `showDelta`, `showArea`, `showPoints`, `showTooltip`.
 
@@ -1127,7 +1127,7 @@ Theme adaptation for line style/glow per spec.
 
 Animation: draw line via `strokeDasharray` animation on mount.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/components/common/TrendSparkline.tsx
@@ -1141,7 +1141,7 @@ git commit -m "feat(progress): create TrendSparkline mini chart component"
 **Files:**
 - Create: `client/src/components/common/ProgressSummary.tsx`
 
-- [ ] **Step 1: Create ProgressSummary**
+- [x] **Step 1: Create ProgressSummary**
 
 Composes ProgressRing + StatusDistribution + TrendSparkline in a vertical card:
 
@@ -1160,7 +1160,7 @@ Composes ProgressRing + StatusDistribution + TrendSparkline in a vertical card:
 
 Props per spec: `progress`, `total`, `completed`, `statusBreakdown`, `trend`, `domain`.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/components/common/ProgressSummary.tsx
@@ -1176,7 +1176,7 @@ git commit -m "feat(progress): create ProgressSummary composition component"
 **Files:**
 - Create: `client/src/lib/workflow-engine.ts`
 
-- [ ] **Step 1: Create workflow engine types and functions**
+- [x] **Step 1: Create workflow engine types and functions**
 
 Types: `WorkflowDefinition`, `WorkflowPhase`, `Prerequisite`, `Suggestion`, `ValidationData`, `PhaseEvaluation`.
 
@@ -1187,7 +1187,7 @@ Functions:
 
 Pure functions, no React dependency. Fully typed.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/lib/workflow-engine.ts
@@ -1204,23 +1204,23 @@ git commit -m "feat(workflow): create workflow engine with phase evaluation and 
 - Create: `client/src/lib/workflows/documentWorkflow.ts`
 - Create: `client/src/lib/workflows/userInputWorkflow.ts`
 
-- [ ] **Step 1: Create project workflow (5 phases)**
+- [x] **Step 1: Create project workflow (5 phases)**
 
 Define the 5-phase project lifecycle with prerequisites and suggestions per the spec. Each prerequisite has an `evaluate` function that checks `ValidationData` (task counts, milestone counts, team size, completion %).
 
-- [ ] **Step 2: Create task workflow (4 phases + blocked)**
+- [x] **Step 2: Create task workflow (4 phases + blocked)**
 
 Define 4-phase task lifecycle. Blocked is a special state reachable from any phase.
 
-- [ ] **Step 3: Create document workflow (3 phases)**
+- [x] **Step 3: Create document workflow (3 phases)**
 
 Define 3-phase document lifecycle.
 
-- [ ] **Step 4: Create userInput workflow (4 phases)**
+- [x] **Step 4: Create userInput workflow (4 phases)**
 
 Define 4-phase request lifecycle with Nuova → In Valutazione → Accettata → Convertita/Rifiutata.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/lib/workflows/
@@ -1236,21 +1236,21 @@ git commit -m "feat(workflow): create 4 workflow definitions (project, task, doc
 - Create: `client/src/components/common/PhaseValidationPanel.tsx`
 - Create: `client/src/components/common/NextActionSuggestion.tsx`
 
-- [ ] **Step 1: Create PhaseValidationPanel**
+- [x] **Step 1: Create PhaseValidationPanel**
 
 Card showing the current phase's prerequisite checklist:
 - Each prerequisite: check/empty icon + label + detail text
 - All met → green border
 - Missing → amber border with count
 
-- [ ] **Step 2: Create NextActionSuggestion**
+- [x] **Step 2: Create NextActionSuggestion**
 
 Small banner below PhaseValidationPanel:
 - Shows the highest priority suggestion
 - CTA button (navigate or open dialog)
 - Uses Framer Motion for entrance animation
 
-- [ ] **Step 3: Create WorkflowStepper (unifying component)**
+- [x] **Step 3: Create WorkflowStepper (unifying component)**
 
 Combines StepperBar (existing) + PhaseValidationPanel + NextActionSuggestion.
 
@@ -1264,7 +1264,7 @@ Block button: opens AlertDialog with textarea for block reason.
 
 Theme adaptation via `useThemeConfig()` for stepper line style, animation type, pulse effects.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/components/common/WorkflowStepper.tsx client/src/components/common/PhaseValidationPanel.tsx client/src/components/common/NextActionSuggestion.tsx
@@ -1285,11 +1285,11 @@ git commit -m "feat(workflow): create WorkflowStepper with validation panel and 
 - Delete: `client/src/components/domain/tasks/TaskStatusStepper.tsx`
 - Delete: `client/src/components/domain/documents/DocumentStatusStepper.tsx`
 
-- [ ] **Step 1: Read all 4 detail pages**
+- [x] **Step 1: Read all 4 detail pages**
 
 Understand current stepper usage.
 
-- [ ] **Step 2: Replace old steppers with WorkflowStepper**
+- [x] **Step 2: Replace old steppers with WorkflowStepper**
 
 In each detail page:
 1. Import the appropriate workflow definition
@@ -1298,15 +1298,15 @@ In each detail page:
 4. Wire `onAdvance` to the appropriate update mutation
 5. Wire `onBlock` to update mutation with blocked status + reason
 
-- [ ] **Step 3: Delete old stepper components**
+- [x] **Step 3: Delete old stepper components**
 
 Remove the 4 old stepper files.
 
-- [ ] **Step 4: Verify build compiles**
+- [x] **Step 4: Verify build compiles**
 
 Run: `cd client && npx tsc --noEmit 2>&1 | head -30`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/pages/projects/ProjectDetailPage.tsx client/src/pages/tasks/TaskDetailPage.tsx client/src/pages/documents/DocumentDetailPage.tsx client/src/pages/inputs/UserInputDetailPage.tsx
@@ -1323,7 +1323,7 @@ git commit -m "feat(workflow): integrate WorkflowStepper into detail pages, remo
 **Files:**
 - Create: `client/src/lib/radial-actions.ts`
 
-- [ ] **Step 1: Create action registry**
+- [x] **Step 1: Create action registry**
 
 Define all radial actions per domain and scope from the spec. Each action:
 
@@ -1345,7 +1345,7 @@ Create arrays: `PROJECT_LIST_ACTIONS`, `PROJECT_DETAIL_ACTIONS`, `TASK_LIST_ACTI
 
 Export `getActionsForContext(domain, scope, permissions)` function that filters by domain + scope + permission.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/lib/radial-actions.ts
@@ -1359,7 +1359,7 @@ git commit -m "feat(radial): create radial action registry with all domain/scope
 **Files:**
 - Create: `client/src/components/features/RadialMenu/useRadialMenu.ts`
 
-- [ ] **Step 1: Create the hook**
+- [x] **Step 1: Create the hook**
 
 Manages:
 - `isOpen` state
@@ -1373,7 +1373,7 @@ Collision detection logic:
 3. Distribute items evenly in remaining sector
 4. Ensure minimum 60 degrees between adjacent items
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/components/features/RadialMenu/useRadialMenu.ts
@@ -1388,7 +1388,7 @@ git commit -m "feat(radial): create useRadialMenu hook with collision detection"
 - Create: `client/src/components/features/RadialMenu/RadialMenuItem.tsx`
 - Create: `client/src/components/features/RadialMenu/RadialSubMenu.tsx`
 
-- [ ] **Step 1: Create RadialMenuItem**
+- [x] **Step 1: Create RadialMenuItem**
 
 Single menu item: circle with icon + label below. Positioned absolutely via `style={{ left, top }}` (calculated from hook).
 
@@ -1403,7 +1403,7 @@ Framer Motion entrance animation: different per theme (fade-in / spring stagger 
 
 Accessibility: `role="menuitem"`, `aria-label`, `tabIndex`, keyboard handlers.
 
-- [ ] **Step 2: Create RadialSubMenu**
+- [x] **Step 2: Create RadialSubMenu**
 
 Same layout but appears from parent item position. Shows sub-actions (e.g., status options for "Cambia stato").
 
@@ -1411,7 +1411,7 @@ Props: `actions: RadialAction[]`, `parentPosition: { x, y }`, `onActivate`, `onB
 
 Escape or center click → close sub-menu.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/features/RadialMenu/RadialMenuItem.tsx client/src/components/features/RadialMenu/RadialSubMenu.tsx
@@ -1426,7 +1426,7 @@ git commit -m "feat(radial): create RadialMenuItem and RadialSubMenu with theme 
 - Create: `client/src/components/features/RadialMenu/RadialMenu.tsx`
 - Create: `client/src/components/features/RadialMenu/index.ts`
 
-- [ ] **Step 1: Create RadialMenu**
+- [x] **Step 1: Create RadialMenu**
 
 Main container component. Renders as a portal (fixed positioned overlay).
 
@@ -1443,14 +1443,14 @@ Overlay: transparent `fixed inset-0` div that closes on click.
 
 Theme lines (Tech HUD only): SVG `<line>` elements from center to each item with glow effect.
 
-- [ ] **Step 2: Create index.ts barrel export**
+- [x] **Step 2: Create index.ts barrel export**
 
 ```typescript
 export { RadialMenu } from './RadialMenu'
 export { useRadialMenu } from './useRadialMenu'
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/features/RadialMenu/
@@ -1464,7 +1464,7 @@ git commit -m "feat(radial): create RadialMenu container with context integratio
 **Files:**
 - Modify: `client/src/components/layout/AppShell.tsx`
 
-- [ ] **Step 1: Mount RadialMenu in AppShell**
+- [x] **Step 1: Mount RadialMenu in AppShell**
 
 Add `<RadialMenu />` inside AppShell after `<main>`.
 
@@ -1472,7 +1472,7 @@ Wire desktop trigger: `onContextMenu` on `<main>` to call `openMenu(e.clientX, e
 
 Wire keyboard trigger: `Ctrl+Space` in existing keyboard shortcut listener.
 
-- [ ] **Step 2: Add mobile FAB**
+- [x] **Step 2: Add mobile FAB**
 
 On screens < 768px (`md:hidden`), render a FAB button (56×56px, `rounded-full`, `fixed bottom-6 right-6`).
 
@@ -1480,7 +1480,7 @@ FAB color: `bg-{ctx.color}-500` from PageContext. Icon: `Plus` when closed, `X` 
 
 Tap opens radial menu centered 120px above FAB. Long-press anywhere opens at touch point.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/src/components/layout/AppShell.tsx
@@ -1498,26 +1498,26 @@ git commit -m "feat(radial): integrate RadialMenu into AppShell with desktop+mob
 - Modify: `client/src/components/common/EntityDetail.tsx`
 - Modify: `client/src/components/common/EntityForm.tsx`
 
-- [ ] **Step 1: Read all 3 template components**
+- [x] **Step 1: Read all 3 template components**
 
-- [ ] **Step 2: Add permission filtering to EntityList**
+- [x] **Step 2: Add permission filtering to EntityList**
 
 - Add optional `permissions` prop (or use `usePermissions()` internally)
 - Hide "Create" button if `!canCreate`
 - Filter row actions by permission
 - Show disabled tooltip for restricted actions
 
-- [ ] **Step 3: Add permission filtering to EntityDetail**
+- [x] **Step 3: Add permission filtering to EntityDetail**
 
 - Hide edit/delete header actions based on `canEdit`/`canDelete`
 - Pass permissions to WorkflowStepper (if present in beforeContent)
 
-- [ ] **Step 4: Add permission filtering to EntityForm**
+- [x] **Step 4: Add permission filtering to EntityForm**
 
 - Hide delete button based on `canDelete`
 - Disable form submission if `!canEdit` (for edit mode)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/components/common/EntityList.tsx client/src/components/common/EntityDetail.tsx client/src/components/common/EntityForm.tsx
@@ -1533,11 +1533,11 @@ git commit -m "feat(permissions): integrate permission checks into EntityList/De
 - Modify: `client/src/pages/home/ManagementDashboard.tsx` (or `HomePage.tsx`)
 - Modify: `client/src/pages/analytics/AnalyticsPage.tsx`
 
-- [ ] **Step 1: Add ProgressSummary to ProjectDetailPage sidebar**
+- [x] **Step 1: Add ProgressSummary to ProjectDetailPage sidebar**
 
 Replace the basic progress bar in the sidebar with `<ProgressSummary>`. Wire data from project query (task counts by status, completion %).
 
-- [ ] **Step 2: Add ProgressRing + StatusDistribution to HomePage KPIs**
+- [x] **Step 2: Add ProgressRing + StatusDistribution to HomePage KPIs**
 
 Replace "—" placeholder KPI values with actual data:
 - ProgressRing for project completion
@@ -1546,11 +1546,11 @@ Replace "—" placeholder KPI values with actual data:
 
 This requires wiring the TanStack Query hooks that already exist.
 
-- [ ] **Step 3: Update AnalyticsPage charts**
+- [x] **Step 3: Update AnalyticsPage charts**
 
 Replace hardcoded hex chart colors with CSS variable-based colors from `STATUS_COLORS_HSL`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add client/src/pages/projects/ProjectDetailPage.tsx client/src/pages/home/ client/src/pages/analytics/AnalyticsPage.tsx
@@ -1564,14 +1564,14 @@ git commit -m "feat(progress): integrate ProgressSummary and themed charts into 
 **Files:**
 - Modify: `client/src/components/layout/Sidebar.tsx`
 
-- [ ] **Step 1: Filter sidebar sections by permission**
+- [x] **Step 1: Filter sidebar sections by permission**
 
 Use `usePermissions()` to check visibility per domain:
 - "Gestione" section: hidden if `!canView` for risk/document/input
 - "Analisi" section: hidden if `!canView` for analytics
 - "Admin" section: hidden for non-admin (already done, verify)
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/components/layout/Sidebar.tsx
@@ -1585,7 +1585,7 @@ git commit -m "feat(permissions): filter sidebar navigation sections by user per
 **Files:**
 - Modify: `client/src/lib/radial-actions.ts`
 
-- [ ] **Step 1: Add workflow-aware actions**
+- [x] **Step 1: Add workflow-aware actions**
 
 For detail scopes, add actions that read workflow state:
 - "Avanza a [next phase]" — shown if prerequisites met + canAdvancePhase
@@ -1594,7 +1594,7 @@ For detail scopes, add actions that read workflow state:
 
 These should appear as first items in the radial menu (highest priority positioning).
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add client/src/lib/radial-actions.ts
@@ -1608,25 +1608,25 @@ git commit -m "feat(radial): add workflow-aware actions (advance phase, block) t
 **Files:**
 - All modified files
 
-- [ ] **Step 1: Run TypeScript check**
+- [x] **Step 1: Run TypeScript check**
 
 Run: `cd client && npx tsc --noEmit`
 
 Fix any type errors.
 
-- [ ] **Step 2: Run build**
+- [x] **Step 2: Run build**
 
 Run: `cd client && npm run build`
 
 Verify no build errors.
 
-- [ ] **Step 3: Run linter**
+- [x] **Step 3: Run linter**
 
 Run: `cd client && npm run lint`
 
 Fix any lint issues.
 
-- [ ] **Step 4: Commit any fixes**
+- [x] **Step 4: Commit any fixes**
 
 ```bash
 git add -A

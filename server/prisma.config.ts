@@ -22,6 +22,6 @@ export default defineConfig({
         connectionString: process.env.DATABASE_URL!,
       })
     },
+    seed: 'tsx ./prisma/seed.ts',
   },
-  seed: 'tsx ./prisma/seed.ts',
 })

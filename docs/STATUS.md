@@ -14,7 +14,7 @@
 | **Multi-Theme** | Completo | 3 temi × 2 mode, token CSS, useThemeConfig |
 | **Phase System** | Completo | WorkflowTemplate domain, stepper, wizard |
 | **UX Clarity** | Completo | Dashboard, liste rich, sidebar connesse |
-| **Mockup Gap Analysis** | In corso | Spec approvata, implementazione da iniziare |
+| **Mockup Gap Analysis** | Completo | 4 servizi centrali, risk 1-5, DocumentVersion, RiskTask, 33 hooks |
 
 ---
 

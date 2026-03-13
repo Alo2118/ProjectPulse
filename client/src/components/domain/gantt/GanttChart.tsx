@@ -355,10 +355,10 @@ function MilestoneDiamond({ left, milestone, today }: MilestoneDiamondProps) {
               "absolute top-[10px] h-4 w-4 cursor-pointer rounded-[3px] transition-[filter] hover:brightness-125",
               "rotate-45",
               isOverdue
-                ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                ? "bg-red-500 shadow-md shadow-red-500/40"
                 : isDone
-                ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
-                : "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                ? "bg-green-500 shadow-md shadow-green-500/40"
+                : "bg-purple-500 shadow-md shadow-purple-500/40"
             )}
             style={{ left: left - 8 }}
           />
