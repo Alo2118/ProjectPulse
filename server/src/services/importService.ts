@@ -5,6 +5,7 @@
 
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
+import { generateTaskCode } from '../utils/codeGenerator.js'
 
 // ============================================================
 // TYPES
@@ -187,58 +188,6 @@ function parseFlexibleDate(value: string | undefined): string | undefined {
 }
 
 /**
- * Generates a unique task code based on project code, task type, and existing codes.
- * Mirrors the logic in taskService.ts.
- */
-async function generateTaskCode(
-  projectCode: string | null,
-  projectId: string | null,
-  taskType: string
-): Promise<string> {
-  const prefix = projectCode ?? 'STD'
-  const typePrefix = taskType === 'milestone' ? 'M' : 'T'
-
-  const whereClause = projectId
-    ? { projectId, code: { startsWith: `${prefix}-${typePrefix}` } }
-    : { projectId: null, code: { startsWith: `STD-${typePrefix}` } }
-
-  const lastTask = await prisma.task.findFirst({
-    where: whereClause,
-    orderBy: { code: 'desc' },
-    select: { code: true },
-  })
-
-  let nextNumber = 1
-  if (lastTask?.code) {
-    const parts = lastTask.code.split(`-${typePrefix}`)
-    if (parts.length > 1) {
-      nextNumber = parseInt(parts[1], 10) + 1
-    }
-  }
-
-  let generatedCode = `${prefix}-${typePrefix}${String(nextNumber).padStart(3, '0')}`
-  let attempts = 0
-  const maxAttempts = 100
-
-  while (attempts < maxAttempts) {
-    const existing = await prisma.task.findUnique({
-      where: { code: generatedCode },
-      select: { id: true },
-    })
-    if (!existing) break
-    nextNumber++
-    generatedCode = `${prefix}-${typePrefix}${String(nextNumber).padStart(3, '0')}`
-    attempts++
-  }
-
-  if (attempts >= maxAttempts) {
-    throw new Error('Could not generate unique task code after max attempts')
-  }
-
-  return generatedCode
-}
-
-/**
  * Normalises a task type value to a valid TaskType string.
  */
 function normaliseTaskType(value: string | undefined): string {
@@ -388,8 +337,8 @@ export async function importTasks(
           ? parseFloat(row.estimatedHours)
           : null
 
-        // Generate unique code
-        const code = await generateTaskCode(projectCode, projectId, taskType)
+        // Generate unique code (inside transaction to prevent race conditions)
+        const code = await generateTaskCode(projectCode, projectId, taskType, tx)
 
         await tx.task.create({
           data: {

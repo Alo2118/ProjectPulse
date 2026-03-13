@@ -21,9 +21,13 @@ export const errorMiddleware = (
   res: Response,
   _next: NextFunction
 ) => {
-  logger.error(err)
-
+  // AppError — operational errors with known status code
   if (err instanceof AppError) {
+    if (err.statusCode >= 500) {
+      logger.error(err.message, { statusCode: err.statusCode, stack: err.stack })
+    } else {
+      logger.warn(err.message, { statusCode: err.statusCode })
+    }
     return res.status(err.statusCode).json({
       success: false,
       message: err.message,
@@ -41,9 +45,40 @@ export const errorMiddleware = (
     })
   }
 
-  // Prisma errors
+  // Prisma errors — parse specific error codes
   if (err.name === 'PrismaClientKnownRequestError') {
-    logger.error('Prisma error', { error: err })
+    const prismaErr = err as Error & { code?: string; meta?: Record<string, unknown> }
+    const code = prismaErr.code
+
+    if (code === 'P2002') {
+      // Unique constraint violation
+      const target = (prismaErr.meta?.target as string[])?.join(', ') ?? 'field'
+      logger.warn(`Prisma unique constraint: ${target}`, { code, meta: prismaErr.meta })
+      return res.status(409).json({
+        success: false,
+        message: `A record with this ${target} already exists`,
+      })
+    }
+
+    if (code === 'P2025') {
+      // Record not found
+      logger.warn('Prisma record not found', { code, meta: prismaErr.meta })
+      return res.status(404).json({
+        success: false,
+        message: 'Record not found',
+      })
+    }
+
+    if (code === 'P2003') {
+      // Foreign key constraint
+      logger.warn('Prisma foreign key constraint', { code, meta: prismaErr.meta })
+      return res.status(400).json({
+        success: false,
+        message: 'Referenced record does not exist',
+      })
+    }
+
+    logger.error('Prisma error', { code, error: err })
     return res.status(400).json({
       success: false,
       message: 'Database operation failed',
@@ -52,6 +87,7 @@ export const errorMiddleware = (
 
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
+    logger.warn('Invalid JWT token')
     return res.status(401).json({
       success: false,
       message: 'Invalid token',
@@ -59,13 +95,14 @@ export const errorMiddleware = (
   }
 
   if (err.name === 'TokenExpiredError') {
+    logger.warn('Expired JWT token')
     return res.status(401).json({
       success: false,
       message: 'Token expired',
     })
   }
 
-  // Default error
+  // Default — unexpected errors
   logger.error('Unhandled error', { name: err.name, message: err.message, stack: err.stack })
   return res.status(500).json({
     success: false,

@@ -6,9 +6,9 @@
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { weeklyReportService } from '../services/weeklyReportService.js'
-import { AppError } from '../middleware/errorMiddleware.js'
 import { logger } from '../utils/logger.js'
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -37,12 +37,8 @@ const querySchema = z.object({
  */
 export async function getWeeklyPreview(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
 
     const allUsers = req.query.allUsers === 'true'
     const isAdmin = userRole === 'admin' || userRole === 'direzione'
@@ -72,11 +68,7 @@ export async function getWeeklyPreview(req: Request, res: Response, next: NextFu
  */
 export async function generateReport(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const data = generateReportSchema.parse(req.body)
 
@@ -101,11 +93,7 @@ export async function generateReport(req: Request, res: Response, next: NextFunc
  */
 export async function getMyReports(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const params = querySchema.parse(req.query)
 
@@ -129,19 +117,11 @@ export async function getMyReports(req: Request, res: Response, next: NextFuncti
 export async function getReportById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
     const isAdmin = userRole === 'admin' || userRole === 'direzione'
-    const report = await weeklyReportService.getReportById(id, userId, isAdmin)
-
-    if (!report) {
-      throw new AppError('Report not found', 404)
-    }
+    const report = requireResource(await weeklyReportService.getReportById(id, userId, isAdmin), 'Report')
 
     sendSuccess(res, report)
   } catch (error) {
@@ -155,11 +135,7 @@ export async function getReportById(req: Request, res: Response, next: NextFunct
  */
 export async function getTeamReports(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const params = querySchema.parse(req.query)
 

@@ -5,8 +5,9 @@
 
 import { Request, Response, NextFunction } from 'express'
 import { taskTreeService } from '../services/taskTreeService.js'
-import { AppError } from '../middleware/errorMiddleware.js'
 import { logger } from '../utils/logger.js'
+import { sendSuccess } from '../utils/responseHelpers.js'
+import { requireUserId } from '../utils/controllerHelpers.js'
 
 /**
  * GET /api/task-tree
@@ -14,12 +15,7 @@ import { logger } from '../utils/logger.js'
  */
 async function getTaskTree(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
+    const userId = requireUserId(req)
     const userRole = req.user!.role
     const projectId = req.query.projectId as string | undefined
     const parentTaskId = req.query.parentTaskId as string | undefined
@@ -35,10 +31,7 @@ async function getTaskTree(req: Request, res: Response, next: NextFunction): Pro
       excludeCompleted,
     })
 
-    res.json({
-      success: true,
-      data,
-    })
+    sendSuccess(res, data)
   } catch (error) {
     logger.error('Error fetching task tree', { error, userId: req.user?.userId })
     next(error)

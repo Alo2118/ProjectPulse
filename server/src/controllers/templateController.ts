@@ -6,7 +6,8 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { templateService } from '../services/templateService.js'
-import { AppError } from '../middleware/errorMiddleware.js'
+import { sendSuccess, sendCreated } from '../utils/responseHelpers.js'
+import { requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -38,7 +39,7 @@ export async function getTemplates(req: Request, res: Response, next: NextFuncti
   try {
     const includeInactive = req.query.includeInactive === 'true'
     const templates = await templateService.getTemplates(includeInactive)
-    res.json({ success: true, data: templates })
+    sendSuccess(res, templates)
   } catch (error) {
     next(error)
   }
@@ -50,9 +51,8 @@ export async function getTemplates(req: Request, res: Response, next: NextFuncti
 export async function getTemplate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const template = await templateService.getTemplateById(id)
-    if (!template) throw new AppError('Template not found', 404)
-    res.json({ success: true, data: template })
+    const template = requireResource(await templateService.getTemplateById(id), 'Template')
+    sendSuccess(res, template)
   } catch (error) {
     next(error)
   }
@@ -70,7 +70,7 @@ export async function createTemplate(req: Request, res: Response, next: NextFunc
       phases: body.phases ? JSON.stringify(body.phases) : undefined,
       structure: body.structure ? JSON.stringify(body.structure) : undefined,
     })
-    res.status(201).json({ success: true, data: template })
+    sendCreated(res, template)
   } catch (error) {
     next(error)
   }
@@ -83,15 +83,14 @@ export async function updateTemplate(req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params
     const body = updateTemplateSchema.parse(req.body)
-    const template = await templateService.updateTemplate(id, {
+    const template = requireResource(await templateService.updateTemplate(id, {
       name: body.name,
       description: body.description ?? undefined,
       isActive: body.isActive,
       phases: body.phases ? JSON.stringify(body.phases) : undefined,
       structure: body.structure ? JSON.stringify(body.structure) : undefined,
-    })
-    if (!template) throw new AppError('Template not found', 404)
-    res.json({ success: true, data: template })
+    }), 'Template')
+    sendSuccess(res, template)
   } catch (error) {
     next(error)
   }
@@ -104,7 +103,7 @@ export async function deleteTemplate(req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params
     await templateService.deleteTemplate(id)
-    res.json({ success: true, message: 'Template deleted' })
+    sendSuccess(res, { message: 'Template deleted' })
   } catch (error) {
     next(error)
   }

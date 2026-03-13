@@ -8,10 +8,11 @@ import { z } from 'zod'
 import { authService } from '../services/authService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { sendSuccess } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(1),
 })
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
@@ -29,7 +30,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       throw new AppError('Invalid credentials', 401)
     }
 
-    res.json({ success: true, user: result.user, token: result.token, refreshToken: result.refreshToken })
+    sendSuccess(res, { user: result.user, token: result.token, refreshToken: result.refreshToken })
   } catch (error) {
     next(error)
   }
@@ -49,7 +50,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
       throw new AppError('Invalid refresh token', 401)
     }
 
-    res.json({ success: true, token: result.token, refreshToken: result.refreshToken })
+    sendSuccess(res, { token: result.token, refreshToken: result.refreshToken })
   } catch (error) {
     next(error)
   }
@@ -63,7 +64,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
       await authService.logout(userId)
     }
 
-    res.json({ success: true, message: 'Logged out successfully' })
+    sendSuccess(res, { message: 'Logged out successfully' })
   } catch (error) {
     next(error)
   }
@@ -71,17 +72,9 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
 
 export const me = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
-    const user = await authService.getCurrentUser(userId)
-
-    if (!user) {
-      throw new AppError('User not found', 404)
-    }
+    const user = requireResource(await authService.getCurrentUser(userId), 'User')
 
     sendSuccess(res, user)
   } catch (error) {

@@ -1,6 +1,7 @@
 /**
  * Permission Service - Granular permission management for ProjectPulse (Feature 4.1)
  * Handles project-level roles, capability checks, and ProjectMember CRUD.
+ * Also manages system-level PermissionPolicy records for the admin UI.
  * @module services/permissionService
  */
 
@@ -9,6 +10,172 @@ import { logger } from '../utils/logger.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { auditService } from './auditService.js'
 import { EntityType } from '../types/index.js'
+import { ROLES, DOMAINS, ACTIONS } from '../schemas/permissionSchemas.js'
+
+type PermRole = typeof ROLES[number]
+type PermDomain = typeof DOMAINS[number]
+type PermAction = typeof ACTIONS[number]
+
+interface PolicyInput {
+  role: PermRole
+  domain: PermDomain
+  action: PermAction
+  allowed: boolean
+}
+
+// ============================================================
+// PERMISSION POLICY CRUD
+// ============================================================
+
+/**
+ * Returns all permission policy records ordered by role, domain, action.
+ */
+export async function getAllPolicies() {
+  return prisma.permissionPolicy.findMany({
+    orderBy: [
+      { role: 'asc' },
+      { domain: 'asc' },
+      { action: 'asc' },
+    ],
+  })
+}
+
+/**
+ * Batch upsert permission policies inside a transaction.
+ * Admin role policies cannot be set to allowed: false.
+ */
+export async function upsertPolicies(policies: PolicyInput[]) {
+  const adminRestricted = policies.some((p) => p.role === 'admin' && !p.allowed)
+  if (adminRestricted) {
+    throw new AppError('Cannot restrict admin permissions', 400)
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const policy of policies) {
+      await tx.permissionPolicy.upsert({
+        where: {
+          role_domain_action: {
+            role: policy.role,
+            domain: policy.domain,
+            action: policy.action,
+          },
+        },
+        create: {
+          role: policy.role,
+          domain: policy.domain,
+          action: policy.action,
+          allowed: policy.allowed,
+        },
+        update: {
+          allowed: policy.allowed,
+        },
+      })
+    }
+  })
+
+  return getAllPolicies()
+}
+
+/**
+ * Builds the default policy matrix and seeds it into the database.
+ * Existing records are overwritten.
+ */
+export async function seedDefaults() {
+  const defaults: PolicyInput[] = []
+
+  // admin — everything allowed
+  for (const domain of DOMAINS) {
+    for (const action of ACTIONS) {
+      defaults.push({ role: 'admin', domain, action, allowed: true })
+    }
+  }
+
+  // direzione — broad access
+  const direzioneDomainActions: Record<string, PermAction[]> = {
+    project: ['view', 'create', 'edit', 'advance_phase', 'assign', 'export', 'manage_team', 'convert'],
+    task: ['view', 'create', 'edit', 'advance_phase', 'assign', 'export', 'block', 'evaluate', 'convert'],
+    risk: ['view', 'create', 'edit', 'assign', 'export', 'evaluate'],
+    document: ['view', 'create', 'edit', 'delete', 'approve', 'export', 'convert'],
+    input: ['view', 'create', 'edit', 'assign', 'export', 'convert'],
+    time_entry: ['view', 'create', 'edit', 'export', 'approve'],
+    user: ['view', 'export'],
+    analytics: ['view', 'export'],
+  }
+
+  for (const domain of DOMAINS) {
+    const allowed = (direzioneDomainActions[domain] ?? []) as PermAction[]
+    for (const action of ACTIONS) {
+      defaults.push({
+        role: 'direzione',
+        domain,
+        action,
+        allowed: allowed.includes(action),
+      })
+    }
+  }
+
+  // dipendente — view broadly, limited create/edit
+  const dipendenteDomainActions: Record<string, PermAction[]> = {
+    project: ['view'],
+    task: ['view', 'advance_phase'],
+    risk: ['view'],
+    document: ['view', 'create'],
+    input: ['view', 'create'],
+    time_entry: ['view', 'create', 'edit'],
+    user: ['view'],
+    analytics: ['view', 'export'],
+  }
+
+  for (const domain of DOMAINS) {
+    const allowed = (dipendenteDomainActions[domain] ?? []) as PermAction[]
+    for (const action of ACTIONS) {
+      defaults.push({
+        role: 'dipendente',
+        domain,
+        action,
+        allowed: allowed.includes(action),
+      })
+    }
+  }
+
+  // guest — view only on project, task, analytics
+  const guestAllowedDomains: PermDomain[] = ['project', 'task', 'analytics']
+  for (const domain of DOMAINS) {
+    for (const action of ACTIONS) {
+      defaults.push({
+        role: 'guest',
+        domain,
+        action,
+        allowed: guestAllowedDomains.includes(domain) && action === 'view',
+      })
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const policy of defaults) {
+      await tx.permissionPolicy.upsert({
+        where: {
+          role_domain_action: {
+            role: policy.role,
+            domain: policy.domain,
+            action: policy.action,
+          },
+        },
+        create: {
+          role: policy.role,
+          domain: policy.domain,
+          action: policy.action,
+          allowed: policy.allowed,
+        },
+        update: {
+          allowed: policy.allowed,
+        },
+      })
+    }
+  })
+
+  logger.info('Permission policies seeded to defaults')
+}
 
 // ============================================================
 // TYPES

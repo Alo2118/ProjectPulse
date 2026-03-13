@@ -8,6 +8,8 @@ import { z } from 'zod'
 import { userInputService } from '../services/userInputService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { InputCategory, TaskPriority } from '../types/index.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -85,11 +87,7 @@ export async function getUserInputs(req: Request, res: Response, next: NextFunct
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -101,11 +99,7 @@ export async function getUserInputs(req: Request, res: Response, next: NextFunct
  */
 export async function getMyUserInputs(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
+    const userId = requireUserId(req)
     const params = querySchema.parse(req.query)
 
     const result = await userInputService.getMyUserInputs(userId, {
@@ -117,11 +111,7 @@ export async function getMyUserInputs(req: Request, res: Response, next: NextFun
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -135,13 +125,9 @@ export async function getUserInput(req: Request, res: Response, next: NextFuncti
   try {
     const { id } = req.params
 
-    const input = await userInputService.getUserInputById(id)
+    const input = requireResource(await userInputService.getUserInputById(id), 'User input')
 
-    if (!input) {
-      throw new AppError('User input not found', 404)
-    }
-
-    res.json({ success: true, data: input })
+    sendSuccess(res, input)
   } catch (error) {
     next(error)
   }
@@ -154,11 +140,7 @@ export async function getUserInput(req: Request, res: Response, next: NextFuncti
 export async function createUserInput(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createInputSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const input = await userInputService.createUserInput(
       {
@@ -171,7 +153,7 @@ export async function createUserInput(req: Request, res: Response, next: NextFun
       userId
     )
 
-    res.status(201).json({ success: true, data: input })
+    sendCreated(res, input)
   } catch (error) {
     next(error)
   }
@@ -185,10 +167,10 @@ export async function updateUserInput(req: Request, res: Response, next: NextFun
   try {
     const { id } = req.params
     const data = updateInputSchema.parse(req.body)
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role
 
-    if (!userId || !userRole) {
+    if (!userRole) {
       throw new AppError('User not authenticated', 401)
     }
 
@@ -205,11 +187,9 @@ export async function updateUserInput(req: Request, res: Response, next: NextFun
       userRole
     )
 
-    if (!input) {
-      throw new AppError('User input not found', 404)
-    }
+    requireResource(input, 'User input')
 
-    res.json({ success: true, data: input })
+    sendSuccess(res, input)
   } catch (error) {
     if (error instanceof Error && error.message === 'Permission denied') {
       next(new AppError('Permission denied', 403))
@@ -226,19 +206,11 @@ export async function updateUserInput(req: Request, res: Response, next: NextFun
 export async function startProcessing(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const input = requireResource(await userInputService.startProcessing(id, userId), 'User input')
 
-    const input = await userInputService.startProcessing(id, userId)
-
-    if (!input) {
-      throw new AppError('User input not found', 404)
-    }
-
-    res.json({ success: true, data: input })
+    sendSuccess(res, input)
   } catch (error) {
     if (error instanceof Error && error.message === 'Input is not in pending status') {
       next(new AppError('Input is not in pending status', 400))
@@ -256,11 +228,7 @@ export async function convertToTask(req: Request, res: Response, next: NextFunct
   try {
     const { id } = req.params
     const data = convertToTaskSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const result = await userInputService.convertToTask(
       id,
@@ -274,11 +242,9 @@ export async function convertToTask(req: Request, res: Response, next: NextFunct
       userId
     )
 
-    if (!result) {
-      throw new AppError('User input not found', 404)
-    }
+    requireResource(result, 'User input')
 
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Input is already resolved') {
@@ -302,11 +268,7 @@ export async function convertToProject(req: Request, res: Response, next: NextFu
   try {
     const { id } = req.params
     const data = convertToProjectSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const result = await userInputService.convertToProject(
       id,
@@ -320,11 +282,9 @@ export async function convertToProject(req: Request, res: Response, next: NextFu
       userId
     )
 
-    if (!result) {
-      throw new AppError('User input not found', 404)
-    }
+    requireResource(result, 'User input')
 
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     if (error instanceof Error && error.message === 'Input is already resolved') {
       next(new AppError('Input is already resolved', 400))
@@ -342,19 +302,11 @@ export async function acknowledgeInput(req: Request, res: Response, next: NextFu
   try {
     const { id } = req.params
     const data = acknowledgeSchema.parse(req.body)
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const input = requireResource(await userInputService.acknowledgeInput(id, data.notes, userId), 'User input')
 
-    const input = await userInputService.acknowledgeInput(id, data.notes, userId)
-
-    if (!input) {
-      throw new AppError('User input not found', 404)
-    }
-
-    res.json({ success: true, data: input })
+    sendSuccess(res, input)
   } catch (error) {
     if (error instanceof Error && error.message === 'Input is already resolved') {
       next(new AppError('Input is already resolved', 400))
@@ -372,19 +324,11 @@ export async function rejectInput(req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params
     const data = rejectSchema.parse(req.body)
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const input = requireResource(await userInputService.rejectInput(id, data.reason, userId), 'User input')
 
-    const input = await userInputService.rejectInput(id, data.reason, userId)
-
-    if (!input) {
-      throw new AppError('User input not found', 404)
-    }
-
-    res.json({ success: true, data: input })
+    sendSuccess(res, input)
   } catch (error) {
     if (error instanceof Error && error.message === 'Input is already resolved') {
       next(new AppError('Input is already resolved', 400))
@@ -401,20 +345,16 @@ export async function rejectInput(req: Request, res: Response, next: NextFunctio
 export async function deleteUserInput(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role
 
-    if (!userId || !userRole) {
+    if (!userRole) {
       throw new AppError('User not authenticated', 401)
     }
 
-    const deleted = await userInputService.deleteUserInput(id, userId, userRole)
+    requireResource(await userInputService.deleteUserInput(id, userId, userRole), 'User input')
 
-    if (!deleted) {
-      throw new AppError('User input not found', 404)
-    }
-
-    res.json({ success: true, message: 'User input deleted successfully' })
+    sendSuccess(res, { message: 'User input deleted successfully' })
   } catch (error) {
     if (error instanceof Error && error.message === 'Permission denied') {
       next(new AppError('Permission denied', 403))
@@ -432,7 +372,7 @@ export async function getUserInputStats(_req: Request, res: Response, next: Next
   try {
     const stats = await userInputService.getUserInputStats()
 
-    res.json({ success: true, data: stats })
+    sendSuccess(res, stats)
   } catch (error) {
     next(error)
   }

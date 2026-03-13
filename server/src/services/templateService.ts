@@ -5,6 +5,7 @@
 
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
 const templateSelectFields = {
   id: true,
@@ -140,7 +141,7 @@ export const templateService = {
     if (!template) return false
 
     if (template._count.projects > 0) {
-      throw new Error(`Template is used by ${template._count.projects} project(s) — cannot delete`)
+      throw new AppError(`Template is used by ${template._count.projects} project(s) — cannot delete`, 400)
     }
 
     await prisma.projectTemplate.delete({ where: { id } })

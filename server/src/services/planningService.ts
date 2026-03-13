@@ -7,6 +7,7 @@
 
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
 // ============================================================
 // LOCAL INTERFACES
@@ -470,8 +471,9 @@ async function suggestTimeline(
     for (const task of tasks) {
       for (const dep of task.dependencies ?? []) {
         if (!taskById.has(dep.tempId)) {
-          throw new Error(
+          throw new AppError(
             `Dependency tempId "${dep.tempId}" referenced by task "${task.tempId}" does not exist in the task list`,
+            400,
           )
         }
       }
@@ -518,8 +520,9 @@ async function suggestTimeline(
     }
 
     if (topoOrder.length !== tasks.length) {
-      throw new Error(
+      throw new AppError(
         'Circular dependency detected among the provided tasks. Please resolve the cycle before requesting a timeline.',
+        400,
       )
     }
 
@@ -982,7 +985,7 @@ async function generatePlanFromTemplate(
     })
 
     if (!template) {
-      throw new Error(`Template with id "${templateId}" not found`)
+      throw new AppError(`Template with id "${templateId}" not found`, 404)
     }
 
     let structure: TemplateStructure = {}
@@ -1082,7 +1085,7 @@ async function commitPlan(
       })
 
       if (!project) {
-        throw new Error(`Project with id "${projectId}" not found`)
+        throw new AppError(`Project with id "${projectId}" not found`, 404)
       }
 
       // Capture as non-nullable for use inside the nested closure below

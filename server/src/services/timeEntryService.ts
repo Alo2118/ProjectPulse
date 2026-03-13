@@ -7,6 +7,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { timeEntrySelectFields, timeEntryWithRelationsSelect } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
 import {
   CreateTimeEntryInput,
   UpdateTimeEntryInput,
@@ -14,44 +16,8 @@ import {
   PaginatedResponse,
   EntityType,
 } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
-const timeEntrySelectFields = {
-  id: true,
-  description: true,
-  startTime: true,
-  endTime: true,
-  duration: true,
-  isRunning: true,
-  isDeleted: true,
-  approvalStatus: true,
-  approvedById: true,
-  approvedAt: true,
-  rejectionNote: true,
-  createdAt: true,
-  updatedAt: true,
-  taskId: true,
-  userId: true,
-}
-
-const timeEntryWithRelationsSelect = {
-  ...timeEntrySelectFields,
-  task: {
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      project: {
-        select: { id: true, code: true, name: true },
-      },
-    },
-  },
-  user: {
-    select: { id: true, firstName: true, lastName: true },
-  },
-  approvedBy: {
-    select: { id: true, firstName: true, lastName: true },
-  },
-}
 
 /**
  * Starts a new time entry (timer)
@@ -68,12 +34,12 @@ export async function startTimer(taskId: string, userId: string, description?: s
   })
 
   if (!task) {
-    throw new Error('Task not found')
+    throw new AppError('Task not found', 404)
   }
 
   // Milestones cannot have direct time entries
   if (task.taskType === 'milestone') {
-    throw new Error('Cannot track time directly on a milestone. Track time on tasks within the milestone instead.')
+    throw new AppError('Cannot track time directly on a milestone. Track time on tasks within the milestone instead.', 400)
   }
 
   // Stop any running timer for this user
@@ -113,7 +79,7 @@ export async function stopTimer(timeEntryId: string, userId: string) {
   })
 
   if (!existing) {
-    throw new Error('Running timer not found')
+    throw new AppError('Running timer not found', 404)
   }
 
   const endTime = new Date()
@@ -210,12 +176,12 @@ export async function createTimeEntry(data: CreateTimeEntryInput, userId: string
   })
 
   if (!task) {
-    throw new Error('Task not found')
+    throw new AppError('Task not found', 404)
   }
 
   // Milestones cannot have direct time entries
   if (task.taskType === 'milestone') {
-    throw new Error('Cannot track time directly on a milestone. Track time on tasks within the milestone instead.')
+    throw new AppError('Cannot track time directly on a milestone. Track time on tasks within the milestone instead.', 400)
   }
 
   // Calculate duration if start and end times provided
@@ -403,12 +369,7 @@ export async function getTimeEntries(params: TimeEntryQueryParams): Promise<Pagi
 
   return {
     data: entries,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 
@@ -692,12 +653,7 @@ export async function getPendingTimeEntries(params: {
 
   return {
     data: entries,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 
@@ -719,7 +675,7 @@ export async function approveTimeEntries(ids: string[], approverId: string): Pro
   })
 
   if (entries.length === 0) {
-    throw new Error('No eligible entries found')
+    throw new AppError('No eligible entries found', 400)
   }
 
   const validIds = entries.map((e) => e.id)
@@ -776,7 +732,7 @@ export async function rejectTimeEntries(
   })
 
   if (entries.length === 0) {
-    throw new Error('No eligible entries found')
+    throw new AppError('No eligible entries found', 400)
   }
 
   const validIds = entries.map((e) => e.id)

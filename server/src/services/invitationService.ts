@@ -9,14 +9,8 @@ import bcrypt from 'bcrypt'
 import { prisma } from '../models/prismaClient.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { logger } from '../utils/logger.js'
-import { UserWithoutPassword, Theme } from '../types/index.js'
-
-// ============================================================
-// CONSTANTS
-// ============================================================
-
-const BCRYPT_ROUNDS = 12
-const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+import { UserWithoutPassword, Theme, ThemeStyle } from '../types/index.js'
+import { BCRYPT_ROUNDS, INVITATION_EXPIRY_MS } from '../constants/config.js'
 
 // ============================================================
 // INTERNAL RETURN TYPES
@@ -61,6 +55,7 @@ interface UserRow {
   role: string
   avatarUrl: string | null
   theme: string
+  themeStyle: string
   isActive: boolean
   isExternal: boolean
   createdAt: Date
@@ -108,6 +103,7 @@ const userSelectFields = {
   role: true,
   avatarUrl: true,
   theme: true,
+  themeStyle: true,
   isActive: true,
   isExternal: true,
   createdAt: true,
@@ -350,6 +346,7 @@ export async function acceptInvitation(
     role: result.user.role,
     avatarUrl: result.user.avatarUrl,
     theme: (result.user.theme as Theme),
+    themeStyle: (result.user.themeStyle as ThemeStyle),
     isActive: result.user.isActive,
     createdAt: result.user.createdAt,
     lastLoginAt: result.user.lastLoginAt,

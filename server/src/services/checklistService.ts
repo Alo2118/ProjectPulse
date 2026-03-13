@@ -6,17 +6,10 @@
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { checklistItemSelect } from '../utils/selectFields.js'
 import { EntityType } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
-const checklistItemSelect = {
-  id: true,
-  taskId: true,
-  title: true,
-  isChecked: true,
-  position: true,
-  createdAt: true,
-  updatedAt: true,
-} as const
 
 /**
  * Retrieves all checklist items for a task, ordered by position
@@ -43,7 +36,7 @@ export async function createChecklistItem(taskId: string, title: string, userId:
   // Verify task exists and is not deleted
   const task = await prisma.task.findFirst({ where: { id: taskId, isDeleted: false } })
   if (!task) {
-    throw new Error('Task not found')
+    throw new AppError('Task not found', 404)
   }
 
   // Compute next position

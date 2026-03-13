@@ -10,6 +10,7 @@ import { attachmentService } from '../services/attachmentService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { logger } from '../utils/logger.js'
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -43,12 +44,8 @@ export async function createAttachment(req: Request, res: Response, next: NextFu
     }
 
     const data = parseResult.data
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const file = req.file
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
 
     if (!file) {
       throw new AppError('No file uploaded', 400)
@@ -117,11 +114,7 @@ export async function getAttachmentById(req: Request, res: Response, next: NextF
   try {
     const { id } = req.params
 
-    const attachment = await attachmentService.getAttachmentById(id)
-
-    if (!attachment) {
-      throw new AppError('Attachment not found', 404)
-    }
+    const attachment = requireResource(await attachmentService.getAttachmentById(id), 'Attachment')
 
     sendSuccess(res, attachment)
   } catch (error) {
@@ -137,11 +130,7 @@ export async function downloadAttachment(req: Request, res: Response, next: Next
   try {
     const { id } = req.params
 
-    const attachment = await attachmentService.getAttachmentById(id)
-
-    if (!attachment) {
-      throw new AppError('Attachment not found', 404)
-    }
+    const attachment = requireResource(await attachmentService.getAttachmentById(id), 'Attachment')
 
     // Check if file exists
     if (!fs.existsSync(attachment.filePath)) {
@@ -168,18 +157,10 @@ export async function downloadAttachment(req: Request, res: Response, next: Next
 export async function deleteAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role || 'dipendente'
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
-    const deleted = await attachmentService.deleteAttachment(id, userId, userRole)
-
-    if (!deleted) {
-      throw new AppError('Attachment not found or you do not have permission to delete it', 404)
-    }
+    requireResource(await attachmentService.deleteAttachment(id, userId, userRole), 'Attachment')
 
     // Note: We keep the file on disk for audit purposes
     // If you want to delete the file, uncomment:
@@ -187,7 +168,7 @@ export async function deleteAttachment(req: Request, res: Response, next: NextFu
     //   fs.unlinkSync(attachment.filePath)
     // }
 
-    res.json({ success: true, message: 'Attachment deleted successfully' })
+    sendSuccess(res, { message: 'Attachment deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -226,11 +207,7 @@ const convertToDocumentSchema = z.object({
 export async function convertToDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const data = convertToDocumentSchema.parse(req.body)
 

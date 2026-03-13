@@ -7,6 +7,8 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import { parseTasksCsv, importTasks, type ImportTaskRow } from '../services/importService.js'
 import { logger } from '../utils/logger.js'
+import { sendSuccess, sendError } from '../utils/responseHelpers.js'
+import { requireUserId } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -59,23 +61,20 @@ export async function previewTasksImport(req: Request, res: Response): Promise<v
   try {
     const parsed = previewBodySchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
 
     const result = parseTasksCsv(parsed.data.csvContent)
 
-    res.json({
-      success: true,
-      data: {
-        headers: result.headers,
-        preview: result.preview,
-        totalRows: result.rows.length,
-      },
+    sendSuccess(res, {
+      headers: result.headers,
+      preview: result.preview,
+      totalRows: result.rows.length,
     })
   } catch (error) {
     logger.error('Error parsing CSV for preview', { error })
-    res.status(500).json({ success: false, error: 'Errore durante l\'analisi del file CSV' })
+    sendError(res, "Errore durante l'analisi del file CSV", 500)
   }
 }
 
@@ -87,12 +86,12 @@ export async function importTasksHandler(req: Request, res: Response): Promise<v
   try {
     const parsed = importBodySchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
 
     const { csvContent, mappings = {}, defaultProjectId } = parsed.data
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
 
     const { headers, rows } = parseTasksCsv(csvContent)
 
@@ -103,9 +102,9 @@ export async function importTasksHandler(req: Request, res: Response): Promise<v
 
     const result = await importTasks(taskRows, userId, defaultProjectId)
 
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     logger.error('Error importing tasks', { error })
-    res.status(500).json({ success: false, error: 'Errore durante l\'importazione dei task' })
+    sendError(res, "Errore durante l'importazione dei task", 500)
   }
 }

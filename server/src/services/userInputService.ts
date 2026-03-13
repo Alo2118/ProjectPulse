@@ -9,7 +9,10 @@ import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
 import { notificationService } from './notificationService.js'
 import { parseMentionedUserIds } from '../utils/mentions.js'
+import { userInputWithRelationsSelect } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
 import { PaginatedResponse, EntityType, PaginationParams, InputCategory, InputStatus, TaskPriority } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 import {
   generateInputCode,
   generateStandaloneTaskCode,
@@ -81,44 +84,6 @@ function parseAttachmentsMany<T extends { attachments: unknown }>(inputs: T[]): 
   return inputs.map(parseAttachments)
 }
 
-// Select fields for user input queries
-const userInputSelectFields = {
-  id: true,
-  code: true,
-  title: true,
-  description: true,
-  category: true,
-  priority: true,
-  status: true,
-  resolutionType: true,
-  resolutionNotes: true,
-  resolvedAt: true,
-  convertedTaskId: true,
-  convertedProjectId: true,
-  attachments: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-  createdById: true,
-  processedById: true,
-  processedAt: true,
-}
-
-const userInputWithRelationsSelect = {
-  ...userInputSelectFields,
-  createdBy: {
-    select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
-  },
-  processedBy: {
-    select: { id: true, firstName: true, lastName: true, email: true },
-  },
-  convertedTask: {
-    select: { id: true, code: true, title: true },
-  },
-  convertedProject: {
-    select: { id: true, code: true, name: true },
-  },
-}
 
 // ============================================================
 // CRUD OPERATIONS
@@ -230,12 +195,7 @@ export async function getUserInputs(
 
   return {
     data: parseAttachmentsMany(inputs),
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 
@@ -284,7 +244,7 @@ export async function updateUserInput(
   const isPending = existing.status === 'pending'
 
   if (!isAdmin && (!isOwner || !isPending)) {
-    throw new Error('Permission denied')
+    throw new AppError('Permission denied', 403)
   }
 
   const userInput = await prisma.$transaction(async (tx) => {
@@ -324,7 +284,7 @@ export async function startProcessing(inputId: string, userId: string) {
   }
 
   if (existing.status !== 'pending') {
-    throw new Error('Input is not in pending status')
+    throw new AppError('Input is not in pending status', 400)
   }
 
   const userInput = await prisma.$transaction(async (tx) => {
@@ -372,7 +332,7 @@ export async function convertToTask(inputId: string, data: ConvertToTaskData, us
   }
 
   if (existing.status === 'resolved') {
-    throw new Error('Input is already resolved')
+    throw new AppError('Input is already resolved', 400)
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -384,7 +344,7 @@ export async function convertToTask(inputId: string, data: ConvertToTaskData, us
         select: { code: true },
       })
       if (!project) {
-        throw new Error('Project not found')
+        throw new AppError('Project not found', 404)
       }
       taskCode = await generateTaskCode(project.code, data.projectId)
     } else {
@@ -467,7 +427,7 @@ export async function convertToProject(inputId: string, data: ConvertToProjectDa
   }
 
   if (existing.status === 'resolved') {
-    throw new Error('Input is already resolved')
+    throw new AppError('Input is already resolved', 400)
   }
 
   // Generate project code before transaction (uses separate query)
@@ -548,7 +508,7 @@ export async function acknowledgeInput(inputId: string, notes: string | undefine
   }
 
   if (existing.status === 'resolved') {
-    throw new Error('Input is already resolved')
+    throw new AppError('Input is already resolved', 400)
   }
 
   const userInput = await prisma.$transaction(async (tx) => {
@@ -606,7 +566,7 @@ export async function rejectInput(inputId: string, reason: string, userId: strin
   }
 
   if (existing.status === 'resolved') {
-    throw new Error('Input is already resolved')
+    throw new AppError('Input is already resolved', 400)
   }
 
   const userInput = await prisma.$transaction(async (tx) => {
@@ -669,7 +629,7 @@ export async function deleteUserInput(inputId: string, userId: string, userRole:
   const isPending = existing.status === 'pending'
 
   if (!isAdmin && (!isOwner || !isPending)) {
-    throw new Error('Permission denied')
+    throw new AppError('Permission denied', 403)
   }
 
   await prisma.$transaction(async (tx) => {

@@ -7,6 +7,7 @@
 
 import { prisma } from '../../models/prismaClient.js'
 import { logger } from '../../utils/logger.js'
+import { STALE_COOLDOWN_MS } from '../../constants/config.js'
 
 /**
  * Checks whether a rule is still in cooldown for a specific entity.
@@ -75,7 +76,7 @@ export async function recordCooldown(
  */
 export async function cleanupStaleCooldowns(): Promise<void> {
   try {
-    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const cutoff = new Date(Date.now() - STALE_COOLDOWN_MS)
 
     const result = await prisma.automationCooldown.deleteMany({
       where: {

@@ -6,6 +6,8 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { planningService } from '../services/planningService.js'
+import { sendSuccess, sendCreated, sendError } from '../utils/responseHelpers.js'
+import { requireUserId } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -58,7 +60,7 @@ export async function getEstimationMetrics(
       taskType: params.taskType,
     })
 
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -95,7 +97,7 @@ export async function getTeamCapacity(
 
     const data = await planningService.getTeamCapacity(weekStart, weekEnd)
 
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -118,7 +120,7 @@ export async function suggestTimeline(
 
     const data = await planningService.suggestTimeline(body.tasks, projectStartDate)
 
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -139,13 +141,13 @@ export async function getBottlenecks(
     // Validate projectId is present (guaranteed by route param, but make explicit)
     const parsed = z.string().uuid('Invalid project ID').safeParse(projectId)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0]?.message ?? 'Invalid project ID' })
+      sendError(res, parsed.error.errors[0]?.message ?? 'Invalid project ID', 400)
       return
     }
 
     const data = await planningService.getBottlenecks(parsed.data)
 
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -188,7 +190,7 @@ export async function generatePlan(
   try {
     const body = generatePlanBodySchema.parse(req.body)
     const data = await planningService.generatePlanFromTemplate(body.templateId)
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -205,12 +207,13 @@ export async function commitPlan(
 ): Promise<void> {
   try {
     const body = commitPlanBodySchema.parse(req.body)
+    const userId = requireUserId(req)
     const data = await planningService.commitPlan(
       body.projectId,
       body.tasks,
-      req.user!.userId
+      userId
     )
-    res.status(201).json({ success: true, data })
+    sendCreated(res, data)
   } catch (error) {
     next(error)
   }
@@ -233,11 +236,11 @@ export async function autoSchedule(
   try {
     const parsed = z.object({ projectId: z.string().uuid() }).safeParse(req.params)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: 'Invalid project ID' })
+      sendError(res, 'Invalid project ID', 400)
       return
     }
     const data = await planningService.autoSchedule(parsed.data.projectId)
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -255,11 +258,11 @@ export async function suggestReassignments(
   try {
     const parsed = z.object({ projectId: z.string().uuid() }).safeParse(req.params)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: 'Invalid project ID' })
+      sendError(res, 'Invalid project ID', 400)
       return
     }
     const data = await planningService.suggestReassignments(parsed.data.projectId)
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -291,12 +294,12 @@ export async function whatIfAnalysis(
   try {
     const paramParsed = z.object({ projectId: z.string().uuid() }).safeParse(req.params)
     if (!paramParsed.success) {
-      res.status(400).json({ success: false, error: 'Invalid project ID' })
+      sendError(res, 'Invalid project ID', 400)
       return
     }
     const body = whatIfBodySchema.parse(req.body)
     const data = await planningService.whatIfAnalysis(paramParsed.data.projectId, body.changes)
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }

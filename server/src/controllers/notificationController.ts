@@ -4,14 +4,10 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
 import { notificationService } from '../services/notificationService.js'
-import { AppError } from '../middleware/errorMiddleware.js'
-
-const querySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('20'),
-})
+import { notificationQuerySchema } from '../schemas/notificationSchemas.js'
+import { sendSuccess, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 /**
  * Gets paginated notifications for current user
@@ -19,13 +15,11 @@ const querySchema = z.object({
  */
 export async function getNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-    if (!userId) throw new AppError('User not authenticated', 401)
-
-    const params = querySchema.parse(req.query)
+    const userId = requireUserId(req)
+    const params = notificationQuerySchema.parse(req.query)
     const result = await notificationService.getNotifications(userId, { page: params.page, limit: params.limit })
 
-    res.json({ success: true, data: result.data, pagination: result.pagination })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -37,12 +31,10 @@ export async function getNotifications(req: Request, res: Response, next: NextFu
  */
 export async function getUnreadCount(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-    if (!userId) throw new AppError('User not authenticated', 401)
-
+    const userId = requireUserId(req)
     const count = await notificationService.getUnreadCount(userId)
 
-    res.json({ success: true, data: { count } })
+    sendSuccess(res, { count })
   } catch (error) {
     next(error)
   }
@@ -54,17 +46,13 @@ export async function getUnreadCount(req: Request, res: Response, next: NextFunc
  */
 export async function markAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-    if (!userId) throw new AppError('User not authenticated', 401)
-
+    const userId = requireUserId(req)
     const { id } = req.params
     const notification = await notificationService.markAsRead(id, userId)
 
-    if (!notification) {
-      throw new AppError('Notification not found', 404)
-    }
+    requireResource(notification, 'Notification')
 
-    res.json({ success: true, data: notification })
+    sendSuccess(res, notification)
   } catch (error) {
     next(error)
   }
@@ -76,12 +64,10 @@ export async function markAsRead(req: Request, res: Response, next: NextFunction
  */
 export async function markAllAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-    if (!userId) throw new AppError('User not authenticated', 401)
-
+    const userId = requireUserId(req)
     const count = await notificationService.markAllAsRead(userId)
 
-    res.json({ success: true, data: { count } })
+    sendSuccess(res, { count })
   } catch (error) {
     next(error)
   }
@@ -93,17 +79,11 @@ export async function markAllAsRead(req: Request, res: Response, next: NextFunct
  */
 export async function deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-    if (!userId) throw new AppError('User not authenticated', 401)
-
+    const userId = requireUserId(req)
     const { id } = req.params
-    const deleted = await notificationService.deleteNotification(id, userId)
+    requireResource(await notificationService.deleteNotification(id, userId), 'Notification')
 
-    if (!deleted) {
-      throw new AppError('Notification not found', 404)
-    }
-
-    res.json({ success: true, message: 'Notification deleted successfully' })
+    sendSuccess(res, { message: 'Notification deleted successfully' })
   } catch (error) {
     next(error)
   }

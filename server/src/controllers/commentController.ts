@@ -4,31 +4,15 @@
  */
 
 import type { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
 import { commentService } from '../services/commentService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
-
-// ============================================================
-// VALIDATION SCHEMAS (Rule 6: Input Validation)
-// ============================================================
-
-const createCommentSchema = z.object({
-  taskId: z.string().uuid('Invalid task ID'),
-  content: z.string().min(1, 'Content is required').max(10000),
-  isInternal: z.boolean().default(false),
-  parentId: z.string().uuid('Invalid parent comment ID').optional(),
-})
-
-const updateCommentSchema = z.object({
-  content: z.string().min(1).max(10000).optional(),
-  isInternal: z.boolean().optional(),
-})
-
-const querySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('50'),
-})
+import {
+  createCommentSchema,
+  updateCommentSchema,
+  commentQuerySchema,
+} from '../schemas/commentSchemas.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // CONTROLLER FUNCTIONS
@@ -41,11 +25,7 @@ const querySchema = z.object({
 export async function createComment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createCommentSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     // Only direzione/admin can create internal comments
     const userRole = req.user?.role || 'dipendente'
@@ -80,7 +60,7 @@ export async function createComment(req: Request, res: Response, next: NextFunct
 export async function getTaskComments(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { taskId } = req.params
-    const params = querySchema.parse(req.query)
+    const params = commentQuerySchema.parse(req.query)
     const userRole = req.user?.role || 'dipendente'
 
     const result = await commentService.getTaskComments(
@@ -103,11 +83,7 @@ export async function getComment(req: Request, res: Response, next: NextFunction
   try {
     const { id } = req.params
 
-    const comment = await commentService.getCommentById(id)
-
-    if (!comment) {
-      throw new AppError('Comment not found', 404)
-    }
+    const comment = requireResource(await commentService.getCommentById(id), 'Comment')
 
     // Check if user can view internal comments
     const userRole = req.user?.role || 'dipendente'
@@ -129,11 +105,7 @@ export async function updateComment(req: Request, res: Response, next: NextFunct
   try {
     const { id } = req.params
     const data = updateCommentSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     // Only direzione/admin can set internal flag
     const userRole = req.user?.role || 'dipendente'
@@ -167,12 +139,8 @@ export async function updateComment(req: Request, res: Response, next: NextFunct
 export async function deleteComment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role || 'dipendente'
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
 
     const deleted = await commentService.deleteComment(id, userId, userRole)
 
@@ -180,7 +148,7 @@ export async function deleteComment(req: Request, res: Response, next: NextFunct
       throw new AppError('Comment not found or not owned by user', 404)
     }
 
-    res.json({ success: true, message: 'Comment deleted successfully' })
+    sendSuccess(res, { message: 'Comment deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -192,11 +160,7 @@ export async function deleteComment(req: Request, res: Response, next: NextFunct
  */
 export async function getRecentComments(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const limit = parseInt(req.query.limit as string) || 20
 

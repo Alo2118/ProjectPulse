@@ -4,43 +4,18 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
 import { tagService } from '../services/tagService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { TaggableEntityType } from '../types/index.js'
-
-// ============================================================
-// VALIDATION SCHEMAS
-// ============================================================
-
-
-const createTagSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(50, 'Name too long'),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional(),
-})
-
-const updateTagSchema = z.object({
-  name: z.string().min(1).max(50).optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional(),
-})
-
-const assignTagSchema = z.object({
-  tagId: z.string().uuid('Invalid tag ID'),
-  entityType: z.enum(['task', 'document']),
-  entityId: z.string().uuid('Invalid entity ID'),
-})
-
-const unassignTagSchema = z.object({
-  tagId: z.string().uuid('Invalid tag ID'),
-  entityType: z.enum(['task', 'document']),
-  entityId: z.string().uuid('Invalid entity ID'),
-})
-
-const querySchema = z.object({
-  search: z.string().optional(),
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('50'),
-})
+import {
+  createTagSchema,
+  updateTagSchema,
+  assignTagSchema,
+  unassignTagSchema,
+  tagQuerySchema,
+} from '../schemas/tagSchemas.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // CONTROLLER FUNCTIONS
@@ -52,7 +27,7 @@ const querySchema = z.object({
  */
 export async function getTags(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const params = querySchema.parse(req.query)
+    const params = tagQuerySchema.parse(req.query)
 
     const result = await tagService.getTags({
       search: params.search,
@@ -60,11 +35,7 @@ export async function getTags(req: Request, res: Response, next: NextFunction): 
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -79,11 +50,9 @@ export async function getTag(req: Request, res: Response, next: NextFunction): P
     const { id } = req.params
     const tag = await tagService.getTagById(id)
 
-    if (!tag) {
-      throw new AppError('Tag not found', 404)
-    }
+    requireResource(tag, 'Tag')
 
-    res.json({ success: true, data: tag })
+    sendSuccess(res, tag)
   } catch (error) {
     next(error)
   }
@@ -96,15 +65,11 @@ export async function getTag(req: Request, res: Response, next: NextFunction): P
 export async function createTag(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createTagSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const tag = await tagService.createTag(data, userId)
 
-    res.status(201).json({ success: true, data: tag })
+    sendCreated(res, tag)
   } catch (error) {
     next(error)
   }
@@ -118,19 +83,13 @@ export async function updateTag(req: Request, res: Response, next: NextFunction)
   try {
     const { id } = req.params
     const data = updateTagSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const tag = await tagService.updateTag(id, data, userId)
 
-    if (!tag) {
-      throw new AppError('Tag not found', 404)
-    }
+    requireResource(tag, 'Tag')
 
-    res.json({ success: true, data: tag })
+    sendSuccess(res, tag)
   } catch (error) {
     next(error)
   }
@@ -143,19 +102,11 @@ export async function updateTag(req: Request, res: Response, next: NextFunction)
 export async function deleteTag(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    requireResource(await tagService.deleteTag(id, userId), 'Tag')
 
-    const deleted = await tagService.deleteTag(id, userId)
-
-    if (!deleted) {
-      throw new AppError('Tag not found', 404)
-    }
-
-    res.json({ success: true, message: 'Tag deleted successfully' })
+    sendSuccess(res, { message: 'Tag deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -168,11 +119,7 @@ export async function deleteTag(req: Request, res: Response, next: NextFunction)
 export async function assignTag(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = assignTagSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const assignment = await tagService.assignTag(
       data.tagId,
@@ -181,7 +128,7 @@ export async function assignTag(req: Request, res: Response, next: NextFunction)
       userId
     )
 
-    res.status(201).json({ success: true, data: assignment })
+    sendCreated(res, assignment)
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       next(new AppError(error.message, 404))
@@ -200,11 +147,7 @@ export async function assignTag(req: Request, res: Response, next: NextFunction)
 export async function unassignTag(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = unassignTagSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const removed = await tagService.unassignTag(
       data.tagId,
@@ -213,11 +156,9 @@ export async function unassignTag(req: Request, res: Response, next: NextFunctio
       userId
     )
 
-    if (!removed) {
-      throw new AppError('Tag assignment not found', 404)
-    }
+    requireResource(removed, 'Tag assignment')
 
-    res.json({ success: true, message: 'Tag unassigned successfully' })
+    sendSuccess(res, { message: 'Tag unassigned successfully' })
   } catch (error) {
     next(error)
   }
@@ -237,7 +178,7 @@ export async function getEntityTags(req: Request, res: Response, next: NextFunct
 
     const tags = await tagService.getTagsByEntity(type as TaggableEntityType, id)
 
-    res.json({ success: true, data: tags })
+    sendSuccess(res, tags)
   } catch (error) {
     next(error)
   }

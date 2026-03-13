@@ -7,6 +7,8 @@
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { tagSelectFields, tagWithCreatorSelect } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
 import {
   CreateTagInput,
   UpdateTagInput,
@@ -14,23 +16,8 @@ import {
   TagQueryParams,
   EntityType,
 } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
-const tagSelectFields = {
-  id: true,
-  name: true,
-  color: true,
-  createdById: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-}
-
-const tagWithCreatorSelect = {
-  ...tagSelectFields,
-  createdBy: {
-    select: { id: true, firstName: true, lastName: true },
-  },
-}
 
 /**
  * Verifies that a taggable entity exists and is not deleted
@@ -85,12 +72,7 @@ export async function getTags(params: TagQueryParams) {
 
   return {
     data: tags,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 
@@ -197,11 +179,11 @@ export async function assignTag(tagId: string, entityType: TaggableEntityType, e
     where: { id: tagId, isDeleted: false },
     select: { id: true, name: true },
   })
-  if (!tag) throw new Error('Tag not found')
+  if (!tag) throw new AppError('Tag not found', 404)
 
   // Verify entity exists
   const exists = await verifyEntityExists(entityType, entityId)
-  if (!exists) throw new Error(`${entityType} not found`)
+  if (!exists) throw new AppError(`${entityType} not found`, 404)
 
   // Create assignment (unique constraint will prevent duplicates)
   const assignment = await prisma.tagAssignment.create({
