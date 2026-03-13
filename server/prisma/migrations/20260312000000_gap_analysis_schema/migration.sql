@@ -5,27 +5,42 @@
 ALTER TABLE [users] ADD [hourly_rate] DECIMAL(8, 2) NULL;
 
 -- 2. Risk scale migration: String -> Int (1-5)
--- Step 1: Add temporary Int columns
+-- SQL Server requires separate batches for DDL + DML on new columns.
+-- Using EXEC to force separate compilation contexts.
+
+-- Step 2a: Add temporary Int columns
 ALTER TABLE [risks] ADD [probability_new] INT;
 ALTER TABLE [risks] ADD [impact_new] INT;
 
--- Step 2: Convert existing values
-UPDATE [risks] SET [probability_new] = CASE [probability]
-  WHEN 'low' THEN 1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5
-  ELSE 3 END;
-UPDATE [risks] SET [impact_new] = CASE [impact]
-  WHEN 'low' THEN 1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5
-  ELSE 3 END;
+-- Step 2b: Convert existing values (separate batch via EXEC)
+EXEC(N'UPDATE [risks] SET [probability_new] = CASE [probability]
+  WHEN ''low'' THEN 1 WHEN ''medium'' THEN 3 WHEN ''high'' THEN 5
+  ELSE 3 END');
+EXEC(N'UPDATE [risks] SET [impact_new] = CASE [impact]
+  WHEN ''low'' THEN 1 WHEN ''medium'' THEN 3 WHEN ''high'' THEN 5
+  ELSE 3 END');
 
--- Step 3: Drop old columns, rename new
+-- Step 2c: Drop default constraints then old String columns
+-- SQL Server requires dropping named constraints before dropping columns
+EXEC(N'
+DECLARE @sql NVARCHAR(MAX) = N'''';
+SELECT @sql += N''ALTER TABLE [risks] DROP CONSTRAINT ['' + dc.name + N''];''
+FROM sys.default_constraints dc
+JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+WHERE dc.parent_object_id = OBJECT_ID(N''risks'')
+  AND c.name IN (N''probability'', N''impact'');
+EXEC sp_executesql @sql;
+');
 ALTER TABLE [risks] DROP COLUMN [probability];
 ALTER TABLE [risks] DROP COLUMN [impact];
-EXEC sp_rename 'risks.probability_new', 'probability', 'COLUMN';
-EXEC sp_rename 'risks.impact_new', 'impact', 'COLUMN';
 
--- Step 4: Set defaults
-ALTER TABLE [risks] ADD DEFAULT 3 FOR [probability];
-ALTER TABLE [risks] ADD DEFAULT 3 FOR [impact];
+-- Step 2d: Rename new columns (separate EXEC for each)
+EXEC sp_rename N'risks.probability_new', N'probability', N'COLUMN';
+EXEC sp_rename N'risks.impact_new', N'impact', N'COLUMN';
+
+-- Step 2e: Set defaults
+EXEC(N'ALTER TABLE [risks] ADD DEFAULT 3 FOR [probability]');
+EXEC(N'ALTER TABLE [risks] ADD DEFAULT 3 FOR [impact]');
 
 -- 3. Create document_versions table
 CREATE TABLE [document_versions] (
