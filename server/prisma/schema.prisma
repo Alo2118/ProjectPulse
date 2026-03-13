@@ -64,6 +64,9 @@ model User {
   recommendationsDismissed AutomationRecommendation[] @relation("RecommendationDismisser")
   uploadedVersions    DocumentVersion[] @relation("DocumentVersionUploader")
   createdRiskTasks    RiskTask[] @relation("RiskTaskCreator")
+  tagAssignmentsCreated TagAssignment[] @relation("TagAssignmentCreator")
+  userInputReplies    UserInputReply[] @relation("UserInputReplyAuthor")
+  notificationPreferences String? @map("notification_preferences") @db.NVarChar(Max)
 
   @@map("users")
 }
@@ -478,6 +481,7 @@ model UserInput {
   processedBy        User?     @relation("InputProcessor", fields: [processedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   convertedTask      Task?     @relation(fields: [convertedTaskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   convertedProject   Project?  @relation(fields: [convertedProjectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies            UserInputReply[]
 
   @@index([status])
   @@index([category])
@@ -538,9 +542,11 @@ model TagAssignment {
   tagId      String   @map("tag_id")
   entityType String   @map("entity_type")
   entityId   String   @map("entity_id")
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById String?  @map("created_by_id")
 
-  tag Tag @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tag       Tag  @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User? @relation("TagAssignmentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([tagId, entityType, entityId])
   @@index([entityType, entityId])
@@ -573,6 +579,20 @@ model Note {
   @@index([userId])
   @@index([isDeleted])
   @@map("notes")
+}
+
+model UserInputReply {
+  id        String   @id @default(uuid())
+  inputId   String   @map("input_id")
+  userId    String   @map("user_id")
+  content   String   @db.NVarChar(Max)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  input UserInput @relation(fields: [inputId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user  User      @relation("UserInputReplyAuthor", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([inputId])
+  @@map("user_input_replies")
 }
 
 model Attachment {
