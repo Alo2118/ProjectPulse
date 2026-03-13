@@ -5,7 +5,6 @@
 
 import { Request, Response, NextFunction } from 'express'
 import { riskService } from '../services/riskService.js'
-import { AppError } from '../middleware/errorMiddleware.js'
 import { RiskCategory, RiskStatus } from '../types/index.js'
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
 import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
@@ -103,11 +102,7 @@ export async function createRisk(req: Request, res: Response, next: NextFunction
 
     sendCreated(res, risk)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Project not found') {
-      next(new AppError('Project not found', 404))
-    } else {
-      next(error)
-    }
+    next(error)
   }
 }
 
@@ -169,7 +164,7 @@ export async function deleteRisk(req: Request, res: Response, next: NextFunction
     const { id } = req.params
     const userId = requireUserId(req)
 
-    requireResource(await riskService.deleteRisk(id, userId), 'Risk')
+    await riskService.deleteRisk(id, userId)
 
     sendSuccess(res, { message: 'Risk deleted successfully' })
   } catch (error) {

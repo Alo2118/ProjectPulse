@@ -16,8 +16,3 @@ export const statsDomainParamSchema = z.object({
 export const summaryParamSchema = z.object({
   id: z.string().uuid(),
 })
-
-export const statsQuerySchema = z.object({
-  userId: z.string().uuid().optional(),
-  role: z.string().optional(),
-})

@@ -99,6 +99,7 @@ export async function enrichProjects<T extends { id: string }>(
       user: { select: userWithAvatarSelect },
     },
     orderBy: { createdAt: 'asc' },
+    take: ids.length * 5,
   })
   const avatarMap = new Map<string, EnrichedProject['memberAvatars']>()
   for (const m of members) {
