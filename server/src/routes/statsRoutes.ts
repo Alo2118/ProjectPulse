@@ -12,6 +12,7 @@ const router = Router()
 router.use(authMiddleware)
 
 // Specific routes BEFORE parametric :domain
+router.get('/project/:id/budget-breakdown', statsController.getBudgetBreakdown)
 router.get('/project/:id/summary', statsController.getProjectSummary)
 router.get('/task/:id/summary', statsController.getTaskSummary)
 router.get('/:domain', statsController.getDomainStats)

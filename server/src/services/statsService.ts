@@ -10,6 +10,7 @@
  */
 
 import { prisma } from '../models/prismaClient.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 import { RISK_CRITICAL_THRESHOLD, RISK_HIGH_THRESHOLD } from '../constants/enums.js'
 import type { KpiCard } from '../types/index.js'
 
@@ -427,6 +428,88 @@ export async function getUserStats(): Promise<KpiCard[]> {
     { label: 'Direzione', value: direzione, color: 'purple', icon: 'Crown' },
     { label: 'Dipendenti', value: dipendenti, color: 'blue', icon: 'User' },
   ]
+}
+
+// ============================================================
+// BUDGET BREAKDOWN
+// ============================================================
+
+export interface BudgetMember {
+  userId: string
+  firstName: string
+  lastName: string
+  hoursLogged: number
+  cost: number
+  hourlyRate: number
+}
+
+export interface BudgetBreakdown {
+  budget: number | null
+  totalCost: number
+  totalHours: number
+  budgetUsedPercent: number | null
+  members: BudgetMember[]
+}
+
+/**
+ * Returns a per-member cost breakdown for a project, based on time entries
+ * and each user's hourly rate.
+ */
+export async function getBudgetBreakdown(projectId: string): Promise<BudgetBreakdown> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, budget: true },
+  })
+  if (!project) {
+    throw new AppError('Project not found', 404)
+  }
+
+  const timeEntries = await prisma.timeEntry.findMany({
+    where: {
+      task: { projectId, isDeleted: false },
+      isDeleted: false,
+    },
+    select: {
+      userId: true,
+      duration: true,
+      user: { select: { id: true, firstName: true, lastName: true, hourlyRate: true } },
+    },
+  })
+
+  // Group by user
+  const byUser = new Map<string, { user: typeof timeEntries[0]['user']; totalMinutes: number; totalCost: number }>()
+  for (const te of timeEntries) {
+    const existing = byUser.get(te.userId) ?? {
+      user: te.user,
+      totalMinutes: 0,
+      totalCost: 0,
+    }
+    existing.totalMinutes += te.duration ?? 0
+    const hourlyRate = Number(te.user.hourlyRate ?? 0)
+    existing.totalCost += ((te.duration ?? 0) / 60) * hourlyRate
+    byUser.set(te.userId, existing)
+  }
+
+  const members: BudgetMember[] = Array.from(byUser.values()).map(m => ({
+    userId: m.user.id,
+    firstName: m.user.firstName,
+    lastName: m.user.lastName,
+    hoursLogged: Math.round((m.totalMinutes / 60) * 100) / 100,
+    cost: Math.round(m.totalCost * 100) / 100,
+    hourlyRate: Number(m.user.hourlyRate ?? 0),
+  }))
+
+  const totalCost = members.reduce((sum, m) => sum + m.cost, 0)
+  const totalHours = members.reduce((sum, m) => sum + m.hoursLogged, 0)
+  const budgetValue = project.budget ? Number(project.budget) : null
+
+  return {
+    budget: budgetValue,
+    totalCost: Math.round(totalCost * 100) / 100,
+    totalHours: Math.round(totalHours * 100) / 100,
+    budgetUsedPercent: budgetValue ? Math.round((totalCost / budgetValue) * 10000) / 100 : null,
+    members,
+  }
 }
 
 // ============================================================

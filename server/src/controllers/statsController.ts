@@ -7,6 +7,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { requireUserId } from '../utils/controllerHelpers.js'
 import { sendSuccess } from '../utils/responseHelpers.js'
 import { statsDomainParamSchema, summaryParamSchema } from '../schemas/statsSchemas.js'
+import { uuidParamSchema } from '../schemas/commonSchemas.js'
 import * as statsService from '../services/statsService.js'
 import type { KpiCard } from '../types/index.js'
 
@@ -48,6 +49,17 @@ export async function getTaskSummary(req: Request, res: Response, next: NextFunc
     const { id } = summaryParamSchema.parse(req.params)
     const summary = await statsService.getTaskSummary(id)
     sendSuccess(res, summary)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getBudgetBreakdown(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    requireUserId(req)
+    const { id } = uuidParamSchema.parse(req.params)
+    const breakdown = await statsService.getBudgetBreakdown(id)
+    sendSuccess(res, breakdown)
   } catch (error) {
     next(error)
   }
