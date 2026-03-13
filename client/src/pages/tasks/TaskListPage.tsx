@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
@@ -19,6 +19,8 @@ import { KanbanBoard } from "@/components/domain/tasks/KanbanBoard"
 import { GanttChart } from "@/components/domain/gantt/GanttChart"
 import { CalendarView } from "@/components/domain/calendar/CalendarView"
 import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { EntityRow } from "@/components/common/EntityRow"
+import { TagFilter } from "@/components/common/TagFilter"
 import { ListFilters } from "@/components/common/ListFilters"
 import { StatusDot } from "@/components/common/StatusDot"
 import { DeadlineCell } from "@/components/common/DeadlineCell"
@@ -29,6 +31,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useTaskListQuery, useBulkUpdateTasks, useBulkDeleteTasks } from "@/hooks/api/useTasks"
 import { useStatsQuery } from "@/hooks/api/useStats"
+import { useAttentionItemsQuery } from "@/hooks/api/useDashboard"
 import { useSelectionStore } from "@/stores/selectionStore"
 import { useListKeyboardNav } from "@/hooks/ui/useListKeyboardNav"
 import {
@@ -39,6 +42,7 @@ import {
   TASK_STATUS_GROUP_ORDER,
   COLLAPSED_BY_DEFAULT,
 } from "@/lib/constants"
+import type { AlertItem } from "@/components/common/AlertStrip"
 import { cn, formatRelative } from "@/lib/utils"
 
 interface TaskRow {
@@ -210,6 +214,7 @@ export default function TaskListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const viewMode = searchParams.get("view") || "list"
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   // Selection store
   const { selectedIds, toggle, selectAll, clear } = useSelectionStore()
@@ -228,12 +233,14 @@ export default function TaskListPage() {
       taskType: searchParams.get("taskType") || "",
       sortBy: searchParams.get("sortBy") || "createdAt",
       sortOrder: searchParams.get("sortOrder") || "desc",
+      ...(selectedTagIds.length > 0 ? { tags: selectedTagIds.join(",") } : {}),
     }),
-    [searchParams]
+    [searchParams, selectedTagIds]
   )
 
   const { data, isLoading, error } = useTaskListQuery(filters)
   const { data: kpiCards } = useStatsQuery('tasks')
+  const { data: attentionItems } = useAttentionItemsQuery()
 
   const tasks = (data?.data ?? []) as TaskRow[]
   const pagination = data?.pagination as
@@ -343,6 +350,51 @@ export default function TaskListPage() {
     </>
   )
 
+  // Alert items from attention query (filter to task-relevant items)
+  const alertItems: AlertItem[] | undefined = attentionItems
+    ? attentionItems
+        .filter((item) => item.type === 'blocked_task' || item.type === 'due_soon')
+        .map((item) => ({
+          id: item.entityId,
+          severity: (item.type === 'blocked_task' ? 'critical' : 'warning') as AlertItem['severity'],
+          title: item.title,
+          subtitle: item.extra ?? undefined,
+          projectName: item.projectName ?? undefined,
+          time: item.dueDate ? formatRelative(item.dueDate) : '',
+        }))
+    : undefined
+
+  // Render row for list view using EntityRow
+  const renderRow = useCallback(
+    (t: TaskRow) => (
+      <EntityRow
+        id={t.id}
+        name={t.title}
+        status={t.status}
+        entityType="task"
+        onClick={() => navigate(`/tasks/${t.id}`)}
+        code={t.code}
+        deadline={t.dueDate ?? undefined}
+        subtitle={t.project?.name}
+        assignee={t.assignee ?? undefined}
+        indicators={{
+          comments: t._count?.comments,
+          checklistTotal: t._count?.subtasks ?? t._count?.children,
+          checklistDone: t._count?.subtasks ?? t._count?.children,
+        }}
+        extraBadges={
+          <Badge
+            variant="secondary"
+            className={cn("text-[10px] px-1.5 py-0", TASK_TYPE_COLORS[t.taskType])}
+          >
+            {TASK_TYPE_LABELS[t.taskType] ?? t.taskType}
+          </Badge>
+        }
+      />
+    ),
+    [navigate]
+  )
+
   const handleFilterChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams)
     if (value) params.set(key, value)
@@ -407,7 +459,7 @@ export default function TaskListPage() {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-foreground">Task</h1>
+          <h1 className="text-page-title text-foreground">Task</h1>
           <div className="flex items-center gap-2">
             {viewToggle}
             <Button size="sm" asChild>
@@ -426,6 +478,27 @@ export default function TaskListPage() {
           onClear={handleFilterClear}
         />
 
+        {/* Quick chip filters */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[
+            { key: "", label: "Tutti", dot: "bg-muted-foreground" },
+            { key: "in_progress", label: "In corso", dot: "bg-blue-500" },
+            { key: "blocked", label: "Bloccati", dot: "bg-red-500" },
+            { key: "review", label: "In revisione", dot: "bg-amber-500" },
+            { key: "done", label: "Completati", dot: "bg-green-500" },
+          ].map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              className={cn("chip-filter", filters.status === chip.key && "active")}
+              onClick={() => handleFilterChange("status", chip.key)}
+            >
+              <span className={cn("chip-dot", chip.dot)} />
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
         {viewMode === "board" && <KanbanBoard projectId={projectId} />}
         {viewMode === "gantt" && <GanttChart projectId={projectId} />}
         {viewMode === "calendar" && <CalendarView projectId={projectId} />}
@@ -434,6 +507,28 @@ export default function TaskListPage() {
   }
 
   const useGroupBy = !filters.status
+
+  const chipFilterRow = (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {[
+        { key: "", label: "Tutti", dot: "bg-muted-foreground" },
+        { key: "in_progress", label: "In corso", dot: "bg-blue-500" },
+        { key: "blocked", label: "Bloccati", dot: "bg-red-500" },
+        { key: "review", label: "In revisione", dot: "bg-amber-500" },
+        { key: "done", label: "Completati", dot: "bg-green-500" },
+      ].map((chip) => (
+        <button
+          key={chip.key}
+          type="button"
+          className={cn("chip-filter", filters.status === chip.key && "active")}
+          onClick={() => handleFilterChange("status", chip.key)}
+        >
+          <span className={cn("chip-dot", chip.dot)} />
+          {chip.label}
+        </button>
+      ))}
+    </div>
+  )
 
   return (
     <EntityList<TaskRow>
@@ -460,8 +555,19 @@ export default function TaskListPage() {
       emptyTitle="Nessun task"
       emptyDescription="Crea il tuo primo task"
       headerExtra={viewToggle}
+      afterFilters={
+        <div className="flex items-center gap-2 flex-wrap">
+          {chipFilterRow}
+          <TagFilter
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
+        </div>
+      }
+      alertItems={alertItems}
+      renderRow={viewMode === "list" ? renderRow : undefined}
       rowClassName={(t) =>
-        t.status === "blocked" ? "bg-destructive/5" : undefined
+        cn("row-accent", t.status === "blocked" ? "bg-destructive/5" : undefined)
       }
       groupBy={
         useGroupBy

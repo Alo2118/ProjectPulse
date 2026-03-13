@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FolderKanban, ArrowUpDown, CheckSquare, AlertTriangle, Clock, Users } from 'lucide-react'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useSetPageContext } from '@/hooks/ui/usePageContext'
 import { EntityList, type Column, type FilterConfig } from '@/components/common/EntityList'
+import { EntityRow } from '@/components/common/EntityRow'
+import { TagFilter } from '@/components/common/TagFilter'
 import { ProgressGradient } from '@/components/common/ProgressGradient'
 import { DeadlineCell } from '@/components/common/DeadlineCell'
 import { StatusBadge } from '@/components/common/StatusBadge'
@@ -13,7 +15,7 @@ import { NextActionChip } from '@/components/common/NextActionChip'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useProjectListQuery, useReorderProjects } from '@/hooks/api/useProjects'
-import { useDashboardStatsQuery } from '@/hooks/api/useDashboard'
+import { useDashboardStatsQuery, useAttentionItemsQuery } from '@/hooks/api/useDashboard'
 import { useStatsQuery } from '@/hooks/api/useStats'
 import { usePrivilegedRole } from '@/hooks/ui/usePrivilegedRole'
 import {
@@ -21,8 +23,9 @@ import {
   TASK_PRIORITY_LABELS,
 } from '@/lib/constants'
 import type { KpiCard } from '@/components/common/KpiStrip'
+import type { AlertItem } from '@/components/common/AlertStrip'
 import type { NextAction, ContextGradient } from '@/lib/constants'
-import { formatHours } from '@/lib/utils'
+import { formatHours, formatRelative } from '@/lib/utils'
 import { toast } from 'sonner'
 
 // --- Types ---
@@ -106,9 +109,17 @@ const columns: Column<ProjectRow>[] = [
 
       return (
         <div className="min-w-0 py-0.5">
-          <div className="text-sm font-semibold truncate leading-snug">{p.name}</div>
-          <div className="mt-0.5 text-[11px] text-muted-foreground">
-            {milestoneCount} milestone · {taskCount} task · {riskCount} rischi
+          <div className="text-[13px] font-semibold truncate leading-snug">{p.name}</div>
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="text-data">{milestoneCount} milestone</span>
+            <span aria-hidden>·</span>
+            <span className="text-data">{taskCount} task</span>
+            {riskCount > 0 && (
+              <>
+                <span aria-hidden>·</span>
+                <span className="text-data text-warning">{riskCount} rischi</span>
+              </>
+            )}
           </div>
         </div>
       )
@@ -129,8 +140,8 @@ const columns: Column<ProjectRow>[] = [
       const pct = p.stats?.completionPercentage ?? 0
       return (
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-[11px] tabular-nums">
-            <span>{pct}%</span>
+          <div className="flex items-center justify-between">
+            <span className="text-data text-[11px] text-muted-foreground">{pct}%</span>
           </div>
           <ProgressGradient value={pct} context="project" />
         </div>
@@ -192,38 +203,44 @@ function ProjectGridCard({ project, onClick }: { project: ProjectRow; onClick: (
 
   return (
     <Card
-      className="relative cursor-pointer overflow-hidden p-4 transition-all hover:-translate-y-px hover:border-primary/30 hover:shadow-lg"
+      className="card-hover card-accent-left cursor-pointer p-4 flex flex-col gap-3.5"
+      style={{ ['--card-gradient' as string]: 'var(--gradient-project)' }}
       onClick={onClick}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2 pl-2">
         <div className="min-w-0">
-          <h3 className="font-heading text-sm font-bold leading-snug">{project.name}</h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{taskCount} task · {riskCount} rischi</p>
+          <h3 className="font-heading text-[15px] font-bold leading-snug tracking-tight">{project.name}</h3>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <span className="text-data">{taskCount}</span> task
+            {riskCount > 0 && (
+              <> · <span className="text-data text-warning">{riskCount}</span> rischi</>
+            )}
+          </p>
         </div>
         <StatusBadge status={project.status} labels={PROJECT_STATUS_LABELS} />
       </div>
 
       {/* Progress */}
-      <div className="mt-3 space-y-1">
+      <div className="space-y-1.5 pl-2">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-muted-foreground">Avanzamento</span>
-          <span className="font-heading text-lg font-extrabold tracking-tight">{pct}%</span>
+          <span className="text-kpi-value text-lg">{pct}%</span>
         </div>
         <ProgressGradient value={pct} context="project" height="md" />
       </div>
 
       {/* Phases */}
       {phases.length > 0 && (
-        <div className="mt-3">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fasi</p>
+        <div className="pl-2">
+          <p className="text-table-header mb-1">Fasi</p>
           <PhasePips phases={phases} compact={false} />
         </div>
       )}
 
       {/* Footer */}
-      <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between border-t border-border pt-3 mt-auto">
+        <div className="flex items-center gap-3">
           {members.length > 0 && <AvatarStack users={members} size="sm" />}
           {project.targetEndDate && (
             <DeadlineCell dueDate={project.targetEndDate} status={project.status} />
@@ -231,9 +248,6 @@ function ProjectGridCard({ project, onClick }: { project: ProjectRow; onClick: (
         </div>
         <NextActionChip action={action} onClick={() => {}} />
       </div>
-
-      {/* Bottom accent bar */}
-      <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-blue-700 to-blue-500" />
     </Card>
   )
 }
@@ -278,6 +292,8 @@ export default function ProjectListPage() {
 
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
 
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+
   const filters = {
     page: searchParams.get('page') || '1',
     limit: '20',
@@ -286,6 +302,7 @@ export default function ProjectListPage() {
     priority: searchParams.get('priority') || '',
     sortBy: searchParams.get('sortBy') || 'sortOrder',
     sortOrder: searchParams.get('sortOrder') || 'asc',
+    ...(selectedTagIds.length > 0 ? { tags: selectedTagIds.join(',') } : {}),
   }
 
   const isManualOrder = filters.sortBy === 'sortOrder'
@@ -294,6 +311,7 @@ export default function ProjectListPage() {
   const { data, isLoading, error } = useProjectListQuery(filters)
   const statsQuery = useDashboardStatsQuery()
   const { data: serverKpiCards } = useStatsQuery('projects')
+  const { data: attentionItems } = useAttentionItemsQuery()
 
   const projects = (data?.data ?? []) as ProjectRow[]
   const pagination = data?.pagination as
@@ -343,6 +361,45 @@ export default function ProjectListPage() {
     : []
 
   const kpiCards = serverKpiCards ?? (clientKpiCards.length > 0 ? clientKpiCards : undefined)
+
+  // Alert items from attention query
+  const alertItems: AlertItem[] | undefined = attentionItems
+    ? attentionItems.map((item) => ({
+        id: item.entityId,
+        severity: (item.type === 'critical_risk' || item.type === 'blocked_task' ? 'critical' : item.type === 'due_soon' || item.type === 'milestone_at_risk' ? 'warning' : 'info') as AlertItem['severity'],
+        title: item.title,
+        subtitle: item.extra ?? undefined,
+        projectName: item.projectName ?? undefined,
+        time: item.dueDate ? formatRelative(item.dueDate) : '',
+      }))
+    : undefined
+
+  // Render row for list view using EntityRow
+  const renderRow = useCallback(
+    (p: ProjectRow) => {
+      const pct = p.stats?.completionPercentage ?? 0
+      const phases = mapProjectPhases(p)
+      const currentPhase = phases.find((ph) => ph.status === 'current')
+      return (
+        <EntityRow
+          id={p.id}
+          name={p.name}
+          status={p.status}
+          entityType="project"
+          onClick={() => navigate(`/projects/${p.id}`)}
+          code={p.code}
+          progress={pct}
+          deadline={p.targetEndDate ?? undefined}
+          subtitle={currentPhase?.label}
+          indicators={{
+            blockedTasks: p.stats?.blockedTasks,
+            openRisks: p.stats?.openRisks,
+          }}
+        />
+      )
+    },
+    [navigate]
+  )
 
   // Handlers
   const handleFilterChange = (key: string, value: string) => {
@@ -424,6 +481,14 @@ export default function ProjectListPage() {
       draggable={canDrag}
       onReorder={canDrag ? handleReorder : undefined}
       kpiStrip={kpiCards}
+      alertItems={alertItems}
+      renderRow={viewMode === 'list' ? renderRow : undefined}
+      afterFilters={
+        <TagFilter
+          selectedTagIds={selectedTagIds}
+          onChange={setSelectedTagIds}
+        />
+      }
       viewMode={viewMode}
       onViewModeChange={setViewMode}
       gridRenderItem={(p) => (

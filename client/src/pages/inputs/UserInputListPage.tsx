@@ -4,12 +4,16 @@ import { MessageSquarePlus, Loader2, Calendar } from "lucide-react"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { toast } from "sonner"
 import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { EntityRow } from "@/components/common/EntityRow"
+import { TagFilter } from "@/components/common/TagFilter"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { FormField } from "@/components/common/FormField"
 import { INPUT_STATUS_LABELS, TASK_PRIORITY_LABELS, INPUT_CATEGORY_LABELS } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
 import { useInputListQuery, useCreateInput } from "@/hooks/api/useInputs"
+import { useStatsQuery } from "@/hooks/api/useStats"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -115,6 +119,7 @@ function UserInputListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [createOpen, setCreateOpen] = useState(false)
   const [form, setForm] = useState({ title: "", description: "", category: "bug", priority: "medium" })
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const filters = useMemo(
     () => ({
@@ -127,6 +132,7 @@ function UserInputListPage() {
   )
 
   const { data, isLoading, error } = useInputListQuery(filters)
+  const { data: kpiCards } = useStatsQuery('inputs')
   const createMutation = useCreateInput()
 
   const items: UserInput[] = data?.data ?? []
@@ -155,6 +161,27 @@ function UserInputListPage() {
   const handlePageChange = useCallback(
     (page: number) => handleFilterChange("page", String(page)),
     [handleFilterChange],
+  )
+
+  // Render row for list view using EntityRow
+  const renderRow = useCallback(
+    (item: UserInput) => (
+      <EntityRow
+        id={item.id}
+        name={item.title}
+        status={item.status}
+        entityType="userInput"
+        onClick={() => navigate(`/inputs/${item.id}`)}
+        code={item.code}
+        subtitle={INPUT_CATEGORY_LABELS[item.category] ?? item.category}
+        extraBadges={
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            {TASK_PRIORITY_LABELS[item.priority] ?? item.priority}
+          </Badge>
+        }
+      />
+    ),
+    [navigate]
   )
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -189,6 +216,14 @@ function UserInputListPage() {
         onRowClick={(item) => navigate(`/inputs/${item.id}`)}
         emptyTitle="Nessuna segnalazione"
         emptyDescription="Non ci sono segnalazioni da mostrare."
+        kpiStrip={kpiCards}
+        renderRow={renderRow}
+        afterFilters={
+          <TagFilter
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
+        }
         headerExtra={
           <Button onClick={() => setCreateOpen(true)}>
             <MessageSquarePlus className="h-4 w-4 mr-1" />

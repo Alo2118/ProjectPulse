@@ -13,6 +13,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { EntityRow } from "@/components/common/EntityRow"
+import { TagFilter } from "@/components/common/TagFilter"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import {
   DOCUMENT_STATUS_LABELS,
@@ -164,7 +166,7 @@ function DocumentGridCard({
       whileHover={{ scale: 1.01 }}
       transition={{ duration: 0.15 }}
       onClick={onClick}
-      className="flex flex-col gap-2 rounded-md border border-border bg-card p-3 cursor-pointer hover:border-primary/30 transition-colors"
+      className="card-hover flex flex-col gap-2 rounded-md border border-border bg-card p-3 cursor-pointer"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-xs font-semibold leading-snug line-clamp-2 flex-1 min-w-0">
@@ -582,7 +584,7 @@ function buildColumns(
       header: "",
       className: "w-[70px]",
       cell: (item) => (
-        <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+        <div className="row-actions flex items-center gap-1">
           <button
             title="Dettaglio"
             onClick={(e) => {
@@ -636,6 +638,7 @@ function DocumentListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedDoc, setSelectedDoc] = useState<DocumentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const viewMode = (searchParams.get("view") as "list" | "grid" | null) ?? "list"
 
@@ -715,6 +718,7 @@ function DocumentListPage() {
 
   const handleFilterClear = useCallback(() => {
     setSearchParams(new URLSearchParams())
+    setSelectedTagIds([])
   }, [setSearchParams])
 
   const handlePageChange = useCallback(
@@ -738,6 +742,29 @@ function DocumentListPage() {
     setSelectedDoc(doc)
     setDrawerOpen(true)
   }, [])
+
+  // Render row for list view using EntityRow
+  const renderRow = useCallback(
+    (doc: DocumentRow) => (
+      <EntityRow
+        id={doc.id}
+        name={doc.title}
+        status={doc.status}
+        entityType="document"
+        onClick={() => handleRowClick(doc)}
+        code={doc.code}
+        subtitle={doc.project?.name}
+        assignee={doc.author ?? undefined}
+        extraBadges={
+          <>
+            <TypePill type={doc.type} />
+            <RevBadge version={doc.version} />
+          </>
+        }
+      />
+    ),
+    [handleRowClick]
+  )
 
   const columns = useMemo(() => buildColumns(handleRowClick), [handleRowClick])
 
@@ -763,8 +790,16 @@ function DocumentListPage() {
         emptyTitle="Nessun documento"
         emptyDescription="Non ci sono documenti registrati."
         kpiStrip={kpiCards}
+        renderRow={viewMode === "list" ? renderRow : undefined}
+        afterFilters={
+          <TagFilter
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
+        }
         viewMode={viewMode === "grid" ? "grid" : "list"}
         onViewModeChange={handleViewModeChange}
+        rowClassName={() => "group row-accent"}
       />
 
       {/* Project grouping view — collapsible per-project card groups */}

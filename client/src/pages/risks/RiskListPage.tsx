@@ -12,6 +12,8 @@ import {
 import { motion } from "framer-motion"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { EntityRow } from "@/components/common/EntityRow"
+import { TagFilter } from "@/components/common/TagFilter"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -106,11 +108,11 @@ const SEVERITY_DOT_COLOR: Record<RiskSeverity, string> = {
 }
 
 const SEVERITY_ROW_BORDER: Record<RiskSeverity, string> = {
-  critical: "border-l-2 border-l-red-500/60",
-  high: "border-l-2 border-l-orange-500/50",
-  medium: "border-l-2 border-l-amber-500/40",
-  low: "border-l-2 border-l-slate-400/30",
-  mitigated: "border-l-2 border-l-green-500/30",
+  critical: "border-l-[3px] border-l-red-500/70",
+  high: "border-l-[3px] border-l-orange-500/60",
+  medium: "border-l-[3px] border-l-amber-500/50",
+  low: "border-l-[3px] border-l-slate-400/40",
+  mitigated: "border-l-[3px] border-l-green-500/35",
 }
 
 // Risk status labels (mockup uses "In mitigazione" for mitigated)
@@ -210,19 +212,37 @@ const STA_CHIPS: { value: StaFilter; label: string }[] = [
   { value: "closed", label: "Chiuso" },
 ]
 
-const SEV_ACTIVE_CLASSES: Record<SevFilter, string> = {
-  all: "bg-accent text-foreground border-border",
-  critical: "bg-red-100 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/40",
-  high: "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/40",
-  medium: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40",
-  low: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/40",
+// Dot colors for chip-dot spans (severity)
+const SEV_DOT_COLORS: Record<SevFilter, string | null> = {
+  all: null,
+  critical: "bg-red-500",
+  high: "bg-orange-500",
+  medium: "bg-amber-400",
+  low: "bg-slate-400",
 }
 
-const STA_ACTIVE_CLASSES: Record<StaFilter, string> = {
-  all: "bg-accent text-foreground border-border",
-  open: "bg-red-100 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/40",
-  mitigated: "bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/40",
-  closed: "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/40",
+// Dot colors for chip-dot spans (status)
+const STA_DOT_COLORS: Record<StaFilter, string | null> = {
+  all: null,
+  open: "bg-red-500",
+  mitigated: "bg-indigo-500",
+  closed: "bg-green-500",
+}
+
+// Active background tint (10% opacity) matching each severity/status
+const SEV_ACTIVE_BG: Record<SevFilter, string> = {
+  all: "bg-accent/20 border-border text-foreground",
+  critical: "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400",
+  high: "bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400",
+  medium: "bg-amber-400/10 border-amber-400/30 text-amber-700 dark:text-amber-400",
+  low: "bg-slate-400/10 border-slate-400/30 text-slate-700 dark:text-slate-400",
+}
+
+const STA_ACTIVE_BG: Record<StaFilter, string> = {
+  all: "bg-accent/20 border-border text-foreground",
+  open: "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400",
+  mitigated: "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-400",
+  closed: "bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400",
 }
 
 function ChipFilter<T extends string>({
@@ -230,13 +250,15 @@ function ChipFilter<T extends string>({
   chips,
   value,
   onChange,
-  activeClasses,
+  dotColors,
+  activeBg,
 }: {
   label: string
   chips: { value: T; label: string }[]
   value: T
   onChange: (v: T) => void
-  activeClasses: Record<T, string>
+  dotColors: Record<T, string | null>
+  activeBg: Record<T, string>
 }) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -245,20 +267,19 @@ function ChipFilter<T extends string>({
       </span>
       {chips.map((chip) => {
         const isActive = value === chip.value
+        const dotColor = dotColors[chip.value]
         return (
           <button
             key={chip.value}
             type="button"
             onClick={() => onChange(chip.value)}
             className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold border transition-all",
-              isActive
-                ? activeClasses[chip.value]
-                : "bg-muted/40 text-muted-foreground border-border hover:text-foreground hover:border-border/80"
+              "chip-filter",
+              isActive && activeBg[chip.value]
             )}
           >
-            {chip.value === "critical" && (
-              <AlertTriangle className="h-2.5 w-2.5" />
+            {dotColor && (
+              <span className={cn("chip-dot", dotColor)} />
             )}
             {chip.label}
           </button>
@@ -552,7 +573,7 @@ function buildColumns(
       header: "ID",
       className: "w-[90px]",
       cell: (item) => (
-        <span className="text-[11px] font-bold text-muted-foreground tabular-nums">
+        <span className="text-micro font-bold text-muted-foreground tabular-nums">
           {item.code}
         </span>
       ),
@@ -680,7 +701,7 @@ function buildColumns(
       header: "",
       className: "w-[80px]",
       cell: (item) => (
-        <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+        <div className="row-actions flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
@@ -793,6 +814,7 @@ function RiskListPage() {
   // Client-side chip filters (not sent to API — applied locally)
   const [sevFilter, setSevFilter] = useState<SevFilter>("all")
   const [staFilter, setStaFilter] = useState<StaFilter>("all")
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   // Drawer state
   const [drawerRisk, setDrawerRisk] = useState<Risk | null>(null)
@@ -841,6 +863,7 @@ function RiskListPage() {
     setSearchParams(new URLSearchParams())
     setSevFilter("all")
     setStaFilter("all")
+    setSelectedTagIds([])
   }, [setSearchParams])
 
   const handlePageChange = useCallback(
@@ -857,6 +880,39 @@ function RiskListPage() {
     setDrawerOpen(false)
   }, [])
 
+  // Render row for list view using EntityRow
+  const renderRow = useCallback(
+    (r: Risk) => {
+      const severity = getRiskSeverity(r)
+      const score = computeScore(r.probability, r.impact)
+      return (
+        <EntityRow
+          id={r.id}
+          name={r.title}
+          status={r.status}
+          entityType="risk"
+          onClick={() => handleDrawerOpen(r)}
+          code={r.code}
+          subtitle={r.project?.name}
+          assignee={r.owner ?? undefined}
+          extraBadges={
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] font-semibold border gap-1",
+                SEVERITY_BADGE_CLASSES[severity]
+              )}
+            >
+              {severity === "critical" && <AlertTriangle className="h-2.5 w-2.5" />}
+              {SEVERITY_DISPLAY_LABELS[severity]} ({score})
+            </Badge>
+          }
+        />
+      )
+    },
+    [handleDrawerOpen]
+  )
+
   // Disable groupBy when a status chip is active
   const useGroupBy = staFilter === "all" && sevFilter === "all"
 
@@ -865,11 +921,11 @@ function RiskListPage() {
     [handleDrawerOpen, navigate]
   )
 
-  // Row-level left border by severity
+  // Row-level left border by severity + row-accent for hover state + group for row-actions reveal
   const rowClassName = useCallback(
     (item: Risk) => {
       const severity = getRiskSeverity(item)
-      return cn("group/row", SEVERITY_ROW_BORDER[severity])
+      return cn("group", SEVERITY_ROW_BORDER[severity])
     },
     []
   )
@@ -888,7 +944,8 @@ function RiskListPage() {
         chips={SEV_CHIPS}
         value={sevFilter}
         onChange={setSevFilter}
-        activeClasses={SEV_ACTIVE_CLASSES}
+        dotColors={SEV_DOT_COLORS}
+        activeBg={SEV_ACTIVE_BG}
       />
       <div className="w-px h-5 bg-border shrink-0" />
       <ChipFilter
@@ -896,7 +953,8 @@ function RiskListPage() {
         chips={STA_CHIPS}
         value={staFilter}
         onChange={setStaFilter}
-        activeClasses={STA_ACTIVE_CLASSES}
+        dotColors={STA_DOT_COLORS}
+        activeBg={STA_ACTIVE_BG}
       />
     </motion.div>
   )
@@ -923,7 +981,14 @@ function RiskListPage() {
         emptyTitle="Nessun rischio"
         emptyDescription="Non ci sono rischi corrispondenti ai filtri selezionati."
         kpiStrip={kpiCards}
+        renderRow={renderRow}
         headerExtra={chipFilters}
+        afterFilters={
+          <TagFilter
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
+        }
         rowClassName={rowClassName}
         groupBy={
           useGroupBy
