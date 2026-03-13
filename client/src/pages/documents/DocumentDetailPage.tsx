@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import {
   Pencil,
@@ -9,13 +10,19 @@ import {
   FolderOpen,
   HardDrive,
   Hash,
+  Clock,
+  GitCommitVertical,
 } from "lucide-react"
 import { toast } from "sonner"
 import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { MetaRow } from "@/components/common/MetaRow"
+import { TagEditor } from "@/components/common/TagEditor"
+import { NoteTab } from "@/components/common/NoteTab"
+import { ActivityTab } from "@/components/common/ActivityTab"
+import { KpiStrip, type KpiCard } from "@/components/common/KpiStrip"
 import { DOCUMENT_STATUS_LABELS, DOCUMENT_TYPE_LABELS, DOCUMENT_STATUS_TRANSITIONS } from "@/lib/constants"
-import { cn, formatDate, formatFileSize, formatRelative, getUserInitials, getAvatarColor } from "@/lib/utils"
+import { formatDate, formatFileSize } from "@/lib/utils"
 import {
   useDocumentQuery,
   useDeleteDocument,
@@ -36,9 +43,7 @@ import { documentWorkflow } from "@/lib/workflows/documentWorkflow"
 import type { ValidationData } from "@/lib/workflow-engine"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
-import { useActivityQuery } from "@/hooks/api/useActivity"
 import { useRelatedQuery } from "@/hooks/api/useRelated"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 
 function DocumentDetailPage() {
@@ -50,7 +55,6 @@ function DocumentDetailPage() {
   const deleteMutation = useDeleteDocument()
   const statusMutation = useChangeDocumentStatus()
   const { isPrivileged: canApprove } = usePrivilegedRole()
-  const { data: docActivity } = useActivityQuery('document', id ?? '')
   const { data: relatedData } = useRelatedQuery('document', id ?? '', ['versions', 'tasks'])
 
   const handleDelete = async () => {
@@ -93,16 +97,56 @@ function DocumentDetailPage() {
 
   const transitions = doc ? DOCUMENT_STATUS_TRANSITIONS[doc.status] ?? [] : []
 
+  // KPI row (computed inline)
+  const kpiCards = useMemo<KpiCard[]>(() => {
+    if (!doc) return []
+    const daysInStatus = Math.floor(
+      (Date.now() - new Date(doc.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    return [
+      {
+        label: "Stato workflow",
+        value: DOCUMENT_STATUS_LABELS[doc.status] ?? doc.status,
+        color: doc.status === "approved" ? "success" : doc.status === "review" ? "warning" : "project",
+        icon: FileText,
+      },
+      {
+        label: "Versione",
+        value: `v${doc.version}`,
+        color: "indigo",
+        icon: GitCommitVertical,
+      },
+      {
+        label: "Giorni in stato corrente",
+        value: String(daysInStatus),
+        subtitle: `dal ${formatDate(doc.updatedAt)}`,
+        color: daysInStatus > 14 ? "warning" : "task",
+        icon: Clock,
+      },
+      {
+        label: "Progetto",
+        value: doc.project?.name ?? "—",
+        color: "project",
+        icon: FolderOpen,
+      },
+    ]
+  }, [doc])
+
   return (
     <EntityDetail
       isLoading={isLoading}
       error={error as Error | null}
       notFound={!isLoading && !error && !doc}
       breadcrumbs={[
+        { label: "Home", href: "/" },
         { label: "Documenti", href: "/documents" },
-        { label: doc?.code ?? "..." },
+        { label: doc?.title ?? "..." },
       ]}
       title={doc?.title}
+      subtitle={doc?.code}
+      colorBar="linear-gradient(180deg, hsl(271, 91%, 65%), hsl(250, 60%, 50%))"
+      tagEditor={id ? <TagEditor entityType="document" entityId={id} className="mt-1" /> : undefined}
+      kpiRow={kpiCards.length > 0 ? <KpiStrip cards={kpiCards} /> : undefined}
       badges={
         doc ? (
           <>
@@ -219,19 +263,19 @@ function DocumentDetailPage() {
                           Storico versioni
                         </h3>
                         <p className="text-sm text-muted-foreground mb-2">
-                          Versione corrente: v{doc.version}
+                          Versione corrente: <span className="text-data font-semibold text-foreground">v{doc.version}</span>
                         </p>
                         {relatedData?.versions && Array.isArray(relatedData.versions) && relatedData.versions.length > 0 ? (
                           <div className="space-y-1.5">
                             {(relatedData.versions as Array<{ id: string; version: number; createdAt: string; status?: string }>).map((v) => (
-                              <div key={v.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                              <div key={v.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 row-accent group">
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="text-[10px]">v{v.version}</Badge>
+                                  <Badge variant="secondary" className="text-data text-[10px]">v{v.version}</Badge>
                                   {v.status && (
                                     <StatusBadge status={v.status} labels={DOCUMENT_STATUS_LABELS} />
                                   )}
                                 </div>
-                                <span className="text-[10px] text-muted-foreground">{formatDate(v.createdAt)}</span>
+                                <span className="text-data text-[10px] text-muted-foreground tabular-nums">{formatDate(v.createdAt)}</span>
                               </div>
                             ))}
                           </div>
@@ -247,56 +291,18 @@ function DocumentDetailPage() {
                 key: "note",
                 label: "Note",
                 content: (
-                  <Card>
-                    <CardContent className="p-5">
-                      <p className="text-sm text-muted-foreground">
-                        Nessuna nota disponibile.
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <div className="mt-4">
+                    <NoteTab entityType="document" entityId={id!} />
+                  </div>
                 ),
               },
               {
                 key: "activity",
-                label: "Attivita'",
-                count: docActivity?.length,
+                label: "Attività",
                 content: (
-                  <Card>
-                    <CardContent className="p-5">
-                      {!docActivity || docActivity.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-6">
-                          Nessuna attivita' registrata
-                        </p>
-                      ) : (
-                        <div className="divide-y divide-border">
-                          {docActivity.map((item) => {
-                            const a = item as { id: string; action: string; createdAt: string; user: { firstName: string; lastName: string } }
-                            const name = `${a.user.firstName} ${a.user.lastName}`
-                            return (
-                              <div key={a.id} className="flex items-start gap-3 py-2.5">
-                                <Avatar className="h-6 w-6 mt-0.5 shrink-0">
-                                  <AvatarFallback
-                                    className={cn("text-[9px] text-white", getAvatarColor(name))}
-                                  >
-                                    {getUserInitials(a.user.firstName, a.user.lastName)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-foreground leading-snug">
-                                    <span className="font-medium">{name} </span>
-                                    <span className="text-muted-foreground">{a.action}</span>
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    {formatRelative(a.createdAt)}
-                                  </p>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <div className="mt-4">
+                    <ActivityTab entityType="document" entityId={id!} />
+                  </div>
                 ),
               },
             ]
@@ -313,7 +319,7 @@ function DocumentDetailPage() {
               {DOCUMENT_TYPE_LABELS[doc.type] ?? doc.type}
             </MetaRow>
             <MetaRow icon={Hash} label="Versione">
-              v{doc.version}
+              <span className="text-data font-semibold">v{doc.version}</span>
             </MetaRow>
             <MetaRow icon={FolderOpen} label="Progetto">
               {doc.project ? (

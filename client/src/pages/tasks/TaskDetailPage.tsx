@@ -40,7 +40,6 @@ import {
   useSubtasksQuery,
 } from "@/hooks/api/useTasks"
 import { useTimeEntryListQuery } from "@/hooks/api/useTimeEntries"
-import { useActivityQuery } from "@/hooks/api/useActivity"
 import { useSummaryQuery } from "@/hooks/api/useStats"
 import { KpiStrip } from "@/components/common/KpiStrip"
 import { useAttachmentListQuery } from "@/hooks/api/useAttachments"
@@ -53,6 +52,8 @@ import {
 } from "@/lib/constants"
 import { formatDate, formatDateTime, getUserInitials, getAvatarColor, formatFileSize } from "@/lib/utils"
 import { cn } from "@/lib/utils"
+import { TagEditor } from "@/components/common/TagEditor"
+import { ActivityTab } from "@/components/common/ActivityTab"
 import { CommentSection } from "@/components/domain/tasks/CommentSection"
 import { ChecklistSection } from "@/components/domain/tasks/ChecklistSection"
 import { WorkflowStepper } from "@/components/common/WorkflowStepper"
@@ -164,46 +165,46 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       {/* Avanzamento */}
-      <Card>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(187,85%,53%), hsl(217,91%,60%))" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1.5">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Avanzamento</p>
-          <p className="text-2xl font-bold text-foreground tabular-nums">{completionPct}%</p>
-          <Progress value={completionPct} className="h-1.5" />
+          <p className="text-kpi-label">Avanzamento</p>
+          <p className="text-kpi-value text-foreground">{completionPct}%</p>
+          <Progress value={completionPct} className="h-1.5 progress-shine" />
         </CardContent>
       </Card>
 
       {/* Subtask */}
-      <Card>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(250,60%,50%), hsl(280,60%,60%))" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Subtask</p>
+          <p className="text-kpi-label">Subtask</p>
           <div className="flex items-baseline gap-1">
             <GitBranch className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-2xl font-bold text-foreground tabular-nums">{totalSubs}</span>
+            <span className="text-kpi-value text-foreground">{totalSubs}</span>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             {doneSubs} fatti · {totalSubs - doneSubs} aperti
           </p>
         </CardContent>
       </Card>
 
       {/* Ore loggate */}
-      <Card>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(25,95%,53%), hsl(40,95%,55%))" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ore loggate</p>
+          <p className="text-kpi-label">Ore loggate</p>
           <div className="flex items-baseline gap-1">
             <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-2xl font-bold text-foreground tabular-nums">{logged}h</span>
+            <span className="text-kpi-value text-foreground">{logged}h</span>
           </div>
           {estimated > 0 && (
-            <p className="text-[11px] text-muted-foreground">su {estimated}h stimate</p>
+            <p className="text-micro text-muted-foreground">su {estimated}h stimate</p>
           )}
         </CardContent>
       </Card>
 
       {/* Assegnato a */}
-      <Card>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(142,71%,45%), hsl(162,75%,45%))" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Assegnato a</p>
+          <p className="text-kpi-label">Assegnato a</p>
           <div className="flex items-center gap-2 mt-1">
             {t.assignee ? (
               <Avatar className="h-7 w-7">
@@ -220,9 +221,9 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
       </Card>
 
       {/* Fase / Progetto */}
-      <Card>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(217,91%,60%), hsl(250,60%,55%))" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Progetto</p>
+          <p className="text-kpi-label">Progetto</p>
           {t.project ? (
             <Link
               to={`/projects/${t.project.id}`}
@@ -237,7 +238,7 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
             <p className="text-sm text-muted-foreground mt-1">—</p>
           )}
           {t.phaseKey && (
-            <p className="text-[11px] text-muted-foreground">{t.phaseKey}</p>
+            <p className="text-micro text-muted-foreground">{t.phaseKey}</p>
           )}
         </CardContent>
       </Card>
@@ -355,7 +356,7 @@ function SubtasksTab({
             <span className="text-muted-foreground">{done} / {total} completati</span>
             <span className="font-medium tabular-nums">{pct}%</span>
           </div>
-          <Progress value={pct} className="h-2" />
+          <Progress value={pct} className="h-2 progress-shine" />
         </div>
         <Button size="sm" variant="outline" asChild>
           <Link to={`/tasks/new?parentTaskId=${taskId}`}>
@@ -480,22 +481,22 @@ function TimeEntriesTab({
 
       {/* 3-card summary */}
       <div className="grid grid-cols-3 gap-3">
-        <Card>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(217,91%,60%), hsl(187,85%,53%))" } as React.CSSProperties}>
           <CardContent className="p-3 text-center">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Loggate</p>
-            <p className="text-xl font-bold text-foreground tabular-nums">{totalLogged.toFixed(1)}h</p>
+            <p className="text-kpi-label mb-1">Loggate</p>
+            <p className="text-kpi-value text-foreground text-data">{totalLogged.toFixed(1)}h</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(250,60%,50%), hsl(217,91%,60%))" } as React.CSSProperties}>
           <CardContent className="p-3 text-center">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Stimate</p>
-            <p className="text-xl font-bold text-foreground tabular-nums">{estimated > 0 ? `${estimated}h` : "—"}</p>
+            <p className="text-kpi-label mb-1">Stimate</p>
+            <p className="text-kpi-value text-foreground text-data">{estimated > 0 ? `${estimated}h` : "—"}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(142,71%,45%), hsl(187,85%,53%))" } as React.CSSProperties}>
           <CardContent className="p-3 text-center">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Rimanenti</p>
-            <p className={cn("text-xl font-bold tabular-nums", remaining === 0 && estimated > 0 ? "text-success" : "text-foreground")}>
+            <p className="text-kpi-label mb-1">Rimanenti</p>
+            <p className={cn("text-kpi-value text-data", remaining === 0 && estimated > 0 ? "text-success" : "text-foreground")}>
               {estimated > 0 ? `${remaining.toFixed(1)}h` : "—"}
             </p>
           </CardContent>
@@ -507,7 +508,7 @@ function TimeEntriesTab({
         <div className="space-y-1">
           <Progress
             value={loggedPct}
-            className={cn("h-2", loggedPct >= 100 && "[&>div]:bg-destructive")}
+            className={cn("h-2 progress-shine", loggedPct >= 100 && "[&>div]:bg-destructive")}
           />
           <p className="text-xs text-muted-foreground text-right">{loggedPct}% del budget ore utilizzato</p>
         </div>
@@ -551,7 +552,7 @@ function TimeEntriesTab({
                     {entry.endTime && entry.startTime && ` → ${formatDate(entry.endTime)}`}
                   </p>
                 </div>
-                <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
+                <span className="text-sm font-semibold text-foreground text-data shrink-0">
                   {hours.toFixed(1)}h
                 </span>
                 <Avatar className="h-7 w-7 shrink-0">
@@ -637,7 +638,6 @@ export default function TaskDetailPage() {
 
   const { data: task, isLoading, error } = useTaskQuery(id ?? "")
   const { data: subtasks } = useSubtasksQuery(id ?? "")
-  const { data: _taskActivity } = useActivityQuery('task', id ?? '')
   const { data: summaryKpis } = useSummaryQuery('task', id ?? '')
   const changeStatus = useChangeTaskStatus()
   const deleteTask = useDeleteTask()
@@ -839,8 +839,8 @@ export default function TaskDetailPage() {
               content: <AttachmentsTab taskId={id} />,
             },
             {
-              key: "activity",
-              label: "Attività",
+              key: "comments",
+              label: "Commenti",
               count: t._count?.comments,
               content: <CommentSection taskId={id} />,
             },
@@ -848,6 +848,15 @@ export default function TaskDetailPage() {
               key: "checklist",
               label: "Checklist",
               content: <ChecklistSection taskId={id} />,
+            },
+            {
+              key: "activity",
+              label: "Attività",
+              content: (
+                <div className="mt-4">
+                  <ActivityTab entityType="task" entityId={id} />
+                </div>
+              ),
             },
           ]
         : [],
@@ -863,6 +872,7 @@ export default function TaskDetailPage() {
       title={t?.title}
       subtitle={t?.code}
       editableBadges={editableBadges}
+      tagEditor={id ? <TagEditor entityType="task" entityId={id} className="mt-1" /> : undefined}
       headerActions={headerActions}
       colorBar="linear-gradient(90deg, hsl(187, 85%, 53%), hsl(217, 91%, 60%))"
       kpiRow={kpiRow}

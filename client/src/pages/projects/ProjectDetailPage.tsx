@@ -20,7 +20,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DeadlineCell } from "@/components/common/DeadlineCell"
-import { StatusDot } from "@/components/common/StatusDot"
 import { ProjectPhasesStepper } from "@/components/common/WorkflowStepper"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,6 +42,8 @@ import { useRecentActivityQuery, type RecentActivityItem } from "@/hooks/api/use
 import { useActivityQuery } from "@/hooks/api/useActivity"
 import { useSummaryQuery } from "@/hooks/api/useStats"
 import { useRelatedQuery } from "@/hooks/api/useRelated"
+import { TagEditor } from "@/components/common/TagEditor"
+import { ActivityTab } from "@/components/common/ActivityTab"
 import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
 import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
 import {
@@ -192,26 +193,24 @@ function KpiCard({
   label,
   value,
   sub,
+  gradient,
   children,
 }: {
   label: string
   value: React.ReactNode
   sub?: React.ReactNode
+  gradient?: string
   children?: React.ReactNode
 }) {
   return (
-    <Card>
+    <Card
+      className="kpi-accent card-hover"
+      style={gradient ? ({ "--kpi-gradient": gradient } as React.CSSProperties) : undefined}
+    >
       <CardContent className="p-3">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-          {label}
-        </p>
-        <p
-          className="text-xl font-semibold text-foreground leading-none"
-          style={{ fontFamily: "var(--font-data)" }}
-        >
-          {value}
-        </p>
-        {sub && <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>}
+        <p className="text-kpi-label mb-1.5">{label}</p>
+        <p className="text-kpi-value text-foreground leading-none">{value}</p>
+        {sub && <p className="text-micro text-muted-foreground mt-1.5">{sub}</p>}
         {children}
       </CardContent>
     </Card>
@@ -236,14 +235,15 @@ function MilestoneCard({
   return (
     <Card
       className={cn(
-        "overflow-hidden",
+        "overflow-hidden card-accent-left card-hover",
         isCurrentPhase && "ring-2 ring-primary/40"
       )}
+      style={{ "--card-gradient": "var(--gradient-milestone)" } as React.CSSProperties}
     >
       {/* Milestone header */}
       <div
         className={cn(
-          "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors",
+          "flex items-center gap-3 pl-6 pr-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors",
           "border-b border-border"
         )}
         onClick={() => setOpen((v) => !v)}
@@ -259,21 +259,18 @@ function MilestoneCard({
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </motion.div>
 
-        {/* Color bar */}
-        <div className="w-1 h-8 rounded-full bg-purple-400 shrink-0" />
-
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">
+          <p className="text-section-title text-foreground truncate">
             {milestone.title}
           </p>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] text-muted-foreground tabular-nums">
+            <span className="text-micro text-muted-foreground tabular-nums text-data">
               {taskCount} task
             </span>
             {milestone.dueDate && (
               <>
-                <span className="text-[10px] text-muted-foreground">·</span>
+                <span className="text-micro text-muted-foreground">·</span>
                 <DeadlineCell dueDate={milestone.dueDate} status={milestone.status} />
               </>
             )}
@@ -283,10 +280,12 @@ function MilestoneCard({
         {/* Status + progress */}
         <div className="flex items-center gap-3 shrink-0">
           <StatusBadge status={milestone.status} labels={TASK_STATUS_LABELS} />
-          <div className="w-20 hidden sm:block">
+          <div className="w-24 hidden sm:block">
             <div className="flex items-center gap-1.5">
-              <Progress value={pct} className="h-1.5 flex-1" />
-              <span className="text-[10px] tabular-nums text-muted-foreground w-7 text-right">
+              <div className="flex-1 progress-shine">
+                <Progress value={pct} className="h-1.5" />
+              </div>
+              <span className="text-micro tabular-nums text-muted-foreground w-7 text-right font-semibold">
                 {pct}%
               </span>
             </div>
@@ -336,17 +335,39 @@ function MilestoneCard({
 
 function TaskItem({ task, depth }: { task: TaskNode; depth: number }) {
   const pl = depth === 1 ? "pl-10" : "pl-16"
+  const isDone = task.status === "done"
   return (
     <>
       <Link
         to={`/tasks/${task.id}`}
         className={cn(
-          "flex items-center gap-3 py-2.5 pr-4 hover:bg-muted/40 transition-colors group",
+          "flex items-center gap-3 py-2.5 pr-4 row-accent group",
           pl
         )}
       >
-        <StatusDot status={task.status} size="sm" />
-        <span className="flex-1 text-sm truncate text-foreground/90">{task.title}</span>
+        {/* Task checkbox indicator (14px rounded, filled if done) */}
+        <div
+          className={cn(
+            "h-3.5 w-3.5 rounded-sm border shrink-0 flex items-center justify-center",
+            isDone
+              ? "border-green-400/60 bg-green-500/15 dark:bg-green-500/10"
+              : "border-border bg-card"
+          )}
+        >
+          {isDone && (
+            <svg className="h-2.5 w-2.5 text-green-500" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="2 6 5 9 10 3" />
+            </svg>
+          )}
+        </div>
+        <span
+          className={cn(
+            "flex-1 text-sm truncate",
+            isDone ? "line-through text-muted-foreground" : "text-foreground/90"
+          )}
+        >
+          {task.title}
+        </span>
         <div className="flex items-center gap-2 shrink-0">
           <StatusBadge status={task.status} labels={TASK_STATUS_LABELS} />
           {task.dueDate && (
@@ -374,18 +395,29 @@ function TaskItem({ task, depth }: { task: TaskNode; depth: number }) {
   )
 }
 
-// Activity feed item
+// Activity color dot — colored by action type
+const ACTIVITY_DOT_COLOR: Record<string, string> = {
+  created: "bg-blue-500",
+  updated: "bg-primary",
+  deleted: "bg-destructive",
+  completed: "bg-green-500",
+  assigned: "bg-purple-500",
+  commented: "bg-cyan-500",
+}
+
+function getActivityDotColor(action: string): string {
+  const key = Object.keys(ACTIVITY_DOT_COLOR).find((k) => action.toLowerCase().includes(k))
+  return ACTIVITY_DOT_COLOR[key ?? ""] ?? "bg-muted-foreground"
+}
+
+// Activity feed item — timeline dot pattern from mockup
 function ActivityRow({ item }: { item: RecentActivityItem }) {
   const name = `${item.user.firstName} ${item.user.lastName}`
+  const dotColor = getActivityDotColor(item.action)
   return (
     <div className="flex items-start gap-3 py-2.5">
-      <Avatar className="h-6 w-6 mt-0.5 shrink-0">
-        <AvatarFallback
-          className={cn("text-[9px] text-white", getAvatarColor(name))}
-        >
-          {getUserInitials(item.user.firstName, item.user.lastName)}
-        </AvatarFallback>
-      </Avatar>
+      {/* 8px colored timeline dot */}
+      <div className={cn("h-2 w-2 rounded-full mt-1.5 shrink-0", dotColor)} />
       <div className="flex-1 min-w-0">
         <p className="text-xs text-foreground leading-snug">
           <span className="font-medium">{name}</span>{" "}
@@ -394,7 +426,7 @@ function ActivityRow({ item }: { item: RecentActivityItem }) {
             <span className="font-medium"> {item.entityName}</span>
           )}
         </p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">
+        <p className="text-micro text-muted-foreground mt-0.5">
           {formatRelative(item.createdAt)}
         </p>
       </div>
@@ -498,8 +530,11 @@ export default function ProjectDetailPage() {
         label="Avanzamento"
         value={`${Math.round(completionPct)}%`}
         sub={`${completedCount} di ${totalTaskCount} task`}
+        gradient="var(--gradient-project)"
       >
-        <Progress value={Math.round(completionPct)} className="h-1 mt-2" />
+        <div className="mt-2 progress-shine">
+          <Progress value={Math.round(completionPct)} className="h-1.5" />
+        </div>
       </KpiCard>
 
       {/* Task */}
@@ -507,13 +542,15 @@ export default function ProjectDetailPage() {
         label="Task"
         value={totalTaskCount}
         sub={`${completedCount} chiusi · ${totalTaskCount - completedCount} aperti`}
+        gradient="var(--gradient-task)"
       />
 
-      {/* Ore loggate — placeholder, non abbiamo il dato diretto qui */}
+      {/* Ore loggate */}
       <KpiCard
         label="Ore loggate"
         value={p.budgetHours != null ? `${p.budgetHours}h` : "—"}
         sub="budget totale"
+        gradient="var(--gradient-success)"
       />
 
       {/* Rischi aperti */}
@@ -521,15 +558,17 @@ export default function ProjectDetailPage() {
         label="Rischi aperti"
         value={openRisksCount}
         sub={criticalRisksCount > 0 ? `${criticalRisksCount} critici` : "nessuno critico"}
+        gradient={criticalRisksCount > 0 ? "var(--gradient-danger)" : "var(--gradient-warning)"}
       />
 
       {/* Team */}
-      <Card>
+      <Card
+        className="kpi-accent card-hover"
+        style={{ "--kpi-gradient": "var(--gradient-milestone)" } as React.CSSProperties}
+      >
         <CardContent className="p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-            Team
-          </p>
-          <div className="flex items-center gap-2">
+          <p className="text-kpi-label mb-1.5">Team</p>
+          <div className="flex items-center gap-1">
             {members.slice(0, 4).map((m) => {
               const fullName = `${m.user.firstName} ${m.user.lastName}`
               return (
@@ -543,10 +582,10 @@ export default function ProjectDetailPage() {
               )
             })}
             {members.length > 4 && (
-              <span className="text-[10px] text-muted-foreground ml-1">+{members.length - 4}</span>
+              <span className="text-micro text-muted-foreground ml-1">+{members.length - 4}</span>
             )}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">{members.length} membri</p>
+          <p className="text-micro text-muted-foreground mt-1.5">{members.length} membri</p>
         </CardContent>
       </Card>
     </div>
@@ -665,7 +704,7 @@ export default function ProjectDetailPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold flex items-center gap-1.5">
+              <p className="text-section-title flex items-center gap-1.5">
                 <TrendingUp className="h-4 w-4 text-primary" />
                 Avanzamento
               </p>
@@ -698,7 +737,7 @@ export default function ProjectDetailPage() {
         {/* Activity feed */}
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm font-semibold mb-2">Attività recente</p>
+            <p className="text-section-title mb-2">Attività recente</p>
             {(scopedActivity.length > 0 ? scopedActivity : activity).length === 0 ? (
               <p className="text-xs text-muted-foreground">Nessuna attività recente</p>
             ) : (
@@ -716,7 +755,7 @@ export default function ProjectDetailPage() {
       {p.description && (
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm font-semibold mb-2">Descrizione</p>
+            <p className="text-section-title mb-2">Descrizione</p>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
               {p.description}
             </p>
@@ -728,7 +767,7 @@ export default function ProjectDetailPage() {
       {members.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+            <p className="text-section-title mb-3 flex items-center gap-1.5">
               <Users className="h-4 w-4 text-green-500" />
               Team ({members.length})
             </p>
@@ -834,9 +873,18 @@ export default function ProjectDetailPage() {
       {risks.map((r) => {
         const score = Number(r.probability) * Number(r.impact)
         const level = getRiskLevel(score)
+        const riskGradient = level === "critical" || level === "high"
+          ? "var(--gradient-danger)"
+          : level === "medium"
+            ? "var(--gradient-warning)"
+            : undefined
         return (
-          <Card key={r.id}>
-            <CardContent className="p-4">
+          <Card
+            key={r.id}
+            className="card-accent-left card-hover"
+            style={riskGradient ? ({ "--card-gradient": riskGradient } as React.CSSProperties) : undefined}
+          >
+            <CardContent className="pl-6 pr-4 py-4">
               <div className="flex items-start gap-4">
                 {/* Score box */}
                 <div
@@ -918,7 +966,7 @@ export default function ProjectDetailPage() {
         const iconColor = DOC_TYPE_ICON_COLOR[d.type] ?? "text-muted-foreground"
         return (
           <Link key={d.id} to={`/documents/${d.id}`}>
-            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
+            <Card className="h-full card-hover cursor-pointer group">
               <CardContent className="p-4 flex flex-col gap-2">
                 <FileText className={cn("h-7 w-7", iconColor)} />
                 <div className="flex-1 min-w-0">
@@ -1006,8 +1054,9 @@ export default function ProjectDetailPage() {
               .join(" · ")
           : undefined
       }
-      colorBar="linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.4))"
+      colorBar="linear-gradient(180deg, #1d4ed8, #3b82f6)"
       badges={headerBadges}
+      tagEditor={id ? <TagEditor entityType="project" entityId={id} className="mt-1" /> : undefined}
       headerActions={headerActions}
       kpiRow={kpiRow}
       beforeContent={beforeContent}
@@ -1040,24 +1089,9 @@ export default function ProjectDetailPage() {
               {
                 key: "activity",
                 label: "Attività",
-                count: scopedActivity.length > 0 ? scopedActivity.length : undefined,
                 content: (
-                  <div className="space-y-1 mt-4">
-                    {(scopedActivity.length > 0 ? scopedActivity : activity).length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <p className="text-sm text-muted-foreground">Nessuna attività registrata</p>
-                      </div>
-                    ) : (
-                      <Card>
-                        <CardContent className="p-4">
-                          <div className="divide-y divide-border">
-                            {(scopedActivity.length > 0 ? scopedActivity : activity).map((item: RecentActivityItem) => (
-                              <ActivityRow key={item.id} item={item} />
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                  <div className="mt-4">
+                    <ActivityTab entityType="project" entityId={id!} />
                   </div>
                 ),
               },

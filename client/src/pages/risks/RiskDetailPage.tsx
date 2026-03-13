@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
@@ -8,11 +9,17 @@ import {
   User,
   FolderOpen,
   Activity,
+  Clock,
+  Shield,
 } from "lucide-react"
 import { toast } from "sonner"
 import { EntityDetail } from "@/components/common/EntityDetail"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { MetaRow } from "@/components/common/MetaRow"
+import { TagEditor } from "@/components/common/TagEditor"
+import { NoteTab } from "@/components/common/NoteTab"
+import { ActivityTab } from "@/components/common/ActivityTab"
+import { KpiStrip, type KpiCard } from "@/components/common/KpiStrip"
 import { RISK_STATUS_LABELS, RISK_CATEGORY_LABELS, RISK_SCALE_LABELS, RISK_LEVEL_LABELS, RISK_LEVEL_COLORS, getRiskLevel } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
 import { useRiskQuery, useDeleteRisk } from "@/hooks/api/useRisks"
@@ -50,16 +57,61 @@ function RiskDetailPage() {
     ? getRiskScoreLabel(risk.probability, risk.impact)
     : ""
 
+  // KPI row (computed inline)
+  const kpiCards = useMemo<KpiCard[]>(() => {
+    if (!risk) return []
+    const score = risk.probability * risk.impact
+    const level = getRiskLevel(score)
+    const daysSinceCreated = Math.floor(
+      (Date.now() - new Date(risk.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    return [
+      {
+        label: "Punteggio P×I",
+        value: String(score),
+        subtitle: RISK_LEVEL_LABELS[level],
+        color: level === "critical" || level === "high" ? "danger" : level === "medium" ? "warning" : "success",
+        icon: Shield,
+      },
+      {
+        label: "Probabilità",
+        value: RISK_SCALE_LABELS[risk.probability] ?? String(risk.probability),
+        subtitle: `${risk.probability}/5`,
+        color: "warning",
+        icon: AlertTriangle,
+      },
+      {
+        label: "Impatto",
+        value: RISK_SCALE_LABELS[risk.impact] ?? String(risk.impact),
+        subtitle: `${risk.impact}/5`,
+        color: "danger",
+        icon: Activity,
+      },
+      {
+        label: "Giorni dalla creazione",
+        value: String(daysSinceCreated),
+        subtitle: formatDate(risk.createdAt),
+        color: "indigo",
+        icon: Clock,
+      },
+    ]
+  }, [risk])
+
   return (
     <EntityDetail
       isLoading={isLoading}
       error={error as Error | null}
       notFound={!isLoading && !error && !risk}
       breadcrumbs={[
+        { label: "Home", href: "/" },
         { label: "Rischi", href: "/risks" },
-        { label: risk?.code ?? "..." },
+        { label: risk?.title ?? "..." },
       ]}
       title={risk?.title}
+      subtitle={risk?.code}
+      colorBar="linear-gradient(180deg, hsl(0, 72%, 51%), hsl(25, 95%, 53%))"
+      tagEditor={id ? <TagEditor entityType="risk" entityId={id} className="mt-1" /> : undefined}
+      kpiRow={kpiCards.length > 0 ? <KpiStrip cards={kpiCards} /> : undefined}
       badges={
         risk ? (
           <>
@@ -104,7 +156,7 @@ function RiskDetailPage() {
                           Punteggio rischio
                         </h3>
                         <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-foreground" style={{ fontFamily: "var(--font-data)" }}>
+                          <span className="text-kpi-value text-foreground">
                             {risk.probability * risk.impact}
                           </span>
                           <Badge
@@ -113,7 +165,7 @@ function RiskDetailPage() {
                           >
                             {riskScore}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-data text-muted-foreground">
                             (P:{risk.probability} × I:{risk.impact})
                           </span>
                         </div>
@@ -140,13 +192,18 @@ function RiskDetailPage() {
                 key: "note",
                 label: "Note",
                 content: (
-                  <Card>
-                    <CardContent className="p-5">
-                      <p className="text-sm text-muted-foreground">
-                        Nessuna nota disponibile.
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <div className="mt-4">
+                    <NoteTab entityType="risk" entityId={id!} />
+                  </div>
+                ),
+              },
+              {
+                key: "activity",
+                label: "Attività",
+                content: (
+                  <div className="mt-4">
+                    <ActivityTab entityType="risk" entityId={id!} />
+                  </div>
                 ),
               },
             ]
@@ -163,10 +220,10 @@ function RiskDetailPage() {
               {RISK_CATEGORY_LABELS[risk.category] ?? risk.category}
             </MetaRow>
             <MetaRow icon={AlertTriangle} label="Probabilita'">
-              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.probability] ?? risk.probability} ({risk.probability}/5)</span>
+              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.probability] ?? risk.probability} <span className="text-data text-xs text-muted-foreground">({risk.probability}/5)</span></span>
             </MetaRow>
             <MetaRow icon={Activity} label="Impatto">
-              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.impact] ?? risk.impact} ({risk.impact}/5)</span>
+              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.impact] ?? risk.impact} <span className="text-data text-xs text-muted-foreground">({risk.impact}/5)</span></span>
             </MetaRow>
             <MetaRow icon={FolderOpen} label="Progetto">
               {risk.project ? (

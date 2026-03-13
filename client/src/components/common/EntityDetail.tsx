@@ -58,6 +58,8 @@ interface EntityDetailProps {
   kpiRow?: React.ReactNode
   /** Color bar above title (gradient CSS value) */
   colorBar?: string
+  /** Tag editor rendered below title/badges in hero */
+  tagEditor?: React.ReactNode
 }
 
 function DetailSkeleton() {
@@ -102,6 +104,7 @@ export function EntityDetail({
   editableBadges,
   kpiRow,
   colorBar,
+  tagEditor,
 }: EntityDetailProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const ctx = usePageContext()
@@ -165,6 +168,7 @@ export function EntityDetail({
               <h1 className="text-page-title text-foreground">{title}</h1>
             )}
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+            {tagEditor}
           </div>
         </div>
         {(headerActions || (onDelete && canDelete)) && (
