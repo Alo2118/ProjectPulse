@@ -592,6 +592,7 @@ model UserInputReply {
   user  User      @relation("UserInputReplyAuthor", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([inputId])
+  @@index([userId])
   @@map("user_input_replies")
 }
 
