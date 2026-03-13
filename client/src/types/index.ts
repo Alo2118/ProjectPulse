@@ -73,6 +73,7 @@ export interface User {
   role: UserRole
   avatarUrl: string | null
   theme?: Theme
+  themeStyle?: string | null
   isActive?: boolean
   createdAt?: string
   lastLoginAt?: string | null

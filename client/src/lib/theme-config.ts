@@ -102,6 +102,42 @@ export const THEME_EMOJIS: Record<ThemeStyle, {
   },
 }
 
+// Visual effects per theme (card styles, badges, progress bars, KPIs)
+export const THEME_EFFECTS = {
+  'office-classic': {
+    cardHover: 'hover:bg-muted/50 transition-colors duration-150',
+    cardShadow: 'shadow-sm',
+    cardBorder: 'border',
+    badgeStyle: 'border',
+    progressStyle: 'rounded-sm',
+    kpiStyle: 'bg-card',
+    transitionDuration: 150,
+    transitionType: 'ease' as const,
+  },
+  'asana-like': {
+    cardHover: 'hover:scale-[1.01] hover:bg-accent/10 transition-all duration-200',
+    cardShadow: 'shadow-md',
+    cardBorder: 'border border-border/50',
+    badgeStyle: 'rounded-full bg-opacity-20',
+    progressStyle: 'rounded-full',
+    kpiStyle: 'bg-gradient-to-br from-card to-accent/5',
+    transitionDuration: 200,
+    transitionType: 'spring' as const,
+  },
+  'tech-hud': {
+    cardHover: 'hover:border-primary/30 hover:shadow-[0_0_6px] hover:shadow-primary/20 transition-all duration-[250ms]',
+    cardShadow: 'shadow-[0_0_8px] shadow-primary/10',
+    cardBorder: 'border border-primary/10',
+    badgeStyle: 'border border-primary/20 font-mono text-xs',
+    progressStyle: 'rounded shadow-[0_0_4px] shadow-primary/20',
+    kpiStyle: 'bg-card border border-primary/10 shadow-[0_0_6px] shadow-primary/5',
+    transitionDuration: 250,
+    transitionType: 'ease' as const,
+  },
+} as const
+
+export type ThemeEffects = typeof THEME_EFFECTS[keyof typeof THEME_EFFECTS]
+
 // Animation config per theme
 export const THEME_ANIMATIONS: Record<ThemeStyle, {
   pageTransition: { duration: number; ease: string }

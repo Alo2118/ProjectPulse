@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useThemeStore } from '@/stores/themeStore'
 import type { User } from '@/types'
 
 const AUTH_KEY = ['auth', 'me'] as const
@@ -28,6 +29,13 @@ export function useLogin() {
       localStorage.setItem('accessToken', data.token)
       localStorage.setItem('refreshToken', data.refreshToken)
       qc.setQueryData([...AUTH_KEY], data.user)
+
+      // Sync theme preferences from server
+      // Backend fields: theme = light/dark/system, themeStyle = tech-hud/basic/classic
+      const user = data.user
+      if (user.theme || user.themeStyle) {
+        useThemeStore.getState().initFromServer(user.theme, user.themeStyle)
+      }
     },
   })
 }
