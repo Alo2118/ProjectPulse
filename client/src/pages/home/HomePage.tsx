@@ -6,18 +6,16 @@ import {
   CheckSquare,
   Clock,
   AlertTriangle,
-  Star,
   Calendar,
   Plus,
-  Play,
-  Ban,
-  LayoutGrid,
+  Activity,
+  Bell,
+  ChevronRight,
 } from 'lucide-react'
 import { useSetPageContext } from '@/hooks/ui/usePageContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { KpiStrip, type KpiCard } from '@/components/common/KpiStrip'
 import { AlertStrip, type AlertItem } from '@/components/common/AlertStrip'
@@ -28,7 +26,7 @@ import { StatusBadge } from '@/components/common/StatusBadge'
 import { StatusDot } from '@/components/common/StatusDot'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { cn, formatHours } from '@/lib/utils'
-import { PROJECT_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/lib/constants'
+import { PROJECT_STATUS_LABELS } from '@/lib/constants'
 import type { ContextGradient } from '@/lib/constants'
 import {
   useDashboardStatsQuery,
@@ -37,11 +35,12 @@ import {
   useRecentActivityQuery,
   type AttentionItem,
   type MyTaskToday,
-  type RecentActivityItem,
 } from '@/hooks/api/useDashboard'
 import { useProjectListQuery } from '@/hooks/api/useProjects'
-import { useTaskListQuery } from '@/hooks/api/useTasks'
+import { useNotificationListQuery, useMarkNotificationRead } from '@/hooks/api/useNotifications'
 import { usePrivilegedRole } from '@/hooks/ui/usePrivilegedRole'
+import { useThemeConfig } from '@/hooks/ui/useThemeConfig'
+import { useNotificationUIStore } from '@/stores/notificationUiStore'
 
 // --- Animation variants ---
 
@@ -51,9 +50,36 @@ const pageVariants = {
   exit: { opacity: 0, y: -8 },
 }
 
+const containerVariants = {
+  animate: { transition: { staggerChildren: 0.05 } },
+}
+
+const itemVariants = {
+  initial: { opacity: 0, x: -8 },
+  animate: { opacity: 1, x: 0 },
+}
+
 // --- Types ---
 
 type ViewRole = 'direzione' | 'dipendente'
+
+interface ProjectSummary {
+  id: string
+  name: string
+  status: string
+  stats?: { completionPercentage?: number; totalTasks?: number; openRisks?: number } | null
+  _count?: { tasks?: number; risks?: number } | null
+  targetEndDate?: string | null
+}
+
+interface NotificationItem {
+  id: string
+  type: string
+  title: string
+  message: string
+  isRead: boolean
+  createdAt: string
+}
 
 // --- Attention → AlertStrip adapter ---
 
@@ -62,10 +88,10 @@ function attentionToAlerts(items: AttentionItem[]): AlertItem[] {
     id: item.entityId,
     severity:
       item.type === 'critical_risk' || item.type === 'blocked_task'
-        ? 'critical' as const
+        ? ('critical' as const)
         : item.type === 'due_soon'
-          ? 'warning' as const
-          : 'info' as const,
+          ? ('warning' as const)
+          : ('info' as const),
     title: item.title,
     subtitle: item.extra ?? undefined,
     projectName: item.projectName ?? undefined,
@@ -77,43 +103,57 @@ function attentionToAlerts(items: AttentionItem[]): AlertItem[] {
 
 // --- KPI builders ---
 
-function buildDirezioneKpis(stats: {
-  activeProjects: number
-  activeProjectsDelta: number
-  openTasks: number
-  openTasksDelta: number
-  weeklyHours: number
-  weeklyHoursDelta: number
-  openRisks: number
-  criticalRisks: number
-  budgetUsedPercent: number | null
-} | null): KpiCard[] {
+function buildDirezioneKpis(
+  stats: {
+    activeProjects: number
+    activeProjectsDelta: number
+    openTasks: number
+    openTasksDelta: number
+    weeklyHours: number
+    weeklyHoursDelta: number
+    openRisks: number
+    criticalRisks: number
+    budgetUsedPercent: number | null
+  } | null
+): KpiCard[] {
   if (!stats) return []
   return [
     {
       label: 'Progetti attivi',
       value: stats.activeProjects,
-      trend: stats.activeProjectsDelta !== 0
-        ? { value: `${stats.activeProjectsDelta > 0 ? '+' : ''}${stats.activeProjectsDelta}`, direction: stats.activeProjectsDelta > 0 ? 'up' : 'down' }
-        : undefined,
+      trend:
+        stats.activeProjectsDelta !== 0
+          ? {
+              value: `${stats.activeProjectsDelta > 0 ? '+' : ''}${stats.activeProjectsDelta}`,
+              direction: stats.activeProjectsDelta > 0 ? 'up' : 'down',
+            }
+          : undefined,
       color: 'project' as ContextGradient,
       icon: FolderKanban,
     },
     {
       label: 'Task aperti team',
       value: stats.openTasks,
-      trend: stats.openTasksDelta !== 0
-        ? { value: `${stats.openTasksDelta > 0 ? '+' : ''}${stats.openTasksDelta}`, direction: stats.openTasksDelta > 0 ? 'down' : 'up' }
-        : undefined,
+      trend:
+        stats.openTasksDelta !== 0
+          ? {
+              value: `${stats.openTasksDelta > 0 ? '+' : ''}${stats.openTasksDelta}`,
+              direction: stats.openTasksDelta > 0 ? 'down' : 'up',
+            }
+          : undefined,
       color: 'task' as ContextGradient,
       icon: CheckSquare,
     },
     {
       label: 'Ore settimana team',
       value: `${formatHours(stats.weeklyHours * 60)}`,
-      trend: stats.weeklyHoursDelta !== 0
-        ? { value: `${stats.weeklyHoursDelta > 0 ? '+' : ''}${stats.weeklyHoursDelta}h`, direction: stats.weeklyHoursDelta > 0 ? 'up' : 'down' }
-        : undefined,
+      trend:
+        stats.weeklyHoursDelta !== 0
+          ? {
+              value: `${stats.weeklyHoursDelta > 0 ? '+' : ''}${stats.weeklyHoursDelta}h`,
+              direction: stats.weeklyHoursDelta > 0 ? 'up' : 'down',
+            }
+          : undefined,
       color: 'success' as ContextGradient,
       icon: Clock,
     },
@@ -133,7 +173,13 @@ function buildDirezioneKpis(stats: {
 }
 
 function buildDipendenteKpis(
-  stats: { openTasks: number; openTasksDelta: number; weeklyHours: number; weeklyHoursDelta: number; completedTasksThisWeek: number } | null,
+  stats: {
+    openTasks: number
+    openTasksDelta: number
+    weeklyHours: number
+    weeklyHoursDelta: number
+    completedTasksThisWeek: number
+  } | null,
   myTasks: MyTaskToday[]
 ): KpiCard[] {
   if (!stats) return []
@@ -142,9 +188,13 @@ function buildDipendenteKpis(
     {
       label: 'I miei task',
       value: stats.openTasks,
-      trend: stats.openTasksDelta !== 0
-        ? { value: `${stats.openTasksDelta > 0 ? '+' : ''}${stats.openTasksDelta}`, direction: stats.openTasksDelta > 0 ? 'down' : 'up' }
-        : undefined,
+      trend:
+        stats.openTasksDelta !== 0
+          ? {
+              value: `${stats.openTasksDelta > 0 ? '+' : ''}${stats.openTasksDelta}`,
+              direction: stats.openTasksDelta > 0 ? 'down' : 'up',
+            }
+          : undefined,
       color: 'task' as ContextGradient,
       icon: CheckSquare,
     },
@@ -169,304 +219,532 @@ function buildDipendenteKpis(
   ]
 }
 
-// --- Tab: Milestone ---
+// --- Section: My Tasks Today ---
 
-interface MilestoneTask {
-  id: string
-  title: string
-  taskType: string
-  status: string
-  dueDate: string | null
-  project?: { id: string; name: string } | null
-  stats?: { completionPercentage?: number } | null
-}
-
-function MilestonePanel() {
+function MyTasksSection({ myTasks, isLoading }: { myTasks: MyTaskToday[]; isLoading: boolean }) {
   const navigate = useNavigate()
-  const { data, isLoading } = useTaskListQuery({
-    taskType: 'milestone',
-    status: '',
-    page: '1',
-    limit: '12',
-    sortBy: 'dueDate',
-    sortOrder: 'asc',
-  })
-
-  const milestones = (data?.data ?? []) as MilestoneTask[]
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="p-4">
-            <Skeleton className="mb-2 h-4 w-3/4" />
-            <Skeleton className="mb-3 h-3 w-1/2" />
-            <Skeleton className="h-1 w-full" />
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  if (milestones.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-        <Star className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Nessuna milestone attiva</p>
-      </div>
-    )
-  }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {milestones.map((ms, i) => {
-        const pct = ms.stats?.completionPercentage ?? 0
-        const colors: ContextGradient[] = ['project', 'warning', 'milestone', 'task', 'success', 'indigo']
-        const color = colors[i % colors.length]
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <CheckSquare className="h-4 w-4 text-muted-foreground" />
+            I miei task oggi
+          </h3>
+          <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+            {myTasks.length}
+          </Badge>
+        </div>
 
-        return (
-          <motion.div
-            key={ms.id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04, duration: 0.2 }}
-          >
-            <Card
-              className="relative cursor-pointer overflow-hidden p-4 transition-all hover:border-primary/30"
-              onClick={() => navigate(`/tasks/${ms.id}`)}
-            >
-              {/* Left accent */}
-              <div className="absolute inset-y-0 left-0 w-[3px] bg-primary" />
-              <div className="pl-2">
-                <div className="mb-1 flex items-start justify-between gap-2">
-                  <span className="text-sm font-semibold leading-snug">{ms.title}</span>
-                  <DeadlineCell dueDate={ms.dueDate} status={ms.status} />
-                </div>
-                {ms.project && (
-                  <p className="mb-2 text-[11px] text-muted-foreground">{ms.project.name}</p>
-                )}
-                <ProgressGradient value={pct} context={color} />
-                <p className="mt-1 text-right text-[10px] text-muted-foreground">{pct}% completato</p>
-              </div>
-            </Card>
-          </motion.div>
-        )
-      })}
-    </div>
-  )
-}
-
-// --- Tab: Task (3-column: urgenti, in scadenza, bloccati) ---
-
-function TaskPanel() {
-  const navigate = useNavigate()
-
-  // Fetch urgent tasks (high priority, due today or overdue)
-  const { data: urgentData } = useTaskListQuery({
-    priority: 'high',
-    status: '',
-    page: '1',
-    limit: '6',
-    sortBy: 'dueDate',
-    sortOrder: 'asc',
-  })
-
-  // Fetch blocked tasks
-  const { data: blockedData } = useTaskListQuery({
-    status: 'blocked',
-    page: '1',
-    limit: '6',
-    sortBy: 'dueDate',
-    sortOrder: 'asc',
-  })
-
-  // Fetch upcoming (this week)
-  const { data: upcomingData } = useTaskListQuery({
-    status: 'in_progress',
-    page: '1',
-    limit: '6',
-    sortBy: 'dueDate',
-    sortOrder: 'asc',
-  })
-
-  interface TaskItem {
-    id: string
-    title: string
-    status: string
-    priority: string
-    dueDate: string | null
-    project?: { id: string; name: string } | null
-    assignee?: { firstName: string; lastName: string } | null
-    blockedReason?: string | null
-  }
-
-  const urgent = (urgentData?.data ?? []) as TaskItem[]
-  const upcoming = (upcomingData?.data ?? []) as TaskItem[]
-  const blocked = (blockedData?.data ?? []) as TaskItem[]
-
-  function TaskCard({ task }: { task: TaskItem }) {
-    const isBlocked = task.status === 'blocked'
-    return (
-      <div
-        className={cn(
-          'flex cursor-pointer items-start gap-2 rounded-md border p-3 transition-colors hover:border-primary/20',
-          isBlocked && 'border-l-[3px] border-l-red-500/40 bg-red-500/5'
-        )}
-        onClick={() => navigate(`/tasks/${task.id}`)}
-      >
-        <StatusDot status={task.status} size="md" className="mt-1 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium leading-snug">{task.title}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {task.project && (
-              <span className="text-[10px] text-muted-foreground">{task.project.name}</span>
-            )}
-            {task.priority === 'high' || task.priority === 'critical' ? (
-              <Badge variant="outline" className="h-4 px-1 text-[9px] border-red-500/30 text-red-500">
-                {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
-              </Badge>
-            ) : null}
-            {task.dueDate && (
-              <DeadlineCell dueDate={task.dueDate} status={task.status} />
-            )}
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
           </div>
-          {isBlocked && task.blockedReason && (
-            <div className="mt-1.5 rounded border border-red-500/20 bg-red-500/5 px-2 py-1">
-              <p className="text-[10px] text-red-500">{task.blockedReason}</p>
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
+        ) : myTasks.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 py-8 text-center">
+            <CheckSquare className="h-7 w-7 text-muted-foreground/40" />
+            <p className="text-xs text-muted-foreground">Nessun task per oggi</p>
+          </div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            className="space-y-1"
+          >
+            {myTasks.slice(0, 20).map((task) => (
+              <motion.div
+                key={task.id}
+                variants={itemVariants}
+                transition={{ duration: 0.15 }}
+                className="row-accent group flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 hover:bg-accent/50"
+                onClick={() => navigate(`/tasks/${task.id}`)}
+              >
+                <StatusDot status={task.status} size="md" className="shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium">{task.title}</p>
+                  {task.project && (
+                    <p className="truncate text-[10px] text-muted-foreground">{task.project.name}</p>
+                  )}
+                </div>
+                {task.dueDate && (
+                  <DeadlineCell dueDate={task.dueDate} status={task.status} />
+                )}
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
 
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {/* Urgenti */}
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          <AlertTriangle className="h-3 w-3" />
-          Urgenti / Oggi
-          <Badge variant="outline" className="ml-auto h-4 px-1.5 text-[9px]">{urgent.length}</Badge>
+        <div className="mt-3 border-t border-border pt-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-full gap-1.5 text-xs text-muted-foreground"
+            onClick={() => navigate('/tasks?scope=mine')}
+          >
+            Vedi tutti i miei task
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
         </div>
-        <div className="space-y-2">
-          {urgent.map((t) => <TaskCard key={t.id} task={t} />)}
-          {urgent.length === 0 && (
-            <p className="py-4 text-center text-xs text-muted-foreground">Nessun task urgente</p>
-          )}
-        </div>
-      </div>
-
-      {/* In scadenza */}
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          <Calendar className="h-3 w-3" />
-          In scadenza — questa settimana
-          <Badge variant="outline" className="ml-auto h-4 px-1.5 text-[9px]">{upcoming.length}</Badge>
-        </div>
-        <div className="space-y-2">
-          {upcoming.map((t) => <TaskCard key={t.id} task={t} />)}
-          {upcoming.length === 0 && (
-            <p className="py-4 text-center text-xs text-muted-foreground">Nessun task in scadenza</p>
-          )}
-        </div>
-      </div>
-
-      {/* Bloccati */}
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-red-500">
-          <Ban className="h-3 w-3" />
-          Bloccati
-          <Badge variant="outline" className="ml-auto h-4 border-red-500/30 px-1.5 text-[9px] text-red-500">{blocked.length}</Badge>
-        </div>
-        <div className="space-y-2">
-          {blocked.map((t) => <TaskCard key={t.id} task={t} />)}
-          {blocked.length === 0 && (
-            <p className="py-4 text-center text-xs text-muted-foreground">Nessun task bloccato</p>
-          )}
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
-// --- Tab: Progetti ---
+// --- Section: Deadlines (next 7 days) ---
 
-interface ProjectSummary {
-  id: string
-  name: string
-  status: string
-  stats?: { completionPercentage?: number; totalTasks?: number; completedTasks?: number; openRisks?: number } | null
-  _count?: { tasks?: number; risks?: number } | null
-  targetEndDate?: string | null
+function DeadlinesSection() {
+  const navigate = useNavigate()
+  const { data, isLoading } = useMyTasksTodayQuery(7)
+  const tasks = (data ?? []) as MyTaskToday[]
+
+  // Group tasks by relative day label
+  const grouped = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+
+    const groups: Record<string, MyTaskToday[]> = {}
+
+    for (const task of tasks) {
+      if (!task.dueDate) {
+        const key = 'Senza scadenza'
+        groups[key] = groups[key] ?? []
+        groups[key].push(task)
+        continue
+      }
+      const d = new Date(task.dueDate)
+      d.setHours(0, 0, 0, 0)
+      let label: string
+      if (d.getTime() < today.getTime()) {
+        label = 'Scaduti'
+      } else if (d.getTime() === today.getTime()) {
+        label = 'Oggi'
+      } else if (d.getTime() === tomorrow.getTime()) {
+        label = 'Domani'
+      } else {
+        label = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+      }
+      groups[label] = groups[label] ?? []
+      groups[label].push(task)
+    }
+
+    // Sort keys: Scaduti first, then Oggi, Domani, rest
+    const order = ['Scaduti', 'Oggi', 'Domani']
+    const sortedKeys = [
+      ...order.filter((k) => k in groups),
+      ...Object.keys(groups).filter((k) => !order.includes(k) && k !== 'Senza scadenza'),
+      ...('Senza scadenza' in groups ? ['Senza scadenza'] : []),
+    ]
+
+    return sortedKeys.map((key) => ({ label: key, tasks: groups[key] }))
+  }, [tasks])
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            Scadenze — prossimi 7 giorni
+          </h3>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 py-8 text-center">
+            <Calendar className="h-7 w-7 text-muted-foreground/40" />
+            <p className="text-xs text-muted-foreground">Nessuna scadenza nei prossimi 7 giorni</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {grouped.map(({ label, tasks: groupTasks }) => (
+              <div key={label}>
+                <div
+                  className={cn(
+                    'mb-1 text-[10px] font-bold uppercase tracking-wider',
+                    label === 'Scaduti'
+                      ? 'text-red-500'
+                      : label === 'Oggi'
+                        ? 'text-orange-500'
+                        : 'text-muted-foreground'
+                  )}
+                >
+                  {label}
+                </div>
+                <div className="space-y-1">
+                  {groupTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent/50"
+                      onClick={() => navigate(`/tasks/${task.id}`)}
+                    >
+                      <StatusDot status={task.status} size="sm" className="shrink-0" />
+                      <span className="min-w-0 flex-1 truncate text-xs">{task.title}</span>
+                      {task.project && (
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {task.project.name}
+                        </span>
+                      )}
+                      {task.dueDate && (
+                        <DeadlineCell dueDate={task.dueDate} status={task.status} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
-function ProjectPanel() {
+// --- Section: Projects Overview ---
+
+function ProjectsOverviewSection() {
   const navigate = useNavigate()
+  const { effects } = useThemeConfig()
   const { data, isLoading } = useProjectListQuery({
-    page: '1',
-    limit: '12',
+    status: 'active',
+    limit: '6',
     sortBy: 'sortOrder',
     sortOrder: 'asc',
-    status: 'active',
+    page: '1',
   })
-
   const projects = (data?.data ?? []) as ProjectSummary[]
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="p-4">
-            <Skeleton className="mb-2 h-4 w-3/4" />
-            <Skeleton className="mb-3 h-3 w-1/2" />
-            <Skeleton className="h-1 w-full" />
-          </Card>
-        ))}
-      </div>
-    )
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+            Progetti attivi
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 gap-1 text-[11px] text-muted-foreground"
+            onClick={() => navigate('/projects')}
+          >
+            Tutti
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-3">
+                <Skeleton className="mb-2 h-3.5 w-3/4" />
+                <Skeleton className="mb-2 h-2.5 w-1/2" />
+                <Skeleton className="h-1.5 w-full" />
+              </Card>
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 py-8 text-center">
+            <FolderKanban className="h-7 w-7 text-muted-foreground/40" />
+            <p className="text-xs text-muted-foreground">Nessun progetto attivo</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {projects.map((p, i) => {
+              const pct = p.stats?.completionPercentage ?? 0
+              const taskCount = p.stats?.totalTasks ?? p._count?.tasks ?? 0
+              const riskCount = p.stats?.openRisks ?? p._count?.risks ?? 0
+              return (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04, duration: 0.18 }}
+                >
+                  <Card
+                    className={cn(
+                      'relative cursor-pointer overflow-hidden p-3',
+                      effects.cardHover,
+                      effects.cardShadow
+                    )}
+                    onClick={() => navigate(`/projects/${p.id}`)}
+                  >
+                    <div className="mb-1 flex items-start justify-between gap-1.5">
+                      <span className="text-xs font-semibold leading-snug">{p.name}</span>
+                      <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
+                    </div>
+                    <p className="mb-2 text-[10px] text-muted-foreground">
+                      {taskCount} task · {riskCount} rischi
+                    </p>
+                    <ProgressGradient value={pct} context="project" />
+                    <p className="mt-0.5 text-right text-[10px] font-bold tabular-nums">{pct}%</p>
+                    {p.targetEndDate && (
+                      <div className="mt-1.5 border-t border-border pt-1.5">
+                        <DeadlineCell dueDate={p.targetEndDate} status={p.status} />
+                      </div>
+                    )}
+                    <div
+                      className="absolute inset-x-0 bottom-0 h-0.5"
+                      style={{ background: 'var(--gradient-project)' }}
+                    />
+                  </Card>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// --- Section: Activity Feed ---
+
+const ENTITY_TYPE_ROUTES: Record<string, string> = {
+  task: '/tasks',
+  project: '/projects',
+  risk: '/risks',
+  document: '/documents',
+  milestone: '/tasks',
+}
+
+const ACTION_DOT_COLORS: Record<string, string> = {
+  created: 'bg-green-500',
+  updated: 'bg-blue-500',
+  deleted: 'bg-red-500',
+  completed: 'bg-emerald-500',
+  assigned: 'bg-purple-500',
+  commented: 'bg-amber-500',
+}
+
+function ActivityFeedSection() {
+  const navigate = useNavigate()
+  const { data, isLoading } = useRecentActivityQuery(12)
+  const items = data ?? []
+
+  function getRoute(entityType: string, entityId: string): string {
+    const base = ENTITY_TYPE_ROUTES[entityType.toLowerCase()] ?? ''
+    return base ? `${base}/${entityId}` : '#'
+  }
+
+  function getDotColor(action: string): string {
+    const key = action.toLowerCase().split(' ')[0]
+    return ACTION_DOT_COLORS[key] ?? 'bg-primary'
+  }
+
+  function formatRelativeTime(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60_000)
+    if (mins < 1) return 'adesso'
+    if (mins < 60) return `${mins}m fa`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h fa`
+    const days = Math.floor(hrs / 24)
+    return `${days}g fa`
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {projects.map((p, i) => {
-        const pct = p.stats?.completionPercentage ?? 0
-        const taskCount = p.stats?.totalTasks ?? p._count?.tasks ?? 0
-        const riskCount = p.stats?.openRisks ?? p._count?.risks ?? 0
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <h3 className="flex flex-1 items-center gap-2 text-sm font-semibold">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            Attività recente
+          </h3>
+          <div className="flex h-2 w-2 items-center justify-center">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+            </span>
+          </div>
+        </div>
 
-        return (
-          <motion.div
-            key={p.id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04, duration: 0.2 }}
-          >
-            <Card
-              className="relative cursor-pointer overflow-hidden p-4 transition-all hover:border-primary/30"
-              onClick={() => navigate(`/projects/${p.id}`)}
-            >
-              <div className="mb-1 flex items-start justify-between gap-2">
-                <span className="text-sm font-semibold leading-snug">{p.name}</span>
-                <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
-              </div>
-              <p className="mb-3 text-[11px] text-muted-foreground">
-                {taskCount} task · {riskCount} rischi
-              </p>
-              <ProgressGradient value={pct} context="project" />
-              <p className="mt-1 text-right text-[11px] font-bold tabular-nums">{pct}%</p>
-              {p.targetEndDate && (
-                <div className="mt-2 border-t border-border pt-2">
-                  <DeadlineCell dueDate={p.targetEndDate} status={p.status} />
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="mt-1 h-2 w-2 shrink-0 rounded-full" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-2.5 w-1/3" />
                 </div>
-              )}
-              {/* Bottom accent bar */}
-              <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-blue-700 to-blue-500" />
-            </Card>
+              </div>
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 py-8 text-center">
+            <Activity className="h-7 w-7 text-muted-foreground/40" />
+            <p className="text-xs text-muted-foreground">Nessuna attività recente</p>
+          </div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            className="space-y-0"
+          >
+            {items.map((item) => {
+              const route = getRoute(item.entityType, item.entityId)
+              const isClickable = route !== '#'
+              return (
+                <motion.div
+                  key={item.id}
+                  variants={itemVariants}
+                  transition={{ duration: 0.15 }}
+                  className={cn(
+                    'flex items-start gap-3 border-b border-border py-2.5 last:border-0',
+                    isClickable && 'cursor-pointer hover:bg-accent/30 rounded-sm -mx-1 px-1'
+                  )}
+                  onClick={isClickable ? () => navigate(route) : undefined}
+                >
+                  <div className="relative mt-1.5 shrink-0">
+                    <div
+                      className={cn('h-2 w-2 rounded-full', getDotColor(item.action))}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs leading-snug">
+                      <span className="font-medium">
+                        {item.user.firstName} {item.user.lastName}
+                      </span>{' '}
+                      <span className="text-muted-foreground">{item.action.toLowerCase()}</span>
+                      {item.entityName && (
+                        <>
+                          {' '}
+                          <span className="font-medium">{item.entityName}</span>
+                        </>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground tabular-nums">
+                      {formatRelativeTime(item.createdAt)}
+                    </p>
+                  </div>
+                </motion.div>
+              )
+            })}
           </motion.div>
-        )
-      })}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   )
+}
+
+// --- Section: Notifications ---
+
+function NotificationsSection() {
+  const setPanelOpen = useNotificationUIStore((s) => s.setPanelOpen)
+  const { data, isLoading } = useNotificationListQuery({ limit: 5 })
+  const markRead = useMarkNotificationRead()
+
+  const notifications = (data?.data ?? []) as NotificationItem[]
+  const unreadCount = notifications.filter((n) => !n.isRead).length
+
+  function formatRelativeTime(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60_000)
+    if (mins < 1) return 'adesso'
+    if (mins < 60) return `${mins}m fa`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h fa`
+    const days = Math.floor(hrs / 24)
+    return `${days}g fa`
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <Bell className="h-4 w-4 text-muted-foreground" />
+            Notifiche
+            {unreadCount > 0 && (
+              <Badge className="h-4 min-w-[1rem] px-1 text-[10px]">{unreadCount}</Badge>
+            )}
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 gap-1 text-[11px] text-muted-foreground"
+            onClick={() => setPanelOpen(true)}
+          >
+            Vedi tutte
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 py-8 text-center">
+            <Bell className="h-7 w-7 text-muted-foreground/40" />
+            <p className="text-xs text-muted-foreground">Nessuna notifica</p>
+          </div>
+        ) : (
+          <div className="space-y-0">
+            {notifications.map((notif) => (
+              <div
+                key={notif.id}
+                className={cn(
+                  'flex items-start gap-3 border-b border-border py-2.5 last:border-0',
+                  !notif.isRead && 'bg-primary/5'
+                )}
+              >
+                {!notif.isRead && (
+                  <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                )}
+                {notif.isRead && <div className="mt-1.5 h-1.5 w-1.5 shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium leading-snug">{notif.title}</p>
+                  {notif.message && (
+                    <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
+                      {notif.message}
+                    </p>
+                  )}
+                  <p className="mt-0.5 text-[10px] text-muted-foreground tabular-nums">
+                    {formatRelativeTime(notif.createdAt)}
+                  </p>
+                </div>
+                {!notif.isRead && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 shrink-0 px-2 text-[10px] text-muted-foreground"
+                    onClick={() => markRead.mutate(notif.id)}
+                  >
+                    Letto
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// --- Greeting helper ---
+
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Buongiorno'
+  if (hour < 18) return 'Buon pomeriggio'
+  return 'Buonasera'
 }
 
 // --- Main Component ---
@@ -474,7 +752,7 @@ function ProjectPanel() {
 export default function HomePage() {
   useSetPageContext({ domain: 'home' })
   const navigate = useNavigate()
-  const { isPrivileged } = usePrivilegedRole()
+  const { isPrivileged, user } = usePrivilegedRole()
 
   const [viewRole, setViewRole] = useState<ViewRole>(() =>
     isPrivileged ? 'direzione' : 'dipendente'
@@ -484,12 +762,10 @@ export default function HomePage() {
   const statsQuery = useDashboardStatsQuery()
   const attentionQuery = useAttentionItemsQuery(8)
   const myTasksQuery = useMyTasksTodayQuery()
-  const activityQuery = useRecentActivityQuery(10)
 
   const stats = statsQuery.data ?? null
   const attention = (attentionQuery.data ?? []) as AttentionItem[]
   const myTasks = (myTasksQuery.data ?? []) as MyTaskToday[]
-  const activity = (activityQuery.data ?? []) as RecentActivityItem[]
 
   // KPI cards based on view role
   const kpiCards = useMemo(() => {
@@ -500,9 +776,10 @@ export default function HomePage() {
   // Alerts from attention items
   const alerts = useMemo(() => attentionToAlerts(attention), [attention])
 
+  // Date / week info
   const today = new Date()
   const dateStr = today.toLocaleDateString('it-IT', {
-    weekday: 'short',
+    weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -510,6 +787,9 @@ export default function HomePage() {
   const weekNum = Math.ceil(
     ((today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) / 86400000 + 1) / 7
   )
+
+  const greeting = getGreeting()
+  const firstName = user?.firstName ?? ''
 
   return (
     <motion.div
@@ -523,21 +803,28 @@ export default function HomePage() {
       {/* Breadcrumbs */}
       <Breadcrumbs items={[{ label: 'Workspace' }, { label: 'Dashboard' }]} />
 
-      {/* Header */}
+      {/* Header — greeting + date + week */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <Badge variant="outline" className="gap-1.5 border-blue-500/25 bg-blue-500/10 text-blue-500">
-              <LayoutGrid className="h-3 w-3" />
-              Dashboard
-            </Badge>
-            <h1 className="text-xl font-bold tracking-tight">Command Center</h1>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Panoramica operativa — <span className="font-semibold text-foreground/70">{dateStr}</span>
+          <h1 className="text-page-title">
+            {greeting}
+            {firstName && (
+              <span className="ml-1.5 text-muted-foreground">{firstName}</span>
+            )}
+          </h1>
+          <p className="mt-1 text-xs text-muted-foreground capitalize">
+            {dateStr}
+            <span className="mx-1.5 text-border">·</span>
+            <span className="font-medium text-foreground/60">Settimana {weekNum}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
+          {isPrivileged && (
+            <Button variant="outline" size="sm" onClick={() => navigate('/projects/new')}>
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Nuovo Progetto
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => navigate('/tasks/new')}>
             <Plus className="mr-1 h-3.5 w-3.5" />
             Nuovo Task
@@ -545,17 +832,19 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Role switcher + date chip */}
-      <div className="flex items-center gap-3">
-        {isPrivileged && <RoleSwitcher value={viewRole} onChange={setViewRole} />}
-        <Badge variant="outline" className="text-[10px] font-semibold border-primary/20 bg-primary/5 text-primary">
-          {dateStr} · Sett. {weekNum}
-        </Badge>
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          Vista: <span className="font-semibold text-foreground/70">{viewRole === 'direzione' ? 'Direzione' : 'Dipendente'}</span>
-          {viewRole === 'direzione' ? ' · dati aggregati team' : ' · i miei dati'}
-        </span>
-      </div>
+      {/* Role switcher */}
+      {isPrivileged && (
+        <div className="flex items-center gap-3">
+          <RoleSwitcher value={viewRole} onChange={setViewRole} />
+          <span className="text-[11px] text-muted-foreground">
+            Vista:{' '}
+            <span className="font-semibold text-foreground/70">
+              {viewRole === 'direzione' ? 'Direzione' : 'Dipendente'}
+            </span>
+            {viewRole === 'direzione' ? ' · dati aggregati team' : ' · i miei dati'}
+          </span>
+        </div>
+      )}
 
       {/* KPI Strip */}
       {statsQuery.isLoading ? (
@@ -571,120 +860,24 @@ export default function HomePage() {
         <KpiStrip cards={kpiCards} />
       )}
 
-      {/* Alert strip */}
+      {/* Alert Strip */}
       <AlertStrip alerts={alerts} />
 
-      {/* Domain tabs */}
-      <Tabs defaultValue="milestone">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="milestone" className="flex items-center gap-1.5">
-            <Star className="h-3.5 w-3.5" />
-            Milestone
-          </TabsTrigger>
-          <TabsTrigger value="calendar" className="flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5" />
-            Calendario
-          </TabsTrigger>
-          <TabsTrigger value="task" className="flex items-center gap-1.5">
-            <CheckSquare className="h-3.5 w-3.5" />
-            Task
-          </TabsTrigger>
-          <TabsTrigger value="projects" className="flex items-center gap-1.5">
-            <FolderKanban className="h-3.5 w-3.5" />
-            Progetti
-          </TabsTrigger>
-        </TabsList>
+      {/* 2-column layout */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {/* Left column */}
+        <div className="space-y-4 lg:col-span-7">
+          <MyTasksSection myTasks={myTasks} isLoading={myTasksQuery.isLoading} />
+          <DeadlinesSection />
+          <ProjectsOverviewSection />
+        </div>
 
-        <TabsContent value="milestone">
-          <MilestonePanel />
-        </TabsContent>
-
-        <TabsContent value="calendar">
-          {/* Simplified calendar — My Tasks Today + Activity Feed in 2-col layout */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* My Tasks Today */}
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="mb-3 text-sm font-semibold">I Miei Task Oggi</h3>
-                {myTasksQuery.isLoading ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <Skeleton key={i} className="h-8 w-full" />
-                    ))}
-                  </div>
-                ) : myTasks.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-muted-foreground">Nessun task per oggi</p>
-                ) : (
-                  <div className="space-y-1">
-                    {myTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-accent/50"
-                        onClick={() => navigate(`/tasks/${task.id}`)}
-                      >
-                        <StatusDot status={task.status} size="md" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-medium">{task.title}</p>
-                          {task.project && (
-                            <p className="text-[10px] text-muted-foreground">{task.project.name}</p>
-                          )}
-                        </div>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100">
-                          <Play className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Activity Feed */}
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="mb-3 text-sm font-semibold">Attività Recente</h3>
-                {activityQuery.isLoading ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-6 w-full" />
-                    ))}
-                  </div>
-                ) : activity.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-muted-foreground">Nessuna attività recente</p>
-                ) : (
-                  <div className="space-y-2">
-                    {activity.slice(0, 8).map((item) => (
-                      <div key={item.id} className="flex items-start gap-2 border-b border-border py-1.5 last:border-0">
-                        <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs">
-                            <span className="font-medium">{item.user.firstName} {item.user.lastName}</span>{' '}
-                            <span className="text-muted-foreground">{item.action.toLowerCase()}</span>{' '}
-                            {item.entityName && (
-                              <span className="font-medium">{item.entityName}</span>
-                            )}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground tabular-nums">
-                            {new Date(item.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="task">
-          <TaskPanel />
-        </TabsContent>
-
-        <TabsContent value="projects">
-          <ProjectPanel />
-        </TabsContent>
-      </Tabs>
+        {/* Right column */}
+        <div className="space-y-4 lg:col-span-5">
+          <ActivityFeedSection />
+          <NotificationsSection />
+        </div>
+      </div>
     </motion.div>
   )
 }
