@@ -104,6 +104,12 @@ function RiskDetailPage() {
       notFound={!isLoading && !error && !risk}
       breadcrumbs={[
         { label: "Home", href: "/" },
+        ...(risk?.project
+          ? [
+              { label: "Progetti", href: "/projects" },
+              { label: risk.project.name, href: `/projects/${risk.project.id}` },
+            ]
+          : []),
         { label: "Rischi", href: "/risks" },
         { label: risk?.title ?? "..." },
       ]}

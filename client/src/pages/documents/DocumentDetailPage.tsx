@@ -139,6 +139,12 @@ function DocumentDetailPage() {
       notFound={!isLoading && !error && !doc}
       breadcrumbs={[
         { label: "Home", href: "/" },
+        ...(doc?.project
+          ? [
+              { label: "Progetti", href: "/projects" },
+              { label: doc.project.name, href: `/projects/${doc.project.id}` },
+            ]
+          : []),
         { label: "Documenti", href: "/documents" },
         { label: doc?.title ?? "..." },
       ]}
