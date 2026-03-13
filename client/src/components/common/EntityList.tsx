@@ -9,9 +9,12 @@ import { ListFilters, type FilterConfig } from "./ListFilters"
 import { PaginationControls } from "./PaginationControls"
 import { GroupHeader } from "./GroupHeader"
 import { KpiStrip, type KpiCard } from "./KpiStrip"
+import { AlertStrip, type AlertItem } from "./AlertStrip"
 import { ViewToggle } from "./ViewToggle"
 import { RoleSwitcher } from "./RoleSwitcher"
 import { STATUS_VISUAL } from "@/lib/constants"
+import { useThemeConfig } from "@/hooks/ui/useThemeConfig"
+import { cn } from "@/lib/utils"
 import type { ResolvedPermissions } from "@/lib/permissions"
 
 interface GroupByConfig<T> {
@@ -68,6 +71,10 @@ interface EntityListProps<T> {
   groupBy?: GroupByConfig<T>
   // Row customization
   rowClassName?: (item: T) => string | undefined
+  /** Alert items displayed below KPI strip */
+  alertItems?: AlertItem[]
+  /** Custom row renderer for list-mode (bypasses DataTable) */
+  renderRow?: (item: T) => React.ReactNode
   /** KPI cards displayed above filters */
   kpiStrip?: KpiCard[]
   /** Current view mode */
@@ -83,6 +90,8 @@ interface EntityListProps<T> {
   }
   /** Keyboard-navigated focused row index */
   focusedIndex?: number
+  /** Optional row of content rendered between filters and the table/list */
+  afterFilters?: React.ReactNode
 }
 
 const STORAGE_KEY_PREFIX = "entitylist-collapsed-"
@@ -134,14 +143,18 @@ export function EntityList<T>({
   onReorder,
   groupBy,
   rowClassName,
+  alertItems,
+  renderRow,
   kpiStrip,
   viewMode,
   onViewModeChange,
   gridRenderItem,
   roleSwitcher,
   focusedIndex,
+  afterFilters,
 }: EntityListProps<T>) {
   const nav = useNavigate()
+  const { effects } = useThemeConfig()
   const canCreate = permissions ? permissions.canCreate : true
   const handleSelectAll = () => {
     onSelectAll?.()
@@ -201,14 +214,17 @@ export function EntityList<T>({
       : null
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", effects.cardShadow)}>
       {/* KPI Strip */}
       {kpiStrip && kpiStrip.length > 0 && <KpiStrip cards={kpiStrip} />}
+
+      {/* Alert Strip */}
+      {alertItems && alertItems.length > 0 && <AlertStrip alerts={alertItems} />}
 
       {/* Compact header — no duplicate icon (Header already shows context) */}
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+          <h1 className="text-page-title text-foreground">{title}</h1>
           {!isLoading && (
             <span className="text-xs text-muted-foreground font-[var(--font-data)] tabular-nums">
               {totalCount}
@@ -248,6 +264,9 @@ export function EntityList<T>({
           onClear={onFilterClear}
         />
       )}
+
+      {/* After-filters slot (e.g. chip-filter quick rows) */}
+      {afterFilters}
 
       {/* Bulk actions */}
       {showBulk && (
@@ -317,12 +336,18 @@ export function EntityList<T>({
         </div>
       )}
 
-      {/* Flat table or grid (no groupBy) */}
+      {/* Flat table, grid, or custom row list (no groupBy) */}
       {!groupBy && showTable && (
         viewMode === 'grid' && gridRenderItem ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {data.map((item) => (
               <div key={getId(item)}>{gridRenderItem(item)}</div>
+            ))}
+          </div>
+        ) : renderRow ? (
+          <div className="space-y-1">
+            {data.map((item) => (
+              <div key={getId(item)}>{renderRow(item)}</div>
             ))}
           </div>
         ) : (
@@ -381,3 +406,4 @@ export function EntityList<T>({
 // Re-export for convenience
 export type { Column } from "./DataTable"
 export type { FilterConfig } from "./ListFilters"
+export type { AlertItem } from "./AlertStrip"
