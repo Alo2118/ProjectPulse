@@ -21,7 +21,7 @@ import { NoteTab } from "@/components/common/NoteTab"
 import { ActivityTab } from "@/components/common/ActivityTab"
 import { KpiStrip, type KpiCard } from "@/components/common/KpiStrip"
 import { RISK_STATUS_LABELS, RISK_CATEGORY_LABELS, RISK_SCALE_LABELS, RISK_LEVEL_LABELS, RISK_LEVEL_COLORS, getRiskLevel } from "@/lib/constants"
-import { formatDate } from "@/lib/utils"
+import { formatDate, toError } from "@/lib/utils"
 import { useRiskQuery, useDeleteRisk } from "@/hooks/api/useRisks"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -100,7 +100,7 @@ function RiskDetailPage() {
   return (
     <EntityDetail
       isLoading={isLoading}
-      error={error as Error | null}
+      error={toError(error)}
       notFound={!isLoading && !error && !risk}
       breadcrumbs={[
         { label: "Home", href: "/" },

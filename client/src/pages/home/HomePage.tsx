@@ -26,7 +26,7 @@ import { StatusBadge } from '@/components/common/StatusBadge'
 import { StatusDot } from '@/components/common/StatusDot'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { cn, formatHours } from '@/lib/utils'
-import { PROJECT_STATUS_LABELS } from '@/lib/constants'
+import { PROJECT_STATUS_LABELS, ACTIVITY_ACTION_COLORS } from '@/lib/constants'
 import type { ContextGradient } from '@/lib/constants'
 import {
   useDashboardStatsQuery,
@@ -519,15 +519,6 @@ const ENTITY_TYPE_ROUTES: Record<string, string> = {
   milestone: '/tasks',
 }
 
-const ACTION_DOT_COLORS: Record<string, string> = {
-  created: 'bg-green-500',
-  updated: 'bg-blue-500',
-  deleted: 'bg-red-500',
-  completed: 'bg-emerald-500',
-  assigned: 'bg-purple-500',
-  commented: 'bg-amber-500',
-}
-
 function ActivityFeedSection() {
   const navigate = useNavigate()
   const { data, isLoading } = useRecentActivityQuery(12)
@@ -540,7 +531,7 @@ function ActivityFeedSection() {
 
   function getDotColor(action: string): string {
     const key = action.toLowerCase().split(' ')[0]
-    return ACTION_DOT_COLORS[key] ?? 'bg-primary'
+    return ACTIVITY_ACTION_COLORS[key] ?? 'bg-primary'
   }
 
   function formatRelativeTime(dateStr: string): string {

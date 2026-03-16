@@ -70,11 +70,11 @@ function ProjectEditForm({ id }: { id: string }) {
     defaultValues: {
       code: "",
       name: "",
-      description: "",
+      description: undefined,
       status: "active",
       priority: "medium",
-      startDate: "",
-      targetEndDate: "",
+      startDate: undefined,
+      targetEndDate: undefined,
     },
   })
 
@@ -84,15 +84,15 @@ function ProjectEditForm({ id }: { id: string }) {
       reset({
         code: (p.code as string) ?? "",
         name: (p.name as string) ?? "",
-        description: (p.description as string) ?? "",
+        description: (p.description as string) ?? undefined,
         status: (p.status as string) ?? "active",
         priority: (p.priority as string) ?? "medium",
         startDate: p.startDate
           ? (p.startDate as string).slice(0, 10)
-          : "",
+          : undefined,
         targetEndDate: p.targetEndDate
           ? (p.targetEndDate as string).slice(0, 10)
-          : "",
+          : undefined,
         budgetHours: (p.budgetHours as number) ?? undefined,
       })
     }

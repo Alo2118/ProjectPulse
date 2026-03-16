@@ -41,9 +41,10 @@ import {
   TASK_TYPE_COLORS,
   TASK_STATUS_GROUP_ORDER,
   COLLAPSED_BY_DEFAULT,
+  STATUS_VISUAL,
 } from "@/lib/constants"
 import type { AlertItem } from "@/components/common/AlertStrip"
-import { cn, formatRelative } from "@/lib/utils"
+import { cn, formatRelative, toError } from "@/lib/utils"
 
 interface TaskRow {
   id: string
@@ -482,10 +483,10 @@ export default function TaskListPage() {
         <div className="flex items-center gap-1.5 flex-wrap">
           {[
             { key: "", label: "Tutti", dot: "bg-muted-foreground" },
-            { key: "in_progress", label: "In corso", dot: "bg-blue-500" },
-            { key: "blocked", label: "Bloccati", dot: "bg-red-500" },
-            { key: "review", label: "In revisione", dot: "bg-amber-500" },
-            { key: "done", label: "Completati", dot: "bg-green-500" },
+            { key: "in_progress", label: "In corso", dot: STATUS_VISUAL.in_progress.dot },
+            { key: "blocked", label: "Bloccati", dot: STATUS_VISUAL.blocked.dot },
+            { key: "review", label: "In revisione", dot: STATUS_VISUAL.review.dot },
+            { key: "done", label: "Completati", dot: STATUS_VISUAL.done.dot },
           ].map((chip) => (
             <button
               key={chip.key}
@@ -537,7 +538,7 @@ export default function TaskListPage() {
       data={tasks}
       pagination={pagination}
       isLoading={isLoading}
-      error={error ?? undefined}
+      error={toError(error)}
       columns={columns}
       getId={(t) => t.id}
       filterConfig={filterConfig}

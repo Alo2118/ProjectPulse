@@ -4,7 +4,7 @@ import { DOMAIN_ICONS, DOMAIN_LABELS } from '@/lib/theme-config'
 import type { LucideIcon } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
 
-export type Domain = 'project' | 'task' | 'risk' | 'document' | 'input' | 'time_entry' | 'user' | 'analytics' | 'admin' | 'home'
+export type Domain = 'project' | 'task' | 'risk' | 'document' | 'input' | 'time_entry' | 'user' | 'analytics' | 'planning' | 'admin' | 'home'
 
 export interface PageContextValue {
   domain: Domain
@@ -39,6 +39,7 @@ export function useSetPageContext(config: {
       time_entry: 'emerald',
       user: 'green',
       analytics: 'indigo',
+      planning: 'indigo',
       admin: 'slate',
       home: 'blue',
     }

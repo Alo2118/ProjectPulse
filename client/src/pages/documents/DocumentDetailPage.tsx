@@ -22,7 +22,7 @@ import { NoteTab } from "@/components/common/NoteTab"
 import { ActivityTab } from "@/components/common/ActivityTab"
 import { KpiStrip, type KpiCard } from "@/components/common/KpiStrip"
 import { DOCUMENT_STATUS_LABELS, DOCUMENT_TYPE_LABELS, DOCUMENT_STATUS_TRANSITIONS } from "@/lib/constants"
-import { formatDate, formatFileSize } from "@/lib/utils"
+import { formatDate, formatFileSize, toError } from "@/lib/utils"
 import {
   useDocumentQuery,
   useDeleteDocument,
@@ -135,7 +135,7 @@ function DocumentDetailPage() {
   return (
     <EntityDetail
       isLoading={isLoading}
-      error={error as Error | null}
+      error={toError(error)}
       notFound={!isLoading && !error && !doc}
       breadcrumbs={[
         { label: "Home", href: "/" },
@@ -150,7 +150,7 @@ function DocumentDetailPage() {
       ]}
       title={doc?.title}
       subtitle={doc?.code}
-      colorBar="linear-gradient(180deg, hsl(271, 91%, 65%), hsl(250, 60%, 50%))"
+      colorBar="var(--gradient-milestone)"
       tagEditor={id ? <TagEditor entityType="document" entityId={id} className="mt-1" /> : undefined}
       kpiRow={kpiCards.length > 0 ? <KpiStrip cards={kpiCards} /> : undefined}
       badges={

@@ -50,7 +50,7 @@ import {
   TASK_TYPE_COLORS,
   STATUS_COLORS,
 } from "@/lib/constants"
-import { formatDate, formatDateTime, getUserInitials, getAvatarColor, formatFileSize } from "@/lib/utils"
+import { formatDate, formatDateTime, getUserInitials, getAvatarColor, formatFileSize, toError } from "@/lib/utils"
 import { cn } from "@/lib/utils"
 import { TagEditor } from "@/components/common/TagEditor"
 import { ActivityTab } from "@/components/common/ActivityTab"
@@ -165,7 +165,7 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       {/* Avanzamento */}
-      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(187,85%,53%), hsl(217,91%,60%))" } as React.CSSProperties}>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-primary)" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1.5">
           <p className="text-kpi-label">Avanzamento</p>
           <p className="text-kpi-value text-foreground">{completionPct}%</p>
@@ -174,7 +174,7 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
       </Card>
 
       {/* Subtask */}
-      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(250,60%,50%), hsl(280,60%,60%))" } as React.CSSProperties}>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-milestone)" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
           <p className="text-kpi-label">Subtask</p>
           <div className="flex items-baseline gap-1">
@@ -188,7 +188,7 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
       </Card>
 
       {/* Ore loggate */}
-      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(25,95%,53%), hsl(40,95%,55%))" } as React.CSSProperties}>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-warning)" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
           <p className="text-kpi-label">Ore loggate</p>
           <div className="flex items-baseline gap-1">
@@ -202,7 +202,7 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
       </Card>
 
       {/* Assegnato a */}
-      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(142,71%,45%), hsl(162,75%,45%))" } as React.CSSProperties}>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-success)" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
           <p className="text-kpi-label">Assegnato a</p>
           <div className="flex items-center gap-2 mt-1">
@@ -221,7 +221,7 @@ function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) 
       </Card>
 
       {/* Fase / Progetto */}
-      <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(217,91%,60%), hsl(250,60%,55%))" } as React.CSSProperties}>
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-project)" } as React.CSSProperties}>
         <CardContent className="p-3 space-y-1">
           <p className="text-kpi-label">Progetto</p>
           {t.project ? (
@@ -481,19 +481,19 @@ function TimeEntriesTab({
 
       {/* 3-card summary */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(217,91%,60%), hsl(187,85%,53%))" } as React.CSSProperties}>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-time)" } as React.CSSProperties}>
           <CardContent className="p-3 text-center">
             <p className="text-kpi-label mb-1">Loggate</p>
             <p className="text-kpi-value text-foreground text-data">{totalLogged.toFixed(1)}h</p>
           </CardContent>
         </Card>
-        <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(250,60%,50%), hsl(217,91%,60%))" } as React.CSSProperties}>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-milestone)" } as React.CSSProperties}>
           <CardContent className="p-3 text-center">
             <p className="text-kpi-label mb-1">Stimate</p>
             <p className="text-kpi-value text-foreground text-data">{estimated > 0 ? `${estimated}h` : "—"}</p>
           </CardContent>
         </Card>
-        <Card className="kpi-accent" style={{ "--kpi-gradient": "linear-gradient(90deg, hsl(142,71%,45%), hsl(187,85%,53%))" } as React.CSSProperties}>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-success)" } as React.CSSProperties}>
           <CardContent className="p-3 text-center">
             <p className="text-kpi-label mb-1">Rimanenti</p>
             <p className={cn("text-kpi-value text-data", remaining === 0 && estimated > 0 ? "text-success" : "text-foreground")}>
@@ -866,7 +866,7 @@ export default function TaskDetailPage() {
   return (
     <EntityDetail
       isLoading={isLoading}
-      error={error ?? undefined}
+      error={toError(error)}
       notFound={!isLoading && !error && !t}
       breadcrumbs={breadcrumbs}
       title={t?.title}
@@ -874,7 +874,7 @@ export default function TaskDetailPage() {
       editableBadges={editableBadges}
       tagEditor={id ? <TagEditor entityType="task" entityId={id} className="mt-1" /> : undefined}
       headerActions={headerActions}
-      colorBar="linear-gradient(90deg, hsl(187, 85%, 53%), hsl(217, 91%, 60%))"
+      colorBar="var(--gradient-task)"
       kpiRow={kpiRow}
       beforeContent={
         t ? (

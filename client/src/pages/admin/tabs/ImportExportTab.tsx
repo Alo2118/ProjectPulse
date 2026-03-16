@@ -261,6 +261,7 @@ export function ImportExportTab() {
                   <DataTable
                     columns={previewColumns}
                     data={previewData}
+                    getId={(item) => (item as Record<string, unknown>).id as string ?? JSON.stringify(item)}
                   />
                 </div>
               </div>

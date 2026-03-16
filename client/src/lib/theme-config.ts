@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   FolderKanban, Flag, CheckSquare, GitBranch,
   AlertTriangle, FileText, Users, MessageSquarePlus,
+  CalendarRange,
 } from 'lucide-react'
 import type { ThemeStyle } from '@/types'
 
@@ -15,6 +16,7 @@ export const DOMAIN_ICONS: Record<string, LucideIcon> = {
   document: FileText,
   user: Users,
   input: MessageSquarePlus,
+  planning: CalendarRange,
 }
 
 // Domain labels (Italian)
@@ -27,6 +29,7 @@ export const DOMAIN_LABELS: Record<string, string> = {
   document: 'Documenti',
   user: 'Utenti',
   input: 'Richieste',
+  planning: 'Pianificazione',
 }
 
 // Icon wrapper styles per theme

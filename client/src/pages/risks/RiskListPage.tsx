@@ -27,9 +27,14 @@ import {
   RISK_CATEGORY_LABELS,
   RISK_SCALE_LABELS,
   getRiskLevel,
+  RISK_SEVERITY_BADGE_CLASSES,
+  RISK_SEVERITY_DOT_COLORS,
+  RISK_SEVERITY_ROW_BORDER,
+  RISK_SEVERITY_LABELS as RISK_SEV_DISPLAY_LABELS,
+  RISK_SEVERITY_GROUP_LABELS,
 } from "@/lib/constants"
 import type { KpiCard } from "@/components/common/KpiStrip"
-import { cn } from "@/lib/utils"
+import { cn, toError } from "@/lib/utils"
 import { useRiskListQuery } from "@/hooks/api/useRisks"
 import { useStatsQuery } from "@/hooks/api/useStats"
 
@@ -70,50 +75,15 @@ function getRiskSeverity(risk: Risk): RiskSeverity {
   return getRiskLevel(score)
 }
 
-const SEVERITY_LABELS: Record<RiskSeverity, string> = {
-  critical: "Critici",
-  high: "Alti",
-  medium: "Medi",
-  low: "Bassi",
-  mitigated: "Mitigati/Chiusi",
-}
+const SEVERITY_LABELS = RISK_SEVERITY_GROUP_LABELS as Record<RiskSeverity, string>
 
 const SEVERITY_ORDER: RiskSeverity[] = ["critical", "high", "medium", "low", "mitigated"]
 
-const SEVERITY_BADGE_CLASSES: Record<RiskSeverity, string> = {
-  critical:
-    "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30",
-  high: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
-  medium:
-    "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30",
-  low: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
-  mitigated:
-    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
-}
-
-const SEVERITY_DISPLAY_LABELS: Record<RiskSeverity, string> = {
-  critical: "Critico",
-  high: "Alto",
-  medium: "Medio",
-  low: "Basso",
-  mitigated: "Mitigato",
-}
-
-const SEVERITY_DOT_COLOR: Record<RiskSeverity, string> = {
-  critical: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-amber-500",
-  low: "bg-slate-400",
-  mitigated: "bg-green-500",
-}
-
-const SEVERITY_ROW_BORDER: Record<RiskSeverity, string> = {
-  critical: "border-l-[3px] border-l-red-500/70",
-  high: "border-l-[3px] border-l-orange-500/60",
-  medium: "border-l-[3px] border-l-amber-500/50",
-  low: "border-l-[3px] border-l-slate-400/40",
-  mitigated: "border-l-[3px] border-l-green-500/35",
-}
+// Severity badge, dot, row-border, and display labels now imported from constants
+const SEVERITY_BADGE_CLASSES = RISK_SEVERITY_BADGE_CLASSES as Record<RiskSeverity, string>
+const SEVERITY_DISPLAY_LABELS = RISK_SEV_DISPLAY_LABELS as Record<RiskSeverity, string>
+const SEVERITY_DOT_COLOR = RISK_SEVERITY_DOT_COLORS as Record<RiskSeverity, string>
+const SEVERITY_ROW_BORDER = RISK_SEVERITY_ROW_BORDER as Record<RiskSeverity, string>
 
 // Risk status labels (mockup uses "In mitigazione" for mitigated)
 const RISK_STATUS_DISPLAY: Record<string, string> = {
@@ -967,7 +937,7 @@ function RiskListPage() {
         data={items}
         pagination={useGroupBy ? pagination : undefined}
         isLoading={isLoading}
-        error={error as Error | null}
+        error={toError(error)}
         columns={columns}
         getId={(item) => item.id}
         filterConfig={filterConfig}

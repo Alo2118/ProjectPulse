@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react"
 import { Building2, ShieldAlert } from "lucide-react"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { toast } from "sonner"
+import { toError } from "@/lib/utils"
 import { EntityList, type Column } from "@/components/common/EntityList"
 import { EmptyState } from "@/components/common/EmptyState"
 import { FormField } from "@/components/common/FormField"
@@ -236,7 +237,7 @@ function DepartmentListPage() {
         data={items}
         pagination={pagination}
         isLoading={isLoading}
-        error={error as Error | null}
+        error={toError(error)}
         columns={columnsWithActions}
         getId={(item) => item.id}
         filterConfig={filterConfig}

@@ -19,9 +19,11 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import {
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_TYPE_LABELS,
+  DOCUMENT_TYPE_PILL_CLASSES,
+  DOCUMENT_TYPE_PILL_DEFAULT,
   type ContextGradient,
 } from "@/lib/constants"
-import { cn, formatDate, formatFileSize, getUserInitials, getAvatarColor } from "@/lib/utils"
+import { cn, formatDate, formatFileSize, getUserInitials, getAvatarColor, toError } from "@/lib/utils"
 import { useDocumentListQuery } from "@/hooks/api/useDocuments"
 import { useStatsQuery } from "@/hooks/api/useStats"
 import type { KpiCard } from "@/components/common/KpiStrip"
@@ -63,23 +65,8 @@ interface DocumentRow {
 
 // ── Type Pill ────────────────────────────────────────────────────────────────
 
-const TYPE_PILL_CLASSES: Record<string, string> = {
-  design_input:
-    "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/30",
-  design_output:
-    "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/30",
-  verification_report:
-    "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
-  validation_report:
-    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
-  change_control:
-    "bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-400 dark:border-cyan-800/30",
-}
-const TYPE_PILL_DEFAULT =
-  "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30"
-
 function TypePill({ type }: { type: string }) {
-  const classes = TYPE_PILL_CLASSES[type] ?? TYPE_PILL_DEFAULT
+  const classes = DOCUMENT_TYPE_PILL_CLASSES[type] ?? DOCUMENT_TYPE_PILL_DEFAULT
   const label = DOCUMENT_TYPE_LABELS[type] ?? type
   return (
     <span
@@ -386,7 +373,7 @@ function DocumentDrawer({
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                   Ultimo aggiornamento
                 </p>
-                <span className="text-xs font-[var(--font-data)] tabular-nums">
+                <span className="text-xs font-data tabular-nums">
                   {formatDate(doc.updatedAt)}
                 </span>
               </div>
@@ -394,7 +381,7 @@ function DocumentDrawer({
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                   Dimensione
                 </p>
-                <span className="text-xs font-[var(--font-data)] tabular-nums">
+                <span className="text-xs font-data tabular-nums">
                   {doc.fileSize ? formatFileSize(doc.fileSize) : "—"}
                 </span>
               </div>
@@ -437,13 +424,13 @@ function DocumentDrawer({
                     >
                       <span
                         className={cn(
-                          "w-10 shrink-0 font-bold font-[var(--font-data)]",
+                          "w-10 shrink-0 font-bold font-data",
                           isCurrent ? "text-primary" : "text-muted-foreground"
                         )}
                       >
                         v{ver.version}
                       </span>
-                      <span className="w-20 shrink-0 text-[10px] text-muted-foreground tabular-nums font-[var(--font-data)]">
+                      <span className="w-20 shrink-0 text-[10px] text-muted-foreground tabular-nums font-data">
                         {formatDate(ver.createdAt)}
                       </span>
                       <div className="flex-1 min-w-0">
@@ -574,7 +561,7 @@ function buildColumns(
       sortable: true,
       className: "w-[100px]",
       cell: (item) => (
-        <span className="text-xs font-[var(--font-data)] tabular-nums text-muted-foreground">
+        <span className="text-xs font-data tabular-nums text-muted-foreground">
           {formatDate(item.updatedAt)}
         </span>
       ),
@@ -776,7 +763,7 @@ function DocumentListPage() {
         data={viewMode === "list" ? items : []}
         pagination={viewMode === "list" ? pagination : undefined}
         isLoading={isLoading}
-        error={error as Error | null}
+        error={toError(error)}
         columns={columns}
         getId={(item) => item.id}
         filterConfig={filterConfig}

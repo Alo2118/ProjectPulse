@@ -397,8 +397,7 @@ export default function UserListPage() {
                       value: stats.total,
                       sub: `${stats.admins} admin · ${stats.direzione} dir · ${stats.dipendenti} dip`,
                       icon: Users,
-                      gradientFrom: "#475569",
-                      gradientTo: "#94a3b8",
+                      gradient: "var(--gradient-primary)",
                       valueClass: "text-foreground",
                       delay: 0,
                     },
@@ -407,8 +406,7 @@ export default function UserListPage() {
                       value: stats.active,
                       sub: `${stats.total - stats.active} disattivat${stats.total - stats.active === 1 ? "o" : "i"}`,
                       icon: UserCheck,
-                      gradientFrom: "#15803d",
-                      gradientTo: "#22c55e",
+                      gradient: "var(--gradient-success)",
                       valueClass: "text-green-500",
                       delay: 1,
                     },
@@ -417,8 +415,7 @@ export default function UserListPage() {
                       value: stats.admins,
                       sub: "accesso completo",
                       icon: Crown,
-                      gradientFrom: "#b91c1c",
-                      gradientTo: "#ef4444",
+                      gradient: "var(--gradient-danger)",
                       valueClass: "text-red-500",
                       delay: 2,
                     },
@@ -427,8 +424,7 @@ export default function UserListPage() {
                       value: stats.direzione,
                       sub: "gestione progetti",
                       icon: Briefcase,
-                      gradientFrom: "#4338ca",
-                      gradientTo: "#818cf8",
+                      gradient: "var(--gradient-indigo)",
                       valueClass: "text-indigo-400",
                       delay: 3,
                     },
@@ -437,8 +433,7 @@ export default function UserListPage() {
                       value: stats.dipendenti,
                       sub: "accesso progetti assegnati",
                       icon: UserCog,
-                      gradientFrom: "#334155",
-                      gradientTo: "#94a3b8",
+                      gradient: "var(--gradient-primary)",
                       valueClass: "text-slate-400",
                       delay: 4,
                     },
@@ -453,7 +448,7 @@ export default function UserListPage() {
                   >
                     <Card
                       className="kpi-accent card-hover overflow-hidden"
-                      style={{ "--kpi-gradient": `linear-gradient(90deg, ${kpi.gradientFrom}, ${kpi.gradientTo})` } as React.CSSProperties}
+                      style={{ "--kpi-gradient": kpi.gradient } as React.CSSProperties}
                     >
                       <CardContent className="p-3.5 pb-4">
                         <div className="flex items-start justify-between mb-1.5">
@@ -607,13 +602,13 @@ export default function UserListPage() {
                                 <span
                                   className={cn(
                                     "h-1.5 w-1.5 rounded-full flex-shrink-0",
-                                    user.isActive ? "bg-green-500" : "bg-slate-400"
+                                    user.isActive ? "bg-success" : "bg-muted-foreground"
                                   )}
                                 />
                                 <span
                                   className={cn(
                                     "text-xs font-medium",
-                                    user.isActive ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                                    user.isActive ? "text-success" : "text-muted-foreground"
                                   )}
                                 >
                                   {user.isActive ? "Attivo" : "Inattivo"}

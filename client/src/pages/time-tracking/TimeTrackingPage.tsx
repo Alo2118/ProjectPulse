@@ -140,7 +140,7 @@ function TimeTrackingPage() {
         sortable: true,
         className: "w-[80px]",
         cell: (item) => (
-          <span className="text-xs tabular-nums font-medium" style={{ fontFamily: 'var(--font-data)' }}>
+          <span className="text-xs tabular-nums font-medium font-data">
             {formatHours(item.duration ?? 0)}
           </span>
         ),
@@ -252,10 +252,10 @@ function TimeTrackingPage() {
                       />
                       <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="capitalize">{label}</span>
-                      <span className="ml-1 text-xs text-muted-foreground tabular-nums font-[var(--font-data)]">
+                      <span className="ml-1 text-xs text-muted-foreground tabular-nums font-data">
                         ({dayEntries.length})
                       </span>
-                      <span className="ml-auto text-xs tabular-nums font-medium" style={{ fontFamily: 'var(--font-data)' }}>
+                      <span className="ml-auto text-xs tabular-nums font-medium font-data">
                         {formatHours(totalHours)}
                       </span>
                     </button>

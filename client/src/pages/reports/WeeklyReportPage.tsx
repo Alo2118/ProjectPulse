@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
-import { cn } from "@/lib/utils"
+import { cn, formatDate, getDeadlineUrgency, getUserInitials } from "@/lib/utils"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import {
@@ -9,6 +9,10 @@ import {
   addWeeks,
   getISOWeek,
   format,
+  parseISO,
+  differenceInDays,
+  startOfDay,
+  addDays,
 } from "date-fns"
 import { it } from "date-fns/locale"
 import {
@@ -52,6 +56,17 @@ import {
   useWeeklyReportPreviewQuery,
   useGenerateWeeklyReport,
 } from "@/hooks/api/useWeeklyReports"
+import { useTaskListQuery } from "@/hooks/api/useTasks"
+import { useProjectListQuery } from "@/hooks/api/useProjects"
+import { useRiskListQuery } from "@/hooks/api/useRisks"
+import { useTeamTimeReportQuery, useMyTimeReportQuery } from "@/hooks/api/useTimeEntries"
+import { useCurrentUser } from "@/hooks/api/useAuth"
+import type { Task, Project, Risk, TimeEntry, TeamTimeReport } from "@/types"
+import {
+  PROJECT_STATUS_LABELS,
+  RISK_LEVEL_LABELS,
+  getRiskLevel,
+} from "@/lib/constants"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -65,229 +80,103 @@ interface KpiCardData {
   delta?: string
   deltaDir?: "up" | "down"
   subtitle: string
-  barColor: string
+  gradient: string
 }
 
-interface ProjectRow {
-  name: string
-  dotColor: string
-  barColor: string
-  pct: number
-  status: string
-  statusClass: string
-}
-
-interface RiskRow {
-  level: "Alto" | "Medio" | "Basso"
-  name: string
-  project: string
-  projectColor: string
-}
-
-interface TeamRow {
-  initials: string
-  name: string
-  avatarBg: string
-  avatarColor: string
-  barColor: string
-  barPct: number
-  hours: string
-  tasks: string
-}
-
-interface MilestoneRow {
-  dotColor: string
-  name: string
-  project: string
-  pct: number
-  pctColor: string
-  date: string
-  dateColor: string
-}
-
-interface TaskRow {
-  id: string
-  name: string
-  project: string
-  projectColor: string
-  status: "completato" | "in-corso" | "revisione" | "bloccato" | "da-iniziare"
-  op: string
-  opName: string
-  opBg: string
-  opColor: string
+interface HoursDayEntry {
+  day: string
   hours: number
-  deadline: string
-  closedAt: string
-}
-
-// ─── Static mock data ───────────────────────────────────────────────────────
-
-const HOURS_DATA = [
-  { day: "Lun", hours: 12 },
-  { day: "Mar", hours: 15 },
-  { day: "Mer", hours: 22 },
-  { day: "Gio", hours: 18 },
-  { day: "Ven", hours: 20 },
-  { day: "Sab", hours: 0 },
-  { day: "Dom", hours: 0 },
-]
-
-const DIREZIONE_KPIS: KpiCardData[] = [
-  {
-    label: "Task completati",
-    value: "12",
-    valueColor: "text-green-400",
-    delta: "↑ 4",
-    deltaDir: "up",
-    subtitle: "vs 8 settimana scorsa",
-    barColor: "from-green-800 to-green-500",
-  },
-  {
-    label: "Ore lavorate",
-    value: "87h",
-    valueColor: "text-blue-400",
-    delta: "↓ 5h",
-    deltaDir: "down",
-    subtitle: "su 3 risorse attive",
-    barColor: "from-blue-800 to-blue-500",
-  },
-  {
-    label: "Task aperti",
-    value: "34",
-    valueColor: "text-foreground",
-    delta: "↑ 2",
-    deltaDir: "up",
-    subtitle: "5 in scadenza questa settimana",
-    barColor: "from-slate-700 to-slate-500",
-  },
-  {
-    label: "Rischi attivi",
-    value: "3",
-    valueColor: "text-orange-400",
-    delta: "+1",
-    deltaDir: "up",
-    subtitle: "1 critico · 2 medi",
-    barColor: "from-orange-900 to-orange-500",
-  },
-  {
-    label: "Avanz. medio",
-    value: "58%",
-    valueColor: "text-indigo-300",
-    delta: "↑ 6%",
-    deltaDir: "up",
-    subtitle: "su 4 progetti attivi",
-    barColor: "from-indigo-900 to-indigo-500",
-  },
-]
-
-const DIPENDENTE_KPIS: KpiCardData[] = [
-  {
-    label: "Miei task chiusi",
-    value: "7",
-    valueColor: "text-green-400",
-    delta: "↑ 2",
-    deltaDir: "up",
-    subtitle: "vs 5 settimana scorsa",
-    barColor: "from-green-800 to-green-500",
-  },
-  {
-    label: "Ore lavorate",
-    value: "36h",
-    valueColor: "text-blue-400",
-    delta: "↑ 3h",
-    deltaDir: "up",
-    subtitle: "su ~40h settimanali",
-    barColor: "from-blue-800 to-blue-500",
-  },
-  {
-    label: "Task aperti",
-    value: "11",
-    valueColor: "text-foreground",
-    subtitle: "3 in scadenza questa settimana",
-    barColor: "from-slate-700 to-slate-500",
-  },
-  {
-    label: "In revisione",
-    value: "2",
-    valueColor: "text-yellow-400",
-    subtitle: "in attesa di approvazione",
-    barColor: "from-yellow-900 to-yellow-500",
-  },
-  {
-    label: "Progetti attivi",
-    value: "2",
-    valueColor: "text-indigo-300",
-    subtitle: "XR-200 · Med-Tracker",
-    barColor: "from-indigo-900 to-indigo-500",
-  },
-]
-
-const PROJECTS: ProjectRow[] = [
-  { name: "XR-200 Alpha", dotColor: "bg-blue-500", barColor: "from-blue-800 to-blue-500", pct: 62, status: "Attivo", statusClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
-  { name: "Med-Tracker v2", dotColor: "bg-green-500", barColor: "from-green-800 to-green-500", pct: 88, status: "Revisione", statusClass: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
-  { name: "OrthoScan Pro", dotColor: "bg-purple-500", barColor: "from-purple-800 to-purple-500", pct: 34, status: "Attivo", statusClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
-  { name: "ImplantDB 3.1", dotColor: "bg-orange-500", barColor: "from-orange-900 to-orange-500", pct: 15, status: "Avvio", statusClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
-]
-
-const RISKS: RiskRow[] = [
-  { level: "Alto", name: "Ritardo fornitura PCB rev.4", project: "XR-200", projectColor: "text-blue-400" },
-  { level: "Medio", name: "Incompatibilità driver IMU su RTOS", project: "XR-200", projectColor: "text-blue-400" },
-  { level: "Medio", name: "Validazione IEC 62304 in ritardo", project: "Med-Track", projectColor: "text-green-400" },
-]
-
-const TEAM_ROWS: TeamRow[] = [
-  { initials: "MB", name: "Marco Bianchi", avatarBg: "bg-green-500/15", avatarColor: "text-green-400", barColor: "from-green-800 to-green-500", barPct: 82, hours: "36h", tasks: "7 task" },
-  { initials: "NR", name: "Nicola Rossi", avatarBg: "bg-blue-500/15", avatarColor: "text-blue-400", barColor: "from-blue-800 to-blue-500", barPct: 65, hours: "28h", tasks: "3 task" },
-  { initials: "GF", name: "Giulia Ferrari", avatarBg: "bg-purple-500/15", avatarColor: "text-purple-400", barColor: "from-purple-800 to-purple-500", barPct: 53, hours: "23h", tasks: "2 task" },
-]
-
-const MILESTONES: MilestoneRow[] = [
-  { dotColor: "bg-green-400", name: "Med-Tracker — M4 Validazione", project: "Med-Tracker v2", pct: 88, pctColor: "text-green-400", date: "14 mar", dateColor: "text-orange-400" },
-  { dotColor: "bg-blue-400", name: "XR-200 — M3 Sviluppo", project: "XR-200 Alpha", pct: 67, pctColor: "text-blue-400", date: "28 mar", dateColor: "text-muted-foreground" },
-  { dotColor: "bg-purple-400", name: "OrthoScan — M1 Analisi req.", project: "OrthoScan Pro", pct: 90, pctColor: "text-purple-400", date: "2 apr", dateColor: "text-muted-foreground" },
-]
-
-const TASK_DATA: TaskRow[] = [
-  { id: "T-038", name: "Integrazione librerie I2C — test ping", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 4, deadline: "20 mar", closedAt: "08 mar" },
-  { id: "T-039", name: "Review specifiche IEC 62368-1 §8.4", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 3, deadline: "10 mar", closedAt: "06 mar" },
-  { id: "T-040", name: "Stesura piano di validazione v0.3", project: "Med-Track", projectColor: "text-green-400", status: "completato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 5, deadline: "09 mar", closedAt: "07 mar" },
-  { id: "T-041", name: "Aggiornamento FMEA dispositivo", project: "Med-Track", projectColor: "text-green-400", status: "completato", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 2.5, deadline: "08 mar", closedAt: "08 mar" },
-  { id: "T-042", name: "Integrazione sensori IMU", project: "XR-200", projectColor: "text-blue-400", status: "in-corso", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 18, deadline: "20 mar", closedAt: "—" },
-  { id: "T-043", name: "Firmware core v0.8", project: "XR-200", projectColor: "text-blue-400", status: "revisione", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 12, deadline: "22 mar", closedAt: "—" },
-  { id: "T-044", name: "Raccolta requisiti utente OrthoScan", project: "OrthoScan", projectColor: "text-purple-400", status: "completato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 6, deadline: "07 mar", closedAt: "07 mar" },
-  { id: "T-045", name: "Analisi schema elettrico rev.3", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 2.5, deadline: "05 mar", closedAt: "05 mar" },
-  { id: "T-046", name: "Setup ambiente CI/CD Med-Tracker", project: "Med-Track", projectColor: "text-green-400", status: "in-corso", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 7, deadline: "14 mar", closedAt: "—" },
-  { id: "T-047", name: "Calibrazione filtro Kalman", project: "XR-200", projectColor: "text-blue-400", status: "da-iniziare", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 0, deadline: "25 mar", closedAt: "—" },
-  { id: "T-048", name: "Documentazione API modulo BLE", project: "Med-Track", projectColor: "text-green-400", status: "bloccato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 1, deadline: "12 mar", closedAt: "—" },
-  { id: "T-049", name: "Test integrazione database pazienti", project: "Med-Track", projectColor: "text-green-400", status: "revisione", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 4, deadline: "11 mar", closedAt: "—" },
-  { id: "T-050", name: "Prototipo UI schermata principale", project: "OrthoScan", projectColor: "text-purple-400", status: "in-corso", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 9, deadline: "20 mar", closedAt: "—" },
-  { id: "T-051", name: "Revisione SRS §3 — requisiti hw", project: "XR-200", projectColor: "text-blue-400", status: "completato", op: "NR", opName: "Nicola R.", opBg: "bg-blue-500/15", opColor: "text-blue-400", hours: 3, deadline: "06 mar", closedAt: "06 mar" },
-  { id: "T-052", name: "Configurazione registro I2C @ 400kHz", project: "XR-200", projectColor: "text-blue-400", status: "in-corso", op: "MB", opName: "Marco B.", opBg: "bg-green-500/15", opColor: "text-green-400", hours: 5.5, deadline: "20 mar", closedAt: "—" },
-  { id: "T-053", name: "Redazione manuale utente v0.1", project: "Med-Track", projectColor: "text-green-400", status: "bloccato", op: "GF", opName: "Giulia F.", opBg: "bg-purple-500/15", opColor: "text-purple-400", hours: 2, deadline: "15 mar", closedAt: "—" },
-]
-
-const HEATMAP_DATA = [
-  2, 5, 8, 3, 6, 0, 0,
-  4, 7, 5, 9, 3, 0, 0,
-  6, 2, 8, 4, 7, 0, 0,
-  3, 6, 9, 5, 8, 0, 0,
-]
-
-const STATUS_CONFIG: Record<TaskRow["status"], { label: string; dotClass: string; badgeClass: string }> = {
-  completato:   { label: "Completato",   dotClass: "bg-green-500",  badgeClass: "bg-green-500/10 text-green-400 border-green-500/25" },
-  "in-corso":   { label: "In corso",     dotClass: "bg-blue-500",   badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
-  revisione:    { label: "Revisione",    dotClass: "bg-yellow-500", badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
-  bloccato:     { label: "Bloccato",     dotClass: "bg-red-500",    badgeClass: "bg-red-500/10 text-red-400 border-red-500/25" },
-  "da-iniziare":{ label: "Da iniziare",  dotClass: "bg-slate-500",  badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
-}
-
-const RISK_CONFIG: Record<RiskRow["level"], { className: string }> = {
-  Alto:  { className: "bg-red-500/10 text-red-400 border-red-500/20" },
-  Medio: { className: "bg-orange-500/8 text-orange-400 border-orange-500/20" },
-  Basso: { className: "bg-yellow-500/8 text-yellow-400 border-yellow-500/20" },
 }
 
 // ─── Animation variants ──────────────────────────────────────────────────────
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const DAY_LABELS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+
+function buildHoursPerDay(entries: TimeEntry[], weekStart: Date): HoursDayEntry[] {
+  const slots: HoursDayEntry[] = DAY_LABELS.map((day) => ({ day, hours: 0 }))
+  for (const entry of entries) {
+    if (!entry.startTime) continue
+    const d = parseISO(entry.startTime)
+    const diff = differenceInDays(startOfDay(d), startOfDay(weekStart))
+    if (diff >= 0 && diff <= 6) {
+      const minutes = entry.duration ?? 0
+      slots[diff].hours = Math.round((slots[diff].hours * 60 + minutes) / 60 * 10) / 10
+    }
+  }
+  return slots
+}
+
+function buildHeatmapData(entries: TimeEntry[], weekEnd: Date): number[] {
+  const cells = new Array<number>(28).fill(0)
+  const refMonday = startOfDay(addDays(startOfWeek(weekEnd, { weekStartsOn: 1 }), -21))
+  for (const entry of entries) {
+    if (!entry.startTime) continue
+    const d = startOfDay(parseISO(entry.startTime))
+    const diff = differenceInDays(d, refMonday)
+    if (diff >= 0 && diff < 28) {
+      cells[diff] = Math.round((cells[diff] * 60 + (entry.duration ?? 0)) / 60 * 10) / 10
+    }
+  }
+  return cells
+}
+
+const TASK_STATUS_DISPLAY: Record<string, { label: string; dotClass: string; badgeClass: string }> = {
+  done:        { label: "Completato",  dotClass: "bg-green-500",  badgeClass: "bg-green-500/10 text-green-400 border-green-500/25" },
+  in_progress: { label: "In corso",   dotClass: "bg-blue-500",   badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  review:      { label: "Revisione",  dotClass: "bg-yellow-500", badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+  blocked:     { label: "Bloccato",   dotClass: "bg-red-500",    badgeClass: "bg-red-500/10 text-red-400 border-red-500/25" },
+  todo:        { label: "Da iniziare",dotClass: "bg-slate-500",  badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
+  cancelled:   { label: "Annullato",  dotClass: "bg-gray-500",   badgeClass: "bg-gray-500/10 text-gray-400 border-gray-500/25" },
+}
+
+function milestoneProgress(task: Task): number {
+  if (task.subtasks && task.subtasks.length > 0) {
+    const done = task.subtasks.filter((s) => s.status === "done").length
+    return Math.round((done / task.subtasks.length) * 100)
+  }
+  if (task.status === "done") return 100
+  if (task.status === "review") return 80
+  if (task.status === "in_progress") return 50
+  return 0
+}
+
+function deadlineColor(dueDate: string | null | undefined): string {
+  const urgency = getDeadlineUrgency(dueDate)
+  if (urgency === "overdue" || urgency === "urgent") return "text-red-400"
+  if (urgency === "soon") return "text-orange-400"
+  return "text-muted-foreground"
+}
+
+const PROJECT_GRADIENT_KEYS = ["primary", "success", "milestone", "warning", "indigo", "slate"] as const
+type GradientKey = typeof PROJECT_GRADIENT_KEYS[number]
+
+const GRADIENT_CSS: Record<GradientKey, string> = {
+  primary: "from-blue-800 to-blue-500",
+  success: "from-green-800 to-green-500",
+  milestone: "from-purple-800 to-purple-500",
+  warning: "from-orange-900 to-orange-500",
+  indigo: "from-indigo-900 to-indigo-500",
+  slate: "from-slate-700 to-slate-500",
+}
+
+const DOT_COLORS: Record<GradientKey, string> = {
+  primary: "bg-blue-500",
+  success: "bg-green-500",
+  milestone: "bg-purple-500",
+  warning: "bg-orange-500",
+  indigo: "bg-indigo-500",
+  slate: "bg-slate-500",
+}
+
+const AVATAR_BG_CLASSES = [
+  "bg-green-500/15 text-green-400",
+  "bg-blue-500/15 text-blue-400",
+  "bg-purple-500/15 text-purple-400",
+  "bg-orange-500/15 text-orange-400",
+  "bg-indigo-500/15 text-indigo-400",
+]
 
 const containerVariants = {
   animate: { transition: { staggerChildren: 0.06 } },
@@ -301,21 +190,10 @@ const itemVariants = {
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function KpiCard({ kpi }: { kpi: KpiCardData }) {
-  // Convert Tailwind gradient class to CSS gradient for --kpi-gradient
-  const gradientMap: Record<string, string> = {
-    "from-green-800 to-green-500":   "linear-gradient(90deg, #166534, #22c55e)",
-    "from-blue-800 to-blue-500":     "linear-gradient(90deg, #1e3a5f, #3b82f6)",
-    "from-slate-700 to-slate-500":   "linear-gradient(90deg, #334155, #64748b)",
-    "from-orange-900 to-orange-500": "linear-gradient(90deg, #7c2d12, #f97316)",
-    "from-indigo-900 to-indigo-500": "linear-gradient(90deg, #1e1b4b, #6366f1)",
-    "from-yellow-900 to-yellow-500": "linear-gradient(90deg, #422006, #eab308)",
-  }
-  const cssGradient = gradientMap[kpi.barColor] ?? "linear-gradient(90deg, #3730a3, #6366f1)"
-
   return (
     <Card
       className="kpi-accent card-hover overflow-hidden"
-      style={{ "--kpi-gradient": cssGradient } as React.CSSProperties}
+      style={{ "--kpi-gradient": kpi.gradient } as React.CSSProperties}
     >
       <CardContent className="p-4">
         <p className="text-kpi-label mb-1">
@@ -350,14 +228,20 @@ function KpiCard({ kpi }: { kpi: KpiCardData }) {
 }
 
 interface HoursBarChartProps {
-  data: typeof HOURS_DATA
-  totalLabel: string
-  avgLabel: string
-  peakLabel: string
+  data: HoursDayEntry[]
+  isLoading?: boolean
 }
 
-function HoursBarChart({ data, totalLabel, avgLabel, peakLabel }: HoursBarChartProps) {
-  const maxHours = Math.max(...data.map((d) => d.hours))
+function HoursBarChart({ data, isLoading }: HoursBarChartProps) {
+  const workDays = data.filter((d, i) => i < 5 && d.hours > 0)
+  const totalHours = data.reduce((s, d) => s + d.hours, 0)
+  const avgHours = workDays.length > 0 ? totalHours / workDays.length : 0
+  const maxEntry = data.reduce((a, b) => (b.hours > a.hours ? b : a), { day: "—", hours: 0 })
+
+  if (isLoading) {
+    return <Skeleton className="h-24 w-full" />
+  }
+
   return (
     <div className="space-y-3">
       <ResponsiveContainer width="100%" height={80}>
@@ -383,7 +267,7 @@ function HoursBarChart({ data, totalLabel, avgLabel, peakLabel }: HoursBarChartP
           <Bar dataKey="hours" radius={[3, 3, 0, 0]}>
             {data.map((entry, index) => {
               const isWeekend = index >= 5
-              const isPeak = entry.hours === maxHours && entry.hours > 0
+              const isPeak = entry.hours > 0 && entry.hours === maxEntry.hours
               return (
                 <Cell
                   key={`cell-${index}`}
@@ -391,8 +275,8 @@ function HoursBarChart({ data, totalLabel, avgLabel, peakLabel }: HoursBarChartP
                     isWeekend
                       ? "hsl(var(--border))"
                       : isPeak
-                      ? "#4ade80"
-                      : "#3b82f6"
+                      ? "hsl(var(--success))"
+                      : "hsl(var(--primary))"
                   }
                 />
               )
@@ -403,87 +287,77 @@ function HoursBarChart({ data, totalLabel, avgLabel, peakLabel }: HoursBarChartP
       <div className="flex items-center gap-4 text-[10px]">
         <span>
           <span className="text-muted-foreground">Totale</span>
-          <span className="font-bold text-blue-400 ml-1.5 text-data">{totalLabel}</span>
+          <span className="font-bold text-blue-400 ml-1.5 text-data">
+            {totalHours > 0 ? `${totalHours.toFixed(1)}h` : "—"}
+          </span>
         </span>
         <span>
           <span className="text-muted-foreground">Media/giorno</span>
-          <span className="font-bold text-foreground ml-1.5 text-data">{avgLabel}</span>
+          <span className="font-bold text-foreground ml-1.5 text-data">
+            {avgHours > 0 ? `${avgHours.toFixed(1)}h` : "—"}
+          </span>
         </span>
         <span>
           <span className="text-muted-foreground">Picco</span>
-          <span className="font-bold text-green-400 ml-1.5 text-data">{peakLabel}</span>
+          <span className="font-bold text-green-400 ml-1.5 text-data">
+            {maxEntry.hours > 0 ? `${maxEntry.day} · ${maxEntry.hours}h` : "—"}
+          </span>
         </span>
       </div>
     </div>
   )
 }
 
-function DonutChart() {
-  const total = 44
+function DonutChart({ tasks, isLoading }: { tasks: Task[]; isLoading?: boolean }) {
+  const counts = useMemo(() => ({
+    done: tasks.filter((t) => t.status === "done").length,
+    in_progress: tasks.filter((t) => t.status === "in_progress").length,
+    review: tasks.filter((t) => t.status === "review").length,
+    todo: tasks.filter((t) => t.status === "todo").length,
+    blocked: tasks.filter((t) => t.status === "blocked").length,
+  }), [tasks])
+  const total = Object.values(counts).reduce((s, v) => s + v, 0)
   const circ = 2 * Math.PI * 30
   const segments = [
-    { value: 12, color: "#22c55e", label: "Completati", textColor: "text-green-400" },
-    { value: 14, color: "#3b82f6", label: "In corso", textColor: "text-blue-400" },
-    { value: 5,  color: "#eab308", label: "In revisione", textColor: "text-yellow-400" },
-    { value: 10, color: "#475569", label: "Da iniziare", textColor: "text-slate-400" },
-    { value: 3,  color: "#ef4444", label: "Bloccati", textColor: "text-red-400" },
+    { value: counts.done,        color: "hsl(var(--success))",          label: "Completati",   textColor: "text-green-400" },
+    { value: counts.in_progress, color: "hsl(var(--primary))",          label: "In corso",     textColor: "text-blue-400" },
+    { value: counts.review,      color: "hsl(var(--warning))",          label: "In revisione", textColor: "text-yellow-400" },
+    { value: counts.todo,        color: "hsl(var(--muted-foreground))", label: "Da iniziare",  textColor: "text-slate-400" },
+    { value: counts.blocked,     color: "hsl(var(--destructive))",      label: "Bloccati",     textColor: "text-red-400" },
   ]
-
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-4">
+        <Skeleton className="w-[90px] h-[90px] rounded-full flex-shrink-0" />
+        <div className="flex flex-col gap-1.5 flex-1">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-3 w-full" />)}
+        </div>
+      </div>
+    )
+  }
   let offset = 0
   const arcs = segments.map((seg) => {
-    const dash = (seg.value / total) * circ
+    const dash = total > 0 ? (seg.value / total) * circ : 0
     const gap = circ - dash
     const arc = { dash, gap, offset, ...seg }
     offset += dash
     return arc
   })
-
   return (
     <div className="flex items-center gap-4">
       <svg width="90" height="90" viewBox="0 0 90 90" className="flex-shrink-0">
-        <circle
-          cx="45" cy="45" r="30"
-          fill="none"
-          stroke="hsl(var(--muted))"
-          strokeWidth="10"
-        />
+        <circle cx="45" cy="45" r="30" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
         {arcs.map((arc, i) => (
-          <circle
-            key={i}
-            cx="45" cy="45" r="30"
-            fill="none"
-            stroke={arc.color}
-            strokeWidth="10"
-            strokeDasharray={`${arc.dash} ${arc.gap}`}
-            strokeDashoffset={-arc.offset}
-            transform="rotate(-90 45 45)"
-          />
+          <circle key={i} cx="45" cy="45" r="30" fill="none" stroke={arc.color} strokeWidth="10"
+            strokeDasharray={`${arc.dash} ${arc.gap}`} strokeDashoffset={-arc.offset} transform="rotate(-90 45 45)" />
         ))}
-        <text
-          x="45" y="41"
-          textAnchor="middle"
-          fill="hsl(var(--foreground))"
-          fontSize="14"
-          fontWeight="700"
-        >
-          {total}
-        </text>
-        <text
-          x="45" y="52"
-          textAnchor="middle"
-          fill="hsl(var(--muted-foreground))"
-          fontSize="7"
-        >
-          task
-        </text>
+        <text x="45" y="41" textAnchor="middle" fill="hsl(var(--foreground))" fontSize="14" fontWeight="700">{total}</text>
+        <text x="45" y="52" textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="7">task</text>
       </svg>
       <div className="flex flex-col gap-1.5 flex-1">
         {segments.map((seg) => (
           <div key={seg.label} className="flex items-center gap-2 text-[11px]">
-            <span
-              className="w-2 h-2 rounded-sm flex-shrink-0"
-              style={{ background: seg.color }}
-            />
+            <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: seg.color }} />
             <span className="text-muted-foreground flex-1">{seg.label}</span>
             <span className={cn("font-semibold", seg.textColor)}>{seg.value}</span>
           </div>
@@ -493,67 +367,88 @@ function DonutChart() {
   )
 }
 
-function ProjectRows({ projects }: { projects: ProjectRow[] }) {
+function ProjectRows({ projects, isLoading }: { projects: Project[]; isLoading?: boolean }) {
+  if (isLoading) return <div className="divide-y divide-border/50">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 my-1" />)}</div>
+  if (projects.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">Nessun progetto attivo</p>
   return (
     <div className="divide-y divide-border/50">
-      {projects.map((p) => (
-        <div key={p.name} className="flex items-center gap-2.5 py-2">
-          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", p.dotColor)} />
+      {projects.map((p, idx) => {
+        const gKey = PROJECT_GRADIENT_KEYS[idx % PROJECT_GRADIENT_KEYS.length]
+        const stats = p.taskStats
+        const pct = stats && stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
+        const statusLabel = PROJECT_STATUS_LABELS[p.status] ?? p.status
+        const statusClass =
+          p.status === "active" ? "bg-blue-500/10 text-blue-400 border-blue-500/25" :
+          p.status === "completed" ? "bg-green-500/10 text-green-400 border-green-500/25" :
+          p.status === "on_hold" ? "bg-amber-500/10 text-amber-400 border-amber-500/25" :
+                                   "bg-slate-500/10 text-slate-400 border-slate-500/25"
+        return (
+        <div key={p.id} className="flex items-center gap-2.5 py-2">
+          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", DOT_COLORS[gKey])} />
           <span className="flex-1 text-xs font-medium truncate text-foreground">{p.name}</span>
           <div className="w-20 flex-shrink-0">
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn("h-full rounded-full bg-gradient-to-r", p.barColor)}
-                style={{ width: `${p.pct}%` }}
-              />
+              <div className={cn("h-full rounded-full bg-gradient-to-r", GRADIENT_CSS[gKey])} style={{ width: `${pct}%` }} />
             </div>
           </div>
-          <span className="text-xs font-semibold w-8 text-right flex-shrink-0 text-foreground">
-            {p.pct}%
-          </span>
-          <Badge
-            variant="outline"
-            className={cn("text-[10px] px-1.5 py-0 flex-shrink-0", p.statusClass)}
-          >
-            {p.status}
+          <span className="text-xs font-semibold w-8 text-right flex-shrink-0 text-foreground">{pct}%</span>
+          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex-shrink-0", statusClass)}>
+            {statusLabel}
           </Badge>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
 
-function RisksCard({ risks }: { risks: RiskRow[] }) {
+function RisksCard({ risks, isLoading }: { risks: Risk[]; isLoading?: boolean }) {
+  if (isLoading) return <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-7" />)}</div>
+  if (risks.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">Nessun rischio aperto</p>
+  const criticalCount = risks.filter((r) => getRiskLevel(r.probability * r.impact) === "critical").length
+  const highCount     = risks.filter((r) => getRiskLevel(r.probability * r.impact) === "high").length
+  const mediumCount   = risks.filter((r) => getRiskLevel(r.probability * r.impact) === "medium").length
+  const lowCount      = risks.filter((r) => getRiskLevel(r.probability * r.impact) === "low").length
   return (
     <div className="space-y-3">
       <div className="divide-y divide-border/50">
-        {risks.map((r, i) => (
-          <div key={i} className="flex items-center gap-2 py-1.5">
-            <Badge
-              variant="outline"
-              className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 flex-shrink-0 min-w-[42px] text-center justify-center", RISK_CONFIG[r.level].className)}
-            >
-              {r.level}
+        {risks.slice(0, 5).map((r) => {
+          const level = getRiskLevel(r.probability * r.impact)
+          const levelLabel = RISK_LEVEL_LABELS[level] ?? level
+          const levelClass =
+            level === "critical" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+            level === "high"     ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
+            level === "medium"   ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                   "bg-green-500/10 text-green-400 border-green-500/20"
+          return (
+          <div key={r.id} className="flex items-center gap-2 py-1.5">
+            <Badge variant="outline" className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 flex-shrink-0 min-w-[42px] text-center justify-center", levelClass)}>
+              {levelLabel}
             </Badge>
-            <span className="flex-1 text-xs font-medium truncate text-foreground">{r.name}</span>
-            <span className={cn("text-[10px] whitespace-nowrap flex-shrink-0", r.projectColor)}>
-              {r.project}
+            <span className="flex-1 text-xs font-medium truncate text-foreground">{r.title}</span>
+            <span className="text-[10px] whitespace-nowrap flex-shrink-0 text-muted-foreground">
+              {r.project?.name ?? "—"}
             </span>
           </div>
-        ))}
+          )
+        })}
       </div>
       <div className="h-px bg-border" />
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <div className="text-center bg-red-500/6 border border-red-500/15 rounded p-2">
-          <div className="text-base font-bold text-red-400">1</div>
+          <div className="text-base font-bold text-red-400">{criticalCount}</div>
           <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Critico</div>
         </div>
         <div className="text-center bg-orange-500/6 border border-orange-500/15 rounded p-2">
-          <div className="text-base font-bold text-orange-400">2</div>
+          <div className="text-base font-bold text-orange-400">{highCount}</div>
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Alto</div>
+        </div>
+        <div className="text-center bg-amber-500/8 border border-amber-500/20 rounded p-2">
+          <div className="text-base font-bold text-amber-400">{mediumCount}</div>
           <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Medio</div>
         </div>
         <div className="text-center bg-slate-500/8 border border-slate-500/20 rounded p-2">
-          <div className="text-base font-bold text-slate-400">0</div>
+          <div className="text-base font-bold text-slate-400">{lowCount}</div>
           <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Basso</div>
         </div>
       </div>
@@ -561,7 +456,17 @@ function RisksCard({ risks }: { risks: RiskRow[] }) {
   )
 }
 
-function TeamRows({ rows }: { rows: TeamRow[] }) {
+function TeamRows({ report, tasks, isLoading }: { report: TeamTimeReport | undefined; tasks: Task[]; isLoading?: boolean }) {
+  if (isLoading) return <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+  if (!report || report.byUser.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">Nessun dato disponibile</p>
+  const maxHours = Math.max(...report.byUser.map((u) => u.totalMinutes / 60), 1)
+  const totalHours = report.summary.totalHours
+  const doneByUser: Record<string, number> = {}
+  for (const t of tasks) {
+    if (t.status === "done" && t.assigneeId) {
+      doneByUser[t.assigneeId] = (doneByUser[t.assigneeId] ?? 0) + 1
+    }
+  }
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-[1fr_auto_auto] text-[9px] font-semibold uppercase tracking-wider text-muted-foreground pb-1 border-b border-border mb-1">
@@ -570,81 +475,66 @@ function TeamRows({ rows }: { rows: TeamRow[] }) {
         <span className="text-right min-w-[55px]">Task chiusi</span>
       </div>
       <div className="divide-y divide-border/50">
-        {rows.map((r) => (
-          <div key={r.name} className="flex items-center gap-2.5 py-2">
-            <span
-              className={cn(
-                "w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0",
-                r.avatarBg,
-                r.avatarColor
-              )}
-            >
-              {r.initials}
-            </span>
+        {report.byUser.map((u, idx) => {
+          const hours = u.totalMinutes / 60
+          const barPct = Math.round((hours / maxHours) * 100)
+          const avClasses = AVATAR_BG_CLASSES[idx % AVATAR_BG_CLASSES.length]
+          const initials = `${u.firstName.charAt(0)}${u.lastName.charAt(0)}`.toUpperCase()
+          const gKey = PROJECT_GRADIENT_KEYS[idx % PROJECT_GRADIENT_KEYS.length]
+          const doneTasks = doneByUser[u.userId] ?? 0
+          return (
+          <div key={u.userId} className="flex items-center gap-2.5 py-2">
+            <span className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0", avClasses)}>{initials}</span>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium text-foreground">{r.name}</div>
+              <div className="text-xs font-medium text-foreground">{u.firstName} {u.lastName}</div>
               <div className="h-1 rounded-full bg-muted overflow-hidden mt-1">
-                <div
-                  className={cn("h-full rounded-full bg-gradient-to-r", r.barColor)}
-                  style={{ width: `${r.barPct}%` }}
-                />
+                <div className={cn("h-full rounded-full bg-gradient-to-r", GRADIENT_CSS[gKey])} style={{ width: `${barPct}%` }} />
               </div>
             </div>
-            <span className="text-xs font-semibold text-blue-400 min-w-[36px] text-right">
-              {r.hours}
-            </span>
-            <span className="text-[10px] text-muted-foreground min-w-[50px] text-right">
-              {r.tasks}
-            </span>
+            <span className="text-xs font-semibold text-blue-400 min-w-[36px] text-right">{hours.toFixed(1)}h</span>
+            <span className="text-[10px] text-muted-foreground min-w-[50px] text-right">{doneTasks} task</span>
           </div>
-        ))}
+          )
+        })}
       </div>
       <div className="h-px bg-border" />
       <div className="flex gap-4 text-[10px] pt-1">
-        <span>
-          <span className="text-muted-foreground">Totale team</span>
-          <span className="font-bold text-blue-400 ml-1.5">87h</span>
-        </span>
-        <span>
-          <span className="text-muted-foreground">Capacità</span>
-          <span className="font-bold text-foreground ml-1.5">120h</span>
-        </span>
-        <span>
-          <span className="text-muted-foreground">Utilizzo</span>
-          <span className="font-bold text-indigo-300 ml-1.5">72.5%</span>
-        </span>
+        <span><span className="text-muted-foreground">Totale team</span><span className="font-bold text-blue-400 ml-1.5">{totalHours.toFixed(1)}h</span></span>
+        <span><span className="text-muted-foreground">Risorse</span><span className="font-bold text-foreground ml-1.5">{report.byUser.length}</span></span>
       </div>
     </div>
   )
 }
 
-function MilestoneItems({ items }: { items: MilestoneRow[] }) {
+function MilestoneItems({ milestones, isLoading }: { milestones: Task[]; isLoading?: boolean }) {
+  if (isLoading) return <div className="space-y-1.5">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+  if (milestones.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">Nessuna milestone nei prossimi 30 giorni</p>
   return (
     <div className="space-y-1.5">
-      {items.map((m, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-2.5 px-3 py-2 bg-accent/30 border border-border rounded hover:border-indigo-500/25 transition-colors cursor-pointer"
-        >
-          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", m.dotColor)} />
+      {milestones.map((m, idx) => {
+        const gKey = PROJECT_GRADIENT_KEYS[idx % PROJECT_GRADIENT_KEYS.length]
+        const pct = milestoneProgress(m)
+        const pctColorClass = pct >= 80 ? "text-green-400" : pct >= 50 ? "text-blue-400" : "text-muted-foreground"
+        const dtColor = deadlineColor(m.dueDate)
+        return (
+        <div key={m.id} className="flex items-center gap-2.5 px-3 py-2 bg-accent/30 border border-border rounded hover:border-indigo-500/25 transition-colors cursor-pointer">
+          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", DOT_COLORS[gKey])} />
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-foreground truncate">{m.name}</div>
-            <div className="text-[10px] text-muted-foreground">{m.project}</div>
+            <div className="text-xs font-medium text-foreground truncate">{m.title}</div>
+            <div className="text-[10px] text-muted-foreground">{m.project?.name ?? "—"}</div>
           </div>
-          <span className={cn("text-xs font-semibold whitespace-nowrap min-w-[32px] text-right", m.pctColor)}>
-            {m.pct}%
-          </span>
-          <span className={cn("text-[10px] whitespace-nowrap ml-2", m.dateColor)}>
-            {m.date}
-          </span>
+          <span className={cn("text-xs font-semibold whitespace-nowrap min-w-[32px] text-right", pctColorClass)}>{pct}%</span>
+          <span className={cn("text-[10px] whitespace-nowrap ml-2", dtColor)}>{m.dueDate ? formatDate(m.dueDate, "d MMM") : "—"}</span>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
 
 interface TaskTableProps {
-  tasks: TaskRow[]
+  tasks: Task[]
+  isLoading?: boolean
   filterStatus: string
   filterOp: string
   filterProject: string
@@ -653,31 +543,43 @@ interface TaskTableProps {
   onFilterProject: (v: string) => void
 }
 
-function TaskTable({
-  tasks,
-  filterStatus,
-  filterOp,
-  filterProject,
-  onFilterStatus,
-  onFilterOp,
-  onFilterProject,
-}: TaskTableProps) {
-  const filtered = useMemo(() => {
-    return tasks.filter(
-      (t) =>
-        (!filterStatus || t.status === filterStatus) &&
-        (!filterOp || t.op === filterOp) &&
-        (!filterProject || t.project === filterProject)
-    )
-  }, [tasks, filterStatus, filterOp, filterProject])
-
-  const counts = useMemo(() => {
-    const done = tasks.filter((t) => t.status === "completato").length
-    const active = tasks.filter((t) => t.status === "in-corso").length
-    const review = tasks.filter((t) => t.status === "revisione").length
-    const blocked = tasks.filter((t) => t.status === "bloccato").length
-    return { done, active, review, blocked }
+function TaskTable({ tasks, isLoading, filterStatus, filterOp, filterProject, onFilterStatus, onFilterOp, onFilterProject }: TaskTableProps) {
+  const assignees = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>()
+    for (const t of tasks) {
+      if (t.assignee) map.set(t.assignee.id, { id: t.assignee.id, name: `${t.assignee.firstName} ${t.assignee.lastName}` })
+    }
+    return Array.from(map.values())
   }, [tasks])
+  const projectOpts = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>()
+    for (const t of tasks) {
+      if (t.project) map.set(t.project.id, { id: t.project.id, name: t.project.name })
+    }
+    return Array.from(map.values())
+  }, [tasks])
+  const filtered = useMemo(() => tasks.filter(
+    (t) =>
+      (filterStatus === "__all__" || t.status === filterStatus) &&
+      (filterOp === "__all__" || t.assigneeId === filterOp) &&
+      (filterProject === "__all__" || t.projectId === filterProject)
+  ), [tasks, filterStatus, filterOp, filterProject])
+
+  const counts = useMemo(() => ({
+    done:        tasks.filter((t) => t.status === "done").length,
+    in_progress: tasks.filter((t) => t.status === "in_progress").length,
+    review:      tasks.filter((t) => t.status === "review").length,
+    blocked:     tasks.filter((t) => t.status === "blocked").length,
+  }), [tasks])
+
+  if (isLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <div className="px-4 py-3 border-b border-border"><Skeleton className="h-4 w-48" /></div>
+        <div className="p-4 space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8" />)}</div>
+      </Card>
+    )
+  }
 
   return (
     <Card className="overflow-hidden">
@@ -691,7 +593,7 @@ function TaskTable({
             {counts.done} chiusi
           </Badge>
           <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/25">
-            {counts.active} in corso
+            {counts.in_progress} in corso
           </Badge>
           <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/25">
             {counts.review} in revisione
@@ -706,34 +608,30 @@ function TaskTable({
               <SelectValue placeholder="Tutti gli stati" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tutti gli stati</SelectItem>
-              <SelectItem value="completato">Completati</SelectItem>
-              <SelectItem value="in-corso">In corso</SelectItem>
-              <SelectItem value="revisione">In revisione</SelectItem>
-              <SelectItem value="bloccato">Bloccati</SelectItem>
-              <SelectItem value="da-iniziare">Da iniziare</SelectItem>
+              <SelectItem value="__all__">Tutti gli stati</SelectItem>
+              <SelectItem value="done">Completati</SelectItem>
+              <SelectItem value="in_progress">In corso</SelectItem>
+              <SelectItem value="review">In revisione</SelectItem>
+              <SelectItem value="blocked">Bloccati</SelectItem>
+              <SelectItem value="todo">Da iniziare</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterOp} onValueChange={onFilterOp}>
-            <SelectTrigger className="h-7 text-[11px] w-[130px]">
+            <SelectTrigger className="h-7 text-[11px] w-[140px]">
               <SelectValue placeholder="Tutti gli operatori" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tutti gli operatori</SelectItem>
-              <SelectItem value="MB">Marco Bianchi</SelectItem>
-              <SelectItem value="NR">Nicola Rossi</SelectItem>
-              <SelectItem value="GF">Giulia Ferrari</SelectItem>
+              <SelectItem value="__all__">Tutti gli operatori</SelectItem>
+              {assignees.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterProject} onValueChange={onFilterProject}>
-            <SelectTrigger className="h-7 text-[11px] w-[130px]">
+            <SelectTrigger className="h-7 text-[11px] w-[140px]">
               <SelectValue placeholder="Tutti i progetti" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tutti i progetti</SelectItem>
-              <SelectItem value="XR-200">XR-200 Alpha</SelectItem>
-              <SelectItem value="Med-Track">Med-Tracker v2</SelectItem>
-              <SelectItem value="OrthoScan">OrthoScan Pro</SelectItem>
+              <SelectItem value="__all__">Tutti i progetti</SelectItem>
+              {projectOpts.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -756,18 +654,32 @@ function TaskTable({
           Nessun task trovato
         </div>
       ) : (
-        filtered.map((t) => {
-          const s = STATUS_CONFIG[t.status]
+        filtered.map((t, idx) => {
+          const s = TASK_STATUS_DISPLAY[t.status] ?? TASK_STATUS_DISPLAY["todo"]
+          const assigneeName = t.assignee
+            ? `${t.assignee.firstName} ${t.assignee.lastName}`
+            : "—"
+          const initials = t.assignee
+            ? getUserInitials(t.assignee.firstName, t.assignee.lastName)
+            : "?"
+          const avatarBg = AVATAR_BG_CLASSES[idx % AVATAR_BG_CLASSES.length]
+          const hoursVal = t.actualHours ?? 0
+          const dueDateText = t.dueDate ? formatDate(t.dueDate, "d MMM") : "—"
+          const dueDateClass = deadlineColor(t.dueDate)
+          const closedText =
+            t.status === "done" && t.updatedAt ? formatDate(t.updatedAt, "d MMM") : "—"
           return (
             <div
               key={t.id}
               className="row-accent grid grid-cols-[2fr_1fr_1fr_1fr_60px_90px_80px] px-4 py-2 border-b border-border/40 last:border-0 items-center cursor-pointer text-xs"
             >
               <div className="flex items-center gap-1.5 pr-3 min-w-0">
-                <span className="font-mono text-[9px] text-muted-foreground flex-shrink-0">{t.id}</span>
-                <span className="truncate font-medium text-foreground">{t.name}</span>
+                <span className="font-mono text-[9px] text-muted-foreground flex-shrink-0">{t.code}</span>
+                <span className="truncate font-medium text-foreground">{t.title}</span>
               </div>
-              <span className={cn("text-[11px] font-medium", t.projectColor)}>{t.project}</span>
+              <span className="text-[11px] font-medium text-blue-400 truncate">
+                {t.project?.name ?? "—"}
+              </span>
               <div className="flex items-center gap-1.5">
                 <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", s.dotClass)} />
                 <span className="text-[11px] font-medium text-foreground">{s.label}</span>
@@ -776,19 +688,18 @@ function TaskTable({
                 <span
                   className={cn(
                     "w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0",
-                    t.opBg,
-                    t.opColor
+                    avatarBg
                   )}
                 >
-                  {t.op}
+                  {initials}
                 </span>
-                <span className="text-[11px] font-medium text-foreground truncate">{t.opName}</span>
+                <span className="text-[11px] font-medium text-foreground truncate">{assigneeName}</span>
               </div>
               <span className="text-right text-xs font-semibold text-blue-400 text-data">
-                {t.hours > 0 ? `${t.hours}h` : "—"}
+                {hoursVal > 0 ? `${hoursVal}h` : "—"}
               </span>
-              <span className="text-[11px] text-orange-400">{t.deadline}</span>
-              <span className="text-[11px] text-muted-foreground">{t.closedAt}</span>
+              <span className={cn("text-[11px]", dueDateClass)}>{dueDateText}</span>
+              <span className="text-[11px] text-muted-foreground">{closedText}</span>
             </div>
           )
         })
@@ -797,9 +708,27 @@ function TaskTable({
   )
 }
 
-function ActivityHeatmap() {
-  const maxVal = Math.max(...HEATMAP_DATA)
+function ActivityHeatmap({ data, isLoading }: { data: number[]; isLoading?: boolean }) {
+  const heatData = data.length === 28 ? data : new Array<number>(28).fill(0)
+  const maxVal = Math.max(...heatData, 1)
   const days = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-1">
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {days.map((d) => (
+            <Skeleton key={d} className="h-2 w-full" />
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 28 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square rounded" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -813,19 +742,19 @@ function ActivityHeatmap() {
       </div>
       {/* Grid */}
       <div className="grid grid-cols-7 gap-1">
-        {HEATMAP_DATA.map((v, i) => {
+        {heatData.map((v, i) => {
           const isWeekend = i % 7 >= 5
           const intensity = maxVal > 0 ? v / maxVal : 0
           return (
             <div
               key={i}
-              title={`${v} attività`}
+              title={`${v.toFixed(1)}h`}
               className="aspect-square rounded cursor-default transition-opacity hover:opacity-70"
               style={{
                 background:
                   isWeekend || v === 0
                     ? "hsl(var(--muted))"
-                    : `rgba(99,102,241,${0.15 + intensity * 0.85})`,
+                    : `hsl(var(--primary) / ${0.15 + intensity * 0.85})`,
                 opacity: isWeekend ? 0.4 : 1,
               }}
             />
@@ -836,32 +765,15 @@ function ActivityHeatmap() {
       <div className="flex items-center gap-1.5 mt-3">
         <span className="text-[10px] text-muted-foreground">Meno</span>
         <div className="w-3 h-3 rounded-sm bg-muted" />
-        <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(99,102,241,0.2)" }} />
-        <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(99,102,241,0.4)" }} />
-        <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(99,102,241,0.65)" }} />
-        <div className="w-3 h-3 rounded-sm bg-indigo-500" />
+        <div className="w-3 h-3 rounded-sm" style={{ background: "hsl(var(--primary) / 0.2)" }} />
+        <div className="w-3 h-3 rounded-sm" style={{ background: "hsl(var(--primary) / 0.4)" }} />
+        <div className="w-3 h-3 rounded-sm" style={{ background: "hsl(var(--primary) / 0.65)" }} />
+        <div className="w-3 h-3 rounded-sm bg-primary" />
         <span className="text-[10px] text-muted-foreground">Più</span>
       </div>
     </div>
   )
 }
-
-// ─── Dipendente-view task list ────────────────────────────────────────────────
-
-const DIP_TASKS = [
-  { name: "Integrazione sensori IMU", project: "XR-200", projectColor: "text-blue-400", dotClass: "bg-blue-500", badge: "In corso", badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
-  { name: "Configurazione registro I2C", project: "XR-200", projectColor: "text-blue-400", dotClass: "bg-blue-500", badge: "In corso", badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
-  { name: "Firmware core v0.8", project: "XR-200", projectColor: "text-blue-400", dotClass: "bg-yellow-500", badge: "Revisione", badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
-  { name: "Test validazione modulo BLE", project: "Med-Track", projectColor: "text-green-400", dotClass: "bg-slate-500", badge: "Da iniziare", badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
-  { name: "Stesura SRS sezione 4", project: "Med-Track", projectColor: "text-green-400", dotClass: "bg-slate-500", badge: "Da iniziare", badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/25" },
-]
-
-const DIP_DEADLINES = [
-  { name: "Configurazione I2C @ 400kHz", context: "XR-200 · Task", dotClass: "bg-red-400", dateText: "20 mar · 9 gg", dateColor: "text-red-400", borderClass: "border-red-500/25" },
-  { name: "Firmware core v0.8", context: "XR-200 · In revisione", dotClass: "bg-orange-400", dateText: "22 mar · 11 gg", dateColor: "text-orange-400", borderClass: "" },
-  { name: "Calibrazione sensore asse Z", context: "XR-200 · Subtask", dotClass: "bg-blue-400", dateText: "25 mar · 14 gg", dateColor: "text-muted-foreground", borderClass: "" },
-  { name: "Test validazione BLE", context: "Med-Track · Task", dotClass: "bg-slate-400", dateText: "2 apr · 22 gg", dateColor: "text-muted-foreground", borderClass: "" },
-]
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -871,10 +783,11 @@ export default function WeeklyReportPage() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [period, setPeriod] = useState<PeriodView>("week")
   const [roleView, setRoleView] = useState<RoleView>("direzione")
-  const [filterStatus, setFilterStatus] = useState("")
-  const [filterOp, setFilterOp] = useState("")
-  const [filterProject, setFilterProject] = useState("")
+  const [filterStatus, setFilterStatus] = useState("__all__")
+  const [filterOp, setFilterOp] = useState("__all__")
+  const [filterProject, setFilterProject] = useState("__all__")
 
+  const currentUser = useCurrentUser()
   const preview = useWeeklyReportPreviewQuery()
   const generateReport = useGenerateWeeklyReport()
 
@@ -888,31 +801,193 @@ export default function WeeklyReportPage() {
     return { weekStart: ws, weekEnd: we, weekNumber: wn, weekRangeLabel: label }
   }, [weekOffset])
 
-  // Merge preview data into KPIs where available
-  const previewData = preview.data as Record<string, unknown> | undefined
-  const completedCount = previewData
-    ? (Array.isArray(previewData.completedTasks)
-        ? previewData.completedTasks.length
-        : typeof previewData.completedTasksCount === "number"
-        ? previewData.completedTasksCount
-        : null)
-    : null
+  // Real data hooks
+  const tasksQuery = useTaskListQuery({ limit: 200 })
+  const projectsQuery = useProjectListQuery({ limit: 100 })
+  const risksQuery = useRiskListQuery({ limit: 100, status: "open" })
+  const teamTimeQuery = useTeamTimeReportQuery({
+    from: weekStart.toISOString(),
+    to: weekEnd.toISOString(),
+  })
+  const myTimeQuery = useMyTimeReportQuery({
+    from: weekStart.toISOString(),
+    to: weekEnd.toISOString(),
+  })
 
-  const totalHoursFromAPI =
-    previewData && typeof previewData.totalHours === "number"
-      ? previewData.totalHours
-      : null
+  // Extract arrays from paginated responses
+  const allTasks = useMemo<Task[]>(() => {
+    const raw = tasksQuery.data
+    if (!raw) return []
+    if (Array.isArray(raw)) return raw
+    if (typeof raw === "object" && "data" in raw && Array.isArray((raw as { data: unknown }).data))
+      return (raw as { data: Task[] }).data
+    return []
+  }, [tasksQuery.data])
 
+  const activeProjects = useMemo<Project[]>(() => {
+    const raw = projectsQuery.data
+    let list: Project[] = []
+    if (!raw) return list
+    if (Array.isArray(raw)) list = raw
+    else if (typeof raw === "object" && "data" in raw && Array.isArray((raw as { data: unknown }).data))
+      list = (raw as { data: Project[] }).data
+    return list.filter((p) => p.status === "active")
+  }, [projectsQuery.data])
+
+  const openRisks = useMemo<Risk[]>(() => {
+    const raw = risksQuery.data
+    if (!raw) return []
+    if (Array.isArray(raw)) return raw
+    if (typeof raw === "object" && "data" in raw && Array.isArray((raw as { data: unknown }).data))
+      return (raw as { data: Risk[] }).data
+    return []
+  }, [risksQuery.data])
+
+  const milestones = useMemo(
+    () => allTasks.filter((t) => t.taskType === "milestone"),
+    [allTasks]
+  )
+
+  const hoursData = useMemo(
+    () => buildHoursPerDay((myTimeQuery.data as { entries?: TimeEntry[] })?.entries ?? [], weekStart),
+    [myTimeQuery.data, weekStart]
+  )
+
+  const heatmapData = useMemo(
+    () => buildHeatmapData((myTimeQuery.data as { entries?: TimeEntry[] })?.entries ?? [], weekEnd),
+    [myTimeQuery.data, weekEnd]
+  )
+
+  // My tasks (assigned to current user)
+  const myTasks = useMemo(() => {
+    if (!currentUser.data) return []
+    return allTasks.filter((t) => t.assigneeId === currentUser.data?.id)
+  }, [allTasks, currentUser.data])
+
+  // My upcoming deadlines
+  const myDeadlines = useMemo(() => {
+    return myTasks
+      .filter((t) => t.dueDate && t.status !== "done" && t.status !== "cancelled")
+      .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))
+      .slice(0, 6)
+  }, [myTasks])
+
+  // My active projects (derived from tasks assigned to me)
+  const myActiveProjects = useMemo(() => {
+    const seen = new Map<string, { name: string; taskCount: number; inProgressCount: number }>()
+    for (const t of myTasks) {
+      if (!t.project) continue
+      const existing = seen.get(t.project.id) ?? { name: t.project.name, taskCount: 0, inProgressCount: 0 }
+      existing.taskCount++
+      if (t.status === "in_progress") existing.inProgressCount++
+      seen.set(t.project.id, existing)
+    }
+    return Array.from(seen.entries()).map(([id, v], idx) => ({
+      id,
+      name: v.name,
+      taskCount: v.taskCount,
+      inProgressCount: v.inProgressCount,
+      gradientKey: PROJECT_GRADIENT_KEYS[idx % PROJECT_GRADIENT_KEYS.length],
+    }))
+  }, [myTasks])
+
+  // My hours by project
+  type ByProject = Array<{ projectId: string; projectName: string; totalMinutes: number }>
+  const myProjectHours = useMemo(
+    () => ((myTimeQuery.data as { byProject?: ByProject } | undefined)?.byProject ?? []) as ByProject,
+    [myTimeQuery.data]
+  )
+
+  // Build KPIs from real data
   const kpis: KpiCardData[] = useMemo(() => {
-    const base = [...DIREZIONE_KPIS]
-    if (completedCount !== null) {
-      base[0] = { ...base[0], value: String(completedCount) }
-    }
-    if (totalHoursFromAPI !== null) {
-      base[1] = { ...base[1], value: `${totalHoursFromAPI}h` }
-    }
-    return base
-  }, [completedCount, totalHoursFromAPI])
+    const doneCount = allTasks.filter((t) => t.status === "done").length
+    const totalHours = teamTimeQuery.data?.summary?.totalHours ?? 0
+    const blockedCount = allTasks.filter((t) => t.status === "blocked").length
+    const criticalRisks = openRisks.filter(
+      (r) => getRiskLevel(r.probability * r.impact) === "critical"
+    ).length
+    return [
+      {
+        label: "Task chiusi",
+        value: String(doneCount),
+        valueColor: "text-green-400",
+        subtitle: "completati questa settimana",
+        gradient: "var(--gradient-success, linear-gradient(135deg, #22c55e, #16a34a))",
+      },
+      {
+        label: "Ore loggate",
+        value: `${Math.round(totalHours)}h`,
+        valueColor: "text-blue-400",
+        subtitle: "ore totali team",
+        gradient: "var(--gradient-project, linear-gradient(135deg, #3b82f6, #2563eb))",
+      },
+      {
+        label: "Progetti attivi",
+        value: String(activeProjects.length),
+        valueColor: "text-indigo-400",
+        subtitle: "in corso",
+        gradient: "var(--gradient-indigo, linear-gradient(135deg, #6366f1, #4f46e5))",
+      },
+      {
+        label: "Rischi critici",
+        value: String(criticalRisks),
+        valueColor: criticalRisks > 0 ? "text-red-400" : "text-green-400",
+        subtitle: `${openRisks.length} rischi aperti totali`,
+        gradient: "var(--gradient-warning, linear-gradient(135deg, #f97316, #ea580c))",
+      },
+      {
+        label: "Task bloccati",
+        value: String(blockedCount),
+        valueColor: blockedCount > 0 ? "text-red-400" : "text-green-400",
+        subtitle: "da sbloccare",
+        gradient: "var(--gradient-primary, linear-gradient(135deg, #64748b, #475569))",
+      },
+    ]
+  }, [allTasks, teamTimeQuery.data, activeProjects, openRisks])
+
+  // Build dipendente KPIs from personal data
+  const dipKpis: KpiCardData[] = useMemo(() => {
+    const myTimeData = myTimeQuery.data as { totalMinutes?: number; entries?: TimeEntry[]; byProject?: Array<{ projectId: string; projectName: string; totalMinutes: number }> } | undefined
+    const myHours = Math.round((myTimeData?.totalMinutes ?? 0) / 60)
+    const myProjects = myTimeData?.byProject?.length ?? 0
+    return [
+      {
+        label: "Le mie ore",
+        value: `${myHours}h`,
+        valueColor: "text-blue-400",
+        subtitle: "questa settimana",
+        gradient: "var(--gradient-project, linear-gradient(135deg, #3b82f6, #2563eb))",
+      },
+      {
+        label: "Task assegnati",
+        value: String(allTasks.filter((t) => t.status !== "done").length),
+        valueColor: "text-indigo-400",
+        subtitle: "da completare",
+        gradient: "var(--gradient-indigo, linear-gradient(135deg, #6366f1, #4f46e5))",
+      },
+      {
+        label: "Completati",
+        value: String(allTasks.filter((t) => t.status === "done").length),
+        valueColor: "text-green-400",
+        subtitle: "questa settimana",
+        gradient: "var(--gradient-success, linear-gradient(135deg, #22c55e, #16a34a))",
+      },
+      {
+        label: "Progetti",
+        value: String(myProjects),
+        valueColor: "text-purple-400",
+        subtitle: "con ore loggate",
+        gradient: "var(--gradient-milestone, linear-gradient(135deg, #a855f7, #9333ea))",
+      },
+      {
+        label: "Media/giorno",
+        value: `${myHours > 0 ? (myHours / 5).toFixed(1) : "0"}h`,
+        valueColor: "text-foreground",
+        subtitle: "5 giorni lavorativi",
+        gradient: "var(--gradient-primary, linear-gradient(135deg, #64748b, #475569))",
+      },
+    ]
+  }, [allTasks, myTimeQuery.data])
 
   const handleExportPDF = () => {
     toast.info("Esportazione PDF in corso…")
@@ -924,10 +999,6 @@ export default function WeeklyReportPage() {
       onError: () => toast.error("Errore nell'invio del report"),
     })
   }
-
-  // Void to satisfy exhaustive-deps: weekStart/weekEnd are computed but only used for labels
-  void weekStart
-  void weekEnd
 
   return (
     <motion.div
@@ -1075,10 +1146,8 @@ export default function WeeklyReportPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 <HoursBarChart
-                  data={HOURS_DATA}
-                  totalLabel="87h"
-                  avgLabel="14.5h"
-                  peakLabel="Mer · 22h"
+                  data={hoursData}
+                  isLoading={myTimeQuery.isLoading}
                 />
               </CardContent>
             </Card>
@@ -1091,7 +1160,7 @@ export default function WeeklyReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <DonutChart />
+                <DonutChart tasks={allTasks} isLoading={tasksQuery.isLoading} />
               </CardContent>
             </Card>
           </motion.div>
@@ -1105,11 +1174,11 @@ export default function WeeklyReportPage() {
                     <TrendingUp className="h-3 w-3" />
                     Avanzamento progetti
                   </div>
-                  <span className="text-[10px] font-normal text-muted-foreground">4 attivi</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">{activeProjects.length} attivi</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <ProjectRows projects={PROJECTS} />
+                <ProjectRows projects={activeProjects} isLoading={projectsQuery.isLoading} />
               </CardContent>
             </Card>
 
@@ -1126,7 +1195,7 @@ export default function WeeklyReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <RisksCard risks={RISKS} />
+                <RisksCard risks={openRisks} isLoading={risksQuery.isLoading} />
               </CardContent>
             </Card>
           </motion.div>
@@ -1144,7 +1213,7 @@ export default function WeeklyReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <TeamRows rows={TEAM_ROWS} />
+                <TeamRows report={teamTimeQuery.data} tasks={allTasks} isLoading={teamTimeQuery.isLoading} />
               </CardContent>
             </Card>
 
@@ -1159,7 +1228,7 @@ export default function WeeklyReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <MilestoneItems items={MILESTONES} />
+                <MilestoneItems milestones={milestones} isLoading={tasksQuery.isLoading} />
               </CardContent>
             </Card>
           </motion.div>
@@ -1167,7 +1236,8 @@ export default function WeeklyReportPage() {
           {/* Full-width task table */}
           <motion.div variants={itemVariants} className="pb-5">
             <TaskTable
-              tasks={TASK_DATA}
+              tasks={allTasks}
+              isLoading={tasksQuery.isLoading}
               filterStatus={filterStatus}
               filterOp={filterOp}
               filterProject={filterProject}
@@ -1190,7 +1260,7 @@ export default function WeeklyReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <ActivityHeatmap />
+                <ActivityHeatmap data={heatmapData} isLoading={myTimeQuery.isLoading} />
               </CardContent>
             </Card>
           </motion.div>
@@ -1202,7 +1272,7 @@ export default function WeeklyReportPage() {
         <>
           {/* KPI personali */}
           <motion.div variants={itemVariants} className="grid grid-cols-5 gap-2.5 pb-5">
-            {DIPENDENTE_KPIS.map((kpi) => (
+            {dipKpis.map((kpi) => (
               <KpiCard key={kpi.label} kpi={kpi} />
             ))}
           </motion.div>
@@ -1217,25 +1287,23 @@ export default function WeeklyReportPage() {
                     Le mie ore per giorno
                   </div>
                   <div className="flex items-center gap-1.5 normal-case">
-                    <span className="w-4 h-4 rounded-full bg-green-500/15 text-green-400 flex items-center justify-center text-[8px] font-bold">MB</span>
-                    <span className="text-[11px] font-semibold text-foreground">Marco Bianchi</span>
+                    <span className="w-4 h-4 rounded-full bg-green-500/15 text-green-400 flex items-center justify-center text-[8px] font-bold">
+                      {currentUser.data
+                        ? getUserInitials(currentUser.data.firstName, currentUser.data.lastName)
+                        : "?"}
+                    </span>
+                    <span className="text-[11px] font-semibold text-foreground">
+                      {currentUser.data
+                        ? `${currentUser.data.firstName} ${currentUser.data.lastName}`
+                        : "—"}
+                    </span>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <HoursBarChart
-                  data={[
-                    { day: "Lun", hours: 7 },
-                    { day: "Mar", hours: 8 },
-                    { day: "Mer", hours: 9 },
-                    { day: "Gio", hours: 6 },
-                    { day: "Ven", hours: 6 },
-                    { day: "Sab", hours: 0 },
-                    { day: "Dom", hours: 0 },
-                  ]}
-                  totalLabel="36h"
-                  avgLabel="7.2h"
-                  peakLabel="4h"
+                  data={hoursData}
+                  isLoading={myTimeQuery.isLoading}
                 />
               </CardContent>
             </Card>
@@ -1247,30 +1315,47 @@ export default function WeeklyReportPage() {
                     <CheckSquare className="h-3 w-3" />
                     Miei task aperti
                   </div>
-                  <span className="text-[10px] font-normal text-muted-foreground">11 totali</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">
+                    {myTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").length} totali
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="divide-y divide-border/50">
-                  {DIP_TASKS.map((t, i) => (
-                    <div key={i} className="flex items-center gap-2 py-1.5">
-                      <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", t.dotClass)} />
-                      <span className="flex-1 text-xs font-medium truncate text-foreground">{t.name}</span>
-                      <span className={cn("text-[10px] whitespace-nowrap flex-shrink-0", t.projectColor)}>
-                        {t.project}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[10px] ml-1.5 flex-shrink-0", t.badgeClass)}
-                      >
-                        {t.badge}
-                      </Badge>
+                {tasksQuery.isLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}
+                  </div>
+                ) : myTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nessun task aperto</p>
+                ) : (
+                  <>
+                    <div className="divide-y divide-border/50">
+                      {myTasks
+                        .filter((t) => t.status !== "done" && t.status !== "cancelled")
+                        .slice(0, 6)
+                        .map((t) => {
+                          const s = TASK_STATUS_DISPLAY[t.status] ?? TASK_STATUS_DISPLAY["todo"]
+                          return (
+                            <div key={t.id} className="flex items-center gap-2 py-1.5">
+                              <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", s.dotClass)} />
+                              <span className="flex-1 text-xs font-medium truncate text-foreground">{t.title}</span>
+                              <span className="text-[10px] whitespace-nowrap flex-shrink-0 text-blue-400">
+                                {t.project?.name ?? "—"}
+                              </span>
+                              <Badge variant="outline" className={cn("text-[10px] ml-1.5 flex-shrink-0", s.badgeClass)}>
+                                {s.label}
+                              </Badge>
+                            </div>
+                          )
+                        })}
                     </div>
-                  ))}
-                </div>
-                <Button variant="ghost" size="sm" className="mt-2 h-6 text-[11px] px-2">
-                  Vedi tutti gli 11 task
-                </Button>
+                    {myTasks.filter((t) => t.status !== "done").length > 6 && (
+                      <Button variant="ghost" size="sm" className="mt-2 h-6 text-[11px] px-2">
+                        Vedi tutti i {myTasks.filter((t) => t.status !== "done").length} task
+                      </Button>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1285,57 +1370,61 @@ export default function WeeklyReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-4">
-                <div className="divide-y divide-border/50">
-                  {[
-                    { name: "XR-200 Alpha", dotColor: "bg-blue-500", barColor: "from-blue-800 to-blue-500", pct: 62, pctColor: "text-blue-400", subtitle: "7 miei task · 4 in corso" },
-                    { name: "Med-Tracker v2", dotColor: "bg-green-500", barColor: "from-green-800 to-green-500", pct: 88, pctColor: "text-green-400", subtitle: "4 miei task · 1 in corso" },
-                  ].map((p) => (
-                    <div key={p.name} className="flex items-center gap-2.5 py-2">
-                      <span className={cn("w-2 h-2 rounded-full flex-shrink-0", p.dotColor)} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-foreground">{p.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{p.subtitle}</div>
-                      </div>
-                      <div className="w-20 flex-shrink-0">
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full bg-gradient-to-r", p.barColor)}
-                            style={{ width: `${p.pct}%` }}
-                          />
+                {myActiveProjects.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nessun progetto assegnato</p>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {myActiveProjects.map((p) => {
+                      const gKey = p.gradientKey
+                      return (
+                        <div key={p.id} className="flex items-center gap-2.5 py-2">
+                          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", DOT_COLORS[gKey])} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-foreground">{p.name}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {p.taskCount} miei task · {p.inProgressCount} in corso
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <span className={cn("text-xs font-semibold w-8 text-right", p.pctColor)}>
-                        {p.pct}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
 
-                <div className="h-px bg-border" />
-                <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                    Ore questa settimana per progetto
-                  </p>
-                  {[
-                    { name: "XR-200 Alpha", color: "text-blue-400", barColor: "from-blue-800 to-blue-500", pct: 75, hours: "27h" },
-                    { name: "Med-Tracker", color: "text-green-400", barColor: "from-green-800 to-green-500", pct: 25, hours: "9h" },
-                  ].map((p) => (
-                    <div key={p.name} className="flex items-center gap-2 mb-1.5">
-                      <span className={cn("text-xs min-w-[90px]", p.color)}>{p.name}</span>
-                      <div className="flex-1">
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full bg-gradient-to-r", p.barColor)}
-                            style={{ width: `${p.pct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className={cn("text-xs font-semibold min-w-[28px] text-right", p.color)}>
-                        {p.hours}
-                      </span>
+                {myProjectHours.length > 0 && (
+                  <>
+                    <div className="h-px bg-border" />
+                    <div>
+                      <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Ore questa settimana per progetto
+                      </p>
+                      {(() => {
+                        const maxMins = Math.max(...myProjectHours.map((p) => p.totalMinutes), 1)
+                        return myProjectHours.map((p, idx) => {
+                          const hours = Math.round(p.totalMinutes / 60 * 10) / 10
+                          const pct = Math.round((p.totalMinutes / maxMins) * 100)
+                          const gKey = PROJECT_GRADIENT_KEYS[idx % PROJECT_GRADIENT_KEYS.length]
+                          return (
+                            <div key={p.projectId} className="flex items-center gap-2 mb-1.5">
+                              <span className="text-xs min-w-[90px] text-blue-400 truncate">{p.projectName}</span>
+                              <div className="flex-1">
+                                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                  <div
+                                    className={cn("h-full rounded-full bg-gradient-to-r", GRADIENT_CSS[gKey])}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <span className="text-xs font-semibold min-w-[28px] text-right text-blue-400">
+                                {hours}h
+                              </span>
+                            </div>
+                          )
+                        })
+                      })()}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -1347,24 +1436,44 @@ export default function WeeklyReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-1.5">
-                {DIP_DEADLINES.map((d, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex items-center gap-2.5 px-3 py-2 bg-accent/30 border rounded hover:border-indigo-500/25 transition-colors cursor-pointer",
-                      d.borderClass || "border-border"
-                    )}
-                  >
-                    <span className={cn("w-2 h-2 rounded-full flex-shrink-0", d.dotClass)} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-foreground truncate">{d.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{d.context}</div>
-                    </div>
-                    <span className={cn("text-[10px] font-semibold whitespace-nowrap", d.dateColor)}>
-                      {d.dateText}
-                    </span>
-                  </div>
-                ))}
+                {myDeadlines.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nessuna scadenza imminente</p>
+                ) : (
+                  myDeadlines.map((t) => {
+                    const dtColor = deadlineColor(t.dueDate)
+                    const dotCls = (() => {
+                      const u = getDeadlineUrgency(t.dueDate)
+                      if (u === "overdue" || u === "urgent") return "bg-red-400"
+                      if (u === "soon") return "bg-orange-400"
+                      return "bg-blue-400"
+                    })()
+                    const borderCls = (() => {
+                      const u = getDeadlineUrgency(t.dueDate)
+                      if (u === "overdue" || u === "urgent") return "border-red-500/25"
+                      return "border-border"
+                    })()
+                    return (
+                      <div
+                        key={t.id}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-2 bg-accent/30 border rounded hover:border-indigo-500/25 transition-colors cursor-pointer",
+                          borderCls
+                        )}
+                      >
+                        <span className={cn("w-2 h-2 rounded-full flex-shrink-0", dotCls)} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-foreground truncate">{t.title}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {t.project?.name ?? "—"} · {(TASK_STATUS_DISPLAY[t.status] ?? TASK_STATUS_DISPLAY["todo"]).label}
+                          </div>
+                        </div>
+                        <span className={cn("text-[10px] font-semibold whitespace-nowrap", dtColor)}>
+                          {t.dueDate ? formatDate(t.dueDate, "d MMM") : "—"}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
               </CardContent>
             </Card>
           </motion.div>

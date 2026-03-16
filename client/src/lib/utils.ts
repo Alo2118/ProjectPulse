@@ -76,6 +76,16 @@ export function formatDaysRemaining(dueDate: string | null | undefined): string 
   return `${diffDays}gg`
 }
 
+export function toError(err: unknown): Error | null {
+  if (!err) return null
+  if (err instanceof Error) return err
+  if (typeof err === "string") return new Error(err)
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return new Error(String((err as { message: unknown }).message))
+  }
+  return new Error("Errore sconosciuto")
+}
+
 export function formatRecurrencePattern(pattern: string | null | undefined): string {
   if (!pattern) return ""
   try {

@@ -61,8 +61,10 @@ import {
   PROJECT_ROLE_LABELS,
   STATUS_COLORS,
   getRiskLevel,
+  ACTIVITY_ACTION_COLORS,
+  DOCUMENT_TYPE_ICON_COLORS,
 } from "@/lib/constants"
-import { cn, formatDate, formatRelative, getUserInitials, getAvatarColor } from "@/lib/utils"
+import { cn, formatDate, formatRelative, getUserInitials, getAvatarColor, toError } from "@/lib/utils"
 
 // ---- Interfaces ----
 
@@ -167,14 +169,6 @@ function buildTaskTree(tasks: TaskRow[]): TaskNode[] {
 }
 
 // Risk severity uses centralized getRiskLevel() from constants
-
-const DOC_TYPE_ICON_COLOR: Record<string, string> = {
-  design_input: "text-blue-500",
-  design_output: "text-purple-500",
-  verification_report: "text-green-500",
-  validation_report: "text-teal-500",
-  change_control: "text-orange-500",
-}
 
 const TASK_LIMIT = 50
 
@@ -397,19 +391,9 @@ function TaskItem({ task, depth }: { task: TaskNode; depth: number }) {
   )
 }
 
-// Activity color dot — colored by action type
-const ACTIVITY_DOT_COLOR: Record<string, string> = {
-  created: "bg-blue-500",
-  updated: "bg-primary",
-  deleted: "bg-destructive",
-  completed: "bg-green-500",
-  assigned: "bg-purple-500",
-  commented: "bg-cyan-500",
-}
-
 function getActivityDotColor(action: string): string {
-  const key = Object.keys(ACTIVITY_DOT_COLOR).find((k) => action.toLowerCase().includes(k))
-  return ACTIVITY_DOT_COLOR[key ?? ""] ?? "bg-muted-foreground"
+  const key = Object.keys(ACTIVITY_ACTION_COLORS).find((k) => action.toLowerCase().includes(k))
+  return ACTIVITY_ACTION_COLORS[key ?? ""] ?? "bg-muted-foreground"
 }
 
 // Activity feed item — timeline dot pattern from mockup
@@ -666,7 +650,7 @@ export default function ProjectDetailPage() {
         <Card>
           <CardContent className="p-3 text-center">
             <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">Inizio</p>
-            <p className="text-sm font-medium" style={{ fontFamily: "var(--font-data)" }}>
+            <p className="text-sm font-medium font-data">
               {p.startDate ? formatDate(p.startDate) : "—"}
             </p>
           </CardContent>
@@ -686,7 +670,7 @@ export default function ProjectDetailPage() {
         <Card>
           <CardContent className="p-3 text-center">
             <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">Budget</p>
-            <p className="text-sm font-medium" style={{ fontFamily: "var(--font-data)" }}>
+            <p className="text-sm font-medium font-data">
               {p.budgetHours != null ? `${p.budgetHours}h` : "—"}
             </p>
           </CardContent>
@@ -711,8 +695,7 @@ export default function ProjectDetailPage() {
                 Avanzamento
               </p>
               <span
-                className="text-lg font-bold tabular-nums"
-                style={{ fontFamily: "var(--font-data)" }}
+                className="text-lg font-bold tabular-nums font-data"
               >
                 {Math.round(completionPct)}%
               </span>
@@ -961,11 +944,10 @@ export default function ProjectDetailPage() {
     <TabSkeleton />
   ) : (
     <div
-      className="mt-4"
-      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}
+      className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3"
     >
       {docs.map((d) => {
-        const iconColor = DOC_TYPE_ICON_COLOR[d.type] ?? "text-muted-foreground"
+        const iconColor = DOCUMENT_TYPE_ICON_COLORS[d.type] ?? "text-muted-foreground"
         return (
           <Link key={d.id} to={`/documents/${d.id}`}>
             <Card className="h-full card-hover cursor-pointer group">
@@ -1036,7 +1018,7 @@ export default function ProjectDetailPage() {
   return (
     <EntityDetail
       isLoading={isLoading}
-      error={error ?? undefined}
+      error={toError(error)}
       notFound={!isLoading && !error && !p}
       breadcrumbs={[
         { label: "Home", href: "/" },
@@ -1056,7 +1038,7 @@ export default function ProjectDetailPage() {
               .join(" · ")
           : undefined
       }
-      colorBar="linear-gradient(180deg, #1d4ed8, #3b82f6)"
+      colorBar="var(--gradient-project)"
       badges={headerBadges}
       tagEditor={id ? <TagEditor entityType="project" entityId={id} className="mt-1" /> : undefined}
       headerActions={headerActions}

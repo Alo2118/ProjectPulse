@@ -281,7 +281,7 @@ export function DataTable<T>({
                   initial: { opacity: 0, x: -4 } as const,
                   animate: { opacity: 1, x: 0 } as const,
                   transition: { delay: idx * 0.03, duration: 0.15 },
-                } : {}
+                } : undefined
                 return (
                   <RowComp
                     key={id}
@@ -295,13 +295,13 @@ export function DataTable<T>({
                       rowClassName?.(item)
                     )}
                     onClick={() => onRowClick?.(item)}
-                    {...motionProps}
+                    {...(motionProps ?? {})}
                   >
                     {hasSelection && (
                       <TableCell onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
-                          onCheckedChange={() => onSelectToggle(id)}
+                          onCheckedChange={() => onSelectToggle?.(id)}
                           aria-label={`Seleziona riga ${id}`}
                         />
                       </TableCell>

@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCurrentUser } from "@/hooks/api/useAuth"
 import { useUpdateProfile } from "@/hooks/api/useUsers"
-import { getUserInitials, getAvatarColor } from "@/lib/utils"
+import { getUserInitials, getAvatarColor, cn } from "@/lib/utils"
 import { useThemeStore } from "@/stores/themeStore"
 import { useNotificationUIStore } from "@/stores/notificationUiStore"
 import type { ThemeStyle, ThemeMode } from "@/types"
@@ -99,8 +99,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
                 <AvatarFallback
-                  className="text-lg font-semibold text-white"
-                  style={{ backgroundColor: color }}
+                  className={cn("text-lg font-semibold text-white", color)}
                 >
                   {initials}
                 </AvatarFallback>

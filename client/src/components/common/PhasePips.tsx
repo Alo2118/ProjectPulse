@@ -18,7 +18,7 @@ interface PhasePipsProps {
 
 const pipColors: Record<PipStatus, string> = {
   done: 'bg-green-500',
-  current: 'bg-primary shadow-[0_0_6px_rgba(59,130,246,0.5)]',
+  current: 'bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]',
   upcoming: 'border border-muted-foreground/30 bg-transparent',
   late: 'bg-orange-500',
 }

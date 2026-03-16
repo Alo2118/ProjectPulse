@@ -44,6 +44,7 @@ import {
 } from "@/hooks/api/usePermissionPolicies"
 import { PermissionsCompareDialog } from "./PermissionsCompareDialog"
 import { cn } from "@/lib/utils"
+import { DOMAIN_ICON_COLORS } from "@/lib/constants"
 
 // ─── domain/action config ─────────────────────────────────────────────────────
 
@@ -65,14 +66,14 @@ interface DomainConfig {
 }
 
 const DOMAINS: DomainConfig[] = [
-  { id: "project", label: "Progetti", icon: FolderKanban, color: "text-blue-600 dark:text-blue-400" },
-  { id: "task", label: "Task", icon: CheckSquare, color: "text-blue-600 dark:text-blue-400" },
-  { id: "risk", label: "Rischi", icon: AlertTriangle, color: "text-red-600 dark:text-red-400" },
-  { id: "document", label: "Documenti", icon: FileText, color: "text-purple-600 dark:text-purple-400" },
-  { id: "input", label: "Segnalazioni", icon: MessageSquarePlus, color: "text-amber-600 dark:text-amber-400" },
-  { id: "time_entry", label: "Ore", icon: Clock, color: "text-green-600 dark:text-green-400" },
-  { id: "user", label: "Utenti", icon: Users, color: "text-green-600 dark:text-green-400" },
-  { id: "analytics", label: "Analytics", icon: BarChart2, color: "text-indigo-600 dark:text-indigo-400" },
+  { id: "project", label: "Progetti", icon: FolderKanban, color: DOMAIN_ICON_COLORS.project },
+  { id: "task", label: "Task", icon: CheckSquare, color: DOMAIN_ICON_COLORS.task },
+  { id: "risk", label: "Rischi", icon: AlertTriangle, color: DOMAIN_ICON_COLORS.risk },
+  { id: "document", label: "Documenti", icon: FileText, color: DOMAIN_ICON_COLORS.document },
+  { id: "input", label: "Segnalazioni", icon: MessageSquarePlus, color: DOMAIN_ICON_COLORS.input },
+  { id: "time_entry", label: "Ore", icon: Clock, color: DOMAIN_ICON_COLORS.time_entry },
+  { id: "user", label: "Utenti", icon: Users, color: DOMAIN_ICON_COLORS.user },
+  { id: "analytics", label: "Analytics", icon: BarChart2, color: DOMAIN_ICON_COLORS.analytics },
 ]
 
 interface ActionConfig {

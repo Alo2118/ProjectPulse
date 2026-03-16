@@ -106,15 +106,15 @@ export default function TaskFormPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       title: "",
-      description: "",
+      description: undefined,
       taskType: "task",
       status: "todo",
       priority: "medium",
-      projectId: "",
-      assigneeId: "",
-      parentTaskId: "",
-      startDate: "",
-      dueDate: "",
+      projectId: undefined,
+      assigneeId: undefined,
+      parentTaskId: undefined,
+      startDate: undefined,
+      dueDate: undefined,
       estimatedHours: undefined,
     },
   })
@@ -124,19 +124,19 @@ export default function TaskFormPage() {
     if (task && !isNew) {
       reset({
         title: task.title,
-        description: task.description ?? "",
+        description: task.description ?? undefined,
         taskType: task.taskType as "milestone" | "task" | "subtask",
         status: task.status,
         priority: task.priority,
-        projectId: task.projectId ?? "",
-        assigneeId: task.assigneeId ?? "",
-        parentTaskId: task.parentTaskId ?? "",
+        projectId: task.projectId ?? undefined,
+        assigneeId: task.assigneeId ?? undefined,
+        parentTaskId: task.parentTaskId ?? undefined,
         startDate: task.startDate
           ? task.startDate.substring(0, 10)
-          : "",
+          : undefined,
         dueDate: task.dueDate
           ? task.dueDate.substring(0, 10)
-          : "",
+          : undefined,
         estimatedHours: task.estimatedHours ?? undefined,
       })
     }
@@ -312,7 +312,7 @@ export default function TaskFormPage() {
                 <Select
                   value={field.value || "__none__"}
                   onValueChange={(val) =>
-                    field.onChange(val === "__none__" ? "" : val)
+                    field.onChange(val === "__none__" ? undefined : val)
                   }
                 >
                   <SelectTrigger>
@@ -339,7 +339,7 @@ export default function TaskFormPage() {
                 <Select
                   value={field.value || "__none__"}
                   onValueChange={(val) =>
-                    field.onChange(val === "__none__" ? "" : val)
+                    field.onChange(val === "__none__" ? undefined : val)
                   }
                 >
                   <SelectTrigger>

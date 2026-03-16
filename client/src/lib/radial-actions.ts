@@ -325,6 +325,7 @@ const ACTION_REGISTRY: Record<Domain, Partial<Record<'list' | 'detail', RadialAc
   time_entry: {},
   user: {},
   analytics: {},
+  planning: {},
   admin: {},
   home: {},
 }

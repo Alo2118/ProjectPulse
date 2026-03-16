@@ -36,7 +36,7 @@ export function GroupHeader({
       />
       <StatusDot status={status} size="md" />
       <span>{label}</span>
-      <span className="ml-1 text-xs text-muted-foreground tabular-nums font-[var(--font-data)]">
+      <span className="ml-1 text-xs text-muted-foreground tabular-nums font-data">
         ({count})
       </span>
     </button>

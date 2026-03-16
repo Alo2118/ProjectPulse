@@ -25,7 +25,7 @@ import {
 import type { KpiCard } from '@/components/common/KpiStrip'
 import type { AlertItem } from '@/components/common/AlertStrip'
 import type { NextAction, ContextGradient } from '@/lib/constants'
-import { formatHours, formatRelative } from '@/lib/utils'
+import { formatHours, formatRelative, toError } from '@/lib/utils'
 import { toast } from 'sonner'
 
 // --- Types ---
@@ -460,7 +460,7 @@ export default function ProjectListPage() {
       data={projects}
       pagination={pagination}
       isLoading={isLoading}
-      error={error ?? undefined}
+      error={toError(error)}
       columns={columns}
       getId={(p) => p.id}
       filterConfig={filterConfig}

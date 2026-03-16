@@ -45,7 +45,7 @@ function MetricSkeleton() {
 }
 
 export default function PlanningDashboardPage() {
-  useSetPageContext({ domain: 'analytics' })
+  useSetPageContext({ domain: 'planning' })
   const { isPrivileged } = usePrivilegedRole()
   const [selectedProjectId, setSelectedProjectId] = useState("")
 
@@ -154,8 +154,8 @@ export default function PlanningDashboardPage() {
                 <XAxis type="number" tick={{ fontSize: 12 }} />
                 <YAxis dataKey="nome" type="category" width={120} tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="attuali" fill="#3b82f6" name="Ore Attuali" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="target" fill="#e2e8f0" name="Ore Target" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="attuali" fill="hsl(var(--primary))" name="Ore Attuali" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="target" fill="hsl(var(--muted))" name="Ore Target" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

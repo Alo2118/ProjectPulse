@@ -396,13 +396,14 @@ export default function AnalyticsPage() {
               Burndown per Progetto
             </CardTitle>
             <Select
-              value={selectedProjectId ?? ""}
-              onValueChange={(val) => setSelectedProjectId(val || null)}
+              value={selectedProjectId ?? "__none__"}
+              onValueChange={(val) => setSelectedProjectId(val === "__none__" ? null : val)}
             >
               <SelectTrigger className="w-[260px]">
                 <SelectValue placeholder="Seleziona progetto..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__none__">Tutti i progetti</SelectItem>
                 {projects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
@@ -441,7 +442,7 @@ export default function AnalyticsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Progetto</TableHead>
-                    <TableHead className="text-right">Velocita'</TableHead>
+                    <TableHead className="text-right">Velocità</TableHead>
                     <TableHead className="text-right">Rimanenti</TableHead>
                     <TableHead className="text-right">Stima (gg)</TableHead>
                     <TableHead className="text-right">Stato</TableHead>

@@ -178,6 +178,7 @@ export const DOMAIN_COLORS: Record<string, string> = {
   risk: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
   document: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
   project: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  planning: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
 }
 
 // --- Audit ---
@@ -388,6 +389,17 @@ export const NEXT_ACTION_CONFIG = {
 
 export type NextAction = keyof typeof NEXT_ACTION_CONFIG
 
+// --- Activity Action Dot Colors ---
+
+export const ACTIVITY_ACTION_COLORS: Record<string, string> = {
+  created: 'bg-green-500',
+  updated: 'bg-blue-500',
+  deleted: 'bg-red-500',
+  completed: 'bg-emerald-500',
+  assigned: 'bg-purple-500',
+  commented: 'bg-amber-500',
+}
+
 /** Alert severity styling */
 export const ALERT_SEVERITY = {
   critical: { label: 'Critico', dot: 'bg-red-500', border: 'border-l-red-500', bg: 'bg-red-500/5' },
@@ -396,3 +408,91 @@ export const ALERT_SEVERITY = {
 } as const
 
 export type AlertSeverity = keyof typeof ALERT_SEVERITY
+
+// --- Document Type Pill Classes (for list/card badges) ---
+
+export const DOCUMENT_TYPE_PILL_CLASSES: Record<string, string> = {
+  design_input:
+    "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/30",
+  design_output:
+    "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/30",
+  verification_report:
+    "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
+  validation_report:
+    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
+  change_control:
+    "bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-400 dark:border-cyan-800/30",
+}
+
+export const DOCUMENT_TYPE_PILL_DEFAULT =
+  "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30"
+
+// --- Document Type Icon Colors ---
+
+export const DOCUMENT_TYPE_ICON_COLORS: Record<string, string> = {
+  design_input: "text-blue-500",
+  design_output: "text-purple-500",
+  verification_report: "text-green-500",
+  validation_report: "text-teal-500",
+  change_control: "text-orange-500",
+}
+
+// --- Risk Severity Badge Classes ---
+
+export const RISK_SEVERITY_BADGE_CLASSES: Record<string, string> = {
+  critical:
+    "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30",
+  high:
+    "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
+  medium:
+    "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30",
+  low:
+    "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
+  mitigated:
+    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
+}
+
+export const RISK_SEVERITY_DOT_COLORS: Record<string, string> = {
+  critical: "bg-red-500",
+  high: "bg-orange-500",
+  medium: "bg-amber-500",
+  low: "bg-slate-400",
+  mitigated: "bg-green-500",
+}
+
+export const RISK_SEVERITY_ROW_BORDER: Record<string, string> = {
+  critical: "border-l-[3px] border-l-red-500/70",
+  high: "border-l-[3px] border-l-orange-500/60",
+  medium: "border-l-[3px] border-l-amber-500/50",
+  low: "border-l-[3px] border-l-slate-400/40",
+  mitigated: "border-l-[3px] border-l-green-500/35",
+}
+
+export const RISK_SEVERITY_LABELS: Record<string, string> = {
+  critical: "Critico",
+  high: "Alto",
+  medium: "Medio",
+  low: "Basso",
+  mitigated: "Mitigato",
+}
+
+export const RISK_SEVERITY_GROUP_LABELS: Record<string, string> = {
+  critical: "Critici",
+  high: "Alti",
+  medium: "Medi",
+  low: "Bassi",
+  mitigated: "Mitigati/Chiusi",
+}
+
+// --- Domain Icon Colors (for admin/permissions) ---
+
+export const DOMAIN_ICON_COLORS: Record<string, string> = {
+  project: "text-blue-600 dark:text-blue-400",
+  task: "text-blue-600 dark:text-blue-400",
+  risk: "text-red-600 dark:text-red-400",
+  document: "text-purple-600 dark:text-purple-400",
+  input: "text-amber-600 dark:text-amber-400",
+  time_entry: "text-green-600 dark:text-green-400",
+  user: "text-green-600 dark:text-green-400",
+  analytics: "text-indigo-600 dark:text-indigo-400",
+}

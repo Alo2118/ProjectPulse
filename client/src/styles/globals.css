@@ -224,15 +224,18 @@
   }
 }
 
-/* Context gradients — shared across all themes */
+/* Context gradients — shared across all themes, reference semantic CSS variables */
 :root {
-  --gradient-project: linear-gradient(90deg, #1d4ed8, #3b82f6);
-  --gradient-milestone: linear-gradient(90deg, #7e22ce, #a855f7);
-  --gradient-task: linear-gradient(90deg, #0e7490, #22d3ee);
-  --gradient-success: linear-gradient(90deg, #15803d, #22c55e);
-  --gradient-warning: linear-gradient(90deg, #c2410c, #f97316);
-  --gradient-danger: linear-gradient(90deg, #b91c1c, #ef4444);
-  --gradient-indigo: linear-gradient(90deg, #3730a3, #6366f1);
+  --gradient-primary: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7));
+  --gradient-success: linear-gradient(90deg, hsl(var(--success)), hsl(var(--success) / 0.7));
+  --gradient-warning: linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.7));
+  --gradient-danger: linear-gradient(90deg, hsl(var(--destructive)), hsl(var(--destructive) / 0.7));
+  --gradient-info: linear-gradient(90deg, hsl(var(--info)), hsl(var(--info) / 0.7));
+  --gradient-project: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.65));
+  --gradient-milestone: linear-gradient(90deg, hsl(271 91% 65%), hsl(250 60% 50%));
+  --gradient-task: linear-gradient(90deg, hsl(var(--info)), hsl(var(--primary) / 0.8));
+  --gradient-time: linear-gradient(90deg, hsl(var(--info)), hsl(var(--primary)));
+  --gradient-indigo: linear-gradient(90deg, hsl(239 84% 67%), hsl(263 70% 60%));
 }
 
 /* ── Scrollbar (matching mockup thin scrollbar) ── */

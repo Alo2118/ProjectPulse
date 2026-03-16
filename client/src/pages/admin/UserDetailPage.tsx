@@ -33,7 +33,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/constants"
-import { cn, formatDate, getUserInitials, getAvatarColor } from "@/lib/utils"
+import { cn, formatDate, getUserInitials, getAvatarColor, toError } from "@/lib/utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -470,7 +470,7 @@ export default function UserDetailPage() {
   return (
     <EntityDetail
       isLoading={isLoading}
-      error={error as Error | null}
+      error={toError(error)}
       notFound={!isLoading && !error && !user}
       breadcrumbs={[
         { label: "Home", href: "/" },

@@ -24,7 +24,7 @@ const STEPS = [
 ] as const
 
 export default function PlanningWizardPage() {
-  useSetPageContext({ domain: 'analytics' })
+  useSetPageContext({ domain: 'planning' })
   const { isPrivileged } = usePrivilegedRole()
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(0)

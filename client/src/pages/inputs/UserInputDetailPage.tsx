@@ -25,7 +25,7 @@ import {
   TASK_PRIORITY_LABELS,
   INPUT_CATEGORY_LABELS,
 } from "@/lib/constants"
-import { formatDate } from "@/lib/utils"
+import { formatDate, toError } from "@/lib/utils"
 import {
   useInputQuery,
   useDeleteInput,
@@ -184,7 +184,7 @@ function UserInputDetailPage() {
   return (
     <EntityDetail
       isLoading={isLoading}
-      error={error as Error | null}
+      error={toError(error)}
       notFound={!isLoading && !error && !input}
       breadcrumbs={[
         { label: "Home", href: "/" },

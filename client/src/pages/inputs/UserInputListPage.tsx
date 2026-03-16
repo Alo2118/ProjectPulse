@@ -9,7 +9,7 @@ import { TagFilter } from "@/components/common/TagFilter"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { FormField } from "@/components/common/FormField"
 import { INPUT_STATUS_LABELS, TASK_PRIORITY_LABELS, INPUT_CATEGORY_LABELS } from "@/lib/constants"
-import { formatDate } from "@/lib/utils"
+import { formatDate, toError } from "@/lib/utils"
 import { useInputListQuery, useCreateInput } from "@/hooks/api/useInputs"
 import { useStatsQuery } from "@/hooks/api/useStats"
 import { Button } from "@/components/ui/button"
@@ -65,7 +65,7 @@ const columns: Column<UserInput>[] = [
     cell: (item) => (
       <div className="min-w-0 py-0.5">
         <span className="font-medium text-sm truncate block leading-tight">{item.title}</span>
-        <span className="text-[11px] text-muted-foreground font-[var(--font-data)] tabular-nums">{item.code}</span>
+        <span className="text-[11px] text-muted-foreground font-data tabular-nums">{item.code}</span>
       </div>
     ),
   },
@@ -99,7 +99,7 @@ const columns: Column<UserInput>[] = [
     sortable: true,
     className: "w-[100px]",
     cell: (item) => (
-      <span className="text-xs font-[var(--font-data)] tabular-nums flex items-center gap-1">
+      <span className="text-xs font-data tabular-nums flex items-center gap-1">
         <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
         {formatDate(item.createdAt)}
       </span>
@@ -205,7 +205,7 @@ function UserInputListPage() {
         data={items}
         pagination={pagination}
         isLoading={isLoading}
-        error={error as Error | null}
+        error={toError(error)}
         columns={columns}
         getId={(item) => item.id}
         filterConfig={filterConfig}

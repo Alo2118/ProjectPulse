@@ -226,7 +226,7 @@ export function EntityList<T>({
         <div className="flex items-baseline gap-2">
           <h1 className="text-page-title text-foreground">{title}</h1>
           {!isLoading && (
-            <span className="text-xs text-muted-foreground font-[var(--font-data)] tabular-nums">
+            <span className="text-xs text-muted-foreground font-data tabular-nums">
               {totalCount}
             </span>
           )}
