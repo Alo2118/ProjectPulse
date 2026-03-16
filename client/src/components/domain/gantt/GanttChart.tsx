@@ -284,7 +284,7 @@ function GanttBar({ task, left, width, onClick }: GanttBarProps) {
             {pct > 0 && (
               <div
                 className={cn(
-                  "absolute inset-y-0 left-0 rounded opacity-40",
+                  "absolute inset-y-0 left-0 rounded opacity-40 progress-shine",
                   isBlocked ? "bg-red-500" : barBase
                 )}
                 style={{ width: `${pct}%` }}
@@ -687,7 +687,7 @@ export function GanttChart({ projectId }: GanttChartProps) {
       {/* ── Toolbar ── */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Zoom selector */}
-        <div className="flex items-center gap-0.5 rounded-md border bg-muted/40 p-0.5">
+        <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/40 p-0.5">
           {(Object.keys(ZOOM_CONFIG) as ZoomLevel[]).map((level) => (
             <button
               key={level}
@@ -696,8 +696,8 @@ export function GanttChart({ projectId }: GanttChartProps) {
               className={cn(
                 "rounded px-3 py-1 text-xs font-semibold transition-colors",
                 zoom === level
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
               )}
             >
               {ZOOM_CONFIG[level].label}
@@ -922,7 +922,7 @@ export function GanttChart({ projectId }: GanttChartProps) {
                           width: grp.count * unitWidth,
                         }}
                       >
-                        <span className="truncate text-[10px] font-bold text-muted-foreground">
+                        <span className="truncate text-micro font-bold text-muted-foreground">
                           {grp.label}
                         </span>
                       </div>
@@ -943,7 +943,7 @@ export function GanttChart({ projectId }: GanttChartProps) {
                       >
                         <span
                           className={cn(
-                            "text-[9px] font-medium",
+                            "text-micro",
                             col.isWeekend && "opacity-50",
                             col.isToday
                               ? "font-bold text-primary"
@@ -999,13 +999,15 @@ export function GanttChart({ projectId }: GanttChartProps) {
                     />
                   ))}
 
-                  {/* Today line (red) */}
+                  {/* Today line (primary color, dashed via repeating gradient) */}
                   {todayX >= 0 && todayX <= totalWidth && (
                     <div
-                      className="pointer-events-none absolute top-0 z-10 w-0.5 bg-red-500/70"
+                      className="pointer-events-none absolute top-0 z-10"
                       style={{
                         left: todayX,
+                        width: 2,
                         height: flatRows.length * ROW_HEIGHT,
+                        backgroundImage: "repeating-linear-gradient(to bottom, hsl(var(--primary)) 0px, hsl(var(--primary)) 4px, transparent 4px, transparent 8px)",
                       }}
                     />
                   )}
@@ -1015,13 +1017,13 @@ export function GanttChart({ projectId }: GanttChartProps) {
                     const top = idx * ROW_HEIGHT
                     const rowBg =
                       row.kind === "project"
-                        ? "bg-muted/20 border-b border-border"
-                        : "border-b border-border/30"
+                        ? "bg-muted/20 border-b border-border hover:bg-muted/40"
+                        : "border-b border-border/30 hover:bg-accent/30"
 
                     return (
                       <div
                         key={idx}
-                        className={cn("absolute left-0 right-0", rowBg)}
+                        className={cn("absolute left-0 right-0 transition-colors", rowBg)}
                         style={{ top, height: ROW_HEIGHT, width: totalWidth }}
                       >
                         {/* Task bar */}

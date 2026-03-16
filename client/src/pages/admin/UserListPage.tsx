@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react"
+import React, { useState, useMemo, useCallback } from "react"
 import { motion } from "framer-motion"
 import {
   Users,
@@ -333,7 +333,7 @@ export default function UserListPage() {
                 <Users className="h-3 w-3" />
                 Team
               </span>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">
+              <h1 className="text-page-title text-foreground">
                 Gestione Utenti
               </h1>
             </div>
@@ -397,7 +397,8 @@ export default function UserListPage() {
                       value: stats.total,
                       sub: `${stats.admins} admin · ${stats.direzione} dir · ${stats.dipendenti} dip`,
                       icon: Users,
-                      gradient: "from-slate-600 to-slate-400",
+                      gradientFrom: "#475569",
+                      gradientTo: "#94a3b8",
                       valueClass: "text-foreground",
                       delay: 0,
                     },
@@ -406,7 +407,8 @@ export default function UserListPage() {
                       value: stats.active,
                       sub: `${stats.total - stats.active} disattivat${stats.total - stats.active === 1 ? "o" : "i"}`,
                       icon: UserCheck,
-                      gradient: "from-green-700 to-green-500",
+                      gradientFrom: "#15803d",
+                      gradientTo: "#22c55e",
                       valueClass: "text-green-500",
                       delay: 1,
                     },
@@ -415,7 +417,8 @@ export default function UserListPage() {
                       value: stats.admins,
                       sub: "accesso completo",
                       icon: Crown,
-                      gradient: "from-red-700 to-red-500",
+                      gradientFrom: "#b91c1c",
+                      gradientTo: "#ef4444",
                       valueClass: "text-red-500",
                       delay: 2,
                     },
@@ -424,7 +427,8 @@ export default function UserListPage() {
                       value: stats.direzione,
                       sub: "gestione progetti",
                       icon: Briefcase,
-                      gradient: "from-indigo-700 to-indigo-500",
+                      gradientFrom: "#4338ca",
+                      gradientTo: "#818cf8",
                       valueClass: "text-indigo-400",
                       delay: 3,
                     },
@@ -433,7 +437,8 @@ export default function UserListPage() {
                       value: stats.dipendenti,
                       sub: "accesso progetti assegnati",
                       icon: UserCog,
-                      gradient: "from-slate-600 to-slate-400",
+                      gradientFrom: "#334155",
+                      gradientTo: "#94a3b8",
                       valueClass: "text-slate-400",
                       delay: 4,
                     },
@@ -446,25 +451,21 @@ export default function UserListPage() {
                     animate="animate"
                     transition={{ duration: 0.2, delay: kpi.delay * 0.05 }}
                   >
-                    <Card className="relative overflow-hidden hover:border-border/80 transition-colors">
+                    <Card
+                      className="kpi-accent card-hover overflow-hidden"
+                      style={{ "--kpi-gradient": `linear-gradient(90deg, ${kpi.gradientFrom}, ${kpi.gradientTo})` } as React.CSSProperties}
+                    >
                       <CardContent className="p-3.5 pb-4">
                         <div className="flex items-start justify-between mb-1.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          <p className="text-kpi-label">
                             {kpi.label}
                           </p>
                           <kpi.icon className="h-3.5 w-3.5 text-muted-foreground/50 mt-0.5" />
                         </div>
-                        <p className={cn("text-2xl font-semibold leading-none mb-1", kpi.valueClass)}>
+                        <p className={cn("text-kpi-value-lg leading-none mb-1", kpi.valueClass)}>
                           {kpi.value}
                         </p>
                         <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>
-                        {/* Accent bar */}
-                        <div
-                          className={cn(
-                            "absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r",
-                            kpi.gradient
-                          )}
-                        />
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -537,19 +538,19 @@ export default function UserListPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/30">
-                        <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <th className="text-left px-4 py-2.5 text-table-header">
                           Nome
                         </th>
-                        <th className="text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-[120px]">
+                        <th className="text-left px-3 py-2.5 text-table-header w-[120px]">
                           Ruolo
                         </th>
-                        <th className="text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-[100px]">
+                        <th className="text-left px-3 py-2.5 text-table-header w-[100px]">
                           Stato
                         </th>
-                        <th className="text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-[180px]">
+                        <th className="text-left px-3 py-2.5 text-table-header w-[180px]">
                           Progetti
                         </th>
-                        <th className="text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-[140px]">
+                        <th className="text-left px-3 py-2.5 text-table-header w-[140px]">
                           Ultimo Accesso
                         </th>
                         <th className="w-[80px]" />
@@ -566,7 +567,7 @@ export default function UserListPage() {
                         return (
                           <tr
                             key={user.id}
-                            className="group border-b border-border/50 last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                            className="group row-accent border-b border-border/50 last:border-0 cursor-pointer"
                             onClick={() => openDrawer(user)}
                           >
                             {/* Name + email */}
@@ -652,7 +653,7 @@ export default function UserListPage() {
 
                             {/* Actions */}
                             <td className="px-3 py-3">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+                              <div className="row-actions flex justify-end">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -689,13 +690,13 @@ export default function UserListPage() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-border bg-muted/40">
-                      <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground min-w-[200px]">
+                      <th className="text-left px-4 py-3 text-table-header min-w-[200px]">
                         Funzionalità
                       </th>
                       {(["admin", "direzione", "dipendente", "guest"] as const).map((role) => (
                         <th
                           key={role}
-                          className="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-[120px]"
+                          className="px-4 py-3 text-center text-table-header w-[120px]"
                         >
                           <Badge
                             variant="secondary"
@@ -721,7 +722,7 @@ export default function UserListPage() {
                       ) : (
                         <tr
                           key={idx}
-                          className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors"
+                          className="row-accent border-b border-border/50 last:border-0"
                         >
                           <td className="px-4 py-2.5">
                             <p className="text-sm font-medium text-foreground">{row.feature}</p>

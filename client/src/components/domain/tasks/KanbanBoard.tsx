@@ -163,8 +163,7 @@ function TaskCard({ task, isDragging = false }: TaskCardProps) {
   return (
     <div
       className={cn(
-        "group relative rounded-lg border bg-card cursor-pointer transition-all duration-150",
-        "hover:border-blue-400/40 hover:shadow-md hover:-translate-y-px",
+        "group relative rounded-lg border bg-card cursor-pointer card-hover",
         isDragging && "opacity-50 rotate-1 shadow-xl"
       )}
       onClick={() => navigate(`/tasks/${task.id}`)}
@@ -270,6 +269,11 @@ function TaskCard({ task, isDragging = false }: TaskCardProps) {
               </div>
             )
           })}
+          {subtaskList.length > 3 && (
+            <span className="text-[10px] text-muted-foreground pl-4.5">
+              +{subtaskList.length - 3} altri
+            </span>
+          )}
         </div>
       )}
 
@@ -407,7 +411,7 @@ function KanbanColumn({ status, tasks }: ColumnProps) {
       {/* Column header */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-card/80 border-b border-border/60 rounded-t-lg">
         <span
-          className={cn("h-2 w-2 rounded-full flex-shrink-0", COLUMN_DOT[status])}
+          className={cn("h-[7px] w-[7px] rounded-full flex-shrink-0", COLUMN_DOT[status])}
         />
         <span className="flex-1 text-[12px] font-semibold text-foreground">
           {COLUMN_LABELS[status] ?? TASK_STATUS_LABELS[status] ?? status}

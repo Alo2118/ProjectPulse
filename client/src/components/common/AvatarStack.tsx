@@ -20,7 +20,7 @@ interface AvatarStackProps {
 
 export function AvatarStack({
   users,
-  max = 3,
+  max = 5,
   size = 'sm',
   className,
 }: AvatarStackProps) {
@@ -34,8 +34,8 @@ export function AvatarStack({
           key={user.id}
           className={cn(
             'border-2 border-background',
-            size === 'sm' ? 'h-6 w-6 text-[9px]' : 'h-7 w-7 text-[10px]',
-            i > 0 && '-ml-2'
+            size === 'sm' ? 'h-[22px] w-[22px] text-[8px]' : 'h-7 w-7 text-[10px]',
+            i > 0 && '-ml-[7px]'
           )}
         >
           <AvatarFallback
@@ -49,9 +49,8 @@ export function AvatarStack({
       {overflow > 0 && (
         <div
           className={cn(
-            '-ml-2 flex items-center justify-center rounded-full border-2 border-background bg-muted text-muted-foreground',
-            size === 'sm' ? 'h-6 w-6 text-[9px]' : 'h-7 w-7 text-[10px]',
-            'font-medium'
+            'flex items-center justify-center rounded-full border-2 border-background bg-muted text-muted-foreground font-medium',
+            size === 'sm' ? '-ml-[7px] h-[22px] w-[22px] text-[8px]' : '-ml-2 h-7 w-7 text-[10px]'
           )}
         >
           +{overflow}

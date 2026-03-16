@@ -32,6 +32,8 @@
     --info: 188.7 94.5% 42.7%;
     --info-foreground: 210 40% 98%;
     --radius: 0.25rem;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
     --font-data: system-ui, sans-serif;
     --shadow-theme: 0 1px 3px 0 rgb(0 0 0 / 0.1);
     --sidebar-width: 260px;
@@ -66,6 +68,8 @@
     --warning-foreground: 26 83.3% 14.1%;
     --info: 188 94.5% 42.7%;
     --info-foreground: 222.2 47.4% 11.2%;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
     --font-data: system-ui, sans-serif;
     --shadow-theme: 0 1px 3px 0 rgb(0 0 0 / 0.3);
   }
@@ -98,6 +102,8 @@
     --info: 199 89% 48%;
     --info-foreground: 210 40% 98%;
     --radius: 0.75rem;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
     --font-data: system-ui, sans-serif;
     --shadow-theme: 0 2px 8px 0 rgb(0 0 0 / 0.08);
     --sidebar-width: 260px;
@@ -131,6 +137,8 @@
     --warning-foreground: 26 83.3% 14.1%;
     --info: 199 89% 48%;
     --info-foreground: 222.2 47.4% 11.2%;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
     --font-data: system-ui, sans-serif;
     --shadow-theme: 0 2px 8px 0 rgb(0 0 0 / 0.3);
   }
@@ -225,4 +233,202 @@
   --gradient-warning: linear-gradient(90deg, #c2410c, #f97316);
   --gradient-danger: linear-gradient(90deg, #b91c1c, #ef4444);
   --gradient-indigo: linear-gradient(90deg, #3730a3, #6366f1);
+}
+
+/* ── Scrollbar (matching mockup thin scrollbar) ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* ── Progress bar shine effect (mockup pattern) ── */
+@layer components {
+  .progress-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    border-radius: inherit;
+  }
+
+  /* ── Card hover lift (mockup pattern: -1px + border + shadow) ── */
+  .card-hover {
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-1px);
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: var(--shadow-theme), 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .dark .card-hover:hover {
+    box-shadow: var(--shadow-theme), 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  /* ── Row accent bar (mockup: 3px left border appears on hover) ── */
+  .row-accent {
+    position: relative;
+    transition: background-color 0.15s ease;
+  }
+  .row-accent::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: hsl(var(--primary));
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .row-accent:hover::before {
+    opacity: 1;
+  }
+  .row-accent:hover {
+    background: hsl(var(--accent) / 0.05);
+  }
+
+  /* ── Row actions reveal on hover (mockup pattern) ── */
+  .row-actions {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .group:hover .row-actions,
+  .row-accent:hover .row-actions {
+    opacity: 1;
+  }
+
+  /* ── KPI card accent bar bottom (mockup: 2px gradient at bottom) ── */
+  .kpi-accent {
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-accent::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--kpi-gradient, var(--gradient-project));
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  /* ── Mockup typography classes ── */
+  .text-display {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 36px;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+  .text-page-title {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+  .text-section-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .text-kpi-value {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-kpi-value-lg {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-kpi-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: hsl(var(--muted-foreground));
+  }
+  .text-table-header {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: hsl(var(--muted-foreground));
+  }
+  .text-micro {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+  }
+  .text-data {
+    font-family: var(--font-data);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Filter chip with colored dot (mockup pattern) ── */
+  .chip-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+  }
+  .chip-filter:hover {
+    background: hsl(var(--accent) / 0.08);
+    color: hsl(var(--foreground));
+  }
+  .chip-filter.active {
+    background: hsl(var(--primary) / 0.1);
+    border-color: hsl(var(--primary) / 0.3);
+    color: hsl(var(--primary));
+  }
+  .chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Gradient accent bar left on cards (mockup: 4px left gradient) ── */
+  .card-accent-left {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-accent-left::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--card-gradient, var(--gradient-project));
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
 }

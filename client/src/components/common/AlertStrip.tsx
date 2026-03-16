@@ -22,6 +22,12 @@ interface AlertStripProps {
 
 const severityIcons = { critical: AlertTriangle, warning: AlertCircle, info: Info }
 
+const severityIconColors = {
+  critical: 'bg-red-500/10 text-red-500',
+  warning: 'bg-orange-500/10 text-orange-500',
+  info: 'bg-blue-500/10 text-blue-500',
+}
+
 export function AlertStrip({ alerts, className }: AlertStripProps) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -84,7 +90,12 @@ export function AlertStrip({ alerts, className }: AlertStripProps) {
                       config.border, config.bg
                     )}
                   >
-                    <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className={cn(
+                      'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+                      severityIconColors[alert.severity]
+                    )}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-medium">{alert.title}</div>
                       {alert.subtitle && (

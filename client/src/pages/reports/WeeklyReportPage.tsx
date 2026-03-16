@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import React, { useState, useMemo } from "react"
 import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -301,14 +301,28 @@ const itemVariants = {
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function KpiCard({ kpi }: { kpi: KpiCardData }) {
+  // Convert Tailwind gradient class to CSS gradient for --kpi-gradient
+  const gradientMap: Record<string, string> = {
+    "from-green-800 to-green-500":   "linear-gradient(90deg, #166534, #22c55e)",
+    "from-blue-800 to-blue-500":     "linear-gradient(90deg, #1e3a5f, #3b82f6)",
+    "from-slate-700 to-slate-500":   "linear-gradient(90deg, #334155, #64748b)",
+    "from-orange-900 to-orange-500": "linear-gradient(90deg, #7c2d12, #f97316)",
+    "from-indigo-900 to-indigo-500": "linear-gradient(90deg, #1e1b4b, #6366f1)",
+    "from-yellow-900 to-yellow-500": "linear-gradient(90deg, #422006, #eab308)",
+  }
+  const cssGradient = gradientMap[kpi.barColor] ?? "linear-gradient(90deg, #3730a3, #6366f1)"
+
   return (
-    <Card className="relative overflow-hidden transition-colors hover:border-indigo-500/20">
+    <Card
+      className="kpi-accent card-hover overflow-hidden"
+      style={{ "--kpi-gradient": cssGradient } as React.CSSProperties}
+    >
       <CardContent className="p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+        <p className="text-kpi-label mb-1">
           {kpi.label}
         </p>
         <div className="flex items-baseline gap-2 mb-0.5">
-          <span className={cn("text-2xl font-semibold leading-none tabular-nums", kpi.valueColor)}>
+          <span className={cn("text-kpi-value-lg leading-none text-data", kpi.valueColor)}>
             {kpi.value}
           </span>
           {kpi.delta && (
@@ -331,7 +345,6 @@ function KpiCard({ kpi }: { kpi: KpiCardData }) {
         </div>
         <p className="text-[10px] text-muted-foreground">{kpi.subtitle}</p>
       </CardContent>
-      <div className={cn("absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r", kpi.barColor)} />
     </Card>
   )
 }
@@ -390,15 +403,15 @@ function HoursBarChart({ data, totalLabel, avgLabel, peakLabel }: HoursBarChartP
       <div className="flex items-center gap-4 text-[10px]">
         <span>
           <span className="text-muted-foreground">Totale</span>
-          <span className="font-bold text-blue-400 ml-1.5">{totalLabel}</span>
+          <span className="font-bold text-blue-400 ml-1.5 text-data">{totalLabel}</span>
         </span>
         <span>
           <span className="text-muted-foreground">Media/giorno</span>
-          <span className="font-bold text-foreground ml-1.5">{avgLabel}</span>
+          <span className="font-bold text-foreground ml-1.5 text-data">{avgLabel}</span>
         </span>
         <span>
           <span className="text-muted-foreground">Picco</span>
-          <span className="font-bold text-green-400 ml-1.5">{peakLabel}</span>
+          <span className="font-bold text-green-400 ml-1.5 text-data">{peakLabel}</span>
         </span>
       </div>
     </div>
@@ -727,7 +740,7 @@ function TaskTable({
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_60px_90px_80px] px-4 py-2 bg-muted/50 border-b border-border text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_60px_90px_80px] px-4 py-2 bg-muted/50 border-b border-border text-table-header">
         <span>Task</span>
         <span>Progetto</span>
         <span>Stato</span>
@@ -748,7 +761,7 @@ function TaskTable({
           return (
             <div
               key={t.id}
-              className="grid grid-cols-[2fr_1fr_1fr_1fr_60px_90px_80px] px-4 py-2 border-b border-border/40 last:border-0 items-center hover:bg-accent/30 transition-colors cursor-pointer text-xs"
+              className="row-accent grid grid-cols-[2fr_1fr_1fr_1fr_60px_90px_80px] px-4 py-2 border-b border-border/40 last:border-0 items-center cursor-pointer text-xs"
             >
               <div className="flex items-center gap-1.5 pr-3 min-w-0">
                 <span className="font-mono text-[9px] text-muted-foreground flex-shrink-0">{t.id}</span>
@@ -771,7 +784,7 @@ function TaskTable({
                 </span>
                 <span className="text-[11px] font-medium text-foreground truncate">{t.opName}</span>
               </div>
-              <span className="text-right text-xs font-semibold text-blue-400">
+              <span className="text-right text-xs font-semibold text-blue-400 text-data">
                 {t.hours > 0 ? `${t.hours}h` : "—"}
               </span>
               <span className="text-[11px] text-orange-400">{t.deadline}</span>
@@ -934,7 +947,7 @@ export default function WeeklyReportPage() {
               <Activity className="h-3 w-3" />
               Report
             </Badge>
-            <h1 className="text-[22px] font-bold text-foreground tracking-tight leading-none">
+            <h1 className="text-page-title text-foreground leading-none">
               Weekly Overview
             </h1>
           </div>
@@ -1052,12 +1065,12 @@ export default function WeeklyReportPage() {
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <Clock className="h-3 w-3" />
                     Ore per giorno
                   </div>
-                  <span className="text-[10px] font-normal normal-case">settimana corrente</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">settimana corrente</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1072,7 +1085,7 @@ export default function WeeklyReportPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <CardTitle className="flex items-center gap-1.5 text-table-header">
                   <BarChart2 className="h-3 w-3" />
                   Task per stato
                 </CardTitle>
@@ -1087,12 +1100,12 @@ export default function WeeklyReportPage() {
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <TrendingUp className="h-3 w-3" />
                     Avanzamento progetti
                   </div>
-                  <span className="text-[10px] font-normal normal-case">4 attivi</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">4 attivi</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1102,12 +1115,12 @@ export default function WeeklyReportPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <AlertTriangle className="h-3 w-3" />
                     Rischi aperti
                   </div>
-                  <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 py-0 normal-case font-normal">
+                  <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 py-0 font-normal">
                     Vedi tutti
                   </Button>
                 </CardTitle>
@@ -1122,12 +1135,12 @@ export default function WeeklyReportPage() {
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <Users className="h-3 w-3" />
                     Ore per risorsa
                   </div>
-                  <span className="text-[10px] font-normal normal-case">settimana corrente</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">settimana corrente</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1137,12 +1150,12 @@ export default function WeeklyReportPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <Flag className="h-3 w-3" />
                     Milestone prossime
                   </div>
-                  <span className="text-[10px] font-normal normal-case">30 giorni</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">30 giorni</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1168,12 +1181,12 @@ export default function WeeklyReportPage() {
           <motion.div variants={itemVariants} className="pb-5">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <CalendarDays className="h-3 w-3" />
                     Attività ultime 4 settimane
                   </div>
-                  <span className="text-[10px] font-normal normal-case">attività = ore log + task chiusi</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">attività = ore log + task chiusi</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1198,8 +1211,8 @@ export default function WeeklyReportPage() {
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <Clock className="h-3 w-3" />
                     Le mie ore per giorno
                   </div>
@@ -1229,12 +1242,12 @@ export default function WeeklyReportPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-table-header">
                     <CheckSquare className="h-3 w-3" />
                     Miei task aperti
                   </div>
-                  <span className="text-[10px] font-normal normal-case">11 totali</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">11 totali</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1266,7 +1279,7 @@ export default function WeeklyReportPage() {
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 pb-5">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <CardTitle className="flex items-center gap-1.5 text-table-header">
                   <TrendingUp className="h-3 w-3" />
                   I miei progetti
                 </CardTitle>
@@ -1328,7 +1341,7 @@ export default function WeeklyReportPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <CardTitle className="flex items-center gap-1.5 text-table-header">
                   <CalendarDays className="h-3 w-3" />
                   Scadenze imminenti
                 </CardTitle>

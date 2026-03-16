@@ -28,7 +28,7 @@ export function ProgressGradient({
       >
         <div
           className={cn(
-            'h-full rounded-full transition-[width] duration-500 ease-out',
+            'h-full rounded-full transition-[width] duration-500 ease-out progress-shine',
             CONTEXT_GRADIENTS[context]
           )}
           style={{ width: `${clamped}%` }}

@@ -109,7 +109,7 @@ function SortableRow<T>({
       data-state={isSelected ? "selected" : undefined}
       className={cn(
         onRowClick && "cursor-pointer group",
-        "transition-colors",
+        "transition-colors row-accent",
         isDragging && "z-50 bg-accent/30",
         theme === "tech-hud" &&
           "hover:bg-primary/5 hover:shadow-[inset_0_0_12px_hsl(var(--primary)/0.06)]",
@@ -212,11 +212,11 @@ export function DataTable<T>({
             </TableHead>
           )}
           {columns.map((col) => (
-            <TableHead key={col.key} className={col.className}>
+            <TableHead key={col.key} className={cn('text-table-header', col.className)}>
               {col.sortable && onSort ? (
                 <button
                   type="button"
-                  className="inline-flex items-center hover:text-foreground transition-colors -ml-2 px-2 py-1 rounded-md"
+                  className="inline-flex items-center hover:text-foreground transition-colors -ml-2 px-2 py-1 rounded-md text-table-header"
                   onClick={() => onSort(col.key)}
                 >
                   {col.header}
@@ -288,7 +288,7 @@ export function DataTable<T>({
                     data-state={isSelected ? "selected" : undefined}
                     className={cn(
                       onRowClick && "cursor-pointer group",
-                      "transition-colors hover:border-primary/20",
+                      "transition-colors hover:border-primary/20 row-accent",
                       theme === "tech-hud" && "hover:bg-primary/5 hover:shadow-[inset_0_0_12px_hsl(var(--primary)/0.06)]",
                       theme === "asana-like" && "hover:bg-accent/50",
                       isFocused && "ring-2 ring-primary ring-inset bg-primary/5",
