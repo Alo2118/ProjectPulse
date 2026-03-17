@@ -6,6 +6,23 @@
 
 import { prisma } from '../models/prismaClient.js'
 
+/** Raw shape returned by the per-level Prisma query in getSubtaskTree */
+interface RawSubtaskRecord {
+  id: string
+  code: string
+  title: string
+  taskType: string
+  status: string
+  priority: string
+  projectId: string | null
+  parentTaskId: string | null
+  dueDate: Date | null
+  estimatedHours: { toNumber(): number } | null
+  isRecurring: boolean
+  assignee: { id: string; firstName: string; lastName: string; avatarUrl: string | null } | null
+  department: { id: string; name: string; color: string } | null
+}
+
 interface TaskTreeStats {
   total: number
   completed: number
@@ -234,7 +251,7 @@ async function getSubtaskTree(
   excludeCompleted: boolean
 ): Promise<TaskTreeResponse> {
   // Iteratively fetch descendants level by level instead of loading all tasks
-  const allDescendants: Array<any> = []
+  const allDescendants: RawSubtaskRecord[] = []
   let currentParentIds = [parentTaskId]
   const MAX_LEVELS = 20
 

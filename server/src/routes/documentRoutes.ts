@@ -18,6 +18,8 @@ import {
   deleteDocument,
   getProjectDocumentStats,
   downloadDocument,
+  getVersions,
+  downloadVersion,
 } from '../controllers/documentController.js'
 import { authMiddleware, requireRole } from '../middleware/authMiddleware.js'
 
@@ -73,6 +75,12 @@ router.get('/', getDocuments)
 
 // GET /api/documents/:id
 router.get('/:id', getDocument)
+
+// GET /api/documents/:id/versions
+router.get('/:id/versions', getVersions)
+
+// GET /api/documents/:id/versions/:versionId/download
+router.get('/:id/versions/:versionId/download', downloadVersion)
 
 // GET /api/documents/:id/download
 router.get('/:id/download', downloadDocument)

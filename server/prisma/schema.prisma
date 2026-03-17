@@ -22,10 +22,12 @@ model User {
   lastName      String    @map("last_name")
   avatarUrl     String?   @map("avatar_url")
   theme         String    @default("system")
+  themeStyle    String    @default("tech-hud") @map("theme_style")
   isActive      Boolean   @default(true) @map("is_active")
   isDeleted     Boolean   @default(false) @map("is_deleted")
   isExternal    Boolean   @default(false) @map("is_external")
   weeklyHoursTarget  Float?   @default(40) @map("weekly_hours_target")
+  hourlyRate    Decimal?  @map("hourly_rate") @db.Decimal(8, 2)
   lastLoginAt   DateTime? @map("last_login_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -60,6 +62,11 @@ model User {
   createdWorkflows    WorkflowTemplate[]   @relation("WorkflowCreator")
   createdAutomations  AutomationRule[]     @relation("AutomationCreator")
   recommendationsDismissed AutomationRecommendation[] @relation("RecommendationDismisser")
+  uploadedVersions    DocumentVersion[] @relation("DocumentVersionUploader")
+  createdRiskTasks    RiskTask[] @relation("RiskTaskCreator")
+  tagAssignmentsCreated TagAssignment[] @relation("TagAssignmentCreator")
+  userInputReplies    UserInputReply[] @relation("UserInputReplyAuthor")
+  notificationPreferences String? @map("notification_preferences") @db.NVarChar(Max)
 
   @@map("users")
 }
@@ -91,6 +98,10 @@ model Project {
   createdById     String    @map("created_by_id")
   templateId      String?   @map("template_id")
   workflowTemplateId String? @map("workflow_template_id")
+  phaseTemplateId String?  @map("phase_template_id")
+  phases          String?  @db.NVarChar(Max) @map("phases")
+  currentPhaseKey String?  @map("current_phase_key")
+  sortOrder       Int       @default(0) @map("sort_order")
   isDeleted       Boolean   @default(false) @map("is_deleted")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -100,6 +111,7 @@ model Project {
   createdBy   User             @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   template    ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   workflowTemplate WorkflowTemplate? @relation(fields: [workflowTemplateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  phaseTemplate WorkflowTemplate? @relation("ProjectPhaseTemplate", fields: [phaseTemplateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tasks            Task[]
   risks            Risk[]
   documents        Document[]
@@ -113,6 +125,7 @@ model Project {
   @@index([ownerId])
   @@index([status])
   @@index([isDeleted])
+  @@index([sortOrder])
   @@map("projects")
 }
 
@@ -165,6 +178,7 @@ model Task {
   estimatedHours    Decimal?  @map("estimated_hours") @db.Decimal(8, 2)
   actualHours       Decimal?  @map("actual_hours") @db.Decimal(8, 2)
   position          Int       @default(0)
+  phaseKey    String?  @map("phase_key")
   blockedReason     String?   @map("blocked_reason")
   isRecurring       Boolean   @default(false) @map("is_recurring")
   recurrencePattern String?   @map("recurrence_pattern") @db.NVarChar(Max)
@@ -187,6 +201,7 @@ model Task {
   completions      TaskCompletion[]
   checklistItems   ChecklistItem[]
   customFieldValues CustomFieldValue[]
+  linkedRisks      RiskTask[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -296,8 +311,8 @@ model Risk {
   description    String?  @db.NVarChar(Max)
   projectId      String   @map("project_id")
   category       String   @default("technical")
-  probability    String   @default("medium")
-  impact         String   @default("medium")
+  probability    Int      @default(3)
+  impact         Int      @default(3)
   status         String   @default("open")
   mitigationPlan String?  @map("mitigation_plan")
   ownerId        String?  @map("owner_id")
@@ -307,9 +322,10 @@ model Risk {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
-  project   Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  owner     User?   @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  createdBy User    @relation("RiskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  owner        User?      @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy    User       @relation("RiskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  linkedTasks  RiskTask[]
 
   @@index([projectId])
   @@index([status])
@@ -342,11 +358,48 @@ model Document {
   project    Project @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy  User    @relation("DocumentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approvedBy User?   @relation("DocumentApprover", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  versions   DocumentVersion[]
 
   @@index([projectId])
   @@index([status])
   @@index([isDeleted])
   @@map("documents")
+}
+
+model DocumentVersion {
+  id           String   @id @default(uuid())
+  documentId   String   @map("document_id")
+  version      Int
+  filePath     String   @map("file_path")
+  fileSize     Int      @map("file_size")
+  mimeType     String   @map("mime_type")
+  note         String?  @db.NVarChar(Max)
+  uploadedById String   @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploadedBy User     @relation("DocumentVersionUploader", fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([documentId])
+  @@map("document_versions")
+}
+
+model RiskTask {
+  id          String   @id @default(uuid())
+  riskId      String   @map("risk_id")
+  taskId      String   @map("task_id")
+  linkType    String   @map("link_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById String   @map("created_by_id")
+
+  risk      Risk @relation(fields: [riskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  task      Task @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User @relation("RiskTaskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([riskId, taskId])
+  @@index([riskId])
+  @@index([taskId])
+  @@map("risk_tasks")
 }
 
 model Notification {
@@ -428,6 +481,7 @@ model UserInput {
   processedBy        User?     @relation("InputProcessor", fields: [processedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   convertedTask      Task?     @relation(fields: [convertedTaskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   convertedProject   Project?  @relation(fields: [convertedProjectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies            UserInputReply[]
 
   @@index([status])
   @@index([category])
@@ -488,9 +542,11 @@ model TagAssignment {
   tagId      String   @map("tag_id")
   entityType String   @map("entity_type")
   entityId   String   @map("entity_id")
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById String?  @map("created_by_id")
 
-  tag Tag @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tag       Tag  @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User? @relation("TagAssignmentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([tagId, entityType, entityId])
   @@index([entityType, entityId])
@@ -523,6 +579,21 @@ model Note {
   @@index([userId])
   @@index([isDeleted])
   @@map("notes")
+}
+
+model UserInputReply {
+  id        String   @id @default(uuid())
+  inputId   String   @map("input_id")
+  userId    String   @map("user_id")
+  content   String   @db.NVarChar(Max)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  input UserInput @relation(fields: [inputId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user  User      @relation("UserInputReplyAuthor", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([inputId])
+  @@index([userId])
+  @@map("user_input_replies")
 }
 
 model Attachment {
@@ -688,11 +759,13 @@ model WorkflowTemplate {
   isSystem    Boolean  @default(false) @map("is_system")
   createdById String   @map("created_by_id")
   isActive    Boolean  @default(true) @map("is_active")
+  domain      String   @default("task") @map("domain")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   createdBy User      @relation("WorkflowCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   projects  Project[]
+  phaseProjects Project[] @relation("ProjectPhaseTemplate")
 
   @@index([isActive])
   @@map("workflow_templates")
@@ -779,4 +852,21 @@ model AutomationRecommendation {
   @@index([projectId])
   @@index([status])
   @@map("automation_recommendations")
+}
+
+// ============================================================
+// PERMISSION POLICIES - Role-based action permissions per domain
+// ============================================================
+
+model PermissionPolicy {
+  id        String   @id @default(uuid())
+  role      String   @db.NVarChar(50)
+  domain    String   @db.NVarChar(50)
+  action    String   @db.NVarChar(50)
+  allowed   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([role, domain, action])
+  @@map("permission_policies")
 }

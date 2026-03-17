@@ -1,0 +1,690 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ── Office Classic Light (default fallback) ── */
+  :root,
+  :root[data-theme="office-classic"] {
+    /* Mockup-style source vars */
+    --bg-base: #f9fafb;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f3f4f6;
+    --bg-overlay: #e5e7eb;
+    --bg-hover: #d1d5db;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --accent-hex: #2563eb;
+    --accent-glow: rgba(37,99,235,0.10);
+    --accent-dim: rgba(37,99,235,0.05);
+    --border-default: #e5e7eb;
+    --border-subtle: #f3f4f6;
+    --border-active: rgba(37,99,235,0.4);
+    --ctx-project: #2563eb;
+    --ctx-milestone: #7c3aed;
+    --ctx-task: #0284c7;
+    --ctx-subtask: #0f766e;
+    --ctx-risk: #dc2626;
+    --ctx-document: #b45309;
+    --ctx-team: #15803d;
+    --status-idle: #6b7280;
+    --status-active: #2563eb;
+    --status-review: #b45309;
+    --status-done: #15803d;
+    --status-blocked: #dc2626;
+    --status-late: #ea580c;
+    --radius: 4px;
+    --radius-sm: 2px;
+    --radius-lg: 6px;
+
+    /* shadcn/ui HSL aliases */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 45.4 93.4% 47.5%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 188.7 94.5% 42.7%;
+    --info-foreground: 210 40% 98%;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --sidebar-width: 216px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
+  }
+
+  /* ── Office Classic Dark ── */
+  :root[data-theme="office-classic"].dark,
+  .dark:not([data-theme]) {
+    --bg-base: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-elevated: #243449;
+    --bg-overlay: #2d3f55;
+    --bg-hover: #364b63;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #475569;
+    --accent-hex: #3b82f6;
+    --accent-glow: rgba(59,130,246,0.15);
+    --accent-dim: rgba(59,130,246,0.07);
+    --border-default: #1e293b;
+    --border-subtle: #0f172a;
+    --border-active: rgba(59,130,246,0.4);
+    --ctx-project: #3b82f6;
+    --ctx-milestone: #a855f7;
+    --ctx-task: #38bdf8;
+    --ctx-subtask: #2dd4bf;
+    --ctx-risk: #f87171;
+    --ctx-document: #fbbf24;
+    --ctx-team: #4ade80;
+    --status-idle: #64748b;
+    --status-active: #3b82f6;
+    --status-review: #fbbf24;
+    --status-done: #4ade80;
+    --status-blocked: #f87171;
+    --status-late: #fb923c;
+
+    /* shadcn/ui HSL aliases */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 48 96.5% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 188 94.5% 42.7%;
+    --info-foreground: 222.2 47.4% 11.2%;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  }
+
+  /* ── Asana Like Light ── */
+  :root[data-theme="asana-like"] {
+    --bg-base: #fafafa;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f5f5f5;
+    --bg-overlay: #eeeeee;
+    --bg-hover: #e0e0e0;
+    --text-primary: #1a1a2e;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --accent-hex: #e11d48;
+    --accent-glow: rgba(225,29,72,0.10);
+    --accent-dim: rgba(225,29,72,0.05);
+    --border-default: #e5e7eb;
+    --border-subtle: #f5f5f5;
+    --border-active: rgba(225,29,72,0.35);
+    --ctx-project: #3b82f6;
+    --ctx-milestone: #8b5cf6;
+    --ctx-task: #06b6d4;
+    --ctx-subtask: #14b8a6;
+    --ctx-risk: #ef4444;
+    --ctx-document: #f59e0b;
+    --ctx-team: #22c55e;
+    --status-idle: #6b7280;
+    --status-active: #3b82f6;
+    --status-review: #f59e0b;
+    --status-done: #22c55e;
+    --status-blocked: #ef4444;
+    --status-late: #f97316;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+
+    /* shadcn/ui HSL aliases */
+    --background: 0 0% 99%;
+    --foreground: 240 10% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 20%;
+    --primary: 350 80% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 340 20% 95%;
+    --secondary-foreground: 240 10% 20%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 5% 46%;
+    --accent: 340 20% 95%;
+    --accent-foreground: 240 10% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 350 80% 56%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 45.4 93.4% 47.5%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 199 89% 48%;
+    --info-foreground: 210 40% 98%;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 2px 8px 0 rgb(0 0 0 / 0.08);
+    --sidebar-width: 216px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
+  }
+
+  /* ── Asana Like Dark ── */
+  :root[data-theme="asana-like"].dark {
+    --bg-base: #0d0d1a;
+    --bg-surface: #131320;
+    --bg-elevated: #1a1a2e;
+    --bg-overlay: #1f1f35;
+    --bg-hover: #26263e;
+    --text-primary: #f2f2f7;
+    --text-secondary: #8888a8;
+    --text-muted: #4a4a6a;
+    --accent-hex: #f43f5e;
+    --accent-glow: rgba(244,63,94,0.15);
+    --accent-dim: rgba(244,63,94,0.07);
+    --border-default: #1f1f35;
+    --border-subtle: #131320;
+    --border-active: rgba(244,63,94,0.4);
+    --ctx-project: #60a5fa;
+    --ctx-milestone: #c084fc;
+    --ctx-task: #22d3ee;
+    --ctx-subtask: #2dd4bf;
+    --ctx-risk: #f87171;
+    --ctx-document: #fbbf24;
+    --ctx-team: #4ade80;
+    --status-idle: #6b7280;
+    --status-active: #60a5fa;
+    --status-review: #fbbf24;
+    --status-done: #4ade80;
+    --status-blocked: #f87171;
+    --status-late: #fb923c;
+
+    /* shadcn/ui HSL aliases */
+    --background: 240 10% 8%;
+    --foreground: 0 0% 95%;
+    --card: 240 10% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 240 10% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 350 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 240 10% 15%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 350 80% 60%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 48 96.5% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --info: 199 89% 48%;
+    --info-foreground: 222.2 47.4% 11.2%;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Inter', system-ui, sans-serif;
+    --font-data: system-ui, sans-serif;
+    --shadow-theme: 0 2px 8px 0 rgb(0 0 0 / 0.3);
+  }
+
+  /* ── Tech HUD Light ── */
+  :root[data-theme="tech-hud"] {
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f1f5f9;
+    --bg-overlay: #e2e8f0;
+    --bg-hover: #cbd5e1;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --accent-hex: #2d8cf0;
+    --accent-glow: rgba(45,140,240,0.12);
+    --accent-dim: rgba(45,140,240,0.06);
+    --border-default: #e2e8f0;
+    --border-subtle: #f1f5f9;
+    --border-active: rgba(45,140,240,0.5);
+    --ctx-project: #3b82f6;
+    --ctx-milestone: #a855f7;
+    --ctx-task: #0891b2;
+    --ctx-subtask: #0d9488;
+    --ctx-risk: #ea580c;
+    --ctx-document: #ca8a04;
+    --ctx-team: #16a34a;
+    --status-idle: #64748b;
+    --status-active: #3b82f6;
+    --status-review: #ca8a04;
+    --status-done: #16a34a;
+    --status-blocked: #dc2626;
+    --status-late: #ea580c;
+    --radius: 8px;
+    --radius-sm: 5px;
+    --radius-lg: 12px;
+
+    /* shadcn/ui HSL aliases */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 213 86% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 213 86% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 213 86% 56%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 213 86% 56%;
+    --info-foreground: 0 0% 100%;
+    --font-body: 'DM Sans', sans-serif;
+    --font-heading: 'Syne', sans-serif;
+    --font-data: 'JetBrains Mono', monospace;
+    --shadow-theme: 0 1px 4px 0 rgb(0 0 0 / 0.08);
+    --sidebar-width: 216px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
+  }
+
+  /* ── Tech HUD Dark (PRIMARY — exact mockup values) ── */
+  :root[data-theme="tech-hud"].dark {
+    /* Mockup source variables — exact values from projectpulse-design-system.html */
+    --bg-base: #0a0d12;
+    --bg-surface: #10151c;
+    --bg-elevated: #171e28;
+    --bg-overlay: #1e2733;
+    --bg-hover: #242e3d;
+    --text-primary: #e2eaf4;
+    --text-secondary: #7d8fa3;
+    --text-muted: #3d4f63;
+    --accent-hex: #2d8cf0;
+    --accent-glow: rgba(45,140,240,0.18);
+    --accent-dim: rgba(45,140,240,0.08);
+    --border-default: #1e2733;
+    --border-subtle: #141a22;
+    --border-active: rgba(45,140,240,0.5);
+    --ctx-project: #3b82f6;
+    --ctx-milestone: #a855f7;
+    --ctx-task: #22d3ee;
+    --ctx-subtask: #14b8a6;
+    --ctx-risk: #f97316;
+    --ctx-document: #eab308;
+    --ctx-team: #22c55e;
+    --status-idle: #475569;
+    --status-active: #3b82f6;
+    --status-review: #eab308;
+    --status-done: #22c55e;
+    --status-blocked: #ef4444;
+    --status-late: #f97316;
+    --radius: 8px;
+    --radius-sm: 5px;
+    --radius-lg: 12px;
+
+    /* shadcn/ui HSL aliases */
+    --background: 216 28% 4%;
+    --foreground: 214 52% 92%;
+    --card: 216 24% 8%;
+    --card-foreground: 214 52% 92%;
+    --popover: 215 22% 12%;
+    --popover-foreground: 214 52% 92%;
+    --primary: 213 86% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 19% 12%;
+    --secondary-foreground: 214 52% 92%;
+    --muted: 215 19% 12%;
+    --muted-foreground: 213 17% 44%;
+    --accent: 213 86% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 22% 12%;
+    --input: 215 22% 12%;
+    --ring: 213 86% 56%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 213 86% 56%;
+    --info-foreground: 0 0% 100%;
+    --font-body: 'DM Sans', sans-serif;
+    --font-heading: 'Syne', sans-serif;
+    --font-data: 'JetBrains Mono', monospace;
+    --shadow-theme: 0 0 8px 0 rgba(45, 140, 240, 0.18);
+    --sidebar-width: 216px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
+  }
+
+  /* ── Shadcn/ui base reset ── */
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── Base styles ── */
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle, hsl(var(--border)));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted, hsl(var(--muted-foreground)));
+}
+
+/* ── Context gradients — shared across all themes ── */
+:root {
+  --gradient-primary: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7));
+  --gradient-success: linear-gradient(90deg, hsl(var(--success)), hsl(var(--success) / 0.7));
+  --gradient-warning: linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.7));
+  --gradient-danger: linear-gradient(90deg, hsl(var(--destructive)), hsl(var(--destructive) / 0.7));
+  --gradient-info: linear-gradient(90deg, hsl(var(--info)), hsl(var(--info) / 0.7));
+  --gradient-project: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.65));
+  --gradient-milestone: linear-gradient(90deg, hsl(271 91% 65%), hsl(250 60% 50%));
+  --gradient-task: linear-gradient(90deg, hsl(var(--info)), hsl(var(--primary) / 0.8));
+  --gradient-time: linear-gradient(90deg, hsl(var(--info)), hsl(var(--primary)));
+  --gradient-indigo: linear-gradient(90deg, hsl(239 84% 67%), hsl(263 70% 60%));
+}
+
+/* ── Custom utility classes (pp-* from mockup design system) ── */
+
+/* Card glow line — Tech HUD only */
+[data-theme="tech-hud"] .pp-card {
+  position: relative;
+}
+[data-theme="tech-hud"] .pp-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  pointer-events: none;
+}
+
+.pp-accent-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.pp-progress-fill {
+  position: relative;
+  overflow: hidden;
+}
+.pp-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 20px; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25));
+  border-radius: 99px;
+  pointer-events: none;
+}
+
+@keyframes pp-fadeInUp {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pp-ani { animation: pp-fadeInUp 0.22s ease both; }
+.pp-d1 { animation-delay: 0.05s; }
+.pp-d2 { animation-delay: 0.10s; }
+.pp-d3 { animation-delay: 0.15s; }
+.pp-d4 { animation-delay: 0.20s; }
+
+@keyframes pp-shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.pp-skeleton {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-overlay) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: pp-shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@layer components {
+  /* ── Progress bar shine effect ── */
+  .progress-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    border-radius: inherit;
+  }
+
+  /* ── Card hover lift ── */
+  .card-hover {
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-1px);
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: var(--shadow-theme), 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .dark .card-hover:hover {
+    box-shadow: var(--shadow-theme), 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  /* ── Row accent bar left (3px left border on hover) ── */
+  .row-accent {
+    position: relative;
+    transition: background-color 0.15s ease;
+  }
+  .row-accent::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: hsl(var(--primary));
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .row-accent:hover::before {
+    opacity: 1;
+  }
+  .row-accent:hover {
+    background: hsl(var(--accent) / 0.05);
+  }
+
+  /* ── Row actions reveal on hover ── */
+  .row-actions {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .group:hover .row-actions,
+  .row-accent:hover .row-actions {
+    opacity: 1;
+  }
+
+  /* ── KPI card accent bar bottom (2px gradient at bottom) ── */
+  .kpi-accent {
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-accent::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--kpi-gradient, var(--gradient-project));
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  /* ── Filter chip with colored dot ── */
+  .chip-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+  }
+  .chip-filter:hover {
+    background: hsl(var(--accent) / 0.08);
+    color: hsl(var(--foreground));
+  }
+  .chip-filter.active {
+    background: hsl(var(--primary) / 0.1);
+    border-color: hsl(var(--primary) / 0.3);
+    color: hsl(var(--primary));
+  }
+  .chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Gradient accent bar left on cards (4px left gradient) ── */
+  .card-accent-left {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-accent-left::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--card-gradient, var(--gradient-project));
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+
+  /* ── Mockup typography classes ── */
+  .text-display {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 36px;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+  .text-page-title {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+  .text-section-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .text-kpi-value {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-kpi-value-lg {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-kpi-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: hsl(var(--muted-foreground));
+  }
+  .text-table-header {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: hsl(var(--muted-foreground));
+  }
+  .text-micro {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+  }
+  .text-data {
+    font-family: var(--font-data);
+    font-variant-numeric: tabular-nums;
+  }
+}

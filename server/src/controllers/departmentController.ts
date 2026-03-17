@@ -9,6 +9,7 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import { departmentService } from '../services/departmentService.js'
 import { logger } from '../utils/logger.js'
+import { sendSuccess, sendCreated, sendError } from '../utils/responseHelpers.js'
 
 const createDepartmentSchema = z.object({
   name: z.string().min(1, 'Il nome è obbligatorio').max(100),
@@ -43,10 +44,10 @@ export async function getDepartments(req: Request, res: Response): Promise<void>
   try {
     const query = querySchema.parse(req.query)
     const result = await departmentService.getDepartments(query)
-    res.json({ success: true, ...result })
+    sendSuccess(res, result)
   } catch (error) {
     logger.error('Error fetching departments', { error })
-    res.status(500).json({ success: false, error: 'Errore nel recupero dei reparti' })
+    sendError(res, 'Errore nel recupero dei reparti', 500)
   }
 }
 
@@ -55,87 +56,87 @@ export async function getDepartment(req: Request, res: Response): Promise<void> 
     const { id } = req.params
     const department = await departmentService.getDepartmentById(id)
     if (!department) {
-      res.status(404).json({ success: false, error: 'Reparto non trovato' })
+      sendError(res, 'Reparto non trovato', 404)
       return
     }
-    res.json({ success: true, data: department })
+    sendSuccess(res, department)
   } catch (error) {
     logger.error('Error fetching department', { error })
-    res.status(500).json({ success: false, error: 'Errore nel recupero del reparto' })
+    sendError(res, 'Errore nel recupero del reparto', 500)
   }
 }
 
 export async function createDepartment(req: Request, res: Response): Promise<void> {
   try {
     if (req.user?.role !== 'admin') {
-      res.status(403).json({ success: false, error: 'Accesso riservato agli amministratori' })
+      sendError(res, 'Accesso riservato agli amministratori', 403)
       return
     }
 
     const parsed = createDepartmentSchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
 
     const department = await departmentService.createDepartment(parsed.data, req.user.userId)
-    res.status(201).json({ success: true, data: department })
+    sendCreated(res, department)
   } catch (error) {
     if (error instanceof Error && error.message.includes('esiste già')) {
-      res.status(409).json({ success: false, error: error.message })
+      sendError(res, error.message, 409)
       return
     }
     logger.error('Error creating department', { error })
-    res.status(500).json({ success: false, error: 'Errore nella creazione del reparto' })
+    sendError(res, 'Errore nella creazione del reparto', 500)
   }
 }
 
 export async function updateDepartment(req: Request, res: Response): Promise<void> {
   try {
     if (req.user?.role !== 'admin') {
-      res.status(403).json({ success: false, error: 'Accesso riservato agli amministratori' })
+      sendError(res, 'Accesso riservato agli amministratori', 403)
       return
     }
 
     const { id } = req.params
     const parsed = updateDepartmentSchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
 
     const department = await departmentService.updateDepartment(id, parsed.data, req.user.userId)
     if (!department) {
-      res.status(404).json({ success: false, error: 'Reparto non trovato' })
+      sendError(res, 'Reparto non trovato', 404)
       return
     }
-    res.json({ success: true, data: department })
+    sendSuccess(res, department)
   } catch (error) {
     if (error instanceof Error && error.message.includes('esiste già')) {
-      res.status(409).json({ success: false, error: error.message })
+      sendError(res, error.message, 409)
       return
     }
     logger.error('Error updating department', { error })
-    res.status(500).json({ success: false, error: 'Errore nell\'aggiornamento del reparto' })
+    sendError(res, "Errore nell'aggiornamento del reparto", 500)
   }
 }
 
 export async function deleteDepartment(req: Request, res: Response): Promise<void> {
   try {
     if (req.user?.role !== 'admin') {
-      res.status(403).json({ success: false, error: 'Accesso riservato agli amministratori' })
+      sendError(res, 'Accesso riservato agli amministratori', 403)
       return
     }
 
     const { id } = req.params
     const deleted = await departmentService.deleteDepartment(id, req.user.userId)
     if (!deleted) {
-      res.status(404).json({ success: false, error: 'Reparto non trovato' })
+      sendError(res, 'Reparto non trovato', 404)
       return
     }
-    res.json({ success: true, message: 'Reparto eliminato' })
+    sendSuccess(res, { message: 'Reparto eliminato' })
   } catch (error) {
     logger.error('Error deleting department', { error })
-    res.status(500).json({ success: false, error: 'Errore nell\'eliminazione del reparto' })
+    sendError(res, "Errore nell'eliminazione del reparto", 500)
   }
 }

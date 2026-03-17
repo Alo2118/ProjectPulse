@@ -68,3 +68,6 @@ server/nul
 check_error.txt
 riprendi_lavoro.txt
 *.png
+
+# Mockup HTML files
+MockUp/

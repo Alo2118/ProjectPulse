@@ -7,6 +7,8 @@ import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { noteService } from '../services/noteService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS (Rule 6: Input Validation)
@@ -43,11 +45,7 @@ const querySchema = z.object({
 export async function createNote(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createNoteSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     // Only direzione/admin can create internal notes
     const userRole = req.user?.role || 'dipendente'
@@ -66,7 +64,7 @@ export async function createNote(req: Request, res: Response, next: NextFunction
       userId
     )
 
-    res.status(201).json({ success: true, data: note })
+    sendCreated(res, note)
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       next(new AppError(error.message, 404))
@@ -99,11 +97,7 @@ export async function getEntityNotes(req: Request, res: Response, next: NextFunc
       userRole
     )
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -117,11 +111,7 @@ export async function getNoteById(req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params
 
-    const note = await noteService.getNoteById(id)
-
-    if (!note) {
-      throw new AppError('Note not found', 404)
-    }
+    const note = requireResource(await noteService.getNoteById(id), 'Note')
 
     // Check if user can see internal note
     const userRole = req.user?.role || 'dipendente'
@@ -129,7 +119,7 @@ export async function getNoteById(req: Request, res: Response, next: NextFunctio
       throw new AppError('Note not found', 404)
     }
 
-    res.json({ success: true, data: note })
+    sendSuccess(res, note)
   } catch (error) {
     next(error)
   }
@@ -143,11 +133,7 @@ export async function updateNote(req: Request, res: Response, next: NextFunction
   try {
     const { id } = req.params
     const data = updateNoteSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     // Only direzione/admin can set notes as internal
     const userRole = req.user?.role || 'dipendente'
@@ -161,7 +147,7 @@ export async function updateNote(req: Request, res: Response, next: NextFunction
       throw new AppError('Note not found or you do not have permission to edit it', 404)
     }
 
-    res.json({ success: true, data: note })
+    sendSuccess(res, note)
   } catch (error) {
     next(error)
   }
@@ -174,12 +160,8 @@ export async function updateNote(req: Request, res: Response, next: NextFunction
 export async function deleteNote(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role || 'dipendente'
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
 
     const deleted = await noteService.deleteNote(id, userId, userRole)
 
@@ -187,7 +169,7 @@ export async function deleteNote(req: Request, res: Response, next: NextFunction
       throw new AppError('Note not found or you do not have permission to delete it', 404)
     }
 
-    res.json({ success: true, message: 'Note deleted successfully' })
+    sendSuccess(res, { message: 'Note deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -206,7 +188,7 @@ export async function getNoteCount(req: Request, res: Response, next: NextFuncti
 
     const count = await noteService.getNoteCount(validatedEntityType, entityId)
 
-    res.json({ success: true, data: { count } })
+    sendSuccess(res, { count })
   } catch (error) {
     next(error)
   }

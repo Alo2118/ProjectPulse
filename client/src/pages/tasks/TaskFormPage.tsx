@@ -1,914 +1,395 @@
-/**
- * Task Form Page - Create and edit tasks
- * @module pages/tasks/TaskFormPage
- */
-
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useTaskStore } from '@stores/taskStore'
-import { useAuthStore } from '@stores/authStore'
-import api from '@services/api'
+import { useEffect } from "react"
+import { useParams, useNavigate } from "react-router-dom"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { toast } from "sonner"
+import { EntityForm } from "@/components/common/EntityForm"
+import { FormField } from "@/components/common/FormField"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
-  Loader2,
-  Save,
-  AlertCircle,
-  CheckSquare,
-  Trash2,
-  Target,
-  ListTodo,
-  Info,
-  Settings2,
-  FolderTree,
-  Users,
-  Calendar,
-  Tag,
-} from 'lucide-react'
-import { User, Project, Tag as TagType } from '@/types'
-import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS, TASK_TYPE_OPTIONS } from '@/constants'
-import TaskSearchSelect from '@components/TaskSearchSelect'
-import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal'
-import RecurrenceSettings from '@components/tasks/RecurrenceSettings'
-import TagInput from '@components/tags/TagInput'
-import { useTagStore } from '@stores/tagStore'
-import { useDepartmentStore } from '@stores/departmentStore'
-import { DetailPageHeader } from '@/components/common/DetailPageHeader'
-import { CustomFieldsSection } from '@/components/tasks/CustomFieldsSection'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  useTaskQuery,
+  useCreateTask,
+  useUpdateTask,
+  useDeleteTask,
+} from "@/hooks/api/useTasks"
+import { useProjectListQuery } from "@/hooks/api/useProjects"
+import { useUserListQuery } from "@/hooks/api/useUsers"
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/constants"
 
-// Zod validation schema
-const taskSchema = z.object({
-  title: z.string().min(3, 'Il titolo deve avere almeno 3 caratteri').max(200, 'Il titolo non può superare i 200 caratteri'),
-  description: z.string().max(5000, 'La descrizione non può superare i 5000 caratteri').optional().or(z.literal('')),
-  taskType: z.enum(['milestone', 'task', 'subtask']),
-  status: z.enum(['todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled']),
-  priority: z.enum(['low', 'medium', 'high', 'critical']),
-  startDate: z.string().optional().or(z.literal('')),
-  dueDate: z.string().optional().or(z.literal('')),
-  estimatedHours: z.string().optional().or(z.literal('')),
-  isStandalone: z.boolean().default(false),
-  projectId: z.string().optional().or(z.literal('')),
-  parentTaskId: z.string().optional().or(z.literal('')),
-  assigneeId: z.string().optional().or(z.literal('')),
-  departmentId: z.string().optional().or(z.literal('')),
-  assignToSubtasks: z.boolean().default(false),
-  isRecurring: z.boolean().optional(),
-  blockedReason: z.string().optional().or(z.literal('')),
-  recurrencePattern: z.string().optional().or(z.literal('')),
-  position: z.string().optional().or(z.literal('')),
+const TASK_TYPE_OPTIONS = [
+  { value: "milestone", label: "Milestone" },
+  { value: "task", label: "Task" },
+  { value: "subtask", label: "Sottotask" },
+]
+
+const schema = z.object({
+  title: z.string().min(1, "Titolo richiesto"),
+  description: z.string().optional(),
+  taskType: z.enum(["milestone", "task", "subtask"]).default("task"),
+  status: z.string().default("todo"),
+  priority: z.string().default("medium"),
+  projectId: z.string().optional(),
+  assigneeId: z.string().optional(),
+  parentTaskId: z.string().optional(),
+  startDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  estimatedHours: z.coerce.number().optional(),
 })
 
-type TaskFormData = z.infer<typeof taskSchema>
+type FormValues = z.infer<typeof schema>
 
-// Map taskType to display label (Italian, grammatically correct)
-function getTypeLabel(taskType: string): string {
-  if (taskType === 'milestone') return 'Milestone'
-  if (taskType === 'subtask') return 'Subtask'
-  return 'Task'
+interface TaskData {
+  id: string
+  title: string
+  description?: string | null
+  taskType: string
+  status: string
+  priority: string
+  projectId?: string | null
+  assigneeId?: string | null
+  parentTaskId?: string | null
+  startDate?: string | null
+  dueDate?: string | null
+  estimatedHours?: number | null
 }
 
-// Map taskType to Italian article for "Nuova/Nuovo"
-function getCreateLabel(taskType: string): string {
-  if (taskType === 'milestone') return 'Nuova Milestone'
-  if (taskType === 'subtask') return 'Nuovo Subtask'
-  return 'Nuovo Task'
+interface ProjectOption {
+  id: string
+  name: string
+  code: string
+}
+
+interface UserOption {
+  id: string
+  firstName: string
+  lastName: string
 }
 
 export default function TaskFormPage() {
   const { id } = useParams<{ id: string }>()
-  const [searchParams] = useSearchParams()
+  useSetPageContext({ domain: 'task', entityId: id })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const { currentTask, isLoading: storeLoading, fetchTask, createTask, updateTask, deleteTask, clearCurrentTask } = useTaskStore()
+  const isNew = !id || id === "new"
 
-  const [users, setUsers] = useState<User[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [taskTags, setTaskTags] = useState<TagType[]>([])
-  const [inheritedFromParent, setInheritedFromParent] = useState(false)
-  const { fetchEntityTags, assignTag: storeAssignTag } = useTagStore()
-  const { departments, fetchDepartments } = useDepartmentStore()
+  const { data: taskData, isLoading: taskLoading } = useTaskQuery(
+    isNew ? "" : (id ?? "")
+  )
+  const task = taskData as TaskData | undefined
 
-  const isEditMode = Boolean(id)
-  const preselectedProjectId = searchParams.get('projectId') || ''
-  const preselectedParentTaskId = searchParams.get('parentTaskId') || ''
+  const { data: projectsData } = useProjectListQuery({ limit: "200" })
+  const { data: usersData } = useUserListQuery({ limit: "200" })
+
+  const projects = ((projectsData?.data ?? []) as ProjectOption[])
+  const users = ((usersData?.data ?? []) as UserOption[])
+
+  const createTask = useCreateTask()
+  const updateTask = useUpdateTask()
+  const deleteTask = useDeleteTask()
 
   const {
     register,
     handleSubmit,
+    control,
     reset,
-    watch,
-    setValue,
-    formState: { errors, isDirty },
-  } = useForm<TaskFormData>({
-    resolver: zodResolver(taskSchema),
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      title: '',
-      description: '',
-      taskType: preselectedParentTaskId ? 'subtask' : 'task',
-      status: 'todo',
-      priority: 'medium',
-      startDate: '',
-      dueDate: '',
-      estimatedHours: '',
-      isStandalone: !preselectedProjectId && !preselectedParentTaskId,
-      projectId: preselectedProjectId,
-      parentTaskId: preselectedParentTaskId,
-      assigneeId: '',
-      departmentId: '',
-      assignToSubtasks: false,
+      title: "",
+      description: undefined,
+      taskType: "task",
+      status: "todo",
+      priority: "medium",
+      projectId: undefined,
+      assigneeId: undefined,
+      parentTaskId: undefined,
+      startDate: undefined,
+      dueDate: undefined,
+      estimatedHours: undefined,
     },
   })
 
-  const isStandalone = watch('isStandalone')
-  const selectedProjectId = watch('projectId')
-  const selectedTaskType = watch('taskType')
-  const selectedParentTaskId = watch('parentTaskId')
-
-  // Check permissions - everyone can create, edit requires ownership or privileged role
-  const isPrivilegedRole = user?.role === 'admin' || user?.role === 'direzione'
-  const isTaskOwner = isEditMode && currentTask && (
-    currentTask.assigneeId === user?.id || currentTask.createdById === user?.id
-  )
-  const canManageTasks = !isEditMode || isPrivilegedRole || isTaskOwner
-
-  // Warn user before leaving with unsaved changes
+  // Populate form on edit
   useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault()
-      }
-    }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [isDirty])
-
-  // Load departments
-  useEffect(() => { fetchDepartments() }, [fetchDepartments])
-
-  // Load users for assignee select
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const response = await api.get<{ success: boolean; data: User[] }>('/users?limit=100')
-        if (response.data.success) {
-          setUsers(response.data.data)
-        }
-      } catch {
-        // silently ignore
-      }
-    }
-    loadUsers()
-  }, [])
-
-  // Load projects for project select
-  useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const response = await api.get<{ success: boolean; data: Project[] }>('/projects?limit=100')
-        if (response.data.success) {
-          setProjects(response.data.data)
-        }
-      } catch {
-        // silently ignore
-      }
-    }
-    loadProjects()
-  }, [])
-
-  // Clear project when toggling standalone (keep parentTaskId — standalone tasks can have parents)
-  useEffect(() => {
-    if (isStandalone) {
-      setValue('projectId', '')
-    }
-  }, [isStandalone, setValue])
-
-  // Handle taskType changes - milestone cannot have parent, subtask must have parent
-  useEffect(() => {
-    if (selectedTaskType === 'milestone') {
-      setValue('parentTaskId', '')
-    }
-  }, [selectedTaskType, setValue])
-
-  // Auto-set taskType based on parentTaskId
-  useEffect(() => {
-    if (selectedParentTaskId && selectedTaskType === 'milestone') {
-      setValue('taskType', 'task')
-    }
-  }, [selectedParentTaskId, selectedTaskType, setValue])
-
-  // Load task data if editing
-  useEffect(() => {
-    if (isEditMode && id) {
-      fetchTask(id)
-    }
-    return () => clearCurrentTask()
-  }, [id, isEditMode, fetchTask, clearCurrentTask])
-
-  // Load tags when editing
-  useEffect(() => {
-    if (isEditMode && id) {
-      fetchEntityTags('task', id).then(setTaskTags)
-    }
-  }, [isEditMode, id, fetchEntityTags])
-
-  // Pre-fill form fields from parent task when creating a subtask
-  useEffect(() => {
-    if (isEditMode || !preselectedParentTaskId) return
-
-    const fetchParentAndInherit = async () => {
-      try {
-        const response = await api.get<{ success: boolean; data: Record<string, unknown> }>(
-          `/tasks/${preselectedParentTaskId}`
-        )
-        if (!response.data.success) return
-
-        const parent = response.data.data
-        let didInherit = false
-
-        if (!watch('assigneeId') && parent.assigneeId) {
-          setValue('assigneeId', parent.assigneeId as string, { shouldDirty: false })
-          didInherit = true
-        }
-        if (!watch('departmentId') && parent.departmentId) {
-          setValue('departmentId', parent.departmentId as string, { shouldDirty: false })
-          didInherit = true
-        }
-        if (parent.priority) {
-          setValue('priority', parent.priority as 'low' | 'medium' | 'high' | 'critical', { shouldDirty: false })
-          didInherit = true
-        }
-        if (!watch('startDate') && parent.startDate) {
-          const dateStr = (parent.startDate as string).split('T')[0]
-          setValue('startDate', dateStr, { shouldDirty: false })
-          didInherit = true
-        }
-        if (!watch('dueDate') && parent.dueDate) {
-          const dateStr = (parent.dueDate as string).split('T')[0]
-          setValue('dueDate', dateStr, { shouldDirty: false })
-          didInherit = true
-        }
-
-        if (didInherit) {
-          setInheritedFromParent(true)
-        }
-      } catch {
-        // Silent failure — do not block form usage if parent fetch fails
-      }
-    }
-
-    fetchParentAndInherit()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, preselectedParentTaskId])
-
-  // Populate form when task is loaded
-  useEffect(() => {
-    if (isEditMode && currentTask) {
+    if (task && !isNew) {
       reset({
-        title: currentTask.title,
-        description: currentTask.description || '',
-        taskType: currentTask.taskType || 'task',
-        status: currentTask.status,
-        priority: currentTask.priority,
-        startDate: currentTask.startDate ? currentTask.startDate.split('T')[0] : '',
-        dueDate: currentTask.dueDate ? currentTask.dueDate.split('T')[0] : '',
-        estimatedHours: currentTask.estimatedHours != null ? String(currentTask.estimatedHours) : '',
-        isStandalone: !currentTask.projectId,
-        projectId: currentTask.projectId || '',
-        parentTaskId: currentTask.parentTaskId || '',
-        assigneeId: currentTask.assigneeId || '',
-        departmentId: currentTask.departmentId || '',
+        title: task.title,
+        description: task.description ?? undefined,
+        taskType: task.taskType as "milestone" | "task" | "subtask",
+        status: task.status,
+        priority: task.priority,
+        projectId: task.projectId ?? undefined,
+        assigneeId: task.assigneeId ?? undefined,
+        parentTaskId: task.parentTaskId ?? undefined,
+        startDate: task.startDate
+          ? task.startDate.substring(0, 10)
+          : undefined,
+        dueDate: task.dueDate
+          ? task.dueDate.substring(0, 10)
+          : undefined,
+        estimatedHours: task.estimatedHours ?? undefined,
       })
     }
-  }, [isEditMode, currentTask, reset])
+  }, [task, isNew, reset])
 
-  const onSubmit = async (data: TaskFormData) => {
-    setIsSubmitting(true)
-    setSubmitError(null)
+  const onSubmit = (values: FormValues) => {
+    // Clean up empty optional strings
+    const payload: Record<string, unknown> = {
+      title: values.title,
+      taskType: values.taskType,
+      status: values.status,
+      priority: values.priority,
+    }
 
-    try {
-      const estimatedHoursValue = data.estimatedHours ? parseFloat(data.estimatedHours) : null
-      const submitData: Record<string, unknown> = {
-        title: data.title,
-        description: data.description || null,
-        taskType: data.taskType,
-        status: data.status,
-        priority: data.priority,
-        startDate: data.startDate || null,
-        dueDate: data.dueDate || null,
-        estimatedHours: estimatedHoursValue && !isNaN(estimatedHoursValue) ? estimatedHoursValue : null,
-        assigneeId: data.assigneeId || null,
-        departmentId: data.departmentId || null,
-        assignToSubtasks: data.assignToSubtasks,
-      }
+    if (values.description) payload.description = values.description
+    if (values.projectId) payload.projectId = values.projectId
+    if (values.assigneeId) payload.assigneeId = values.assigneeId
+    if (values.parentTaskId) payload.parentTaskId = values.parentTaskId
+    if (values.startDate) payload.startDate = values.startDate
+    if (values.dueDate) payload.dueDate = values.dueDate
+    if (values.estimatedHours != null) payload.estimatedHours = values.estimatedHours
 
-      if (!data.isStandalone && data.projectId) {
-        submitData.projectId = data.projectId
-      }
-      if (data.parentTaskId) {
-        submitData.parentTaskId = data.parentTaskId
-      }
-
-      if (isEditMode && id) {
-        await updateTask(id, submitData)
-        navigate(`/tasks/${id}`)
-      } else {
-        const newTask = await createTask(submitData)
-        for (const tag of taskTags) {
-          try {
-            await storeAssignTag(tag.id, 'task', newTask.id)
-          } catch {
-            // ignore duplicate assignments
-          }
+    if (isNew) {
+      createTask.mutate(payload, {
+        onSuccess: (data) => {
+          toast.success("Task creato", {
+            action: {
+              label: "Apri →",
+              onClick: () => navigate(`/tasks/${data.id}`),
+            },
+          })
+          navigate(`/tasks/${data.id}`)
+        },
+        onError: () => toast.error("Errore nella creazione del task"),
+      })
+    } else {
+      updateTask.mutate(
+        { id: id!, ...payload },
+        {
+          onSuccess: () => {
+            toast.success("Task aggiornato", {
+              action: {
+                label: "Apri →",
+                onClick: () => navigate(`/tasks/${id}`),
+              },
+            })
+            navigate(`/tasks/${id}`)
+          },
+          onError: () => toast.error("Errore nell'aggiornamento del task"),
         }
-        navigate(`/tasks/${newTask.id}`)
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Errore durante il salvataggio'
-      setSubmitError(message)
-    } finally {
-      setIsSubmitting(false)
+      )
     }
   }
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!id) return
-    setIsDeleting(true)
-    try {
-      await deleteTask(id)
-      navigate('/tasks')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Errore durante l\'eliminazione'
-      setSubmitError(message)
-      setShowDeleteConfirm(false)
-    } finally {
-      setIsDeleting(false)
-    }
+    deleteTask.mutate(id, {
+      onSuccess: () => {
+        toast.success("Task eliminato")
+        navigate("/tasks")
+      },
+      onError: () => toast.error("Errore nell'eliminazione"),
+    })
   }
 
-  // Loading state — skeleton layout
-  if (isEditMode && storeLoading && !currentTask) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        {/* Breadcrumb skeleton */}
-        <div className="flex gap-2">
-          <div className="skeleton h-4 w-16" />
-          <div className="skeleton h-4 w-32" />
-        </div>
-        {/* Header skeleton */}
-        <div className="flex items-center gap-4">
-          <div className="skeleton w-10 h-10 rounded-lg" />
-          <div className="skeleton h-7 w-48" />
-        </div>
-        {/* Body skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="card p-6 space-y-4">
-              <div className="skeleton h-10 w-full" />
-              <div className="skeleton h-40 w-full" />
-            </div>
-          </div>
-          <div className="card p-5 space-y-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="skeleton h-10 w-full" />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Task not found in edit mode
-  if (isEditMode && !storeLoading && !currentTask) {
-    return (
-      <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          Task non trovato
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
-          Il task richiesto non esiste o è stato eliminato.
-        </p>
-        <button onClick={() => navigate('/tasks')} className="btn-primary">
-          Torna ai Task
-        </button>
-      </div>
-    )
-  }
-
-  // Redirect if not authorized
-  if (!canManageTasks) {
-    return (
-      <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          Accesso non autorizzato
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
-          Non hai i permessi per creare o modificare task.
-        </p>
-        <button onClick={() => navigate('/tasks')} className="btn-primary">
-          Torna ai Task
-        </button>
-      </div>
-    )
-  }
-
-  const typeLabel = getTypeLabel(selectedTaskType)
+  const breadcrumbs = [
+    { label: "Task", href: "/tasks" },
+    { label: isNew ? "Nuovo Task" : "Modifica Task" },
+  ]
 
   return (
-    <div className="space-y-4">
-      {/* Page Header */}
-      <DetailPageHeader
-        title={isEditMode ? `Modifica ${typeLabel}` : getCreateLabel(selectedTaskType)}
-        subtitle={isEditMode && currentTask?.code ? currentTask.code : undefined}
-        backTo="/tasks"
-      />
+    <EntityForm
+      breadcrumbs={breadcrumbs}
+      title={isNew ? "Nuovo Task" : "Modifica Task"}
+      isNew={isNew}
+      isLoading={!isNew && taskLoading}
+      onSubmit={handleSubmit(onSubmit)}
+      onCancel={() => navigate(isNew ? "/tasks" : `/tasks/${id}`)}
+      onDelete={isNew ? undefined : handleDelete}
+      isSubmitting={createTask.isPending || updateTask.isPending}
+      isDeleting={deleteTask.isPending}
+      deleteConfirmMessage="Sei sicuro di voler eliminare questo task?"
+    >
+      <div className="space-y-6">
+        {/* Title */}
+        <FormField label="Titolo" required error={errors.title?.message}>
+          <Input {...register("title")} placeholder="Inserisci il titolo del task" />
+        </FormField>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* ── Left column: Content ── */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="card p-6 space-y-5">
-              {/* Error banner */}
-              {submitError && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-red-700 dark:text-red-400">{submitError}</p>
-                </div>
-              )}
-
-              {/* Parent inheritance banner */}
-              {inheritedFromParent && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
-                  <Info className="w-4 h-4 flex-shrink-0" />
-                  <span>Alcuni campi sono stati pre-compilati dal task padre. Puoi modificarli liberamente.</span>
-                </div>
-              )}
-
-              {/* Title */}
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Titolo <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="title"
-                  type="text"
-                  {...register('title')}
-                  className={`input ${errors.title ? 'input-error' : ''}`}
-                  placeholder="Inserisci il titolo del task"
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>
-                )}
-              </div>
-
-              {/* Description */}
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Descrizione{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                </label>
-                <textarea
-                  id="description"
-                  {...register('description')}
-                  rows={10}
-                  className={`input resize-none ${errors.description ? 'input-error' : ''}`}
-                  placeholder="Descrizione del task (opzionale)"
-                />
-                {errors.description && (
-                  <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Custom Fields - only in edit mode */}
-            {isEditMode && currentTask?.id && (
-              <CustomFieldsSection
-                taskId={currentTask.id}
-                projectId={selectedProjectId || null}
-                readOnly={false}
-              />
-            )}
-          </div>
-
-          {/* ── Right column: Configuration ── */}
-          <div className="lg:col-span-1">
-            <div className="card p-5 space-y-5">
-
-              {/* Task Type — horizontal selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tipo <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {TASK_TYPE_OPTIONS.map((option) => {
-                    const isSelected = selectedTaskType === option.value
-                    const isDisabled = option.value === 'milestone' && Boolean(selectedParentTaskId)
-                    return (
-                      <label
-                        key={option.value}
-                        title={option.description}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 cursor-pointer transition-all
-                          ${isSelected
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-500/30'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                          }
-                          ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
-                        `}
-                      >
-                        <input
-                          type="radio"
-                          {...register('taskType')}
-                          value={option.value}
-                          disabled={isDisabled}
-                          className="sr-only"
-                        />
-                        {option.value === 'milestone' && (
-                          <Target
-                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
-                          />
-                        )}
-                        {option.value === 'task' && (
-                          <CheckSquare
-                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
-                          />
-                        )}
-                        {option.value === 'subtask' && (
-                          <ListTodo
-                            className={`w-5 h-5 ${isSelected ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}
-                          />
-                        )}
-                        <span
-                          className={`text-xs font-medium ${isSelected ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}
-                        >
-                          {option.label}
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-                {selectedTaskType === 'milestone' && (
-                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                    Le milestone non possono avere time entries diretti. Il tempo è calcolato dalle task figlie.
-                  </p>
-                )}
-              </div>
-
-              {/* ── Section: Stato e Priorità ── */}
-              <div className="form-section-header">
-                <Settings2 className="w-3.5 h-3.5" />
-                Stato e Priorità
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Stato <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="status"
-                    {...register('status')}
-                    className={`input ${errors.status ? 'input-error' : ''}`}
-                  >
-                    {TASK_STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.status && (
-                    <p className="mt-1 text-sm text-red-500">{errors.status.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Priorità <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="priority"
-                    {...register('priority')}
-                    className={`input ${errors.priority ? 'input-error' : ''}`}
-                  >
-                    {TASK_PRIORITY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.priority && (
-                    <p className="mt-1 text-sm text-red-500">{errors.priority.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Section: Organizzazione ── */}
-              <div className="form-section-header">
-                <FolderTree className="w-3.5 h-3.5" />
-                Organizzazione
-              </div>
-
-              {/* Standalone Toggle */}
-              <div className="flex items-center gap-3">
-                <input
-                  id="isStandalone"
-                  type="checkbox"
-                  {...register('isStandalone')}
-                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                />
-                <label htmlFor="isStandalone" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Task standalone (senza progetto)
-                </label>
-              </div>
-
-              {/* Project */}
-              {!isStandalone && (
-                <div>
-                  <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Progetto{' '}
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                  </label>
-                  <select
-                    id="projectId"
-                    value={selectedProjectId || ''}
-                    onChange={(e) => {
-                      setValue('projectId', e.target.value, { shouldDirty: true })
-                      setValue('parentTaskId', '')
-                    }}
-                    className={`input ${errors.projectId ? 'input-error' : ''}`}
-                  >
-                    <option value="">Seleziona progetto</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.projectId && (
-                    <p className="mt-1 text-sm text-red-500">{errors.projectId.message}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Parent Task - hidden for milestones */}
-              {selectedTaskType !== 'milestone' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Task/Milestone Padre{' '}
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                  </label>
-                  <TaskSearchSelect
-                    value={watch('parentTaskId') || ''}
-                    onChange={(taskId) => setValue('parentTaskId', taskId, { shouldDirty: true })}
-                    placeholder="Cerca task o milestone padre..."
-                    projectId={selectedProjectId || undefined}
-                    excludeTaskId={isEditMode ? id : undefined}
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {selectedProjectId
-                      ? 'Lascia vuoto per un elemento root del progetto. Seleziona una milestone per raggruppare.'
-                      : 'Lascia vuoto per un task root. Seleziona un task padre per creare un subtask.'}
-                  </p>
-                </div>
-              )}
-
-              {/* ── Section: Assegnazione ── */}
-              <div className="form-section-header">
-                <Users className="w-3.5 h-3.5" />
-                Assegnazione
-              </div>
-
-              {/* Assignee */}
-              <div>
-                <label htmlFor="assigneeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Assegnato a{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                </label>
-                <select
-                  id="assigneeId"
-                  {...register('assigneeId')}
-                  className={`input ${errors.assigneeId ? 'input-error' : ''}`}
-                >
-                  <option value="">Non assegnato</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName} ({u.email})
-                    </option>
-                  ))}
-                </select>
-                {errors.assigneeId && (
-                  <p className="mt-1 text-sm text-red-500">{errors.assigneeId.message}</p>
-                )}
-                {/* Assign to subtasks checkbox — edit mode only when subtasks exist */}
-                {isEditMode && currentTask && currentTask._count && currentTask._count.subtasks > 0 && (
-                  <div className="flex items-center gap-2 mt-3">
-                    <input
-                      id="assignToSubtasks"
-                      type="checkbox"
-                      {...register('assignToSubtasks')}
-                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                    />
-                    <label htmlFor="assignToSubtasks" className="text-sm text-gray-600 dark:text-gray-400">
-                      Assegna anche alle subtask ({currentTask._count.subtasks} subtask dirette, include tutti i livelli)
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {/* Department */}
-              <div>
-                <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Reparto Esecutore{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                </label>
-                <select
-                  id="departmentId"
-                  {...register('departmentId')}
-                  className="input"
-                >
-                  <option value="">Nessun reparto</option>
-                  {departments
-                    .filter((d) => d.isActive)
-                    .map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Il reparto che eseguirà questo task
-                </p>
-              </div>
-
-              {/* ── Section: Tempistiche ── */}
-              <div className="form-section-header">
-                <Calendar className="w-3.5 h-3.5" />
-                Tempistiche
-              </div>
-
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Data Inizio{' '}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                    </label>
-                    <input
-                      id="startDate"
-                      type="date"
-                      {...register('startDate')}
-                      className={`input ${errors.startDate ? 'input-error' : ''}`}
-                    />
-                    {errors.startDate && (
-                      <p className="mt-1 text-sm text-red-500">{errors.startDate.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Data Fine{' '}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                    </label>
-                    <input
-                      id="dueDate"
-                      type="date"
-                      {...register('dueDate')}
-                      className={`input ${errors.dueDate ? 'input-error' : ''}`}
-                    />
-                    {errors.dueDate && (
-                      <p className="mt-1 text-sm text-red-500">{errors.dueDate.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="estimatedHours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Ore Stimate{' '}
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                  </label>
-                  <input
-                    id="estimatedHours"
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    {...register('estimatedHours')}
-                    className={`input ${errors.estimatedHours ? 'input-error' : ''}`}
-                    placeholder="es. 8"
-                  />
-                  {errors.estimatedHours && (
-                    <p className="mt-1 text-sm text-red-500">{errors.estimatedHours.message}</p>
-                  )}
-                </div>
-
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Le date determinano la posizione del task nel Gantt chart
-                </p>
-              </div>
-
-              {/* ── Section: Tag ── */}
-              <div className="form-section-header">
-                <Tag className="w-3.5 h-3.5" />
-                Tag
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Tag{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(opzionale)</span>
-                </label>
-                <TagInput
-                  entityType="task"
-                  entityId={isEditMode ? id ?? null : null}
-                  value={taskTags}
-                  onChange={setTaskTags}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Sticky Action Bar ── */}
-        <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-3 bg-white/90 dark:bg-surface-800/90 backdrop-blur-md border-t border-gray-200/50 dark:border-white/10 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center justify-between">
-            {/* Left: Delete (edit mode only) */}
-            {isEditMode ? (
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
-              >
-                <Trash2 className="w-4 h-4" />
-                Elimina
-              </button>
-            ) : (
-              <div />
-            )}
-
-            {/* Right: Cancel + Save */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || (!isDirty && isEditMode)}
-                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Salvataggio...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    {isEditMode
-                      ? 'Salva Modifiche'
-                      : `Crea ${typeLabel}`
-                    }
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </form>
-
-      {/* Recurrence Settings - Only in edit mode */}
-      {isEditMode && id && (
-        <div className="mt-6">
-          <RecurrenceSettings
-            taskId={id}
-            isRecurring={currentTask?.isRecurring}
-            recurrencePattern={currentTask?.recurrencePattern}
-            onSave={() => {
-              fetchTask(id)
-            }}
+        {/* Description */}
+        <FormField label="Descrizione" error={errors.description?.message}>
+          <Textarea
+            {...register("description")}
+            placeholder="Descrizione del task..."
+            rows={4}
+            className="resize-none"
           />
-        </div>
-      )}
+        </FormField>
 
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={showDeleteConfirm}
-        title="Conferma Eliminazione"
-        message="Sei sicuro di voler eliminare il task"
-        itemName={currentTask?.title}
-        isDeleting={isDeleting}
-        onCancel={() => setShowDeleteConfirm(false)}
-        onConfirm={handleDelete}
-      />
-    </div>
+        {/* Type, Status, Priority row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <FormField label="Tipo" error={errors.taskType?.message}>
+            <Controller
+              name="taskType"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TASK_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FormField>
+
+          <FormField label="Stato" error={errors.status?.message}>
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona stato" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FormField>
+
+          <FormField label="Priorita'" error={errors.priority?.message}>
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona priorita'" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FormField>
+        </div>
+
+        {/* Project and Assignee */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Progetto" error={errors.projectId?.message}>
+            <Controller
+              name="projectId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value || "__none__"}
+                  onValueChange={(val) =>
+                    field.onChange(val === "__none__" ? undefined : val)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona progetto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nessuno</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FormField>
+
+          <FormField label="Assegnatario" error={errors.assigneeId?.message}>
+            <Controller
+              name="assigneeId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value || "__none__"}
+                  onValueChange={(val) =>
+                    field.onChange(val === "__none__" ? undefined : val)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona assegnatario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Non assegnato</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FormField>
+        </div>
+
+        {/* Parent task */}
+        <FormField label="Task Padre" error={errors.parentTaskId?.message}>
+          <Input
+            {...register("parentTaskId")}
+            placeholder="ID del task padre (opzionale)"
+          />
+        </FormField>
+
+        {/* Dates */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Data Inizio" error={errors.startDate?.message}>
+            <Input type="date" {...register("startDate")} />
+          </FormField>
+
+          <FormField label="Scadenza" error={errors.dueDate?.message}>
+            <Input type="date" {...register("dueDate")} />
+          </FormField>
+        </div>
+
+        {/* Estimated hours */}
+        <FormField label="Ore Stimate" error={errors.estimatedHours?.message}>
+          <Input
+            type="number"
+            step="0.5"
+            min="0"
+            {...register("estimatedHours")}
+            placeholder="es. 8"
+            className="w-[200px]"
+          />
+        </FormField>
+      </div>
+    </EntityForm>
   )
 }

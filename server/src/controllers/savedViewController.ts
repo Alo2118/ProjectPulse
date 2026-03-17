@@ -7,6 +7,8 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import { savedViewService } from '../services/savedViewService.js'
 import { logger } from '../utils/logger.js'
+import { sendSuccess, sendCreated, sendError } from '../utils/responseHelpers.js'
+import { requireUserId } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -48,28 +50,28 @@ const querySchema = z.object({
 export async function getViews(req: Request, res: Response): Promise<void> {
   try {
     const query = querySchema.parse(req.query)
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
     const views = await savedViewService.getViews(userId, query)
-    res.json({ success: true, data: views })
+    sendSuccess(res, views)
   } catch (error) {
     logger.error('Error fetching saved views', { error })
-    res.status(500).json({ success: false, error: 'Errore nel recupero delle viste salvate' })
+    sendError(res, 'Errore nel recupero delle viste salvate', 500)
   }
 }
 
 export async function getView(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
     const view = await savedViewService.getViewById(id, userId)
     if (!view) {
-      res.status(404).json({ success: false, error: 'Vista non trovata' })
+      sendError(res, 'Vista non trovata', 404)
       return
     }
-    res.json({ success: true, data: view })
+    sendSuccess(res, view)
   } catch (error) {
     logger.error('Error fetching saved view', { error })
-    res.status(500).json({ success: false, error: 'Errore nel recupero della vista' })
+    sendError(res, 'Errore nel recupero della vista', 500)
   }
 }
 
@@ -77,15 +79,15 @@ export async function createView(req: Request, res: Response): Promise<void> {
   try {
     const parsed = createViewSchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
     const view = await savedViewService.createView(parsed.data, userId)
-    res.status(201).json({ success: true, data: view })
+    sendCreated(res, view)
   } catch (error) {
     logger.error('Error creating saved view', { error })
-    res.status(500).json({ success: false, error: 'Errore nella creazione della vista' })
+    sendError(res, 'Errore nella creazione della vista', 500)
   }
 }
 
@@ -94,34 +96,34 @@ export async function updateView(req: Request, res: Response): Promise<void> {
     const { id } = req.params
     const parsed = updateViewSchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
     const view = await savedViewService.updateView(id, parsed.data, userId)
     if (!view) {
-      res.status(404).json({ success: false, error: 'Vista non trovata o accesso non autorizzato' })
+      sendError(res, 'Vista non trovata o accesso non autorizzato', 404)
       return
     }
-    res.json({ success: true, data: view })
+    sendSuccess(res, view)
   } catch (error) {
     logger.error('Error updating saved view', { error })
-    res.status(500).json({ success: false, error: 'Errore nell\'aggiornamento della vista' })
+    sendError(res, "Errore nell'aggiornamento della vista", 500)
   }
 }
 
 export async function deleteView(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user!.userId
+    const userId = requireUserId(req)
     const deleted = await savedViewService.deleteView(id, userId)
     if (!deleted) {
-      res.status(404).json({ success: false, error: 'Vista non trovata o accesso non autorizzato' })
+      sendError(res, 'Vista non trovata o accesso non autorizzato', 404)
       return
     }
-    res.json({ success: true, message: 'Vista eliminata' })
+    sendSuccess(res, { message: 'Vista eliminata' })
   } catch (error) {
     logger.error('Error deleting saved view', { error })
-    res.status(500).json({ success: false, error: 'Errore nell\'eliminazione della vista' })
+    sendError(res, "Errore nell'eliminazione della vista", 500)
   }
 }

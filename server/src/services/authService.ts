@@ -8,17 +8,22 @@ import jwt, { SignOptions } from 'jsonwebtoken'
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
-import { JwtPayload, UserWithoutPassword, Theme } from '../types/index.js'
+import { JwtPayload, UserWithoutPassword, Theme, ThemeStyle } from '../types/index.js'
+import {
+  BCRYPT_ROUNDS,
+  JWT_ACCESS_EXPIRY,
+  JWT_REFRESH_EXPIRY,
+  REFRESH_TOKEN_TTL_MS,
+} from '../constants/config.js'
 
-const BCRYPT_ROUNDS = 12
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required')
 }
 
 const JWT_SECRET = process.env.JWT_SECRET
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET
-const JWT_OPTIONS: SignOptions = { expiresIn: '8h' }
-const JWT_REFRESH_OPTIONS: SignOptions = { expiresIn: '7d' }
+const JWT_OPTIONS: SignOptions = { expiresIn: JWT_ACCESS_EXPIRY }
+const JWT_REFRESH_OPTIONS: SignOptions = { expiresIn: JWT_REFRESH_EXPIRY }
 
 /**
  * User data returned after successful authentication
@@ -77,7 +82,7 @@ export async function login(
     data: {
       token: refreshToken,
       userId: user.id,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     },
   })
 
@@ -101,6 +106,10 @@ export async function login(
       role: user.role,
       avatarUrl: user.avatarUrl,
       theme: user.theme as Theme,
+      themeStyle: user.themeStyle as ThemeStyle,
+      notificationPreferences: user.notificationPreferences
+        ? JSON.parse(user.notificationPreferences)
+        : null,
       isActive: user.isActive,
       createdAt: user.createdAt,
       lastLoginAt: new Date(),
@@ -153,7 +162,7 @@ export async function refresh(refreshToken: string): Promise<{ token: string; re
       data: {
         token: newRefreshToken,
         userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       },
     })
 
@@ -199,6 +208,8 @@ export async function getCurrentUser(userId: string): Promise<UserWithoutPasswor
       role: true,
       avatarUrl: true,
       theme: true,
+      themeStyle: true,
+      notificationPreferences: true,
       isActive: true,
       createdAt: true,
       lastLoginAt: true,
@@ -210,6 +221,10 @@ export async function getCurrentUser(userId: string): Promise<UserWithoutPasswor
   return {
     ...user,
     theme: user.theme as Theme,
+    themeStyle: user.themeStyle as ThemeStyle,
+    notificationPreferences: user.notificationPreferences
+      ? JSON.parse(user.notificationPreferences)
+      : null,
   }
 }
 

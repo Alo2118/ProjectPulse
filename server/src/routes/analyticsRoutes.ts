@@ -7,7 +7,7 @@ import { Router, Request, Response, NextFunction } from 'express'
 import { authMiddleware, requireRole } from '../middleware/authMiddleware.js'
 import { analyticsService } from '../services/analyticsService.js'
 import { logger } from '../utils/logger.js'
-import { sendSuccess } from '../utils/responseHelpers.js'
+import { sendSuccess, sendError } from '../utils/responseHelpers.js'
 
 const router = Router()
 
@@ -35,7 +35,7 @@ router.get('/my-weekly-hours', async (req: Request, res: Response, next: NextFun
       weekStart.setHours(0, 0, 0, 0)
     }
     const data = await analyticsService.getWeeklyHoursByUser(userId, weekStart)
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -50,7 +50,7 @@ router.use(requireRole('admin', 'direzione'))
 router.get('/overview', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await analyticsService.getOverview()
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -63,7 +63,7 @@ router.get('/overview-with-delta', async (_req: Request, res: Response, next: Ne
       analyticsService.getOverview(),
       analyticsService.getPreviousWeekOverview(),
     ])
-    res.json({ success: true, data: { ...overview, previousWeek } })
+    sendSuccess(res, { ...overview, previousWeek })
   } catch (error) {
     next(error)
   }
@@ -86,7 +86,7 @@ router.get('/team-workload', async (req: Request, res: Response, next: NextFunct
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 7)
     const data = await analyticsService.getTeamWorkload(weekStart, weekEnd)
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -96,7 +96,7 @@ router.get('/team-workload', async (req: Request, res: Response, next: NextFunct
 router.get('/tasks-by-status', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await analyticsService.getTasksByStatus()
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -106,7 +106,7 @@ router.get('/tasks-by-status', async (_req: Request, res: Response, next: NextFu
 router.get('/hours-by-project', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await analyticsService.getHoursByProject()
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -117,7 +117,7 @@ router.get('/task-completion-trend', async (req: Request, res: Response, next: N
   try {
     const days = parseInt(req.query.days as string) || 30
     const data = await analyticsService.getTaskCompletionTrend(days)
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -127,7 +127,7 @@ router.get('/task-completion-trend', async (req: Request, res: Response, next: N
 router.get('/top-contributors', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await analyticsService.getTopContributors()
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
@@ -137,20 +137,38 @@ router.get('/top-contributors', async (_req: Request, res: Response, next: NextF
 router.get('/project-health', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await analyticsService.getProjectHealth()
-    res.json({ success: true, data })
+    sendSuccess(res, data)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// GET /api/analytics/burndown/:projectId?days=30
+router.get('/burndown/:projectId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const projectId = req.params.projectId
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(projectId)) {
+      sendError(res, 'ID progetto non valido', 400)
+      return
+    }
+    const daysParam = parseInt(req.query.days as string)
+    const days = isNaN(daysParam) ? 30 : Math.max(7, Math.min(365, daysParam))
+    const data = await analyticsService.getBurndownData(projectId, days)
+    sendSuccess(res, data)
   } catch (error) {
     next(error)
   }
 })
 
 // GET /api/analytics/delivery-forecast
-router.get('/delivery-forecast', async (_req: Request, res: Response) => {
+router.get('/delivery-forecast', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await analyticsService.getDeliveryForecast()
-    res.json({ success: true, data })
+    sendSuccess(res, data)
   } catch (error) {
-    logger.error('Error fetching delivery forecast', { error })
-    res.status(500).json({ success: false, error: 'Errore nel calcolo previsioni consegna' })
+    next(error)
   }
 })
 

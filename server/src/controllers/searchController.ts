@@ -3,10 +3,12 @@
  * @module controllers/searchController
  */
 
-import { Request, Response } from 'express'
+import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { globalSearch } from '../services/searchService.js'
-import { logger } from '../utils/logger.js'
+import { sendSuccess } from '../utils/responseHelpers.js'
+
+const searchDomainEnum = z.enum(['all', 'tasks', 'projects', 'users', 'risks', 'documents'])
 
 const searchQuerySchema = z.object({
   q: z.string().min(2, 'Query must be at least 2 characters').max(100, 'Query must be at most 100 characters'),
@@ -14,29 +16,20 @@ const searchQuerySchema = z.object({
     (val) => (val !== undefined ? Number(val) : undefined),
     z.number().int().min(1).max(20).default(5)
   ),
+  domain: searchDomainEnum.default('all'),
 })
 
-export async function search(req: Request, res: Response): Promise<void> {
+export async function search(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const parsed = searchQuerySchema.safeParse({
+    const { q, limit, domain } = searchQuerySchema.parse({
       q: req.query['q'],
       limit: req.query['limit'],
+      domain: req.query['domain'],
     })
 
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: parsed.error.errors[0]?.message ?? 'Invalid query parameters',
-      })
-      return
-    }
-
-    const { q, limit } = parsed.data
-    const results = await globalSearch(q, limit)
-
-    res.json({ success: true, data: results })
+    const results = await globalSearch(q, limit, domain)
+    sendSuccess(res, results)
   } catch (error) {
-    logger.error('Search error', { error })
-    res.status(500).json({ success: false, error: 'Server error during search' })
+    next(error)
   }
 }

@@ -87,6 +87,69 @@ async function main() {
 
   console.log('✅ Created project template')
 
+  // Create system phase templates
+  const biomedicalPhaseTemplate = await prisma.workflowTemplate.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000101' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000101',
+      name: 'Biomedico IEC 62304',
+      description: 'Fasi standard per progetti dispositivi medici secondo IEC 62304',
+      domain: 'project',
+      statuses: JSON.stringify([
+        { key: 'planning', label: 'Pianificazione', description: 'Definizione obiettivi e pianificazione', order: 0, color: 'gray', isInitial: true, isFinal: false },
+        { key: 'design', label: 'Design', description: 'Progettazione e strutturazione del lavoro', order: 1, color: 'blue', isInitial: false, isFinal: false },
+        { key: 'verification', label: 'Verifica', description: 'Verifica avanzamento e completamento attivita', order: 2, color: 'yellow', isInitial: false, isFinal: false },
+        { key: 'validation', label: 'Validazione', description: 'Validazione finale e approvazione deliverable', order: 3, color: 'purple', isInitial: false, isFinal: false },
+        { key: 'transfer', label: 'Trasferimento', description: 'Consegna finale e chiusura progetto', order: 4, color: 'green', isInitial: false, isFinal: true },
+      ]),
+      transitions: JSON.stringify({
+        planning: ['design'],
+        design: ['planning', 'verification'],
+        verification: ['design', 'validation'],
+        validation: ['verification', 'transfer'],
+        transfer: ['validation'],
+      }),
+      isDefault: true,
+      isSystem: true,
+      isActive: true,
+      createdById: admin.id,
+    },
+  })
+
+  const genericPhaseTemplate = await prisma.workflowTemplate.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000102' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000102',
+      name: 'Generico',
+      description: 'Template fasi generico per progetti non regolamentati',
+      domain: 'project',
+      statuses: JSON.stringify([
+        { key: 'initiation', label: 'Avvio', description: 'Avvio e definizione del progetto', order: 0, color: 'gray', isInitial: true, isFinal: false },
+        { key: 'execution', label: 'Esecuzione', description: 'Esecuzione delle attivita pianificate', order: 1, color: 'blue', isInitial: false, isFinal: false },
+        { key: 'closing', label: 'Chiusura', description: 'Completamento e consegna', order: 2, color: 'green', isInitial: false, isFinal: true },
+      ]),
+      transitions: JSON.stringify({
+        initiation: ['execution'],
+        execution: ['initiation', 'closing'],
+        closing: ['execution'],
+      }),
+      isDefault: false,
+      isSystem: true,
+      isActive: true,
+      createdById: admin.id,
+    },
+  })
+
+  console.log(`✅ Created 2 phase templates: ${biomedicalPhaseTemplate.name}, ${genericPhaseTemplate.name}`)
+
+  // Prepare phase JSON for projects
+  const bioPhases = JSON.stringify({
+    phases: JSON.parse(biomedicalPhaseTemplate.statuses),
+    transitions: JSON.parse(biomedicalPhaseTemplate.transitions),
+  })
+
   // Create projects (using ISO 13485 lifecycle phases)
   const project1 = await prisma.project.upsert({
     where: { code: 'PRJ-2026-001' },
@@ -95,7 +158,7 @@ async function main() {
       code: 'PRJ-2026-001',
       name: 'Dispositivo Diagnostico Alpha',
       description: 'Sviluppo di un nuovo dispositivo diagnostico per analisi del sangue in conformita ISO 13485',
-      status: 'design',
+      status: 'active',
       priority: 'high',
       startDate: new Date('2026-01-15'),
       targetEndDate: new Date('2026-06-30'),
@@ -103,6 +166,9 @@ async function main() {
       ownerId: direzione.id,
       createdById: admin.id,
       templateId: template.id,
+      phaseTemplateId: biomedicalPhaseTemplate.id,
+      phases: bioPhases,
+      currentPhaseKey: 'design',
     },
   })
 
@@ -113,13 +179,16 @@ async function main() {
       code: 'PRJ-2026-002',
       name: 'Software Gestionale Beta',
       description: 'Implementazione software gestionale per tracciabilita dispositivi medici',
-      status: 'planning',
+      status: 'active',
       priority: 'medium',
       startDate: new Date('2026-02-01'),
       targetEndDate: new Date('2026-05-15'),
       budget: 80000,
       ownerId: direzione.id,
       createdById: admin.id,
+      phaseTemplateId: biomedicalPhaseTemplate.id,
+      phases: bioPhases,
+      currentPhaseKey: 'planning',
     },
   })
 
@@ -241,6 +310,77 @@ async function main() {
   }
 
   console.log(`✅ Created ${tagData.length} tags`)
+
+  // Seed permission policies (default matrix for 4 roles × 8 domains × 12 actions)
+  const PERM_ROLES = ['admin', 'direzione', 'dipendente', 'guest'] as const
+  const PERM_DOMAINS = ['project', 'task', 'risk', 'document', 'input', 'time_entry', 'user', 'analytics'] as const
+  const PERM_ACTIONS = ['view', 'create', 'edit', 'delete', 'advance_phase', 'block', 'assign', 'export', 'manage_team', 'approve', 'evaluate', 'convert'] as const
+
+  type PermAction = typeof PERM_ACTIONS[number]
+  type PermDomain = typeof PERM_DOMAINS[number]
+
+  const policyDefaults: Array<{ role: string; domain: string; action: string; allowed: boolean }> = []
+
+  // admin — everything allowed
+  for (const domain of PERM_DOMAINS) {
+    for (const action of PERM_ACTIONS) {
+      policyDefaults.push({ role: 'admin', domain, action, allowed: true })
+    }
+  }
+
+  // direzione — broad access
+  const direzioneDomainActions: Record<string, PermAction[]> = {
+    project: ['view', 'create', 'edit', 'advance_phase', 'assign', 'export', 'manage_team', 'convert'],
+    task: ['view', 'create', 'edit', 'advance_phase', 'assign', 'export', 'block', 'evaluate', 'convert'],
+    risk: ['view', 'create', 'edit', 'assign', 'export', 'evaluate'],
+    document: ['view', 'create', 'edit', 'delete', 'approve', 'export', 'convert'],
+    input: ['view', 'create', 'edit', 'assign', 'export', 'convert'],
+    time_entry: ['view', 'create', 'edit', 'export', 'approve'],
+    user: ['view', 'export'],
+    analytics: ['view', 'export'],
+  }
+  for (const domain of PERM_DOMAINS) {
+    const allowed = (direzioneDomainActions[domain] ?? []) as PermAction[]
+    for (const action of PERM_ACTIONS) {
+      policyDefaults.push({ role: 'direzione', domain, action, allowed: allowed.includes(action) })
+    }
+  }
+
+  // dipendente — view broadly, limited create/edit
+  const dipendenteDomainActions: Record<string, PermAction[]> = {
+    project: ['view'],
+    task: ['view', 'advance_phase'],
+    risk: ['view'],
+    document: ['view', 'create'],
+    input: ['view', 'create'],
+    time_entry: ['view', 'create', 'edit'],
+    user: ['view'],
+    analytics: ['view', 'export'],
+  }
+  for (const domain of PERM_DOMAINS) {
+    const allowed = (dipendenteDomainActions[domain] ?? []) as PermAction[]
+    for (const action of PERM_ACTIONS) {
+      policyDefaults.push({ role: 'dipendente', domain, action, allowed: allowed.includes(action) })
+    }
+  }
+
+  // guest — view only on project, task, analytics
+  const guestAllowedDomains: PermDomain[] = ['project', 'task', 'analytics']
+  for (const domain of PERM_DOMAINS) {
+    for (const action of PERM_ACTIONS) {
+      policyDefaults.push({ role: 'guest', domain, action, allowed: guestAllowedDomains.includes(domain) && action === 'view' })
+    }
+  }
+
+  for (const policy of policyDefaults) {
+    await prisma.permissionPolicy.upsert({
+      where: { role_domain_action: { role: policy.role, domain: policy.domain, action: policy.action } },
+      create: { role: policy.role, domain: policy.domain, action: policy.action, allowed: policy.allowed },
+      update: { allowed: policy.allowed },
+    })
+  }
+
+  console.log(`✅ Created ${policyDefaults.length} permission policies`)
 
   console.log('🎉 Seed complete!')
 }

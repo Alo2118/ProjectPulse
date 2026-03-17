@@ -4,12 +4,10 @@
  */
 
 import type { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
 import { taskService } from '../services/taskService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { assertTaskOwnership } from '../utils/taskOwnership.js'
 import { TaskStatus, TaskPriority } from '../types/index.js'
-import { logger } from '../utils/logger.js'
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
 import {
   createTaskSchema,
@@ -24,6 +22,7 @@ import {
   cloneTaskSchema,
   calendarQuerySchema,
 } from '../schemas/taskSchemas.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // CONTROLLER FUNCTIONS
@@ -48,6 +47,8 @@ export async function getTasks(req: Request, res: Response, next: NextFunction):
       includeSubtasks: params.includeSubtasks,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)
@@ -80,11 +81,7 @@ export async function getTask(req: Request, res: Response, next: NextFunction): 
   try {
     const { id } = req.params
 
-    const task = await taskService.getTaskById(id)
-
-    if (!task) {
-      throw new AppError('Task not found', 404)
-    }
+    const task = requireResource(await taskService.getTaskById(id), 'Task')
 
     sendSuccess(res, task)
   } catch (error) {
@@ -98,25 +95,8 @@ export async function getTask(req: Request, res: Response, next: NextFunction): 
  */
 export async function createTask(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    // Debug logging
-    logger.info('Received task creation request:', {
-      body: req.body,
-      userId: req.user?.userId,
-    })
-
     const data = createTaskSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
-    logger.info('Task schema validated:', {
-      taskType: data.taskType,
-      projectId: data.projectId,
-      parentTaskId: data.parentTaskId,
-      title: data.title,
-    })
+    const userId = requireUserId(req)
 
     const task = await taskService.createTask(
       {
@@ -156,16 +136,12 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
   try {
     const { id } = req.params
     const data = updateTaskSchema.parse(req.body)
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
 
     await assertTaskOwnership(id, userId, userRole)
 
-    const task = await taskService.updateTask(
+    const task = requireResource(await taskService.updateTask(
       id,
       {
         title: data.title,
@@ -186,11 +162,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
         position: data.position,
       },
       userId
-    )
-
-    if (!task) {
-      throw new AppError('Task not found', 404)
-    }
+    ), 'Task')
 
     // Recursive assignment to subtasks at N levels
     let subtasksUpdated = 0
@@ -202,7 +174,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
       )
     }
 
-    res.json({ success: true, data: task, subtasksUpdated })
+    sendSuccess(res, { ...task, subtasksUpdated })
   } catch (error) {
     next(error)
   }
@@ -217,19 +189,11 @@ export async function changeStatus(req: Request, res: Response, next: NextFuncti
   try {
     const { id } = req.params
     const { status, blockedReason } = statusChangeSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     await assertTaskOwnership(id, userId, req.user?.role)
 
-    const task = await taskService.changeTaskStatus(id, status as TaskStatus, userId, blockedReason)
-
-    if (!task) {
-      throw new AppError('Task not found', 404)
-    }
+    const task = requireResource(await taskService.changeTaskStatus(id, status as TaskStatus, userId, blockedReason), 'Task')
 
     sendSuccess(res, task)
   } catch (error) {
@@ -248,22 +212,14 @@ export async function changeStatus(req: Request, res: Response, next: NextFuncti
 export async function deleteTask(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
     const userRole = req.user?.role
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
 
     await assertTaskOwnership(id, userId, userRole)
 
-    const deleted = await taskService.deleteTask(id, userId)
+    requireResource(await taskService.deleteTask(id, userId), 'Task')
 
-    if (!deleted) {
-      throw new AppError('Task not found', 404)
-    }
-
-    res.json({ success: true, message: 'Task deleted successfully' })
+    sendSuccess(res, { message: 'Task deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -276,11 +232,7 @@ export async function deleteTask(req: Request, res: Response, next: NextFunction
  */
 export async function getMyTasks(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const params = querySchema.parse(req.query)
 
@@ -306,11 +258,7 @@ export async function getMyTasks(req: Request, res: Response, next: NextFunction
  */
 export async function getMyTaskStats(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const stats = await taskService.getUserTaskStats(userId)
 
@@ -330,11 +278,7 @@ export async function getMyTaskStats(req: Request, res: Response, next: NextFunc
  */
 export async function bulkUpdate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const { ids, update } = bulkUpdateTaskSchema.parse(req.body)
 
@@ -352,11 +296,7 @@ export async function bulkUpdate(req: Request, res: Response, next: NextFunction
  */
 export async function bulkDelete(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const { ids } = bulkDeleteTaskSchema.parse(req.body)
 
@@ -374,17 +314,13 @@ export async function bulkDelete(req: Request, res: Response, next: NextFunction
  */
 export async function reorderTasks(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const { tasks } = reorderTaskSchema.parse(req.body)
 
     await taskService.reorderTasks(tasks, userId)
 
-    res.json({ success: true, message: 'Tasks reordered successfully' })
+    sendSuccess(res, { message: 'Tasks reordered successfully' })
   } catch (error) {
     next(error)
   }
@@ -419,6 +355,8 @@ export async function getStandaloneTasks(req: Request, res: Response, next: Next
       search: params.search,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
     sendPaginated(res, result)
@@ -463,20 +401,16 @@ export async function getTasksForGantt(req: Request, res: Response, next: NextFu
 export async function createDependency(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createDependencySchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     // Dipendente must own at least one of the two linked tasks
     if (req.user?.role === 'dipendente') {
-      const [pred, succ] = await Promise.all([
+      const [predRaw, succRaw] = await Promise.all([
         taskService.getTaskById(data.predecessorId),
         taskService.getTaskById(data.successorId),
       ])
-      if (!pred) throw new AppError('Predecessor task not found', 404)
-      if (!succ) throw new AppError('Successor task not found', 404)
+      const pred = requireResource(predRaw, 'Predecessor task')
+      const succ = requireResource(succRaw, 'Successor task')
 
       const ownsPred = pred.createdById === userId || pred.assigneeId === userId
       const ownsSucc = succ.createdById === userId || succ.assigneeId === userId
@@ -523,7 +457,7 @@ export async function getTaskDependencies(req: Request, res: Response, next: Nex
  * Gets tasks for calendar view filtered by date range
  * @route GET /api/tasks/calendar
  */
-export async function getTasksForCalendar(req: Request, res: Response): Promise<void> {
+export async function getTasksForCalendar(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const parsed = calendarQuerySchema.parse(req.query)
 
@@ -538,12 +472,7 @@ export async function getTasksForCalendar(req: Request, res: Response): Promise<
 
     sendSuccess(res, tasks)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ success: false, error: 'Invalid parameters', details: error.errors })
-      return
-    }
-    logger.error('Error fetching calendar tasks', { error })
-    res.status(500).json({ success: false, error: 'Server error' })
+    next(error)
   }
 }
 
@@ -554,16 +483,11 @@ export async function getTasksForCalendar(req: Request, res: Response): Promise<
 export async function deleteDependency(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { dependencyId } = req.params
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     // Dipendente must own at least one of the two linked tasks
     if (req.user?.role === 'dipendente') {
-      const dep = await taskService.getTaskDependencyById(dependencyId)
-      if (!dep) throw new AppError('Dependency not found', 404)
+      const dep = requireResource(await taskService.getTaskDependencyById(dependencyId), 'Dependency')
 
       const [pred, succ] = await Promise.all([
         taskService.getTaskById(dep.predecessorId),
@@ -577,13 +501,9 @@ export async function deleteDependency(req: Request, res: Response, next: NextFu
       }
     }
 
-    const deleted = await taskService.deleteTaskDependency(dependencyId, userId)
+    requireResource(await taskService.deleteTaskDependency(dependencyId, userId), 'Dependency')
 
-    if (!deleted) {
-      throw new AppError('Dependency not found', 404)
-    }
-
-    res.json({ success: true, message: 'Dependency deleted successfully' })
+    sendSuccess(res, { message: 'Dependency deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -595,8 +515,7 @@ export async function deleteDependency(req: Request, res: Response, next: NextFu
  */
 export async function cloneTask(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-    if (!userId) throw new AppError('User not authenticated', 401)
+    const userId = requireUserId(req)
 
     const { id } = req.params
     const { includeSubtasks } = cloneTaskSchema.parse(req.body)

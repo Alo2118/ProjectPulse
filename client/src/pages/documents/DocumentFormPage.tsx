@@ -1,378 +1,319 @@
-/**
- * Document Form Page - Create or edit a document
- * @module pages/documents/DocumentFormPage
- */
+import { useState, useEffect, useRef } from "react"
+import { useParams, useNavigate } from "react-router-dom"
+import { Upload, X } from "lucide-react"
+import { toast } from "sonner"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
+import { EntityForm } from "@/components/common/EntityForm"
+import { FormField } from "@/components/common/FormField"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { DOCUMENT_STATUS_LABELS } from "@/lib/constants"
+import { formatFileSize } from "@/lib/utils"
+import {
+  useDocumentQuery,
+  useCreateDocument,
+  useUpdateDocument,
+  useDeleteDocument,
+} from "@/hooks/api/useDocuments"
+import { useProjectListQuery } from "@/hooks/api/useProjects"
 
-import { useEffect, useState, useRef, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useDocumentStore } from '@stores/documentStore'
-import { useProjectStore } from '@stores/projectStore'
-import { ArrowLeft, Loader2, Save, Upload, X, FileText, FileImage, FileSpreadsheet, File } from 'lucide-react'
-import { DOCUMENT_TYPE_OPTIONS } from '@/constants'
-import { Document, DocumentType } from '@/types'
-import { Breadcrumb } from '@/components/common/Breadcrumb'
+const TYPE_OPTIONS = [
+  { value: "design_input", label: "Design Input" },
+  { value: "design_output", label: "Design Output" },
+  { value: "verification_report", label: "Rapporto Verifica" },
+  { value: "validation_report", label: "Rapporto Validazione" },
+  { value: "change_control", label: "Change Control" },
+]
 
-export default function DocumentFormPage() {
+const STATUS_OPTIONS = Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}))
+
+interface FormState {
+  code: string
+  title: string
+  description: string
+  type: string
+  status: string
+  projectId: string
+}
+
+const INITIAL_FORM: FormState = {
+  code: "",
+  title: "",
+  description: "",
+  type: "design_input",
+  status: "draft",
+  projectId: "",
+}
+
+interface FormErrors {
+  code?: string
+  title?: string
+}
+
+function DocumentFormPage() {
   const { id } = useParams<{ id: string }>()
+  useSetPageContext({ domain: 'document', entityId: id })
   const navigate = useNavigate()
-  const isEditing = Boolean(id)
-
-  const { currentDocument, isLoading, fetchDocument, createDocument, updateDocument, clearCurrentDocument } =
-    useDocumentStore()
-  const { projects, fetchProjects } = useProjectStore()
-
-  const [formData, setFormData] = useState({
-    projectId: '',
-    title: '',
-    description: '',
-    type: 'design_input' as DocumentType,
-    reviewDueDate: '',
-    reviewFrequencyDays: '',
-  })
-  const [file, setFile] = useState<File | null>(null)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSaving, setIsSaving] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
+  const isNew = !id || id === "new"
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  const { data: doc, isLoading: loadingDoc } = useDocumentQuery(isNew ? "" : id)
+  const { data: projectsData } = useProjectListQuery({ limit: "100" })
 
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <FileImage className="w-8 h-8 text-green-500" />
-    if (mimeType.includes('pdf')) return <FileText className="w-8 h-8 text-red-500" />
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return <FileSpreadsheet className="w-8 h-8 text-emerald-500" />
-    if (mimeType.includes('word') || mimeType.includes('document')) return <FileText className="w-8 h-8 text-blue-500" />
-    return <File className="w-8 h-8 text-gray-500" />
-  }
+  const createMutation = useCreateDocument()
+  const updateMutation = useUpdateDocument()
+  const deleteMutation = useDeleteDocument()
 
-  const handleFileChange = useCallback((selectedFile: File | null) => {
-    if (!selectedFile) return
-    if (selectedFile.size > MAX_FILE_SIZE) {
-      setErrors((prev) => ({ ...prev, file: 'Il file supera il limite di 10MB' }))
-      return
-    }
-    setErrors((prev) => { const next = { ...prev }; delete next.file; return next })
-    setFile(selectedFile)
-  }, [])
+  const [form, setForm] = useState<FormState>(INITIAL_FORM)
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [file, setFile] = useState<File | null>(null)
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const dropped = e.dataTransfer.files[0]
-    if (dropped) handleFileChange(dropped)
-  }
+  const projects = projectsData?.data ?? []
 
   useEffect(() => {
-    fetchProjects()
-    if (id) {
-      fetchDocument(id)
-    }
-    return () => clearCurrentDocument()
-  }, [id, fetchProjects, fetchDocument, clearCurrentDocument])
-
-  useEffect(() => {
-    if (isEditing && currentDocument) {
-      setFormData({
-        projectId: currentDocument.projectId,
-        title: currentDocument.title,
-        description: currentDocument.description || '',
-        type: currentDocument.type,
-        reviewDueDate: currentDocument.reviewDueDate
-          ? new Date(currentDocument.reviewDueDate).toISOString().split('T')[0]
-          : '',
-        reviewFrequencyDays: currentDocument.reviewFrequencyDays
-          ? String(currentDocument.reviewFrequencyDays)
-          : '',
+    if (!isNew && doc) {
+      setForm({
+        code: doc.code ?? "",
+        title: doc.title ?? "",
+        description: doc.description ?? "",
+        type: doc.type ?? "design_input",
+        status: doc.status ?? "draft",
+        projectId: doc.projectId ?? "",
       })
     }
-  }, [isEditing, currentDocument])
+  }, [isNew, doc])
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.projectId) {
-      newErrors.projectId = 'Seleziona un progetto'
-    }
-    if (!formData.title.trim()) {
-      newErrors.title = 'Il titolo e obbligatorio'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  const validate = (): boolean => {
+    const errs: FormErrors = {}
+    if (!form.code.trim()) errs.code = "Il codice e' obbligatorio"
+    if (!form.title.trim()) errs.title = "Il titolo e' obbligatorio"
+    setErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm()) return
+    if (!validate()) return
 
-    setIsSaving(true)
     try {
-      if (isEditing && id) {
-        await updateDocument(id, {
-          title: formData.title,
-          description: formData.description || undefined,
-          type: formData.type,
-          reviewDueDate: formData.reviewDueDate || null,
-          reviewFrequencyDays: formData.reviewFrequencyDays ? parseInt(formData.reviewFrequencyDays, 10) : null,
-        } as Partial<Document>)
-        navigate(`/documents/${id}`)
+      if (isNew) {
+        const formData = new FormData()
+        formData.append("code", form.code)
+        formData.append("title", form.title)
+        formData.append("description", form.description)
+        formData.append("type", form.type)
+        formData.append("status", form.status)
+        if (form.projectId) formData.append("projectId", form.projectId)
+        if (file) formData.append("file", file)
+        const result = await createMutation.mutateAsync(formData)
+        const newId = (result as { id?: string }).id
+        toast.success("Documento creato con successo", {
+          action: newId
+            ? { label: "Apri →", onClick: () => navigate(`/documents/${newId}`) }
+            : undefined,
+        })
+        navigate(newId ? `/documents/${newId}` : "/documents")
       } else {
-        const data = new FormData()
-        data.append('projectId', formData.projectId)
-        data.append('title', formData.title)
-        if (formData.description) data.append('description', formData.description)
-        data.append('type', formData.type)
-        if (formData.reviewDueDate) data.append('reviewDueDate', formData.reviewDueDate)
-        if (formData.reviewFrequencyDays) data.append('reviewFrequencyDays', formData.reviewFrequencyDays)
-        if (file) data.append('file', file)
-
-        const newDoc = await createDocument(data)
-        navigate(`/documents/${newDoc.id}`)
+        const payload = {
+          id,
+          ...form,
+          projectId: form.projectId || undefined,
+        }
+        await updateMutation.mutateAsync(payload)
+        toast.success("Documento aggiornato con successo", {
+          action: {
+            label: "Apri →",
+            onClick: () => navigate(`/documents/${id}`),
+          },
+        })
+        navigate(`/documents/${id}`)
       }
     } catch {
-      // silently ignore
-    } finally {
-      setIsSaving(false)
+      toast.error(isNew ? "Errore nella creazione" : "Errore nell'aggiornamento")
     }
   }
 
-  if (isLoading && isEditing) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
-      </div>
-    )
+  const handleDelete = async () => {
+    if (!id) return
+    try {
+      await deleteMutation.mutateAsync(id)
+      toast.success("Documento eliminato")
+      navigate("/documents")
+    } catch {
+      toast.error("Errore nell'eliminazione")
+    }
   }
 
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((f) => ({ ...f, [key]: value }))
+    if (errors[key as keyof FormErrors]) {
+      setErrors((e) => ({ ...e, [key]: undefined }))
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0]
+    if (selected) {
+      setFile(selected)
+    }
+  }
+
+  const handleRemoveFile = () => {
+    setFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending
+
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Documenti', href: '/documents' },
-          { label: isEditing ? 'Modifica Documento' : 'Nuovo Documento' },
-        ]}
-      />
-
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          {isEditing ? 'Modifica Documento' : 'Nuovo Documento'}
-        </h1>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Project Selection */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Progetto</h2>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Seleziona progetto *
-            </label>
-            <select
-              value={formData.projectId}
-              onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-              className={`input ${errors.projectId ? 'border-red-500' : ''}`}
-              disabled={isEditing}
-            >
-              <option value="">Seleziona...</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            {errors.projectId && <p className="mt-1 text-sm text-red-500">{errors.projectId}</p>}
-          </div>
+    <EntityForm
+      breadcrumbs={[
+        { label: "Documenti", href: "/documents" },
+        { label: isNew ? "Nuovo documento" : form.code || "..." },
+      ]}
+      title={isNew ? "Nuovo documento" : `Modifica ${form.code}`}
+      isNew={isNew}
+      isLoading={!isNew && loadingDoc}
+      onSubmit={handleSubmit}
+      onCancel={() => navigate("/documents")}
+      onDelete={isNew ? undefined : handleDelete}
+      isSubmitting={isSubmitting}
+      isDeleting={deleteMutation.isPending}
+    >
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Codice" required error={errors.code}>
+            <Input
+              value={form.code}
+              onChange={(e) => setField("code", e.target.value)}
+              placeholder="DOC-001"
+            />
+          </FormField>
+          <FormField label="Titolo" required error={errors.title}>
+            <Input
+              value={form.title}
+              onChange={(e) => setField("title", e.target.value)}
+              placeholder="Titolo del documento"
+            />
+          </FormField>
         </div>
 
-        {/* Document Details */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Dettagli Documento</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Titolo *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className={`input ${errors.title ? 'border-red-500' : ''}`}
-                placeholder="Titolo del documento..."
-              />
-              {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
-            </div>
+        <FormField label="Descrizione">
+          <Textarea
+            value={form.description}
+            onChange={(e) => setField("description", e.target.value)}
+            placeholder="Descrizione del documento..."
+            rows={4}
+          />
+        </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Descrizione
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
-                className="input"
-                placeholder="Descrizione del documento..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tipo Documento
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as DocumentType })}
-                className="input"
-              >
-                {DOCUMENT_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <FormField label="Tipo">
+            <Select value={form.type} onValueChange={(v) => setField("type", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
-
-            {/* Review fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Data prossima revisione
-                </label>
-                <input
-                  type="date"
-                  value={formData.reviewDueDate}
-                  onChange={(e) => setFormData({ ...formData, reviewDueDate: e.target.value })}
-                  className="input"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Data entro cui il documento deve essere rivisto
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Frequenza revisione (giorni)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={3650}
-                  value={formData.reviewFrequencyDays}
-                  onChange={(e) => setFormData({ ...formData, reviewFrequencyDays: e.target.value })}
-                  className="input"
-                  placeholder="es. 365"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Ogni quanti giorni il documento deve essere rivisto
-                </p>
-              </div>
-            </div>
-          </div>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Stato">
+            <Select value={form.status} onValueChange={(v) => setField("status", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Progetto">
+            <Select
+              value={form.projectId || "__none__"}
+              onValueChange={(v) => setField("projectId", v === "__none__" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona progetto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nessun progetto</SelectItem>
+                {projects.map((p: { id: string; name: string }) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
         </div>
 
-        {/* File Upload (only on create) */}
-        {!isEditing && (
-          <div className="card p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">File</h2>
-
-            {/* Drop Zone */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => !file && fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-lg transition-colors ${
-                isDragging
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : file
-                  ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/10'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 cursor-pointer'
-              }`}
-            >
+        {isNew && (
+          <FormField label="File" description="Carica un file da allegare al documento.">
+            <div className="space-y-2">
               <input
                 ref={fileInputRef}
                 type="file"
+                onChange={handleFileChange}
                 className="hidden"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
-                onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
               />
-
               {file ? (
-                /* File selected — preview */
-                <div className="flex items-center gap-4 p-4">
-                  <div className="flex-shrink-0">{getFileIcon(file.type)}</div>
+                <div className="flex items-center gap-3 rounded-md border p-3">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(file.size)}
                     </p>
                   </div>
-                  <button
+                  <Button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setFile(null)
-                      if (fileInputRef.current) fileInputRef.current.value = ''
-                    }}
-                    className="btn-icon text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
-                    aria-label="Rimuovi file"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveFile}
                   >
-                    <X className="w-5 h-5" />
-                  </button>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               ) : (
-                /* Empty state — invite to upload */
-                <div className="p-8 text-center">
-                  <Upload className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {isDragging ? 'Rilascia il file qui' : 'Trascina un file o clicca per sfogliare'}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    PDF, DOCX, XLSX, PNG, JPEG, TXT — Max 10MB
-                  </p>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Scegli file
+                </Button>
               )}
             </div>
-
-            {errors.file && (
-              <p className="mt-2 text-sm text-red-500">{errors.file}</p>
-            )}
-          </div>
+          </FormField>
         )}
-
-        {/* Submit Buttons */}
-        <div className="flex items-center justify-end gap-4">
-          <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
-            Annulla
-          </button>
-          <button type="submit" disabled={isSaving} className="btn-primary flex items-center">
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            {isEditing ? 'Salva Modifiche' : 'Crea Documento'}
-          </button>
-        </div>
-      </form>
-    </div>
+      </div>
+    </EntityForm>
   )
 }
+
+export default DocumentFormPage

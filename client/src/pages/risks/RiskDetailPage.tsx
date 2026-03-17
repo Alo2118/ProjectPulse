@@ -1,306 +1,264 @@
-/**
- * Risk Detail Page - View and edit a single risk
- * @module pages/risks/RiskDetailPage
- */
-
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useRiskStore } from '@stores/riskStore'
-import { useAuthStore } from '@stores/authStore'
+import { useMemo } from "react"
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
-  ArrowLeft,
+  Pencil,
+  Calendar,
+  Tag,
   AlertTriangle,
-  Loader2,
-  Edit2,
-  Trash2,
-  ChevronDown,
-  FolderOpen,
   User,
+  FolderOpen,
+  Activity,
+  Clock,
   Shield,
-} from 'lucide-react'
-import {
-  RISK_STATUS_LABELS,
-  RISK_STATUS_COLORS,
-  RISK_STATUS_OPTIONS,
-  RISK_CATEGORY_LABELS,
-  RISK_CATEGORY_COLORS,
-  RISK_PROBABILITY_LABELS,
-  RISK_IMPACT_LABELS,
-  RISK_LEVEL_COLORS,
-} from '@/constants'
-import { RiskProbability, RiskImpact, RiskStatus } from '@/types'
-import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal'
+} from "lucide-react"
+import { toast } from "sonner"
+import { EntityDetail } from "@/components/common/EntityDetail"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { MetaRow } from "@/components/common/MetaRow"
+import { TagEditor } from "@/components/common/TagEditor"
+import { NoteTab } from "@/components/common/NoteTab"
+import { ActivityTab } from "@/components/common/ActivityTab"
+import { KpiStrip, type KpiCard } from "@/components/common/KpiStrip"
+import { RISK_STATUS_LABELS, RISK_CATEGORY_LABELS, RISK_SCALE_LABELS, RISK_LEVEL_LABELS, RISK_LEVEL_COLORS, getRiskLevel } from "@/lib/constants"
+import { formatDate, toError } from "@/lib/utils"
+import { useRiskQuery, useDeleteRisk } from "@/hooks/api/useRisks"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 
-function calculateRiskLevel(probability: RiskProbability, impact: RiskImpact): { level: number; label: 'low' | 'medium' | 'high' } {
-  const probValue = { low: 1, medium: 2, high: 3 }
-  const impactValue = { low: 1, medium: 2, high: 3 }
-  const level = probValue[probability] * impactValue[impact]
-
-  let label: 'low' | 'medium' | 'high' = 'low'
-  if (level <= 2) label = 'low'
-  else if (level <= 4) label = 'medium'
-  else label = 'high'
-
-  return { level, label }
+function getRiskScoreLabel(probability: number, impact: number): string {
+  const score = probability * impact
+  return RISK_LEVEL_LABELS[getRiskLevel(score)] ?? "Basso"
 }
 
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-export default function RiskDetailPage() {
+function RiskDetailPage() {
   const { id } = useParams<{ id: string }>()
+  useSetPageContext({ domain: 'risk', entityId: id })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const { currentRisk, isLoading, fetchRisk, changeRiskStatus, deleteRisk, clearCurrentRisk } = useRiskStore()
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
-  const [isMitigationExpanded, setIsMitigationExpanded] = useState(true)
-
-  useEffect(() => {
-    if (id) {
-      fetchRisk(id)
-    }
-    return () => clearCurrentRisk()
-  }, [id, fetchRisk, clearCurrentRisk])
-
-  const canManageRisks = user?.role === 'admin' || user?.role === 'direzione'
-  const canDelete = user?.role === 'admin'
-
-  const handleStatusChange = async (newStatus: RiskStatus) => {
-    if (!id) return
-    try {
-      await changeRiskStatus(id, newStatus)
-    } catch {
-      // silently ignore
-    }
-  }
+  const { data: risk, isLoading, error } = useRiskQuery(id ?? "")
+  const deleteMutation = useDeleteRisk()
 
   const handleDelete = async () => {
-    if (!id || isDeleting) return
-    setIsDeleting(true)
+    if (!id) return
     try {
-      await deleteRisk(id)
-      navigate('/risks')
+      await deleteMutation.mutateAsync(id)
+      toast.success("Rischio eliminato")
+      navigate("/risks")
     } catch {
-      setIsDeleting(false)
+      toast.error("Errore nell'eliminazione")
     }
   }
 
-  if (isLoading || !currentRisk) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
-      </div>
-    )
-  }
+  const riskScore = risk
+    ? getRiskScoreLabel(risk.probability, risk.impact)
+    : ""
 
-  const riskLevel = calculateRiskLevel(currentRisk.probability, currentRisk.impact)
+  // KPI row (computed inline)
+  const kpiCards = useMemo<KpiCard[]>(() => {
+    if (!risk) return []
+    const score = risk.probability * risk.impact
+    const level = getRiskLevel(score)
+    const daysSinceCreated = Math.floor(
+      (Date.now() - new Date(risk.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    return [
+      {
+        label: "Punteggio P×I",
+        value: String(score),
+        subtitle: RISK_LEVEL_LABELS[level],
+        color: level === "critical" || level === "high" ? "danger" : level === "medium" ? "warning" : "success",
+        icon: Shield,
+      },
+      {
+        label: "Probabilità",
+        value: RISK_SCALE_LABELS[risk.probability] ?? String(risk.probability),
+        subtitle: `${risk.probability}/5`,
+        color: "warning",
+        icon: AlertTriangle,
+      },
+      {
+        label: "Impatto",
+        value: RISK_SCALE_LABELS[risk.impact] ?? String(risk.impact),
+        subtitle: `${risk.impact}/5`,
+        color: "danger",
+        icon: Activity,
+      },
+      {
+        label: "Giorni dalla creazione",
+        value: String(daysSinceCreated),
+        subtitle: formatDate(risk.createdAt),
+        color: "indigo",
+        icon: Clock,
+      },
+    ]
+  }, [risk])
 
   return (
-    <div className="space-y-4">
-      {/* Compact Header */}
-      <div className="card p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 mt-0.5"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-500 dark:text-gray-400">{currentRisk.code}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_STATUS_COLORS[currentRisk.status]}`}>
-                  {RISK_STATUS_LABELS[currentRisk.status]}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_CATEGORY_COLORS[currentRisk.category]}`}>
-                  {RISK_CATEGORY_LABELS[currentRisk.category]}
-                </span>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-1 break-words">
-                {currentRisk.title}
-              </h1>
-
-              {/* Inline Info */}
-              <div className="flex items-center gap-4 mt-2 flex-wrap text-sm">
-                {currentRisk.project && (
-                  <Link
-                    to={`/projects/${currentRisk.project.id}`}
-                    className="flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline"
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                    {currentRisk.project.name}
-                  </Link>
-                )}
-                {currentRisk.owner && (
-                  <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                    <User className="w-4 h-4" />
-                    {currentRisk.owner.firstName} {currentRisk.owner.lastName}
-                  </span>
-                )}
-                <span className="text-gray-500 dark:text-gray-400">
-                  Creato {formatDate(currentRisk.createdAt)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Risk Level Badge */}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg flex-shrink-0 ${RISK_LEVEL_COLORS[riskLevel.label]}`}>
-            <AlertTriangle className="w-5 h-5" />
-            <div className="text-center">
-              <div className="text-lg font-bold">{riskLevel.level}</div>
-              <div className="text-xs opacity-80">Livello</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Probability / Impact inline */}
-        <div className="flex items-center gap-6 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Probabilità:</span>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {RISK_PROBABILITY_LABELS[currentRisk.probability]}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Impatto:</span>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {RISK_IMPACT_LABELS[currentRisk.impact]}
-            </span>
-          </div>
-          {currentRisk.createdBy && (
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Creato da:</span>
-              <span className="text-sm text-gray-900 dark:text-white">
-                {currentRisk.createdBy.firstName} {currentRisk.createdBy.lastName}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        {canManageRisks && (
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => navigate(`/risks/${id}/edit`)}
-              className="btn-secondary text-sm py-1.5"
-            >
-              <Edit2 className="w-4 h-4 mr-1.5" />
+    <EntityDetail
+      isLoading={isLoading}
+      error={toError(error)}
+      notFound={!isLoading && !error && !risk}
+      breadcrumbs={[
+        { label: "Home", href: "/" },
+        ...(risk?.project
+          ? [
+              { label: "Progetti", href: "/projects" },
+              { label: risk.project.name, href: `/projects/${risk.project.id}` },
+            ]
+          : []),
+        { label: "Rischi", href: "/risks" },
+        { label: risk?.title ?? "..." },
+      ]}
+      title={risk?.title}
+      subtitle={risk?.code}
+      colorBar="linear-gradient(180deg, hsl(0, 72%, 51%), hsl(25, 95%, 53%))"
+      tagEditor={id ? <TagEditor entityType="risk" entityId={id} className="mt-1" /> : undefined}
+      kpiRow={kpiCards.length > 0 ? <KpiStrip cards={kpiCards} /> : undefined}
+      badges={
+        risk ? (
+          <>
+            <StatusBadge status={risk.status} labels={RISK_STATUS_LABELS} />
+            <StatusBadge status={String(risk.probability)} labels={Object.fromEntries(Object.entries(RISK_SCALE_LABELS).map(([k,v]) => [k, `P: ${v}`]))} />
+            <StatusBadge status={String(risk.impact)} labels={Object.fromEntries(Object.entries(RISK_SCALE_LABELS).map(([k,v]) => [k, `I: ${v}`]))} />
+          </>
+        ) : undefined
+      }
+      headerActions={
+        risk ? (
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/risks/${id}/edit`}>
+              <Pencil className="h-4 w-4 mr-1" />
               Modifica
-            </button>
-            {canDelete && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="btn-danger text-sm py-1.5"
-              >
-                <Trash2 className="w-4 h-4 mr-1.5" />
-                Elimina
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+            </Link>
+          </Button>
+        ) : undefined
+      }
+      tabs={
+        risk
+          ? [
+              {
+                key: "dettagli",
+                label: "Dettagli",
+                content: (
+                  <Card>
+                    <CardContent className="p-5 space-y-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                          Descrizione
+                        </h3>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">
+                          {risk.description || "Nessuna descrizione fornita."}
+                        </p>
+                      </div>
 
-      {/* Description - Collapsible */}
-      {currentRisk.description && (
-        <div className="card">
-          <button
-            onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          >
-            <span className="font-medium text-gray-900 dark:text-white">Descrizione</span>
-            <ChevronDown
-              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                isDescriptionExpanded ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-          {isDescriptionExpanded && (
-            <div className="px-4 pb-4">
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {currentRisk.description}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+                      <Separator />
 
-      {/* Mitigation Plan - Collapsible */}
-      <div className="card">
-        <button
-          onClick={() => setIsMitigationExpanded(!isMitigationExpanded)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-gray-400" />
-            <span className="font-medium text-gray-900 dark:text-white">Piano di Mitigazione</span>
-          </div>
-          <ChevronDown
-            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-              isMitigationExpanded ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
-        {isMitigationExpanded && (
-          <div className="px-4 pb-4">
-            {currentRisk.mitigationPlan ? (
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {currentRisk.mitigationPlan}
-              </p>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 italic">
-                Nessun piano di mitigazione definito
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                          Punteggio rischio
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-kpi-value text-foreground">
+                            {risk.probability * risk.impact}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className={cn("text-xs", RISK_LEVEL_COLORS[getRiskLevel(risk.probability * risk.impact)])}
+                          >
+                            {riskScore}
+                          </Badge>
+                          <span className="text-xs text-data text-muted-foreground">
+                            (P:{risk.probability} × I:{risk.impact})
+                          </span>
+                        </div>
+                      </div>
 
-      {/* Status Change */}
-      {canManageRisks && (
-        <div className="card p-4">
-          <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Cambia Stato
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {RISK_STATUS_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleStatusChange(option.value)}
-                disabled={currentRisk.status === option.value}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  currentRisk.status === option.value
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+                      {risk.mitigationPlan && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                              Piano di mitigazione
+                            </h3>
+                            <p className="text-sm text-foreground whitespace-pre-wrap">
+                              {risk.mitigationPlan}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                ),
+              },
+              {
+                key: "note",
+                label: "Note",
+                content: (
+                  <div className="mt-4">
+                    <NoteTab entityType="risk" entityId={id!} />
+                  </div>
+                ),
+              },
+              {
+                key: "activity",
+                label: "Attività",
+                content: (
+                  <div className="mt-4">
+                    <ActivityTab entityType="risk" entityId={id!} />
+                  </div>
+                ),
+              },
+            ]
+          : undefined
+      }
+      sidebar={
+        risk ? (
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Informazioni</h3>
+            <MetaRow icon={Tag} label="Stato">
+              <StatusBadge status={risk.status} labels={RISK_STATUS_LABELS} />
+            </MetaRow>
+            <MetaRow icon={Tag} label="Categoria">
+              {RISK_CATEGORY_LABELS[risk.category] ?? risk.category}
+            </MetaRow>
+            <MetaRow icon={AlertTriangle} label="Probabilita'">
+              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.probability] ?? risk.probability} <span className="text-data text-xs text-muted-foreground">({risk.probability}/5)</span></span>
+            </MetaRow>
+            <MetaRow icon={Activity} label="Impatto">
+              <span className="text-sm font-medium">{RISK_SCALE_LABELS[risk.impact] ?? risk.impact} <span className="text-data text-xs text-muted-foreground">({risk.impact}/5)</span></span>
+            </MetaRow>
+            <MetaRow icon={FolderOpen} label="Progetto">
+              {risk.project ? (
+                <Link
+                  to={`/projects/${risk.project.id}`}
+                  className="text-primary hover:underline"
+                >
+                  {risk.project.name}
+                </Link>
+              ) : (
+                "-"
+              )}
+            </MetaRow>
+            <MetaRow icon={User} label="Responsabile">
+              {risk.owner
+                ? `${risk.owner.firstName} ${risk.owner.lastName}`
+                : "-"}
+            </MetaRow>
+            <MetaRow icon={Calendar} label="Data">
+              {formatDate(risk.createdAt)}
+            </MetaRow>
           </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={showDeleteConfirm}
-        title="Conferma eliminazione"
-        message="Sei sicuro di voler eliminare il rischio"
-        itemName={currentRisk.title}
-        isDeleting={isDeleting}
-        onCancel={() => setShowDeleteConfirm(false)}
-        onConfirm={handleDelete}
-      />
-    </div>
+        ) : undefined
+      }
+      onDelete={handleDelete}
+      isDeleting={deleteMutation.isPending}
+      deleteConfirmMessage="Sei sicuro di voler eliminare questo rischio? Questa azione non puo' essere annullata."
+    />
   )
 }
+
+export default RiskDetailPage

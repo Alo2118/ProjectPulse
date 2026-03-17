@@ -1,254 +1,113 @@
-import { useEffect, lazy, Suspense, Component } from 'react'
-import type { ReactNode, ErrorInfo } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
-import { useAuthStore } from '@stores/authStore'
-import { useAuthInit } from '@hooks/useAuthInit'
-import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
+import { Suspense, lazy } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useCurrentUser } from '@/hooks/api/useAuth'
+import { Skeleton } from '@/components/ui/skeleton'
+import { AppShell } from '@/components/layout/AppShell'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import LoginPage from '@/pages/auth/LoginPage'
+import HomePage from '@/pages/home/HomePage'
 
-// Layouts (not lazy - needed immediately)
-import AuthLayout from '@components/layout/AuthLayout'
-import DashboardLayout from '@components/layout/DashboardLayout'
+const ProjectListPage = lazy(() => import('@/pages/projects/ProjectListPage'))
+const ProjectDetailPage = lazy(() => import('@/pages/projects/ProjectDetailPage'))
+const ProjectFormPage = lazy(() => import('@/pages/projects/ProjectFormPage'))
+const TaskListPage = lazy(() => import('@/pages/tasks/TaskListPage'))
+const TaskDetailPage = lazy(() => import('@/pages/tasks/TaskDetailPage'))
+const TaskFormPage = lazy(() => import('@/pages/tasks/TaskFormPage'))
+const TimeTrackingPage = lazy(() => import('@/pages/time-tracking/TimeTrackingPage'))
+const UserInputListPage = lazy(() => import('@/pages/inputs/UserInputListPage'))
+const UserInputDetailPage = lazy(() => import('@/pages/inputs/UserInputDetailPage'))
+const RiskListPage = lazy(() => import('@/pages/risks/RiskListPage'))
+const RiskDetailPage = lazy(() => import('@/pages/risks/RiskDetailPage'))
+const RiskFormPage = lazy(() => import('@/pages/risks/RiskFormPage'))
+const DocumentListPage = lazy(() => import('@/pages/documents/DocumentListPage'))
+const DocumentDetailPage = lazy(() => import('@/pages/documents/DocumentDetailPage'))
+const DocumentFormPage = lazy(() => import('@/pages/documents/DocumentFormPage'))
+const AnalyticsPage = lazy(() => import('@/pages/analytics/AnalyticsPage'))
+const PlanningDashboardPage = lazy(() => import('@/pages/planning/PlanningDashboardPage'))
+const PlanningWizardPage = lazy(() => import('@/pages/planning/PlanningWizardPage'))
+const WeeklyReportPage = lazy(() => import('@/pages/reports/WeeklyReportPage'))
+const UserListPage = lazy(() => import('@/pages/admin/UserListPage'))
+const UserFormPage = lazy(() => import('@/pages/admin/UserFormPage'))
+const UserDetailPage = lazy(() => import('@/pages/admin/UserDetailPage'))
+const DepartmentListPage = lazy(() => import('@/pages/admin/DepartmentListPage'))
+const AdminConfigPage = lazy(() => import('@/pages/admin/AdminConfigPage'))
+const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'))
+const AcceptInvitationPage = lazy(() => import('@/pages/auth/AcceptInvitationPage'))
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 
-// Lazy-loaded pages
-const LoginPage = lazy(() => import('@pages/auth/LoginPage'))
-const DashboardPage = lazy(() => import('@pages/dipendente/DashboardPage'))
-const ProjectListPage = lazy(() => import('@pages/projects/ProjectListPage'))
-const ProjectDetailPage = lazy(() => import('@pages/projects/ProjectDetailPage'))
-const ProjectFormPage = lazy(() => import('@pages/projects/ProjectFormPage'))
-const TaskListPage = lazy(() => import('@pages/tasks/TaskListPage'))
-const TaskDetailPage = lazy(() => import('@pages/tasks/TaskDetailPage'))
-const TaskFormPage = lazy(() => import('@pages/tasks/TaskFormPage'))
-const TimeTrackingPage = lazy(() => import('@pages/time-tracking/TimeTrackingPage'))
-const TeamTimePage = lazy(() => import('@pages/time-tracking/TeamTimePage'))
-const KanbanBoardPage = lazy(() => import('@pages/kanban/KanbanBoardPage'))
-const RiskListPage = lazy(() => import('@pages/risks/RiskListPage'))
-const RiskDetailPage = lazy(() => import('@pages/risks/RiskDetailPage'))
-const RiskFormPage = lazy(() => import('@pages/risks/RiskFormPage'))
-const UserInputListPage = lazy(() => import('@pages/inputs/UserInputListPage'))
-const UserInputDetailPage = lazy(() => import('@pages/inputs/UserInputDetailPage'))
-const DocumentListPage = lazy(() => import('@pages/documents/DocumentListPage'))
-const DocumentDetailPage = lazy(() => import('@pages/documents/DocumentDetailPage'))
-const DocumentFormPage = lazy(() => import('@pages/documents/DocumentFormPage'))
-const UserListPage = lazy(() => import('@pages/users/UserListPage'))
-const UserFormPage = lazy(() => import('@pages/users/UserFormPage'))
-const ProfilePage = lazy(() => import('@pages/profile/ProfilePage'))
-const AnalyticsPage = lazy(() => import('@pages/analytics/AnalyticsPage'))
-const WeeklyReportPage = lazy(() => import('@pages/reports/WeeklyReportPage'))
-const GanttPage = lazy(() => import('@pages/gantt/GanttPage'))
-const CalendarPage = lazy(() => import('@pages/calendar/CalendarPage'))
-const NotFoundPage = lazy(() => import('@pages/NotFoundPage'))
-const AuditTrailPage = lazy(() => import('@pages/audit/AuditTrailPage'))
-const TemplateListPage = lazy(() => import('@pages/admin/TemplateListPage'))
-const TemplateFormPage = lazy(() => import('@pages/admin/TemplateFormPage'))
-const DepartmentListPage = lazy(() => import('@pages/admin/DepartmentListPage'))
-const CustomFieldsPage = lazy(() => import('@pages/admin/CustomFieldsPage'))
-const ImportPage = lazy(() => import('@pages/admin/ImportPage'))
-const WorkflowEditorPage = lazy(() => import('@pages/admin/WorkflowEditorPage'))
-const AutomationListPage = lazy(() => import('@pages/admin/AutomationListPage'))
-const AutomationEditorPage = lazy(() => import('@pages/admin/AutomationEditorPage'))
-const AcceptInvitationPage = lazy(() => import('@pages/auth/AcceptInvitationPage'))
-const NotificationCenterPage = lazy(() => import('@pages/notifications/NotificationCenterPage'))
-const PlanningDashboardPage = lazy(() => import('@pages/planning/PlanningDashboardPage'))
-const PlanningWizardPage = lazy(() => import('@pages/planning/PlanningWizardPage'))
-const MyDayPage = lazy(() => import('@pages/my-day/MyDayPage'))
-
-/** Suspense fallback for lazy-loaded pages */
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center py-20">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="space-y-4 w-full max-w-md p-8">
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
     </div>
   )
 }
 
-/** Error Boundary - catches render errors in child components */
-interface ErrorBoundaryProps {
-  children: ReactNode
-}
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { data: user, isLoading, isError } = useCurrentUser()
 
-interface ErrorBoundaryState {
-  hasError: boolean
-  error: Error | null
-}
-
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props)
-    this.state = { hasError: false, error: null }
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error }
-  }
-
-  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
-    // Error already captured in state via getDerivedStateFromError
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-          <div className="text-center max-w-md">
-            <div className="mx-auto w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Qualcosa è andato storto
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-2">
-              Si è verificato un errore imprevisto nell'applicazione.
-            </p>
-            {this.state.error && (
-              <p className="text-sm text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg p-3 mb-4 font-mono break-all">
-                {this.state.error.message}
-              </p>
-            )}
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => {
-                  this.setState({ hasError: false, error: null })
-                  window.location.reload()
-                }}
-                className="btn-primary flex items-center"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Ricarica Pagina
-              </button>
-              <Link to="/dashboard" className="btn-secondary flex items-center"
-                onClick={() => this.setState({ hasError: false, error: null })}
-              >
-                <Home className="w-4 h-4 mr-2" />
-                Dashboard
-              </Link>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    return this.props.children
-  }
-}
-
-function PrivateRoute({ children }: { children: ReactNode }) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  // Listen for logout events and redirect immediately
-  useEffect(() => {
-    if (!isAuthenticated && location.pathname !== '/login') {
-      navigate('/login', { replace: true })
-    }
-  }, [isAuthenticated, navigate, location.pathname])
-
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
-}
-
-function AuthInitializer({ children }: { children: ReactNode }) {
-  const { isInitialized, isValidating } = useAuthInit()
-
-  if (!isInitialized || isValidating) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Verifica sessione...
-          </span>
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return <PageLoader />
+  if (!user || isError) return <Navigate to="/login" replace />
 
   return <>{children}</>
 }
 
-/** Redirect / to /my-day for dipendente, /dashboard for others */
-function DefaultRedirect() {
-  const { user } = useAuthStore()
-  const target = user?.role === 'dipendente' ? '/my-day' : '/dashboard'
-  return <Navigate to={target} replace />
-}
-
-function App() {
+export default function App() {
   return (
     <ErrorBoundary>
-      <AuthInitializer>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* Auth Routes */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-            </Route>
-
-            {/* Dashboard Routes */}
-            <Route
-              element={
-                <PrivateRoute>
-                  <DashboardLayout />
-                </PrivateRoute>
-              }
-            >
-              <Route path="/" element={<DefaultRedirect />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/my-day" element={<MyDayPage />} />
-              <Route path="/projects" element={<ProjectListPage />} />
-              <Route path="/projects/new" element={<ProjectFormPage />} />
-              <Route path="/projects/:id" element={<ProjectDetailPage />} />
-              <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
-              <Route path="/tasks" element={<TaskListPage />} />
-              <Route path="/tasks/new" element={<TaskFormPage />} />
-              <Route path="/tasks/:id" element={<TaskDetailPage />} />
-              <Route path="/tasks/:id/edit" element={<TaskFormPage />} />
-              <Route path="/time-tracking" element={<TimeTrackingPage />} />
-              <Route path="/team-time" element={<TeamTimePage />} />
-              <Route path="/kanban" element={<KanbanBoardPage />} />
-              <Route path="/gantt" element={<GanttPage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/risks" element={<RiskListPage />} />
-              <Route path="/risks/new" element={<RiskFormPage />} />
-              <Route path="/risks/:id" element={<RiskDetailPage />} />
-              <Route path="/risks/:id/edit" element={<RiskFormPage />} />
-              <Route path="/inputs" element={<UserInputListPage />} />
-              <Route path="/inputs/:id" element={<UserInputDetailPage />} />
-              <Route path="/documents" element={<DocumentListPage />} />
-              <Route path="/documents/new" element={<DocumentFormPage />} />
-              <Route path="/documents/:id" element={<DocumentDetailPage />} />
-              <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
-              <Route path="/planning" element={<PlanningDashboardPage />} />
-              <Route path="/planning/wizard" element={<PlanningWizardPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/reports/weekly" element={<WeeklyReportPage />} />
-              <Route path="/notifications" element={<NotificationCenterPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/users" element={<UserListPage />} />
-              <Route path="/users/new" element={<UserFormPage />} />
-              <Route path="/users/:id/edit" element={<UserFormPage />} />
-              <Route path="/audit" element={<AuditTrailPage />} />
-              <Route path="/admin/templates" element={<TemplateListPage />} />
-              <Route path="/admin/templates/new" element={<TemplateFormPage />} />
-              <Route path="/admin/templates/:id/edit" element={<TemplateFormPage />} />
-              <Route path="/admin/departments" element={<DepartmentListPage />} />
-              <Route path="/admin/custom-fields" element={<CustomFieldsPage />} />
-              <Route path="/admin/import" element={<ImportPage />} />
-              <Route path="/admin/workflows" element={<WorkflowEditorPage />} />
-              <Route path="/admin/automations" element={<AutomationListPage />} />
-              <Route path="/admin/automations/new" element={<AutomationEditorPage />} />
-              <Route path="/admin/automations/:id/edit" element={<AutomationEditorPage />} />
-            </Route>
-
-            {/* Public invitation acceptance page - no auth required */}
-            <Route path="/invite/:token" element={<AcceptInvitationPage />} />
-
-            {/* 404 */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </AuthInitializer>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/invite/:token" element={<AcceptInvitationPage />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/projects" element={<ProjectListPage />} />
+                  <Route path="/projects/new" element={<ProjectFormPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                  <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
+                  <Route path="/tasks" element={<TaskListPage />} />
+                  <Route path="/tasks/new" element={<TaskFormPage />} />
+                  <Route path="/tasks/:id" element={<TaskDetailPage />} />
+                  <Route path="/tasks/:id/edit" element={<TaskFormPage />} />
+                  <Route path="/time-tracking" element={<TimeTrackingPage />} />
+                  <Route path="/inputs" element={<UserInputListPage />} />
+                  <Route path="/inputs/:id" element={<UserInputDetailPage />} />
+                  <Route path="/risks" element={<RiskListPage />} />
+                  <Route path="/risks/new" element={<RiskFormPage />} />
+                  <Route path="/risks/:id" element={<RiskDetailPage />} />
+                  <Route path="/risks/:id/edit" element={<RiskFormPage />} />
+                  <Route path="/documents" element={<DocumentListPage />} />
+                  <Route path="/documents/new" element={<DocumentFormPage />} />
+                  <Route path="/documents/:id" element={<DocumentDetailPage />} />
+                  <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
+                  <Route path="/analytics" element={<AnalyticsPage />} />
+                  <Route path="/planning" element={<PlanningDashboardPage />} />
+                  <Route path="/planning/wizard" element={<PlanningWizardPage />} />
+                  <Route path="/reports" element={<WeeklyReportPage />} />
+                  <Route path="/admin/users" element={<UserListPage />} />
+                  <Route path="/admin/users/new" element={<UserFormPage />} />
+                  <Route path="/admin/users/:id" element={<UserDetailPage />} />
+                  <Route path="/admin/users/:id/edit" element={<UserFormPage />} />
+                  <Route path="/admin/departments" element={<DepartmentListPage />} />
+                  <Route path="/admin/config" element={<AdminConfigPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
     </ErrorBoundary>
   )
 }
-
-export default App

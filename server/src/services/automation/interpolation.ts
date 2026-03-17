@@ -109,8 +109,8 @@ function resolveRiskField(
     case 'code': return risk.code
     case 'title': return risk.title
     case 'category': return risk.category
-    case 'probability': return risk.probability
-    case 'impact': return risk.impact
+    case 'probability': return String(risk.probability)
+    case 'impact': return String(risk.impact)
     case 'status': return risk.status
     case 'ownerId': return risk.ownerId
     case 'projectId': return risk.projectId

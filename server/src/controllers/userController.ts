@@ -1,39 +1,16 @@
 import { Request, Response, NextFunction } from 'express'
 import bcrypt from 'bcrypt'
-import { z } from 'zod'
 import { prisma } from '../models/prismaClient.js'
 import { AppError } from '../middleware/errorMiddleware.js'
-
-const createUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  firstName: z.string().min(1).max(100),
-  lastName: z.string().min(1).max(100),
-  role: z.enum(['admin', 'direzione', 'dipendente']).default('dipendente'),
-  avatarUrl: z.string().url().nullable().optional(),
-})
-
-const updateUserSchema = z.object({
-  email: z.string().email().optional(),
-  password: z.string().min(8).optional(),
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-  role: z.enum(['admin', 'direzione', 'dipendente']).optional(),
-  isActive: z.boolean().optional(),
-  theme: z.enum(['light', 'dark', 'system']).optional(),
-  avatarUrl: z.string().url().nullable().optional(),
-})
-
-const updateProfileSchema = z.object({
-  email: z.string().email().optional(),
-  password: z.string().min(8).optional(),
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-})
-
-const updateThemeSchema = z.object({
-  theme: z.enum(['light', 'dark', 'system']),
-})
+import {
+  createUserSchema,
+  updateUserSchema,
+  updateProfileSchema,
+  updateThemeSchema,
+  updatePreferencesSchema,
+} from '../schemas/userSchemas.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -83,8 +60,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
       prisma.user.count({ where }),
     ])
 
-    res.json({
-      success: true,
+    sendPaginated(res, {
       data: users,
       pagination: {
         page: parseInt(page as string),
@@ -113,17 +89,16 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
         isActive: true,
         avatarUrl: true,
         theme: true,
+        themeStyle: true,
         lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
       },
     })
 
-    if (!user) {
-      throw new AppError('User not found', 404)
-    }
+    requireResource(user, 'User')
 
-    res.json({ success: true, data: user })
+    sendSuccess(res, user)
   } catch (error) {
     next(error)
   }
@@ -160,7 +135,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
       },
     })
 
-    res.status(201).json({ success: true, data: user })
+    sendCreated(res, user)
   } catch (error) {
     next(error)
   }
@@ -171,10 +146,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     const { id } = req.params
     const data = updateUserSchema.parse(req.body)
 
-    const existing = await prisma.user.findFirst({ where: { id, isDeleted: false } })
-    if (!existing) {
-      throw new AppError('User not found', 404)
-    }
+    const existing = requireResource(await prisma.user.findFirst({ where: { id, isDeleted: false } }), 'User')
 
     // Check if email is being changed and already exists
     if (data.email && data.email !== existing.email) {
@@ -203,12 +175,13 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         role: true,
         isActive: true,
         theme: true,
+        themeStyle: true,
         avatarUrl: true,
         updatedAt: true,
       },
     })
 
-    res.json({ success: true, data: user })
+    sendSuccess(res, user)
   } catch (error) {
     next(error)
   }
@@ -216,23 +189,59 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 
 export const updateTheme = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as Request & { user?: { id: string } }).user?.id
-    if (!userId) {
-      throw new AppError('Unauthorized', 401)
-    }
+    const userId = requireUserId(req)
 
-    const { theme } = updateThemeSchema.parse(req.body)
+    const { theme, themeStyle } = updateThemeSchema.parse(req.body)
+
+    const data: Record<string, string> = {}
+    if (theme) data.theme = theme
+    if (themeStyle) data.themeStyle = themeStyle
 
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { theme },
+      data,
       select: {
         id: true,
         theme: true,
+        themeStyle: true,
       },
     })
 
-    res.json({ success: true, data: user })
+    sendSuccess(res, user)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateMyPreferences = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUserId(req)
+    const data = updatePreferencesSchema.parse(req.body)
+
+    const updateData: Record<string, unknown> = {}
+    if (data.theme !== undefined) updateData.theme = data.theme
+    if (data.themeStyle !== undefined) updateData.themeStyle = data.themeStyle
+    if (data.notificationPreferences !== undefined) {
+      updateData.notificationPreferences = JSON.stringify(data.notificationPreferences)
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        theme: true,
+        themeStyle: true,
+        notificationPreferences: true,
+      },
+    })
+
+    sendSuccess(res, {
+      ...user,
+      notificationPreferences: user.notificationPreferences
+        ? JSON.parse(user.notificationPreferences)
+        : null,
+    })
   } catch (error) {
     next(error)
   }
@@ -240,17 +249,11 @@ export const updateTheme = async (req: Request, res: Response, next: NextFunctio
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as Request & { user?: { id: string } }).user?.id
-    if (!userId) {
-      throw new AppError('Unauthorized', 401)
-    }
+    const userId = requireUserId(req)
 
     const data = updateProfileSchema.parse(req.body)
 
-    const existing = await prisma.user.findFirst({ where: { id: userId, isDeleted: false } })
-    if (!existing) {
-      throw new AppError('User not found', 404)
-    }
+    const existing = requireResource(await prisma.user.findFirst({ where: { id: userId, isDeleted: false } }), 'User')
 
     // Check if email is being changed and already exists
     if (data.email && data.email !== existing.email) {
@@ -278,11 +281,12 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         role: true,
         avatarUrl: true,
         theme: true,
+        themeStyle: true,
         updatedAt: true,
       },
     })
 
-    res.json({ success: true, data: user })
+    sendSuccess(res, user)
   } catch (error) {
     next(error)
   }
@@ -292,10 +296,7 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
   try {
     const { id } = req.params
 
-    const existing = await prisma.user.findFirst({ where: { id, isDeleted: false } })
-    if (!existing) {
-      throw new AppError('User not found', 404)
-    }
+    const existing = requireResource(await prisma.user.findFirst({ where: { id, isDeleted: false } }), 'User')
 
     // Don't allow deleting the last admin
     if (existing.role === 'admin') {
@@ -315,7 +316,7 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
       },
     })
 
-    res.json({ success: true, message: 'User deleted successfully' })
+    sendSuccess(res, { message: 'User deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -324,12 +325,9 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
 export const hardDeleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const requestingUserId = (req as Request & { user?: { id: string } }).user?.id
+    const requestingUserId = requireUserId(req)
 
-    const existing = await prisma.user.findUnique({ where: { id } })
-    if (!existing) {
-      throw new AppError('User not found', 404)
-    }
+    const existing = requireResource(await prisma.user.findUnique({ where: { id } }), 'User')
 
     // Prevent self-delete
     if (id === requestingUserId) {
@@ -394,7 +392,7 @@ export const hardDeleteUser = async (req: Request, res: Response, next: NextFunc
       await tx.user.delete({ where: { id } })
     })
 
-    res.json({ success: true, message: `User ${existing.email} permanently deleted` })
+    sendSuccess(res, { message: `User ${existing.email} permanently deleted` })
   } catch (error) {
     next(error)
   }

@@ -9,7 +9,12 @@ import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
 import { notificationService } from './notificationService.js'
 import { evaluateRules } from './automation/index.js'
+import { documentWithRelationsSelect } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
+import { generateDocumentCode } from '../utils/codeGenerator.js'
 import { EntityType, PaginatedResponse, PaginationParams, DocumentType, DocumentStatus } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
+import { buildPrismaScopeWhere } from '../utils/scopeFilter.js'
 
 // ============================================================
 // TYPES
@@ -35,67 +40,10 @@ export interface DocumentQueryParams extends PaginationParams {
   search?: string
 }
 
-// Select fields for document queries
-const documentSelectFields = {
-  id: true,
-  code: true,
-  title: true,
-  description: true,
-  type: true,
-  filePath: true,
-  fileSize: true,
-  mimeType: true,
-  version: true,
-  status: true,
-  projectId: true,
-  createdById: true,
-  approvedById: true,
-  approvedAt: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-}
-
-const documentWithRelationsSelect = {
-  ...documentSelectFields,
-  project: {
-    select: { id: true, code: true, name: true },
-  },
-  createdBy: {
-    select: { id: true, firstName: true, lastName: true, email: true },
-  },
-  approvedBy: {
-    select: { id: true, firstName: true, lastName: true, email: true },
-  },
-}
 
 // ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
-
-/**
- * Generates unique document code: DOC-YYYY-NNN
- */
-async function generateDocumentCode(): Promise<string> {
-  const year = new Date().getFullYear()
-  const prefix = `DOC-${year}-`
-
-  const lastDoc = await prisma.document.findFirst({
-    where: { code: { startsWith: prefix } },
-    orderBy: { code: 'desc' },
-    select: { code: true },
-  })
-
-  let nextNumber = 1
-  if (lastDoc?.code) {
-    const parts = lastDoc.code.split('-')
-    if (parts.length === 3) {
-      nextNumber = parseInt(parts[2], 10) + 1
-    }
-  }
-
-  return `${prefix}${String(nextNumber).padStart(3, '0')}`
-}
 
 // ============================================================
 // CRUD OPERATIONS
@@ -115,7 +63,7 @@ export async function createDocument(
   })
 
   if (!project) {
-    throw new Error('Project not found')
+    throw new AppError('Project not found', 404)
   }
 
   const code = await generateDocumentCode()
@@ -160,9 +108,9 @@ export async function createDocument(
  * Retrieves documents with pagination and filters
  */
 export async function getDocuments(
-  params: DocumentQueryParams
+  params: DocumentQueryParams & { userId?: string; role?: string }
 ): Promise<PaginatedResponse<Prisma.DocumentGetPayload<{ select: typeof documentWithRelationsSelect }>>> {
-  const { page = 1, limit = 20, projectId, type, status, search } = params
+  const { page = 1, limit = 20, projectId, type, status, search, userId, role } = params
 
   const where: Prisma.DocumentWhereInput = {
     isDeleted: false,
@@ -177,6 +125,20 @@ export async function getDocuments(
       { code: { contains: search } },
       { description: { contains: search } },
     ]
+  }
+
+  // Scope=mine filter: non-direzione users see only their own records
+  if (userId && role) {
+    const scopeWhere = await buildPrismaScopeWhere(userId, role, 'document')
+    if (scopeWhere) {
+      if (where.OR) {
+        const searchOr = where.OR
+        delete where.OR
+        where.AND = [{ OR: searchOr }, scopeWhere]
+      } else {
+        Object.assign(where, scopeWhere)
+      }
+    }
   }
 
   const skip = (page - 1) * limit
@@ -194,12 +156,7 @@ export async function getDocuments(
 
   return {
     data: documents,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 
@@ -275,6 +232,20 @@ export async function updateDocumentFile(
   }
 
   const document = await prisma.$transaction(async (tx) => {
+    // Create version snapshot of current file before overwriting
+    if (existing.filePath) {
+      await tx.documentVersion.create({
+        data: {
+          documentId,
+          version: existing.version,
+          filePath: existing.filePath,
+          fileSize: existing.fileSize ?? 0,
+          mimeType: existing.mimeType ?? 'application/octet-stream',
+          uploadedById: userId,
+        },
+      })
+    }
+
     const updated = await tx.document.update({
       where: { id: documentId },
       data: {
@@ -334,7 +305,7 @@ export async function changeDocumentStatus(
 
   const currentStatus = existing.status
   if (!validTransitions[currentStatus]?.includes(newStatus)) {
-    throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`)
+    throw new AppError(`Invalid status transition from ${currentStatus} to ${newStatus}`, 400)
   }
 
   const document = await prisma.$transaction(async (tx) => {
@@ -484,6 +455,35 @@ export async function getProjectDocumentStats(projectId: string) {
   }
 }
 
+/**
+ * Gets version history for a document
+ */
+export async function getDocumentVersions(documentId: string) {
+  return prisma.documentVersion.findMany({
+    where: { documentId },
+    select: {
+      id: true,
+      version: true,
+      filePath: true,
+      fileSize: true,
+      mimeType: true,
+      note: true,
+      createdAt: true,
+      uploadedBy: { select: { id: true, firstName: true, lastName: true } },
+    },
+    orderBy: { version: 'desc' },
+  })
+}
+
+/**
+ * Gets a specific document version by ID
+ */
+export async function getDocumentVersion(documentId: string, versionId: string) {
+  return prisma.documentVersion.findFirst({
+    where: { id: versionId, documentId },
+  })
+}
+
 export const documentService = {
   createDocument,
   getDocuments,
@@ -494,4 +494,6 @@ export const documentService = {
   changeDocumentStatus,
   deleteDocument,
   getProjectDocumentStats,
+  getDocumentVersions,
+  getDocumentVersion,
 }

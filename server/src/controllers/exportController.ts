@@ -7,6 +7,7 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import { exportTasks, exportProjects, exportTimeEntries } from '../services/exportService.js'
 import { logger } from '../utils/logger.js'
+import { sendError } from '../utils/responseHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -24,15 +25,10 @@ const exportTasksQuerySchema = z.object({
 const exportProjectsQuerySchema = z.object({
   status: z
     .enum([
-      'planning',
-      'design',
-      'verification',
-      'validation',
-      'transfer',
-      'maintenance',
-      'completed',
+      'active',
       'on_hold',
       'cancelled',
+      'completed',
     ])
     .optional(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
@@ -71,7 +67,7 @@ export async function exportTasksHandler(req: Request, res: Response): Promise<v
   try {
     const parsed = exportTasksQuerySchema.safeParse(req.query)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
 
@@ -80,7 +76,7 @@ export async function exportTasksHandler(req: Request, res: Response): Promise<v
     res.send(csv)
   } catch (error) {
     logger.error('Error exporting tasks', { error })
-    res.status(500).json({ success: false, error: 'Errore durante l\'esportazione dei task' })
+    sendError(res, "Errore durante l'esportazione dei task", 500)
   }
 }
 
@@ -92,7 +88,7 @@ export async function exportProjectsHandler(req: Request, res: Response): Promis
   try {
     const parsed = exportProjectsQuerySchema.safeParse(req.query)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
 
@@ -101,7 +97,7 @@ export async function exportProjectsHandler(req: Request, res: Response): Promis
     res.send(csv)
   } catch (error) {
     logger.error('Error exporting projects', { error })
-    res.status(500).json({ success: false, error: 'Errore durante l\'esportazione dei progetti' })
+    sendError(res, "Errore durante l'esportazione dei progetti", 500)
   }
 }
 
@@ -113,7 +109,7 @@ export async function exportTimeEntriesHandler(req: Request, res: Response): Pro
   try {
     const parsed = exportTimeEntriesQuerySchema.safeParse(req.query)
     if (!parsed.success) {
-      res.status(400).json({ success: false, error: parsed.error.errors[0].message })
+      sendError(res, parsed.error.errors[0].message, 400)
       return
     }
 
@@ -122,6 +118,6 @@ export async function exportTimeEntriesHandler(req: Request, res: Response): Pro
     res.send(csv)
   } catch (error) {
     logger.error('Error exporting time entries', { error })
-    res.status(500).json({ success: false, error: 'Errore durante l\'esportazione delle ore' })
+    sendError(res, "Errore durante l'esportazione delle ore", 500)
   }
 }

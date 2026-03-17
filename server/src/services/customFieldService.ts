@@ -14,6 +14,7 @@ import {
   CustomFieldQueryParams,
   EntityType,
 } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
 // ============================================================
 // SELECT SHAPES
@@ -314,10 +315,10 @@ async function setFieldValue(input: SetCustomFieldValueInput, userId: string) {
     where: { id: definitionId },
     select: { id: true, isRequired: true },
   })
-  if (!def) throw new Error('Definizione campo personalizzato non trovata')
+  if (!def) throw new AppError('Definizione campo personalizzato non trovata', 404)
 
   if (def.isRequired && (value === null || value === undefined || value === '')) {
-    throw new Error('Questo campo è obbligatorio')
+    throw new AppError('Questo campo è obbligatorio', 400)
   }
 
   const result = await prisma.customFieldValue.upsert({

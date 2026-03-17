@@ -16,6 +16,8 @@ import {
   emitCommentUpdated,
   emitCommentDeleted,
 } from '../socket/index.js'
+import { commentWithRelationsSelect, rootCommentThreadedSelect } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
 import {
   CreateCommentInput,
   UpdateCommentInput,
@@ -23,66 +25,8 @@ import {
   PaginatedResponse,
   EntityType,
 } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
-const commentSelectFields = {
-  id: true,
-  content: true,
-  isInternal: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-  taskId: true,
-  userId: true,
-  parentId: true,
-}
-
-const commentWithRelationsSelect = {
-  ...commentSelectFields,
-  user: {
-    select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, role: true },
-  },
-  task: {
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      assigneeId: true,
-      project: {
-        select: { id: true, code: true, name: true, ownerId: true },
-      },
-    },
-  },
-}
-
-/** Select shape for threaded root comments (includes replies nested 1 level) */
-const rootCommentThreadedSelect = {
-  id: true,
-  content: true,
-  isInternal: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-  taskId: true,
-  userId: true,
-  parentId: true,
-  user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-  replies: {
-    where: { isDeleted: false },
-    orderBy: { createdAt: 'asc' as const },
-    select: {
-      id: true,
-      content: true,
-      isInternal: true,
-      isDeleted: true,
-      createdAt: true,
-      updatedAt: true,
-      taskId: true,
-      userId: true,
-      parentId: true,
-      user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-    },
-  },
-}
 
 /**
  * Creates a new comment on a task
@@ -106,7 +50,7 @@ export async function createComment(data: CreateCommentInput, userId: string) {
   })
 
   if (!task) {
-    throw new Error('Task not found')
+    throw new AppError('Task not found', 404)
   }
 
   // Create comment + audit in a transaction (notifications handled separately for Socket.io)
@@ -250,12 +194,7 @@ export async function getTaskComments(
 
   return {
     data: comments,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 

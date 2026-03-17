@@ -33,13 +33,13 @@ export const riskProbabilityIsCondition: ConditionEvaluator = {
 
   async evaluate(config, context) {
     if (!context.risk) return false
-    return context.risk.probability === (config.params['value'] as string)
+    return context.risk.probability === Number(config.params['value'])
   },
 }
 
 /**
  * Checks if a risk's impact matches the expected value.
- * Params: { value: string }
+ * Params: { value: string | number }
  */
 export const riskImpactIsCondition: ConditionEvaluator = {
   type: 'risk_impact_is',
@@ -47,7 +47,7 @@ export const riskImpactIsCondition: ConditionEvaluator = {
 
   async evaluate(config, context) {
     if (!context.risk) return false
-    return context.risk.impact === (config.params['value'] as string)
+    return context.risk.impact === Number(config.params['value'])
   },
 }
 

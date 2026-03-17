@@ -4,73 +4,22 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
 import { timeEntryService } from '../services/timeEntryService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
-
-// ============================================================
-// VALIDATION SCHEMAS (Rule 6: Input Validation)
-// ============================================================
-
-const startTimerSchema = z.object({
-  taskId: z.string().uuid('Invalid task ID'),
-  description: z.string().nullish(),
-})
-
-const createTimeEntrySchema = z.object({
-  taskId: z.string().uuid('Invalid task ID'),
-  description: z.string().nullish(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime().nullish(),
-  duration: z.number().int().positive().nullish(),
-})
-
-const updateTimeEntrySchema = z.object({
-  description: z.string().nullish(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().nullish(),
-  duration: z.number().int().positive().nullish(),
-})
-
-const querySchema = z.object({
-  taskId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  fromDate: z.string().optional(),
-  toDate: z.string().optional(),
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('50'),
-})
-
-const reportQuerySchema = z.object({
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
-})
-
-const teamReportQuerySchema = z.object({
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  projectId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
-})
-
-const approvalQuerySchema = z.object({
-  userId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional(),
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).default('50'),
-})
-
-const bulkApproveSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1, 'At least one ID required'),
-})
-
-const bulkRejectSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1, 'At least one ID required'),
-  rejectionNote: z.string().max(500).optional(),
-})
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
+import {
+  startTimerSchema,
+  createTimeEntrySchema,
+  updateTimeEntrySchema,
+  timeEntryQuerySchema,
+  reportQuerySchema,
+  teamReportQuerySchema,
+  approvalQuerySchema,
+  bulkApproveSchema,
+  bulkRejectSchema,
+  exportTimeEntryQuerySchema,
+} from '../schemas/timeEntrySchemas.js'
 
 // ============================================================
 // CONTROLLER FUNCTIONS
@@ -83,15 +32,11 @@ const bulkRejectSchema = z.object({
 export async function startTimer(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = startTimerSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const timeEntry = await timeEntryService.startTimer(data.taskId, userId, data.description ?? undefined)
 
-    res.status(201).json({ success: true, data: timeEntry })
+    sendCreated(res, timeEntry)
   } catch (error) {
     if (error instanceof Error && error.message === 'Task not found') {
       next(new AppError('Task not found', 404))
@@ -108,15 +53,11 @@ export async function startTimer(req: Request, res: Response, next: NextFunction
 export async function stopTimer(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const timeEntry = await timeEntryService.stopTimer(id, userId)
 
-    res.json({ success: true, data: timeEntry })
+    sendSuccess(res, timeEntry)
   } catch (error) {
     if (error instanceof Error && error.message === 'Running timer not found') {
       next(new AppError('Running timer not found', 404))
@@ -132,20 +73,16 @@ export async function stopTimer(req: Request, res: Response, next: NextFunction)
  */
 export async function stopCurrentTimer(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const timeEntry = await timeEntryService.stopCurrentTimer(userId)
 
     if (!timeEntry) {
-      res.json({ success: true, data: null, message: 'No running timer' })
+      sendSuccess(res, null)
       return
     }
 
-    res.json({ success: true, data: timeEntry })
+    sendSuccess(res, timeEntry)
   } catch (error) {
     next(error)
   }
@@ -157,15 +94,11 @@ export async function stopCurrentTimer(req: Request, res: Response, next: NextFu
  */
 export async function getRunningTimer(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const timeEntry = await timeEntryService.getRunningTimer(userId)
 
-    res.json({ success: true, data: timeEntry })
+    sendSuccess(res, timeEntry)
   } catch (error) {
     next(error)
   }
@@ -178,11 +111,7 @@ export async function getRunningTimer(req: Request, res: Response, next: NextFun
 export async function createTimeEntry(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createTimeEntrySchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const timeEntry = await timeEntryService.createTimeEntry(
       {
@@ -195,7 +124,7 @@ export async function createTimeEntry(req: Request, res: Response, next: NextFun
       userId
     )
 
-    res.status(201).json({ success: true, data: timeEntry })
+    sendCreated(res, timeEntry)
   } catch (error) {
     if (error instanceof Error && error.message === 'Task not found') {
       next(new AppError('Task not found', 404))
@@ -211,7 +140,7 @@ export async function createTimeEntry(req: Request, res: Response, next: NextFun
  */
 export async function getTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const params = querySchema.parse(req.query)
+    const params = timeEntryQuerySchema.parse(req.query)
 
     // Support both fromDate/toDate (YYYY-MM-DD) and startDate/endDate (ISO datetime)
     const fromDateStr = params.fromDate || params.startDate
@@ -240,11 +169,7 @@ export async function getTimeEntries(req: Request, res: Response, next: NextFunc
       limit: params.limit,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -258,13 +183,9 @@ export async function updateTimeEntry(req: Request, res: Response, next: NextFun
   try {
     const { id } = req.params
     const data = updateTimeEntrySchema.parse(req.body)
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
-    const timeEntry = await timeEntryService.updateTimeEntry(
+    const timeEntry = requireResource(await timeEntryService.updateTimeEntry(
       id,
       {
         description: data.description ?? undefined,
@@ -273,13 +194,9 @@ export async function updateTimeEntry(req: Request, res: Response, next: NextFun
         duration: data.duration ?? undefined,
       },
       userId
-    )
+    ), 'Time entry')
 
-    if (!timeEntry) {
-      throw new AppError('Time entry not found', 404)
-    }
-
-    res.json({ success: true, data: timeEntry })
+    sendSuccess(res, timeEntry)
   } catch (error) {
     next(error)
   }
@@ -292,19 +209,11 @@ export async function updateTimeEntry(req: Request, res: Response, next: NextFun
 export async function deleteTimeEntry(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    requireResource(await timeEntryService.deleteTimeEntry(id, userId), 'Time entry')
 
-    const deleted = await timeEntryService.deleteTimeEntry(id, userId)
-
-    if (!deleted) {
-      throw new AppError('Time entry not found', 404)
-    }
-
-    res.json({ success: true, message: 'Time entry deleted successfully' })
+    sendSuccess(res, { message: 'Time entry deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -316,12 +225,7 @@ export async function deleteTimeEntry(req: Request, res: Response, next: NextFun
  */
 export async function getMyTimeReport(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
-
+    const userId = requireUserId(req)
     const params = reportQuerySchema.parse(req.query)
 
     const report = await timeEntryService.getUserTimeReport(
@@ -330,7 +234,7 @@ export async function getMyTimeReport(req: Request, res: Response, next: NextFun
       new Date(params.endDate)
     )
 
-    res.json({ success: true, data: report })
+    sendSuccess(res, report)
   } catch (error) {
     next(error)
   }
@@ -342,11 +246,7 @@ export async function getMyTimeReport(req: Request, res: Response, next: NextFun
  */
 export async function getMyDailySummary(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const date = req.query.date
       ? new Date(req.query.date as string)
@@ -354,7 +254,7 @@ export async function getMyDailySummary(req: Request, res: Response, next: NextF
 
     const summary = await timeEntryService.getDailySummary(userId, date)
 
-    res.json({ success: true, data: summary })
+    sendSuccess(res, summary)
   } catch (error) {
     next(error)
   }
@@ -366,21 +266,7 @@ export async function getMyDailySummary(req: Request, res: Response, next: NextF
  */
 export async function exportTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const exportQuerySchema = z.object({
-      taskId: z.string().uuid().optional(),
-      userId: z.string().uuid().optional(),
-      projectId: z.string().uuid().optional(),
-      startDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be YYYY-MM-DD')
-        .optional(),
-      endDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be YYYY-MM-DD')
-        .optional(),
-    })
-
-    const params = exportQuerySchema.parse(req.query)
+    const params = exportTimeEntryQuerySchema.parse(req.query)
 
     const startDate = params.startDate ? new Date(params.startDate + 'T00:00:00.000Z') : undefined
     const endDate = params.endDate ? new Date(params.endDate + 'T23:59:59.999Z') : undefined
@@ -474,7 +360,7 @@ export async function getTeamTimeReport(req: Request, res: Response, next: NextF
       userId: params.userId,
     })
 
-    res.json({ success: true, data: report })
+    sendSuccess(res, report)
   } catch (error) {
     next(error)
   }
@@ -495,7 +381,7 @@ export async function getPendingTimeEntries(req: Request, res: Response, next: N
       limit: params.limit,
     })
 
-    res.json({ success: true, data: result.data, pagination: result.pagination })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -508,15 +394,11 @@ export async function getPendingTimeEntries(req: Request, res: Response, next: N
 export async function approveTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = bulkApproveSchema.parse(req.body)
-    const approverId = req.user?.userId
-
-    if (!approverId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const approverId = requireUserId(req)
 
     const result = await timeEntryService.approveTimeEntries(data.ids, approverId)
 
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     if (error instanceof Error && error.message === 'No eligible entries found') {
       next(new AppError('No eligible entries found', 404))
@@ -533,15 +415,11 @@ export async function approveTimeEntries(req: Request, res: Response, next: Next
 export async function rejectTimeEntries(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = bulkRejectSchema.parse(req.body)
-    const approverId = req.user?.userId
-
-    if (!approverId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const approverId = requireUserId(req)
 
     const result = await timeEntryService.rejectTimeEntries(data.ids, approverId, data.rejectionNote)
 
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     if (error instanceof Error && error.message === 'No eligible entries found') {
       next(new AppError('No eligible entries found', 404))

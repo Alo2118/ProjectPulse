@@ -1,0 +1,571 @@
+// --- Status / Priority Labels (Italian) ---
+
+export const PROJECT_STATUS_LABELS: Record<string, string> = {
+  active: "Attivo",
+  on_hold: "In Pausa",
+  cancelled: "Annullato",
+  completed: "Completato",
+}
+
+export const TASK_STATUS_LABELS: Record<string, string> = {
+  todo: "Da fare",
+  in_progress: "In corso",
+  review: "In revisione",
+  blocked: "Bloccato",
+  done: "Completato",
+  cancelled: "Annullato",
+}
+
+export const TASK_PRIORITY_LABELS: Record<string, string> = {
+  low: "Bassa",
+  medium: "Media",
+  high: "Alta",
+  critical: "Critica",
+}
+
+export const RISK_STATUS_LABELS: Record<string, string> = {
+  open: "Aperto",
+  mitigated: "Mitigato",
+  accepted: "Accettato",
+  closed: "Chiuso",
+}
+
+export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
+  draft: "Bozza",
+  review: "In Revisione",
+  approved: "Approvato",
+  obsolete: "Obsoleto",
+}
+
+export const INPUT_STATUS_LABELS: Record<string, string> = {
+  pending: "In Attesa",
+  processing: "In Lavorazione",
+  resolved: "Risolto",
+}
+
+export const PHASE_COLORS: Record<string, string> = {
+  gray: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
+  blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  yellow: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  purple: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  red: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+}
+
+// --- Task Type ---
+
+export const TASK_TYPE_LABELS: Record<string, string> = {
+  milestone: "Milestone",
+  task: "Task",
+  subtask: "Sottotask",
+}
+
+export const TASK_TYPE_COLORS: Record<string, string> = {
+  milestone: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  task: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  subtask: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
+}
+
+// --- Risk ---
+
+export const RISK_CATEGORY_LABELS: Record<string, string> = {
+  technical: "Tecnico",
+  regulatory: "Normativo",
+  resource: "Risorse",
+  schedule: "Tempistica",
+}
+
+export const RISK_SCALE_LABELS: Record<number, string> = {
+  1: 'Molto bassa',
+  2: 'Bassa',
+  3: 'Media',
+  4: 'Alta',
+  5: 'Molto alta',
+}
+
+export const RISK_SCALE_MIN = 1
+export const RISK_SCALE_MAX = 5
+export const RISK_CRITICAL_THRESHOLD = 15
+export const RISK_HIGH_THRESHOLD = 10
+export const RISK_MEDIUM_THRESHOLD = 5
+
+export const RISK_LEVEL_LABELS: Record<string, string> = {
+  critical: 'Critico',
+  high: 'Alto',
+  medium: 'Medio',
+  low: 'Basso',
+}
+
+export const RISK_LEVEL_COLORS: Record<string, string> = {
+  critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+}
+
+export function getRiskLevel(score: number): 'critical' | 'high' | 'medium' | 'low' {
+  if (score >= RISK_CRITICAL_THRESHOLD) return 'critical'
+  if (score >= RISK_HIGH_THRESHOLD) return 'high'
+  if (score >= RISK_MEDIUM_THRESHOLD) return 'medium'
+  return 'low'
+}
+
+// --- Document ---
+
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  design_input: "Design Input",
+  design_output: "Design Output",
+  verification_report: "Rapporto Verifica",
+  validation_report: "Rapporto Validazione",
+  change_control: "Change Control",
+}
+
+export const DOCUMENT_STATUS_TRANSITIONS: Record<string, { value: string; label: string }[]> = {
+  draft: [{ value: "review", label: "Invia in revisione" }],
+  review: [
+    { value: "approved", label: "Approva" },
+    { value: "draft", label: "Torna in bozza" },
+  ],
+  approved: [{ value: "obsolete", label: "Segna come obsoleto" }],
+  obsolete: [],
+}
+
+// --- User Input ---
+
+export const INPUT_CATEGORY_LABELS: Record<string, string> = {
+  bug: "Bug",
+  feature_request: "Funzionalità",
+  improvement: "Miglioramento",
+  question: "Domanda",
+  other: "Altro",
+}
+
+// --- Roles ---
+
+export const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  direzione: "Direzione",
+  dipendente: "Dipendente",
+  guest: "Ospite",
+}
+
+/** @deprecated Use ROLE_COLORS instead — will be removed after rebuild */
+export const ROLE_COLORS_LEGACY: Record<string, string> = {
+  admin: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  direzione: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  dipendente: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
+  guest: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+}
+
+export const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  admin:       { bg: 'rgba(239,68,68,0.12)',   text: '#f87171', border: 'rgba(239,68,68,0.25)' },
+  direzione:   { bg: 'rgba(165,180,252,0.12)', text: '#a5b4fc', border: 'rgba(165,180,252,0.25)' },
+  dipendente:  { bg: 'rgba(74,222,128,0.12)',  text: '#4ade80', border: 'rgba(74,222,128,0.25)' },
+  guest:       { bg: 'rgba(71,85,105,0.12)',   text: '#94a3b8', border: 'rgba(71,85,105,0.25)' },
+}
+
+export const PROJECT_ROLE_LABELS: Record<string, string> = {
+  owner: "Owner",
+  manager: "Manager",
+  member: "Membro",
+  viewer: "Viewer",
+  guest: "Ospite",
+}
+
+// --- Automation ---
+
+export const DOMAIN_LABELS: Record<string, string> = {
+  project: "Progetti",
+  milestone: "Milestone",
+  task: "Task",
+  subtask: "Subtask",
+  risk: "Rischi",
+  document: "Documenti",
+  user: "Utenti",
+  input: "Richieste",
+  planning: "Pianificazione",
+  time_entry: "Ore",
+  analytics: "Analisi",
+  admin: "Amministrazione",
+  home: "Home",
+}
+
+/** @deprecated Use DOMAIN_COLORS instead — will be removed after rebuild */
+export const DOMAIN_COLORS_LEGACY: Record<string, string> = {
+  task: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  risk: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  document: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  project: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  planning: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
+}
+
+export const DOMAIN_COLORS: Record<string, { hex: string; bg: string; text: string; border: string; gradient: string }> = {
+  project:   { hex: '#3b82f6', bg: 'rgba(59,130,246,0.1)',  text: '#60a5fa', border: 'rgba(59,130,246,0.25)', gradient: 'linear-gradient(90deg, #1d4ed8, #3b82f6)' },
+  milestone: { hex: '#a855f7', bg: 'rgba(168,85,247,0.1)',  text: '#c084fc', border: 'rgba(168,85,247,0.25)', gradient: 'linear-gradient(90deg, #7e22ce, #a855f7)' },
+  task:      { hex: '#22d3ee', bg: 'rgba(34,211,238,0.1)',   text: '#22d3ee', border: 'rgba(34,211,238,0.25)', gradient: 'linear-gradient(90deg, #0e7490, #22d3ee)' },
+  subtask:   { hex: '#14b8a6', bg: 'rgba(20,184,166,0.1)',  text: '#2dd4bf', border: 'rgba(20,184,166,0.25)', gradient: 'linear-gradient(90deg, #0d9488, #14b8a6)' },
+  risk:      { hex: '#f97316', bg: 'rgba(249,115,22,0.1)',  text: '#fb923c', border: 'rgba(249,115,22,0.25)', gradient: 'linear-gradient(90deg, #c2410c, #f97316)' },
+  document:  { hex: '#eab308', bg: 'rgba(234,179,8,0.1)',   text: '#facc15', border: 'rgba(234,179,8,0.25)', gradient: 'linear-gradient(90deg, #a16207, #eab308)' },
+  team:      { hex: '#22c55e', bg: 'rgba(34,197,94,0.1)',   text: '#4ade80', border: 'rgba(34,197,94,0.25)', gradient: 'linear-gradient(90deg, #15803d, #22c55e)' },
+  planning:  { hex: '#6366f1', bg: 'rgba(99,102,241,0.1)',  text: '#a5b4fc', border: 'rgba(99,102,241,0.25)', gradient: 'linear-gradient(90deg, #4338ca, #6366f1)' },
+}
+
+// --- Audit ---
+
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  create: "Creazione",
+  update: "Modifica",
+  delete: "Eliminazione",
+  status_change: "Cambio stato",
+}
+
+export const AUDIT_ACTION_COLORS: Record<string, string> = {
+  create: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  update: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  delete: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  status_change: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+}
+
+// --- Custom Fields ---
+
+export const CUSTOM_FIELD_TYPE_LABELS: Record<string, string> = {
+  text: "Testo",
+  number: "Numero",
+  date: "Data",
+  select: "Selezione",
+}
+
+// --- Time Tracking ---
+
+export const TIME_ENTRY_STATUS_LABELS: Record<string, string> = {
+  pending: "In attesa",
+  approved: "Approvato",
+  rejected: "Rifiutato",
+}
+
+// --- Gantt / Calendar Colors ---
+
+export const GANTT_BAR_COLORS: Record<string, string> = {
+  todo: "bg-slate-400 dark:bg-slate-500",
+  in_progress: "bg-blue-500 dark:bg-blue-400",
+  review: "bg-amber-500 dark:bg-amber-400",
+  blocked: "bg-red-500 dark:bg-red-400",
+  done: "bg-green-500 dark:bg-green-400",
+  cancelled: "bg-gray-400 dark:bg-gray-500",
+}
+
+export const CALENDAR_DOT_COLORS: Record<string, string> = {
+  todo: "bg-slate-400",
+  in_progress: "bg-blue-500",
+  review: "bg-amber-500",
+  blocked: "bg-red-500",
+  done: "bg-green-500",
+  cancelled: "bg-gray-400",
+}
+
+// --- Status Colors (Tailwind classes) ---
+
+/** @deprecated Use STATUS_COLORS instead — will be removed after rebuild */
+export const STATUS_COLORS_LEGACY: Record<string, string> = {
+  // Project statuses
+  active: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  completed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  on_hold: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+
+  // Task statuses
+  todo: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
+  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  review: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  blocked: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  done: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+
+  // Task priorities
+  low: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
+  medium: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  high: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+  critical: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+
+  // Risk statuses
+  open: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  mitigated: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  accepted: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  closed: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+
+  // Document statuses
+  draft: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
+  approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  obsolete: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+
+  // Input statuses
+  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  processing: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  resolved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+
+  // Time entry approval
+  rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+}
+
+export const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  todo:        { bg: 'rgba(71,85,105,0.15)',  text: '#94a3b8', border: 'rgba(71,85,105,0.3)' },
+  in_progress: { bg: 'rgba(59,130,246,0.1)',  text: '#60a5fa', border: 'rgba(59,130,246,0.25)' },
+  review:      { bg: 'rgba(234,179,8,0.1)',   text: '#facc15', border: 'rgba(234,179,8,0.25)' },
+  done:        { bg: 'rgba(34,197,94,0.1)',   text: '#4ade80', border: 'rgba(34,197,94,0.25)' },
+  blocked:     { bg: 'rgba(239,68,68,0.1)',   text: '#f87171', border: 'rgba(239,68,68,0.25)' },
+  cancelled:   { bg: 'rgba(71,85,105,0.15)',  text: '#94a3b8', border: 'rgba(71,85,105,0.3)' },
+  active:      { bg: 'rgba(59,130,246,0.1)',  text: '#60a5fa', border: 'rgba(59,130,246,0.25)' },
+  on_hold:     { bg: 'rgba(234,179,8,0.1)',   text: '#facc15', border: 'rgba(234,179,8,0.25)' },
+  completed:   { bg: 'rgba(34,197,94,0.1)',   text: '#4ade80', border: 'rgba(34,197,94,0.25)' },
+  open:        { bg: 'rgba(239,68,68,0.08)',  text: '#f87171', border: 'rgba(239,68,68,0.18)' },
+  mitigated:   { bg: 'rgba(99,102,241,0.08)', text: '#a5b4fc', border: 'rgba(99,102,241,0.2)' },
+  accepted:    { bg: 'rgba(234,179,8,0.08)',  text: '#facc15', border: 'rgba(234,179,8,0.2)' },
+  closed:      { bg: 'rgba(34,197,94,0.08)',  text: '#4ade80', border: 'rgba(34,197,94,0.2)' },
+  draft:       { bg: 'rgba(71,85,105,0.15)',  text: '#94a3b8', border: 'rgba(71,85,105,0.3)' },
+  approved:    { bg: 'rgba(34,197,94,0.1)',   text: '#4ade80', border: 'rgba(34,197,94,0.25)' },
+  obsolete:    { bg: 'rgba(71,85,105,0.1)',   text: '#64748b', border: 'rgba(71,85,105,0.2)' },
+  pending:     { bg: 'rgba(234,179,8,0.08)',  text: '#facc15', border: 'rgba(234,179,8,0.2)' },
+  processing:  { bg: 'rgba(59,130,246,0.1)',  text: '#60a5fa', border: 'rgba(59,130,246,0.25)' },
+  resolved:    { bg: 'rgba(34,197,94,0.1)',   text: '#4ade80', border: 'rgba(34,197,94,0.25)' },
+  rejected:    { bg: 'rgba(239,68,68,0.1)',   text: '#f87171', border: 'rgba(239,68,68,0.25)' },
+}
+
+export const PRIORITY_COLORS: Record<string, { bg: string; text: string; border: string; bar: string }> = {
+  critical: { bg: 'rgba(239,68,68,0.08)',  text: '#f87171', border: 'rgba(239,68,68,0.2)',  bar: '#ef4444' },
+  high:     { bg: 'rgba(239,68,68,0.08)',  text: '#f87171', border: 'rgba(239,68,68,0.2)',  bar: '#ef4444' },
+  medium:   { bg: 'rgba(249,115,22,0.08)', text: '#fb923c', border: 'rgba(249,115,22,0.2)', bar: '#f97316' },
+  low:      { bg: 'rgba(234,179,8,0.08)',  text: '#facc15', border: 'rgba(234,179,8,0.2)',  bar: '#3b82f6' },
+}
+
+export const NAV_DOMAIN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  dashboard:  { bg: 'rgba(45,140,240,0.08)',  text: '#60a5fa', border: 'rgba(45,140,240,0.2)' },
+  projects:   { bg: 'rgba(59,130,246,0.08)',  text: '#60a5fa', border: 'rgba(59,130,246,0.2)' },
+  tasks:      { bg: 'rgba(34,211,238,0.08)',  text: '#22d3ee', border: 'rgba(34,211,238,0.2)' },
+  kanban:     { bg: 'rgba(34,211,238,0.08)',  text: '#22d3ee', border: 'rgba(34,211,238,0.2)' },
+  gantt:      { bg: 'rgba(59,130,246,0.08)',  text: '#60a5fa', border: 'rgba(59,130,246,0.2)' },
+  risks:      { bg: 'rgba(249,115,22,0.08)',  text: '#fb923c', border: 'rgba(249,115,22,0.2)' },
+  documents:  { bg: 'rgba(234,179,8,0.08)',   text: '#facc15', border: 'rgba(234,179,8,0.2)' },
+  reports:    { bg: 'rgba(59,130,246,0.08)',  text: '#60a5fa', border: 'rgba(59,130,246,0.2)' },
+  users:      { bg: 'rgba(99,102,241,0.1)',   text: '#a5b4fc', border: 'rgba(99,102,241,0.2)' },
+  planning:   { bg: 'rgba(45,140,240,0.08)',  text: '#60a5fa', border: 'rgba(45,140,240,0.2)' },
+}
+
+// --- Status Colors (HSL values for use in SVG/canvas/inline styles) ---
+
+export const STATUS_COLORS_HSL: Record<string, string> = {
+  // Task statuses
+  todo: 'hsl(215, 20%, 65%)',
+  in_progress: 'hsl(217, 91%, 60%)',
+  review: 'hsl(38, 92%, 50%)',
+  blocked: 'hsl(0, 84%, 60%)',
+  done: 'hsl(142, 71%, 45%)',
+  cancelled: 'hsl(0, 0%, 60%)',
+  // Project statuses
+  active: 'hsl(217, 91%, 60%)',
+  completed: 'hsl(142, 71%, 45%)',
+  on_hold: 'hsl(48, 96%, 53%)',
+  // Risk statuses
+  open: 'hsl(0, 84%, 60%)',
+  mitigated: 'hsl(217, 91%, 60%)',
+  accepted: 'hsl(38, 92%, 50%)',
+  closed: 'hsl(0, 0%, 60%)',
+  // Document statuses
+  draft: 'hsl(215, 20%, 65%)',
+  approved: 'hsl(142, 71%, 45%)',
+  obsolete: 'hsl(0, 0%, 60%)',
+  // Input statuses
+  pending: 'hsl(48, 96%, 53%)',
+  processing: 'hsl(217, 91%, 60%)',
+  resolved: 'hsl(142, 71%, 45%)',
+  // Time entry
+  rejected: 'hsl(0, 84%, 60%)',
+}
+
+// --- Role helpers ---
+
+export const PRIVILEGED_ROLES = ["admin", "direzione"] as const
+
+export function isPrivileged(role: string): boolean {
+  return PRIVILEGED_ROLES.includes(role as (typeof PRIVILEGED_ROLES)[number])
+}
+
+// --- Status Visual (dot color + label for compact rendering) ---
+
+export const STATUS_VISUAL: Record<string, { dot: string; label: string }> = {
+  blocked: { dot: "bg-red-500", label: "Bloccato" },
+  in_progress: { dot: "bg-blue-500", label: "In corso" },
+  review: { dot: "bg-amber-500", label: "In revisione" },
+  todo: { dot: "bg-slate-400", label: "Non iniziato" },
+  done: { dot: "bg-green-500", label: "Completato" },
+  cancelled: { dot: "bg-slate-300", label: "Annullato" },
+  active: { dot: "bg-blue-500", label: "Attivo" },
+  completed: { dot: "bg-green-500", label: "Completato" },
+  on_hold: { dot: "bg-amber-500", label: "In pausa" },
+  open: { dot: "bg-red-500", label: "Aperto" },
+  mitigated: { dot: "bg-green-500", label: "Mitigato" },
+  accepted: { dot: "bg-amber-500", label: "Accettato" },
+  closed: { dot: "bg-slate-400", label: "Chiuso" },
+  draft: { dot: "bg-slate-400", label: "Bozza" },
+  approved: { dot: "bg-green-500", label: "Approvato" },
+  obsolete: { dot: "bg-slate-300", label: "Obsoleto" },
+  pending: { dot: "bg-amber-500", label: "In attesa" },
+  processing: { dot: "bg-blue-500", label: "In elaborazione" },
+  resolved: { dot: "bg-green-500", label: "Risolto" },
+}
+
+export const TASK_STATUS_GROUP_ORDER = [
+  "blocked",
+  "in_progress",
+  "review",
+  "todo",
+  "recurring",
+  "done",
+  "cancelled",
+]
+
+export const PROJECT_STATUS_GROUP_ORDER = [
+  "on_hold",
+  "active",
+  "completed",
+  "cancelled",
+]
+
+export const COLLAPSED_BY_DEFAULT = [
+  "done",
+  "cancelled",
+  "completed",
+  "mitigated",
+  "closed",
+  "todo",
+]
+
+/** Gradient backgrounds per context domain — used by ProgressGradient */
+export const CONTEXT_GRADIENTS = {
+  project: 'bg-gradient-to-r from-blue-700 to-blue-500',
+  milestone: 'bg-gradient-to-r from-purple-700 to-purple-500',
+  task: 'bg-gradient-to-r from-cyan-700 to-cyan-400',
+  success: 'bg-gradient-to-r from-green-700 to-green-500',
+  warning: 'bg-gradient-to-r from-orange-700 to-orange-500',
+  danger: 'bg-gradient-to-r from-red-700 to-red-500',
+  indigo: 'bg-gradient-to-r from-indigo-700 to-indigo-500',
+} as const
+
+export type ContextGradient = keyof typeof CONTEXT_GRADIENTS
+
+/** Colors for NextActionChip */
+export const NEXT_ACTION_CONFIG = {
+  advance: { label: 'Avanza', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20', icon: 'ArrowRight' },
+  unblock: { label: 'Sblocca', color: 'bg-orange-500/10 text-orange-500 border-orange-500/20', icon: 'Unlock' },
+  approve: { label: 'Approva', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', icon: 'Check' },
+  report: { label: 'Report', color: 'bg-green-500/10 text-green-500 border-green-500/20', icon: 'BarChart3' },
+  review: { label: 'Revisione', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20', icon: 'Eye' },
+} as const
+
+export type NextAction = keyof typeof NEXT_ACTION_CONFIG
+
+// --- Activity Action Dot Colors ---
+
+export const ACTIVITY_ACTION_COLORS: Record<string, string> = {
+  created: 'bg-green-500',
+  updated: 'bg-blue-500',
+  deleted: 'bg-red-500',
+  completed: 'bg-emerald-500',
+  assigned: 'bg-purple-500',
+  commented: 'bg-amber-500',
+}
+
+/** Alert severity styling */
+export const ALERT_SEVERITY = {
+  critical: { label: 'Critico', dot: 'bg-red-500', border: 'border-l-red-500', bg: 'bg-red-500/5' },
+  warning: { label: 'Attenzione', dot: 'bg-orange-500', border: 'border-l-orange-500', bg: 'bg-orange-500/5' },
+  info: { label: 'Info', dot: 'bg-blue-500', border: 'border-l-blue-500', bg: 'bg-blue-500/5' },
+} as const
+
+export type AlertSeverity = keyof typeof ALERT_SEVERITY
+
+// --- Document Type Pill Classes (for list/card badges) ---
+
+export const DOCUMENT_TYPE_PILL_CLASSES: Record<string, string> = {
+  design_input:
+    "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/30",
+  design_output:
+    "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/30",
+  verification_report:
+    "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
+  validation_report:
+    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
+  change_control:
+    "bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-400 dark:border-cyan-800/30",
+}
+
+export const DOCUMENT_TYPE_PILL_DEFAULT =
+  "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30"
+
+// --- Document Type Icon Colors ---
+
+export const DOCUMENT_TYPE_ICON_COLORS: Record<string, string> = {
+  design_input: "text-blue-500",
+  design_output: "text-purple-500",
+  verification_report: "text-green-500",
+  validation_report: "text-teal-500",
+  change_control: "text-orange-500",
+}
+
+// --- Risk Severity Badge Classes ---
+
+export const RISK_SEVERITY_BADGE_CLASSES: Record<string, string> = {
+  critical:
+    "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30",
+  high:
+    "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/30",
+  medium:
+    "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30",
+  low:
+    "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
+  mitigated:
+    "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
+}
+
+export const RISK_SEVERITY_DOT_COLORS: Record<string, string> = {
+  critical: "bg-red-500",
+  high: "bg-orange-500",
+  medium: "bg-amber-500",
+  low: "bg-slate-400",
+  mitigated: "bg-green-500",
+}
+
+export const RISK_SEVERITY_ROW_BORDER: Record<string, string> = {
+  critical: "border-l-[3px] border-l-red-500/70",
+  high: "border-l-[3px] border-l-orange-500/60",
+  medium: "border-l-[3px] border-l-amber-500/50",
+  low: "border-l-[3px] border-l-slate-400/40",
+  mitigated: "border-l-[3px] border-l-green-500/35",
+}
+
+export const RISK_SEVERITY_LABELS: Record<string, string> = {
+  critical: "Critico",
+  high: "Alto",
+  medium: "Medio",
+  low: "Basso",
+  mitigated: "Mitigato",
+}
+
+export const RISK_SEVERITY_GROUP_LABELS: Record<string, string> = {
+  critical: "Critici",
+  high: "Alti",
+  medium: "Medi",
+  low: "Bassi",
+  mitigated: "Mitigati/Chiusi",
+}
+
+// --- Domain Icon Colors (for admin/permissions) ---
+
+export const DOMAIN_ICON_COLORS: Record<string, string> = {
+  project: "text-blue-600 dark:text-blue-400",
+  task: "text-blue-600 dark:text-blue-400",
+  risk: "text-red-600 dark:text-red-400",
+  document: "text-purple-600 dark:text-purple-400",
+  input: "text-amber-600 dark:text-amber-400",
+  time_entry: "text-green-600 dark:text-green-400",
+  user: "text-green-600 dark:text-green-400",
+  analytics: "text-indigo-600 dark:text-indigo-400",
+}

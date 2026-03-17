@@ -16,28 +16,8 @@ import {
   AttachableEntityType,
   DocumentType,
 } from '../types/index.js'
-
-// Document code generator (same as documentService)
-async function generateDocumentCode(): Promise<string> {
-  const year = new Date().getFullYear()
-  const prefix = `DOC-${year}-`
-
-  const lastDoc = await prisma.document.findFirst({
-    where: { code: { startsWith: prefix } },
-    orderBy: { code: 'desc' },
-    select: { code: true },
-  })
-
-  let nextNumber = 1
-  if (lastDoc?.code) {
-    const parts = lastDoc.code.split('-')
-    if (parts.length === 3) {
-      nextNumber = parseInt(parts[2], 10) + 1
-    }
-  }
-
-  return `${prefix}${String(nextNumber).padStart(3, '0')}`
-}
+import { generateDocumentCode } from '../utils/codeGenerator.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
 const attachmentSelectFields = {
   id: true,
@@ -89,7 +69,7 @@ export async function createAttachment(data: CreateAttachmentInput, userId: stri
   // Verify entity exists
   const entityExists = await verifyEntityExists(data.entityType, data.entityId)
   if (!entityExists) {
-    throw new Error(`${data.entityType} not found`)
+    throw new AppError(`${data.entityType} not found`, 404)
   }
 
   const attachment = await prisma.$transaction(async (tx) => {
@@ -301,7 +281,7 @@ export async function convertToDocument(
   })
 
   if (!attachment) {
-    throw new Error('Attachment not found')
+    throw new AppError('Attachment not found', 404)
   }
 
   // Determine projectId based on entityType
@@ -317,7 +297,7 @@ export async function convertToDocument(
         select: { projectId: true },
       })
       if (!task?.projectId) {
-        throw new Error('Task has no associated project')
+        throw new AppError('Task has no associated project', 400)
       }
       projectId = task.projectId
       break
@@ -328,13 +308,13 @@ export async function convertToDocument(
         select: { task: { select: { projectId: true } } },
       })
       if (!timeEntry?.task?.projectId) {
-        throw new Error('Time entry has no associated project')
+        throw new AppError('Time entry has no associated project', 400)
       }
       projectId = timeEntry.task.projectId
       break
     }
     default:
-      throw new Error('Cannot determine project for this attachment type')
+      throw new AppError('Cannot determine project for this attachment type', 400)
   }
 
   // Generate document code

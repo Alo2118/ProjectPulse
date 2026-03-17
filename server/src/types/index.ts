@@ -35,14 +35,22 @@ export type {
 // ============================================================
 
 export type UserRole = 'admin' | 'direzione' | 'dipendente' | 'guest'
-export type ProjectStatus = 'planning' | 'design' | 'verification' | 'validation' | 'transfer' | 'maintenance' | 'completed' | 'on_hold' | 'cancelled'
+export type ProjectStatus = 'active' | 'on_hold' | 'cancelled' | 'completed'
+
+export interface ProjectPhase {
+  key: string
+  label: string
+  description: string
+  order: number
+  color: string
+  isFinal: boolean
+  isInitial: boolean
+}
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'blocked' | 'done' | 'cancelled'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskType = 'milestone' | 'task' | 'subtask'
 export type RiskCategory = 'technical' | 'regulatory' | 'resource' | 'schedule'
-export type RiskProbability = 'low' | 'medium' | 'high'
-export type RiskImpact = 'low' | 'medium' | 'high'
 export type RiskStatus = 'open' | 'mitigated' | 'accepted' | 'closed'
 export type DocumentType = 'design_input' | 'design_output' | 'verification_report' | 'validation_report' | 'change_control'
 export type DocumentStatus = 'draft' | 'review' | 'approved' | 'obsolete'
@@ -93,6 +101,7 @@ export interface CreateProjectInput {
   description?: string
   ownerId: string
   templateId?: string
+  phaseTemplateId?: string
   startDate?: Date
   targetEndDate?: Date
   budget?: number
@@ -181,8 +190,8 @@ export interface CreateRiskInput {
   title: string
   description?: string
   category?: string
-  probability?: string
-  impact?: string
+  probability?: number
+  impact?: number
   mitigationPlan?: string
   ownerId?: string
 }
@@ -191,8 +200,8 @@ export interface UpdateRiskInput {
   title?: string
   description?: string
   category?: string
-  probability?: string
-  impact?: string
+  probability?: number
+  impact?: number
   mitigationPlan?: string
   status?: string
   ownerId?: string
@@ -212,6 +221,8 @@ export interface ProjectQueryParams extends PaginationParams {
   priority?: string
   ownerId?: string
   search?: string
+  sortBy?: 'createdAt' | 'name' | 'targetEndDate' | 'priority' | 'status' | 'sortOrder'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface TaskQueryParams extends PaginationParams {
@@ -261,6 +272,18 @@ export interface ApiResponse<T> {
 // ============================================================
 
 export type Theme = 'light' | 'dark' | 'system'
+export type ThemeStyle = 'tech-hud' | 'basic' | 'classic'
+
+export interface NotificationPreferences {
+  sound: boolean
+  desktop: boolean
+  types: {
+    task: boolean
+    risk: boolean
+    doc: boolean
+    automation: boolean
+  }
+}
 
 export interface UserWithoutPassword {
   id: string
@@ -270,6 +293,8 @@ export interface UserWithoutPassword {
   role: string
   avatarUrl: string | null
   theme: Theme
+  themeStyle: ThemeStyle
+  notificationPreferences: NotificationPreferences | null
   isActive: boolean
   weeklyHoursTarget?: number | null
   createdAt: Date
@@ -626,5 +651,62 @@ export interface UserWeeklyHours {
   byProject: Array<{ projectId: string; projectName: string; totalMinutes: number }>
   totalMinutes: number
   weeklyTarget: number
+}
+
+// ============================================================
+// DOCUMENT VERSION TYPES
+// ============================================================
+
+export interface DocumentVersion {
+  id: string
+  documentId: string
+  version: number
+  filePath: string
+  fileSize: number
+  mimeType: string
+  note: string | null
+  uploadedBy: { id: string; firstName: string; lastName: string }
+  createdAt: string
+}
+
+// ============================================================
+// RISK-TASK LINK TYPES
+// ============================================================
+
+export type RiskTaskLinkType = 'mitigation' | 'verification' | 'related'
+
+export interface RiskTaskLink {
+  id: string
+  riskId: string
+  taskId: string
+  linkType: RiskTaskLinkType
+  createdAt: string
+  createdBy: { id: string; firstName: string; lastName: string }
+}
+
+// ============================================================
+// ACTIVITY & KPI TYPES
+// ============================================================
+
+export interface ActivityItem {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string
+  field?: string
+  oldValue?: string
+  newValue?: string
+  user: { id: string; firstName: string; lastName: string }
+  createdAt: string
+}
+
+export interface KpiCard {
+  label: string
+  value: string | number
+  trend?: { value: string; direction: 'up' | 'down' | 'neutral' }
+  subtitle?: string
+  color: string
+  icon?: string
 }
 

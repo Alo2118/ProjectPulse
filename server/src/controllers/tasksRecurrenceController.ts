@@ -10,6 +10,8 @@ import { AppError } from '../middleware/errorMiddleware.js'
 import { assertTaskOwnership } from '../utils/taskOwnership.js'
 import * as recurrenceService from '../services/recurrenceService.js'
 import { RecurrenceType } from '../types/index.js'
+import { sendSuccess } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -49,11 +51,7 @@ export async function completeOccurrence(
   try {
     const { taskId } = req.params
     const data = completeOccurrenceSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     await assertTaskOwnership(taskId, userId, req.user?.role)
 
@@ -72,7 +70,7 @@ export async function completeOccurrence(
       userId
     )
 
-    res.json({ success: true, data: completion })
+    sendSuccess(res, completion)
   } catch (error) {
     if (error instanceof Error && (error.message === 'Task not found' || error.message === 'Task is not recurring')) {
       next(new AppError(error.message, 404))
@@ -104,8 +102,7 @@ export async function getCompletionHistory(
 
     const result = await recurrenceService.getCompletionHistory(taskId, limit, offset)
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       data: result.completions,
       pagination: {
         total: result.total,
@@ -132,13 +129,9 @@ export async function getRecurringTask(
 
     logger.info('Fetching recurring task details', { taskId })
 
-    const task = await recurrenceService.getRecurringTaskWithCompletions(taskId)
+    const task = requireResource(await recurrenceService.getRecurringTaskWithCompletions(taskId), 'Task')
 
-    if (!task) {
-      throw new AppError('Task not found', 404)
-    }
-
-    res.json({ success: true, data: task })
+    sendSuccess(res, task)
   } catch (error) {
     next(error)
   }
@@ -156,11 +149,7 @@ export async function setRecurrence(
   try {
     const { taskId } = req.params
     const data = setRecurrenceSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     await assertTaskOwnership(taskId, userId, req.user?.role)
 
@@ -177,7 +166,7 @@ export async function setRecurrence(
       userId
     )
 
-    res.json({ success: true, data: task })
+    sendSuccess(res, task)
   } catch (error) {
     if (error instanceof Error && (error.message.includes('Recurrence') || error.message.includes('pattern'))) {
       next(new AppError(error.message, 400))
@@ -199,11 +188,7 @@ export async function purgeOldCompletions(
   try {
     const { taskId } = req.params
     const keepCount = req.query.keep ? parseInt(req.query.keep as string, 10) : 10
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     await assertTaskOwnership(taskId, userId, req.user?.role)
 
@@ -214,7 +199,7 @@ export async function purgeOldCompletions(
 
     const result = await recurrenceService.purgeOldCompletions(taskId, keepCount, userId)
 
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     next(error)
   }

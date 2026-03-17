@@ -12,8 +12,7 @@ import { evaluateRules } from '../services/automation/index.js'
 import { cleanupStaleCooldowns } from '../services/automation/cooldown.js'
 import { generateRecommendations } from '../services/automation/recommendationService.js'
 import { logger } from '../utils/logger.js'
-
-const INTERVAL_MS = 15 * 60 * 1000 // 15 minutes
+import { SCHEDULER_INTERVAL_MS } from '../constants/config.js'
 
 // Number of upcoming days to check for approaching deadlines
 const DEADLINE_DAYS_WINDOWS = [1, 2, 3] as const
@@ -328,7 +327,7 @@ export function startAutomationScheduler(): void {
         logger.error('Recommendation generation failed', { error: err })
       )
     }
-  }, INTERVAL_MS)
+  }, SCHEDULER_INTERVAL_MS)
 }
 
 /**

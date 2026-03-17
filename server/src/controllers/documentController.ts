@@ -8,50 +8,14 @@ import { z } from 'zod'
 import { documentService } from '../services/documentService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { DocumentType, DocumentStatus } from '../types/index.js'
-
-// ============================================================
-// VALIDATION SCHEMAS
-// ============================================================
-
-const createDocumentSchema = z.object({
-  projectId: z.string().uuid('Invalid project ID'),
-  title: z.string().min(1, 'Title is required').max(255),
-  description: z.string().nullish(),
-  type: z
-    .enum(['design_input', 'design_output', 'verification_report', 'validation_report', 'change_control'])
-    .default('design_input'),
-})
-
-const updateDocumentSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  description: z.string().nullish(),
-  type: z
-    .enum(['design_input', 'design_output', 'verification_report', 'validation_report', 'change_control'])
-    .optional(),
-})
-
-const querySchema = z.object({
-  projectId: z.string().uuid().optional(),
-  type: z
-    .enum(['design_input', 'design_output', 'verification_report', 'validation_report', 'change_control'])
-    .optional(),
-  status: z.enum(['draft', 'review', 'approved', 'obsolete']).optional(),
-  search: z.string().optional(),
-  page: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .default('1'),
-  limit: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .default('20'),
-})
-
-const statusChangeSchema = z.object({
-  status: z.enum(['draft', 'review', 'approved', 'obsolete']),
-})
+import {
+  createDocumentSchema,
+  updateDocumentSchema,
+  documentQuerySchema,
+  documentStatusChangeSchema,
+} from '../schemas/documentSchemas.js'
+import { sendSuccess, sendCreated, sendPaginated } from '../utils/responseHelpers.js'
+import { requireUserId, requireResource } from '../utils/controllerHelpers.js'
 
 // ============================================================
 // CONTROLLER FUNCTIONS
@@ -63,7 +27,7 @@ const statusChangeSchema = z.object({
  */
 export async function getDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const params = querySchema.parse(req.query)
+    const params = documentQuerySchema.parse(req.query)
 
     const result = await documentService.getDocuments({
       projectId: params.projectId,
@@ -72,13 +36,11 @@ export async function getDocuments(req: Request, res: Response, next: NextFuncti
       search: params.search,
       page: params.page,
       limit: params.limit,
+      userId: req.user?.userId,
+      role: req.user?.role,
     })
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-    })
+    sendPaginated(res, result)
   } catch (error) {
     next(error)
   }
@@ -92,7 +54,7 @@ export async function getProjectDocuments(req: Request, res: Response, next: Nex
   try {
     const { projectId } = req.params
     const documents = await documentService.getProjectDocuments(projectId)
-    res.json({ success: true, data: documents })
+    sendSuccess(res, documents)
   } catch (error) {
     next(error)
   }
@@ -105,13 +67,9 @@ export async function getProjectDocuments(req: Request, res: Response, next: Nex
 export async function getDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const document = await documentService.getDocumentById(id)
+    const document = requireResource(await documentService.getDocumentById(id), 'Document')
 
-    if (!document) {
-      throw new AppError('Document not found', 404)
-    }
-
-    res.json({ success: true, data: document })
+    sendSuccess(res, document)
   } catch (error) {
     next(error)
   }
@@ -124,11 +82,7 @@ export async function getDocument(req: Request, res: Response, next: NextFunctio
 export async function createDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createDocumentSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const file = req.file
       ? {
@@ -149,7 +103,7 @@ export async function createDocument(req: Request, res: Response, next: NextFunc
       file
     )
 
-    res.status(201).json({ success: true, data: document })
+    sendCreated(res, document)
   } catch (error) {
     if (error instanceof Error && error.message === 'Project not found') {
       next(new AppError('Project not found', 404))
@@ -167,11 +121,7 @@ export async function updateDocument(req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params
     const data = updateDocumentSchema.parse(req.body)
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     const document = await documentService.updateDocument(
       id,
@@ -183,11 +133,9 @@ export async function updateDocument(req: Request, res: Response, next: NextFunc
       userId
     )
 
-    if (!document) {
-      throw new AppError('Document not found', 404)
-    }
+    requireResource(document, 'Document')
 
-    res.json({ success: true, data: document })
+    sendSuccess(res, document)
   } catch (error) {
     next(error)
   }
@@ -200,27 +148,19 @@ export async function updateDocument(req: Request, res: Response, next: NextFunc
 export async function uploadDocumentFile(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
-
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const userId = requireUserId(req)
 
     if (!req.file) {
       throw new AppError('No file uploaded', 400)
     }
 
-    const document = await documentService.updateDocumentFile(id, userId, {
+    const document = requireResource(await documentService.updateDocumentFile(id, userId, {
       path: req.file.path,
       size: req.file.size,
       mimetype: req.file.mimetype,
-    })
+    }), 'Document')
 
-    if (!document) {
-      throw new AppError('Document not found', 404)
-    }
-
-    res.json({ success: true, data: document })
+    sendSuccess(res, document)
   } catch (error) {
     next(error)
   }
@@ -233,20 +173,12 @@ export async function uploadDocumentFile(req: Request, res: Response, next: Next
 export async function changeStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const { status } = statusChangeSchema.parse(req.body)
-    const userId = req.user?.userId
+    const { status } = documentStatusChangeSchema.parse(req.body)
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    const document = requireResource(await documentService.changeDocumentStatus(id, status as DocumentStatus, userId), 'Document')
 
-    const document = await documentService.changeDocumentStatus(id, status as DocumentStatus, userId)
-
-    if (!document) {
-      throw new AppError('Document not found', 404)
-    }
-
-    res.json({ success: true, data: document })
+    sendSuccess(res, document)
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('Invalid status transition')) {
       next(new AppError(error.message, 400))
@@ -263,19 +195,11 @@ export async function changeStatus(req: Request, res: Response, next: NextFuncti
 export async function deleteDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.userId
+    const userId = requireUserId(req)
 
-    if (!userId) {
-      throw new AppError('User not authenticated', 401)
-    }
+    requireResource(await documentService.deleteDocument(id, userId), 'Document')
 
-    const deleted = await documentService.deleteDocument(id, userId)
-
-    if (!deleted) {
-      throw new AppError('Document not found', 404)
-    }
-
-    res.json({ success: true, message: 'Document deleted successfully' })
+    sendSuccess(res, { message: 'Document deleted successfully' })
   } catch (error) {
     next(error)
   }
@@ -289,7 +213,7 @@ export async function getProjectDocumentStats(req: Request, res: Response, next:
   try {
     const { projectId } = req.params
     const stats = await documentService.getProjectDocumentStats(projectId)
-    res.json({ success: true, data: stats })
+    sendSuccess(res, stats)
   } catch (error) {
     next(error)
   }
@@ -302,17 +226,56 @@ export async function getProjectDocumentStats(req: Request, res: Response, next:
 export async function downloadDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params
-    const document = await documentService.getDocumentById(id)
-
-    if (!document) {
-      throw new AppError('Document not found', 404)
-    }
+    const document = requireResource(await documentService.getDocumentById(id), 'Document')
 
     if (!document.filePath) {
       throw new AppError('No file attached to this document', 404)
     }
 
     res.download(document.filePath, `${document.code}-${document.title}`)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Gets version history for a document
+ * @route GET /api/documents/:id/versions
+ */
+export async function getVersions(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    requireUserId(req)
+    const { id } = req.params
+
+    // Ensure document exists
+    requireResource(await documentService.getDocumentById(id), 'Document')
+
+    const versions = await documentService.getDocumentVersions(id)
+    sendSuccess(res, versions)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Downloads a specific version of a document
+ * @route GET /api/documents/:id/versions/:versionId/download
+ */
+export async function downloadVersion(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    requireUserId(req)
+    const { id, versionId } = z.object({
+      id: z.string().uuid(),
+      versionId: z.string().uuid(),
+    }).parse(req.params)
+
+    const version = await documentService.getDocumentVersion(id, versionId)
+
+    if (!version) {
+      throw new AppError('Version not found', 404)
+    }
+
+    res.download(version.filePath, `v${version.version}-${version.filePath.split(/[\\/]/).pop()}`)
   } catch (error) {
     next(error)
   }

@@ -1,841 +1,589 @@
-/**
- * Task List Page - Shows all tasks with hierarchical view
- * @module pages/tasks/TaskListPage
- */
-
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from '@stores/toastStore'
-import { useTaskStore } from '@stores/taskStore'
-import { useProjectStore } from '@stores/projectStore'
-import { useAuthStore } from '@stores/authStore'
-import { useDashboardStore } from '@stores/dashboardStore'
-import { useDepartmentStore } from '@stores/departmentStore'
-import { useUserStore } from '@stores/userStore'
-import { QuickAddTask } from '@components/tasks/QuickAddTask'
-import { BlockedReasonModal } from '@/components/tasks/BlockedReasonModal'
-import { TaskListViewFilters } from '@components/tasks/TaskListViewFilters'
-import { TaskListViewItem } from '@components/tasks/TaskListViewItem'
-import { TaskBulkActionBar } from '@components/tasks/TaskBulkActionBar'
-import { AdvancedFilterBuilder } from '@components/features/AdvancedFilterBuilder'
+import { useCallback, useMemo, useState } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
+  ListChecks,
+  List,
+  LayoutGrid,
+  GanttChart as GanttChartIcon,
+  CalendarDays,
   Plus,
-  Clock,
-  CheckCircle,
-  ArrowRight,
-  AlertTriangle,
-  CheckSquare,
-  ChevronDown,
-} from 'lucide-react'
-import { TaskTreeView } from '@/components/reports/TaskTreeView'
-import TaskTableView from '@pages/tasks/TaskTableView'
-import { SavedViewsBar } from '@components/features/SavedViewsBar'
-import { ExportButton } from '@components/features/ExportButton'
-import { EmptyState } from '@components/common/EmptyState'
-import { DeleteConfirmModal } from '@components/ui/DeleteConfirmModal'
-import { useDebounce } from '@hooks/useDebounce'
-import { applyAdvancedFilter, describeAdvancedFilter } from '@utils/advancedFilterUtils'
-import type { Task, TaskStatus, AdvancedFilter } from '@/types'
+  Play,
+  CheckCircle2,
+  Trash2,
+  XCircle,
+} from "lucide-react"
+import { KanbanBoard } from "@/components/domain/tasks/KanbanBoard"
+import { GanttChart } from "@/components/domain/gantt/GanttChart"
+import { CalendarView } from "@/components/domain/calendar/CalendarView"
+import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { EntityRow } from "@/components/common/EntityRow"
+import { TagFilter } from "@/components/common/TagFilter"
+import { ListFilters } from "@/components/common/ListFilters"
+import { StatusDot } from "@/components/common/StatusDot"
+import { DeadlineCell } from "@/components/common/DeadlineCell"
+import { ProblemIndicators } from "@/components/common/ProblemIndicators"
+import { ParentLink } from "@/components/common/ParentLink"
+import { RecurrenceBadge } from "@/components/common/RecurrenceBadge"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { useTaskListQuery, useBulkUpdateTasks, useBulkDeleteTasks } from "@/hooks/api/useTasks"
+import { useStatsQuery } from "@/hooks/api/useStats"
+import { useAttentionItemsQuery } from "@/hooks/api/useDashboard"
+import { useSelectionStore } from "@/stores/selectionStore"
+import { useListKeyboardNav } from "@/hooks/ui/useListKeyboardNav"
+import {
+  TASK_STATUS_LABELS,
+  TASK_PRIORITY_LABELS,
+  TASK_TYPE_LABELS,
+  TASK_TYPE_COLORS,
+  TASK_STATUS_GROUP_ORDER,
+  COLLAPSED_BY_DEFAULT,
+  STATUS_VISUAL,
+} from "@/lib/constants"
+import type { AlertItem } from "@/components/common/AlertStrip"
+import { cn, formatRelative, toError } from "@/lib/utils"
 
-/** Empty advanced filter sentinel — used for reset and initial state */
-const EMPTY_ADVANCED_FILTER: AdvancedFilter = { logic: 'and', rules: [] }
-
-
-/** Section status dot color */
-function statusDotClass(sectionKey: string): string {
-  switch (sectionKey) {
-    case 'in_progress': return 'bg-blue-500'
-    case 'todo': return 'bg-gray-400'
-    case 'review': return 'bg-violet-500'
-    case 'blocked': return 'bg-red-500'
-    case 'done': return 'bg-green-500'
-    case 'recurring': return 'bg-cyan-500'
-    default: return 'bg-gray-400'
-  }
+interface TaskRow {
+  id: string
+  code: string
+  title: string
+  taskType: string
+  status: string
+  priority: string
+  dueDate?: string | null
+  blockedReason?: string | null
+  isRecurring?: boolean
+  recurrencePattern?: string | null
+  lastExecutedAt?: string | null
+  updatedAt?: string
+  project?: { id: string; name: string } | null
+  assignee?: { id: string; firstName: string; lastName: string } | null
+  _count?: {
+    comments?: number
+    subtasks?: number
+    children?: number
+  } | null
 }
 
+const VIEW_MODES = [
+  { key: "kanban", label: "Kanban", icon: LayoutGrid },
+  { key: "list", label: "Lista", icon: List },
+  { key: "gantt", label: "Gantt", icon: GanttChartIcon },
+  { key: "calendar", label: "Calendario", icon: CalendarDays },
+] as const
+
+function getTaskGroup(t: TaskRow): string {
+  if (t.isRecurring && t.status !== "done" && t.status !== "cancelled") {
+    return "recurring"
+  }
+  return t.status
+}
+
+const columns: Column<TaskRow>[] = [
+  {
+    key: "title",
+    header: "Task",
+    sortable: true,
+    cell: (t) => {
+      const comments = t._count?.comments
+      const subtasks = t._count?.subtasks ?? t._count?.children
+      const assigneeName = t.assignee
+        ? `${t.assignee.firstName[0]}. ${t.assignee.lastName}`
+        : null
+      const isBlocked = t.status === "blocked"
+      const showRecurrence = t.isRecurring && t.status !== "done" && t.status !== "cancelled"
+
+      return (
+        <div className="min-w-0 py-1 space-y-0.5">
+          {/* Line 1: dot + title + problem indicators */}
+          <div className="flex items-center gap-2 min-w-0">
+            <StatusDot status={t.status} size="md" />
+            <span className="font-medium text-sm truncate leading-tight flex-1 min-w-0">
+              {t.title}
+            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <Badge
+                variant="secondary"
+                className={cn("text-[10px] px-1.5 py-0", TASK_TYPE_COLORS[t.taskType])}
+              >
+                {TASK_TYPE_LABELS[t.taskType] ?? t.taskType}
+              </Badge>
+              <ProblemIndicators
+                comments={comments && comments > 0 ? comments : undefined}
+                checklistTotal={subtasks && subtasks > 0 ? subtasks : undefined}
+                checklistDone={subtasks && subtasks > 0 ? subtasks : undefined}
+              />
+            </div>
+          </div>
+
+          {/* Line 2: parent link + assignee */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground pl-5">
+            {t.project ? (
+              <ParentLink
+                name={t.project.name}
+                href={`/projects/${t.project.id}`}
+                domain="project"
+              />
+            ) : null}
+            {t.project && assigneeName && (
+              <span aria-hidden="true" className="text-muted-foreground/50">·</span>
+            )}
+            {assigneeName && <span className="truncate">{assigneeName}</span>}
+          </div>
+
+          {/* Line 3: blocked reason or recurrence badge */}
+          {isBlocked && t.blockedReason && (
+            <p className="text-xs text-destructive italic truncate pl-5">
+              {t.blockedReason}
+            </p>
+          )}
+          {!isBlocked && showRecurrence && (
+            <div className="pl-5">
+              <RecurrenceBadge
+                pattern={t.recurrencePattern}
+                lastExecuted={t.lastExecutedAt}
+              />
+            </div>
+          )}
+        </div>
+      )
+    },
+  },
+  {
+    key: "dueDate",
+    header: "Scadenza",
+    sortable: true,
+    className: "w-[130px]",
+    cell: (t) => {
+      if (t.isRecurring && t.status !== "done" && t.status !== "cancelled") {
+        return t.updatedAt ? (
+          <span className="text-xs text-muted-foreground">
+            Ultima: {formatRelative(t.updatedAt)}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )
+      }
+      return <DeadlineCell dueDate={t.dueDate} status={t.status} />
+    },
+  },
+]
+
+const filterConfig: FilterConfig[] = [
+  {
+    key: "search",
+    label: "Cerca",
+    type: "search",
+    placeholder: "Cerca task...",
+  },
+  {
+    key: "status",
+    label: "Stato",
+    type: "select",
+    options: Object.entries(TASK_STATUS_LABELS).map(([value, label]) => ({
+      value,
+      label,
+    })),
+  },
+  {
+    key: "priority",
+    label: "Priorità",
+    type: "select",
+    options: Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => ({
+      value,
+      label,
+    })),
+  },
+  {
+    key: "taskType",
+    label: "Tipo",
+    type: "select",
+    options: Object.entries(TASK_TYPE_LABELS).map(([value, label]) => ({
+      value,
+      label,
+    })),
+  },
+]
 
 export default function TaskListPage() {
+  useSetPageContext({ domain: "task" })
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { user } = useAuthStore()
-  const { tasks, myTasks, isLoading, fetchTasks, fetchMyTasks, changeTaskStatus, updateTask, bulkDeleteTasks } = useTaskStore()
-  const { projects, fetchProjects } = useProjectStore()
-  const { runningTimer, startTimer, stopTimer } = useDashboardStore()
-  const { departments, fetchDepartments } = useDepartmentStore()
-  const { users, fetchUsers } = useUserStore()
 
-  const canTrackTime = user?.role !== 'direzione'
+  const viewMode = searchParams.get("view") || "kanban"
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
-  const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || '')
-  const [projectFilter, setProjectFilter] = useState(searchParams.get('projectId') || '')
-  const [departmentFilter, setDepartmentFilter] = useState(searchParams.get('departmentId') || '')
+  // Selection store
+  const { selectedIds, toggle, selectAll, clear } = useSelectionStore()
 
-  // Advanced filter state
-  const [advancedFilter, setAdvancedFilter] = useState<AdvancedFilter>(EMPTY_ADVANCED_FILTER)
-  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
+  // Bulk mutations
+  const bulkUpdate = useBulkUpdateTasks()
+  const bulkDelete = useBulkDeleteTasks()
 
-  // Bulk selection state
-  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
-
-  // Blocked reason modal state
-  const [showBlockedModal, setShowBlockedModal] = useState(false)
-  const [pendingBlockedTaskId, setPendingBlockedTaskId] = useState<string | null>(null)
-  const [pendingBlockedTaskTitle, setPendingBlockedTaskTitle] = useState('')
-  const [isChangingStatus, setIsChangingStatus] = useState(false)
-
-  // Collapsible sections — "done" collapsed by default
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['done']))
-
-  const canSeeAllTasks = user?.role === 'admin' || user?.role === 'direzione'
-  const [showAllTasks, setShowAllTasks] = useState(
-    canSeeAllTasks ? searchParams.get('all') === 'true' : false
-  )
-  const [viewMode, setViewMode] = useState<'list' | 'tree' | 'table'>(
-    (searchParams.get('view') as 'list' | 'tree' | 'table') || 'list'
+  const filters = useMemo(
+    () => ({
+      page: searchParams.get("page") || "1",
+      limit: "20",
+      search: searchParams.get("search") || "",
+      status: searchParams.get("status") || "",
+      priority: searchParams.get("priority") || "",
+      taskType: searchParams.get("taskType") || "",
+      sortBy: searchParams.get("sortBy") || "createdAt",
+      sortOrder: searchParams.get("sortOrder") || "desc",
+      ...(selectedTagIds.length > 0 ? { tags: selectedTagIds.join(",") } : {}),
+    }),
+    [searchParams, selectedTagIds]
   )
 
-  const debouncedSearch = useDebounce(searchTerm, 300)
+  const { data, isLoading, error } = useTaskListQuery(filters)
+  const { data: kpiCards } = useStatsQuery('tasks')
+  const { data: attentionItems } = useAttentionItemsQuery()
 
-  useEffect(() => {
-    fetchProjects()
-    fetchDepartments()
-    fetchUsers({ limit: 200 })
-  }, [fetchProjects, fetchDepartments, fetchUsers])
+  const tasks = (data?.data ?? []) as TaskRow[]
+  const pagination = data?.pagination as
+    | { page: number; limit: number; total: number; pages: number }
+    | undefined
 
-  useEffect(() => {
-    const filters: Record<string, string> = {}
-    if (debouncedSearch) filters.search = debouncedSearch
-    if (statusFilter) filters.status = statusFilter
-    if (priorityFilter) filters.priority = priorityFilter
-    if (projectFilter) filters.projectId = projectFilter
-    if (departmentFilter) filters.departmentId = departmentFilter
-    if (showAllTasks && canSeeAllTasks) filters.all = 'true'
-
-    const params = new URLSearchParams(filters)
-    setSearchParams(params)
-
-    fetchMyTasks({
-      status: statusFilter || undefined,
-      priority: priorityFilter || undefined,
-      limit: 100,
-    })
-
-    if (showAllTasks && canSeeAllTasks) {
-      fetchTasks({
-        search: debouncedSearch || undefined,
-        status: statusFilter || undefined,
-        priority: priorityFilter || undefined,
-        projectId: projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined,
-        standalone: projectFilter === 'standalone' ? true : undefined,
-        departmentId: departmentFilter || undefined,
-        page: 1,
-        limit: 200,
-      })
-    }
-  }, [debouncedSearch, statusFilter, priorityFilter, projectFilter, departmentFilter, showAllTasks, canSeeAllTasks, user?.id])
-
-  // -------------------------
-  // Memoised derived data
-  // -------------------------
-
-  /** Raw task list (before advanced filter) based on basic filters + showAll */
-  const rawTaskList = useMemo(
-    () => (showAllTasks && canSeeAllTasks ? tasks : myTasks),
-    [tasks, myTasks, showAllTasks, canSeeAllTasks]
+  // Keyboard navigation (only in list view)
+  const isListView = viewMode === "list"
+  const handleKeyboardSelect = useCallback(
+    (task: TaskRow) => navigate(`/tasks/${task.id}`),
+    [navigate]
   )
+  const { focusedIndex } = useListKeyboardNav({
+    items: tasks,
+    getId: (t) => t.id,
+    onSelect: handleKeyboardSelect,
+    enabled: isListView,
+  })
 
-  /** Task list after applying advanced filter rules */
-  const taskList = useMemo(
-    () => applyAdvancedFilter(rawTaskList, advancedFilter),
-    [rawTaskList, advancedFilter]
-  )
+  // Bulk action handlers
+  const selectedArray = useMemo(() => Array.from(selectedIds), [selectedIds])
 
-  const taskCounts = useMemo(() => ({
-    total: taskList.length,
-    todo: taskList.filter((t) => t.status === 'todo').length,
-    inProgress: taskList.filter((t) => t.status === 'in_progress').length,
-    blocked: taskList.filter((t) => t.status === 'blocked').length,
-    completed: taskList.filter((t) => t.status === 'done').length,
-  }), [taskList])
-
-  const activeFilterCount = useMemo(
-    () =>
-      [searchTerm, statusFilter, priorityFilter, projectFilter, departmentFilter].filter(Boolean).length,
-    [searchTerm, statusFilter, priorityFilter, projectFilter, departmentFilter]
-  )
-
-  const advancedFilterRuleCount = advancedFilter.rules.length
-
-  const advancedFilterDescription = useMemo(
-    () => describeAdvancedFilter(advancedFilter),
-    [advancedFilter]
-  )
-
-  const currentFilters = useMemo<Record<string, unknown>>(() => {
-    const filters: Record<string, unknown> = {}
-    if (searchTerm) filters.search = searchTerm
-    if (statusFilter) filters.status = statusFilter
-    if (priorityFilter) filters.priority = priorityFilter
-    if (projectFilter) filters.projectId = projectFilter
-    if (departmentFilter) filters.departmentId = departmentFilter
-    if (showAllTasks && canSeeAllTasks) filters.all = true
-    // Persist advanced filter rules in the saved view
-    if (advancedFilter.rules.length > 0) {
-      filters.advancedFilter = advancedFilter
-    }
-    return filters
-  }, [searchTerm, statusFilter, priorityFilter, projectFilter, departmentFilter, showAllTasks, canSeeAllTasks, advancedFilter])
-
-  // -------------------------
-  // Callbacks
-  // -------------------------
-
-  const handleTimerToggle = useCallback(
-    async (taskId: string) => {
-      try {
-        if (runningTimer?.taskId === taskId) {
-          await stopTimer()
-        } else {
-          await startTimer(taskId)
+  const handleBulkStatus = useCallback(
+    (status: string) => {
+      if (selectedArray.length === 0) return
+      bulkUpdate.mutate(
+        { taskIds: selectedArray, updates: { status } },
+        {
+          onSuccess: () => {
+            toast.success(`${selectedArray.length} task aggiornati a "${TASK_STATUS_LABELS[status] ?? status}"`)
+            clear()
+          },
+          onError: () => {
+            toast.error("Errore nell'aggiornamento dei task")
+          },
         }
-      } catch {
-        // silently ignore
-      }
+      )
     },
-    [runningTimer?.taskId, startTimer, stopTimer]
+    [selectedArray, bulkUpdate, clear]
   )
 
-  const canCreateTask = !!user
-
-  const handleToggleTaskSelection = useCallback((taskId: string) => {
-    setSelectedTaskIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(taskId)) {
-        next.delete(taskId)
-      } else {
-        next.add(taskId)
+  const handleBulkDelete = useCallback(() => {
+    if (selectedArray.length === 0) return
+    bulkDelete.mutate(
+      { taskIds: selectedArray },
+      {
+        onSuccess: () => {
+          toast.success(`${selectedArray.length} task eliminati`)
+          clear()
+        },
+        onError: () => {
+          toast.error("Errore nell'eliminazione dei task")
+        },
       }
-      return next
-    })
-  }, [])
+    )
+  }, [selectedArray, bulkDelete, clear])
 
-  /** Called by TaskBulkActionBar when the user picks a new status and clicks Apply */
-  const handleBulkStatusChange = useCallback(async (status: string) => {
-    const ids = Array.from(selectedTaskIds)
-    await Promise.all(ids.map((id) => changeTaskStatus(id, status as Task['status'])))
-    setSelectedTaskIds(new Set())
-  }, [selectedTaskIds, changeTaskStatus])
+  const handleSelectAll = useCallback(() => {
+    const allIds = tasks.map((t) => t.id)
+    selectAll(allIds)
+  }, [tasks, selectAll])
 
-  /** Called by TaskBulkActionBar when the user picks a new priority and clicks Apply */
-  const handleBulkPriorityChange = useCallback(async (priority: string) => {
-    const ids = Array.from(selectedTaskIds)
-    try {
-      await Promise.all(ids.map((id) => updateTask(id, { priority: priority as Task['priority'] })))
-      setSelectedTaskIds(new Set())
-    } catch {
-      toast.error('Errore', 'Impossibile applicare le modifiche')
+  const isBulkLoading = bulkUpdate.isPending || bulkDelete.isPending
+
+  const bulkActions = (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleBulkStatus("in_progress")}
+        disabled={isBulkLoading}
+        className="gap-1.5"
+      >
+        <Play className="h-3.5 w-3.5" />
+        Avvia
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleBulkStatus("done")}
+        disabled={isBulkLoading}
+        className="gap-1.5"
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Completa
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleBulkDelete}
+        disabled={isBulkLoading}
+        className="gap-1.5 text-destructive hover:text-destructive"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Elimina
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={clear}
+        disabled={isBulkLoading}
+        className="gap-1.5"
+      >
+        <XCircle className="h-3.5 w-3.5" />
+        Deseleziona
+      </Button>
+    </>
+  )
+
+  // Alert items from attention query (filter to task-relevant items)
+  const alertItems: AlertItem[] | undefined = attentionItems
+    ? attentionItems
+        .filter((item) => item.type === 'blocked_task' || item.type === 'due_soon')
+        .map((item) => ({
+          id: item.entityId,
+          severity: (item.type === 'blocked_task' ? 'critical' : 'warning') as AlertItem['severity'],
+          title: item.title,
+          subtitle: item.extra ?? undefined,
+          projectName: item.projectName ?? undefined,
+          time: item.dueDate ? formatRelative(item.dueDate) : '',
+        }))
+    : undefined
+
+  // Render row for list view using EntityRow
+  const renderRow = useCallback(
+    (t: TaskRow) => (
+      <EntityRow
+        id={t.id}
+        name={t.title}
+        status={t.status}
+        entityType="task"
+        onClick={() => navigate(`/tasks/${t.id}`)}
+        code={t.code}
+        deadline={t.dueDate ?? undefined}
+        subtitle={t.project?.name}
+        assignee={t.assignee ?? undefined}
+        indicators={{
+          comments: t._count?.comments,
+          checklistTotal: t._count?.subtasks ?? t._count?.children,
+          checklistDone: t._count?.subtasks ?? t._count?.children,
+        }}
+        extraBadges={
+          <Badge
+            variant="secondary"
+            className={cn("text-[10px] px-1.5 py-0", TASK_TYPE_COLORS[t.taskType])}
+          >
+            {TASK_TYPE_LABELS[t.taskType] ?? t.taskType}
+          </Badge>
+        }
+      />
+    ),
+    [navigate]
+  )
+
+  const handleFilterChange = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (value) params.set(key, value)
+    else params.delete(key)
+    if (key !== "page") params.set("page", "1")
+    setSearchParams(params)
+  }
+
+  const handleFilterClear = () => {
+    const params = new URLSearchParams()
+    if (viewMode !== "kanban") params.set("view", viewMode)
+    setSearchParams(params)
+  }
+
+  const handlePageChange = (page: number) =>
+    handleFilterChange("page", String(page))
+
+  const handleSort = (key: string) => {
+    const newOrder =
+      filters.sortBy === key && filters.sortOrder === "asc" ? "desc" : "asc"
+    const params = new URLSearchParams(searchParams)
+    params.set("sortBy", key)
+    params.set("sortOrder", newOrder)
+    setSearchParams(params)
+  }
+
+  const handleViewChange = (mode: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (mode === "kanban") {
+      params.delete("view")
+    } else {
+      params.set("view", mode)
     }
-  }, [selectedTaskIds, updateTask])
+    setSearchParams(params)
+  }
 
-  const handleBulkDelete = useCallback(async () => {
-    if (selectedTaskIds.size === 0) return
-    setIsBulkDeleting(true)
-    try {
-      await bulkDeleteTasks(Array.from(selectedTaskIds))
-      setSelectedTaskIds(new Set())
-      setShowBulkDeleteConfirm(false)
-    } catch {
-      // Error toast shown by store
-    } finally {
-      setIsBulkDeleting(false)
-    }
-  }, [selectedTaskIds, bulkDeleteTasks])
-
-  const handleBlockedConfirm = useCallback(
-    async (reason: string) => {
-      if (!pendingBlockedTaskId) return
-      setIsChangingStatus(true)
-      try {
-        await changeTaskStatus(pendingBlockedTaskId, 'blocked', reason)
-        setShowBlockedModal(false)
-        setPendingBlockedTaskId(null)
-        setPendingBlockedTaskTitle('')
-      } catch {
-        // silently ignore
-      } finally {
-        setIsChangingStatus(false)
-      }
-    },
-    [pendingBlockedTaskId, changeTaskStatus]
+  const viewToggle = (
+    <div className="flex items-center rounded-md border bg-muted/50 p-0.5">
+      {VIEW_MODES.map((mode) => {
+        const Icon = mode.icon
+        const active = viewMode === mode.key
+        return (
+          <Button
+            key={mode.key}
+            variant={active ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => handleViewChange(mode.key)}
+            className={cn("h-8 px-2.5 gap-1.5", active && "shadow-sm")}
+            title={mode.label}
+          >
+            <Icon className="h-4 w-4" />
+            <span className="hidden sm:inline text-xs">{mode.label}</span>
+          </Button>
+        )
+      })}
+    </div>
   )
 
-  const handleBlockedCancel = useCallback(() => {
-    setShowBlockedModal(false)
-    setPendingBlockedTaskId(null)
-    setPendingBlockedTaskTitle('')
-  }, [])
+  const projectId = searchParams.get("projectId") || undefined
 
-  const handleRequestBlockedModal = useCallback((taskId: string, taskTitle: string) => {
-    setPendingBlockedTaskId(taskId)
-    setPendingBlockedTaskTitle(taskTitle)
-    setShowBlockedModal(true)
-  }, [])
-
-  const handleApplyView = useCallback(
-    (filters: Record<string, unknown>) => {
-      setSearchTerm((filters.search as string) ?? '')
-      setStatusFilter((filters.status as string) ?? '')
-      setPriorityFilter((filters.priority as string) ?? '')
-      setProjectFilter((filters.projectId as string) ?? '')
-      setDepartmentFilter((filters.departmentId as string) ?? '')
-      if (canSeeAllTasks) {
-        setShowAllTasks(!!filters.all)
-      }
-      // Restore advanced filter from saved view
-      if (filters.advancedFilter && typeof filters.advancedFilter === 'object') {
-        const af = filters.advancedFilter as AdvancedFilter
-        setAdvancedFilter(af)
-        if (af.rules.length > 0) setShowAdvancedFilter(true)
-      } else {
-        setAdvancedFilter(EMPTY_ADVANCED_FILTER)
-      }
-    },
-    [canSeeAllTasks]
-  )
-
-  const handleResetFilters = useCallback(() => {
-    setSearchTerm('')
-    setStatusFilter('')
-    setPriorityFilter('')
-    setProjectFilter('')
-    setDepartmentFilter('')
-    setAdvancedFilter(EMPTY_ADVANCED_FILTER)
-  }, [])
-
-  const toggleSection = useCallback((key: string) => {
-    setCollapsedSections((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
-  }, [])
-
-  /** Shared refetch helper used by QuickAddTask */
-  const handleQuickAddCreated = useCallback(() => {
-    fetchMyTasks({ status: statusFilter || undefined, priority: priorityFilter || undefined, limit: 100 })
-    if (showAllTasks && canSeeAllTasks) {
-      fetchTasks({
-        search: debouncedSearch || undefined,
-        status: statusFilter || undefined,
-        priority: priorityFilter || undefined,
-        projectId: projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined,
-        standalone: projectFilter === 'standalone' ? true : undefined,
-        departmentId: departmentFilter || undefined,
-        page: 1,
-        limit: 200,
-      })
-    }
-  }, [fetchMyTasks, fetchTasks, statusFilter, priorityFilter, showAllTasks, canSeeAllTasks, debouncedSearch, projectFilter, departmentFilter])
-
-  // -------------------------
-  // Per-item change handlers (passed to TaskListViewItem)
-  // -------------------------
-
-  const handleStatusChange = useCallback(
-    async (taskId: string, status: string) => {
-      await changeTaskStatus(taskId, status as TaskStatus)
-    },
-    [changeTaskStatus]
-  )
-
-  const handlePriorityChange = useCallback(
-    async (taskId: string, priority: string) => {
-      await updateTask(taskId, { priority: priority as Task['priority'] })
-    },
-    [updateTask]
-  )
-
-  const handleDueDateChange = useCallback(
-    async (taskId: string, date: string | null) => {
-      await updateTask(taskId, { dueDate: date })
-    },
-    [updateTask]
-  )
-
-  const handleAssigneeChange = useCallback(
-    async (taskId: string, userId: string | null) => {
-      await updateTask(taskId, { assigneeId: userId })
-    },
-    [updateTask]
-  )
-
-  // -------------------------
-  // Loading skeleton
-  // -------------------------
-
-  if (isLoading && tasks.length === 0) {
+  if (viewMode === "kanban" || viewMode === "gantt" || viewMode === "calendar") {
     return (
-      <div className="space-y-4 animate-fade-in">
-        {/* Header skeleton */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="skeleton h-8 w-24" />
-            <div className="skeleton h-4 w-48 mt-2" />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-page-title text-foreground">Task</h1>
+          <div className="flex items-center gap-2">
+            {viewToggle}
+            <Button size="sm" asChild>
+              <Link to="/tasks/new">
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Nuovo Task
+              </Link>
+            </Button>
           </div>
-          <div className="skeleton h-10 w-32" />
         </div>
 
-        {/* Stat pills skeleton */}
-        <div className="flex flex-wrap items-center gap-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="skeleton h-8 w-24 rounded-full" />
+        <ListFilters
+          filters={filterConfig}
+          values={filters}
+          onChange={handleFilterChange}
+          onClear={handleFilterClear}
+        />
+
+        {/* Quick chip filters */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[
+            { key: "", label: "Tutti", dot: "bg-muted-foreground" },
+            { key: "in_progress", label: "In corso", dot: STATUS_VISUAL.in_progress.dot },
+            { key: "blocked", label: "Bloccati", dot: STATUS_VISUAL.blocked.dot },
+            { key: "review", label: "In revisione", dot: STATUS_VISUAL.review.dot },
+            { key: "done", label: "Completati", dot: STATUS_VISUAL.done.dot },
+          ].map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              className={cn("chip-filter", filters.status === chip.key && "active")}
+              onClick={() => handleFilterChange("status", chip.key)}
+            >
+              <span className={cn("chip-dot", chip.dot)} />
+              {chip.label}
+            </button>
           ))}
         </div>
 
-        {/* Filter bar skeleton */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="skeleton h-9 w-56 rounded-lg" />
-          <div className="skeleton h-9 w-36 rounded-lg" />
-          <div className="skeleton h-9 w-28 rounded-lg" />
-          <div className="skeleton h-9 w-28 rounded-lg" />
-        </div>
-
-        {/* Task list skeleton */}
-        <div className="card p-6">
-          <div className="space-y-6">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i}>
-                <div className="skeleton h-5 w-32 mb-3 rounded-lg" />
-                <div className="space-y-2">
-                  {Array.from({ length: 4 }).map((_, j) => (
-                    <div key={j} className="flex items-center gap-3 px-4 py-3 rounded-lg border-l-4 border-l-gray-200 dark:border-l-gray-700">
-                      <div className="skeleton w-3.5 h-3.5 rounded" />
-                      <div className="skeleton h-4 w-20 rounded-full" />
-                      <div className="skeleton h-4 flex-1 rounded" />
-                      <div className="skeleton h-4 w-16 rounded" />
-                      <div className="skeleton h-4 w-20 rounded" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {viewMode === "kanban" && <KanbanBoard projectId={projectId} />}
+        {viewMode === "gantt" && <GanttChart projectId={projectId} />}
+        {viewMode === "calendar" && <CalendarView projectId={projectId} />}
       </div>
     )
   }
 
-  // -------------------------
-  // Render helpers
-  // -------------------------
+  const useGroupBy = !filters.status
 
-  /** Collapsible section wrapper */
-  const renderSection = (
-    key: string,
-    label: string,
-    items: Task[],
-    showWhenEmpty = false
-  ) => {
-    if (items.length === 0 && !showWhenEmpty) return null
-    const collapsed = collapsedSections.has(key)
-    return (
-      <div key={key}>
+  const chipFilterRow = (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {[
+        { key: "", label: "Tutti", dot: "bg-muted-foreground" },
+        { key: "in_progress", label: "In corso", dot: "bg-blue-500" },
+        { key: "blocked", label: "Bloccati", dot: "bg-red-500" },
+        { key: "review", label: "In revisione", dot: "bg-amber-500" },
+        { key: "done", label: "Completati", dot: "bg-green-500" },
+      ].map((chip) => (
         <button
+          key={chip.key}
           type="button"
-          onClick={() => toggleSection(key)}
-          className="flex items-center justify-between w-full py-2 select-none group/header"
-          aria-expanded={!collapsed}
+          className={cn("chip-filter", filters.status === chip.key && "active")}
+          onClick={() => handleFilterChange("status", chip.key)}
         >
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDotClass(key)}`}
-              aria-hidden="true"
-            />
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</span>
-            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
-              {items.length}
-            </span>
-          </div>
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${
-              collapsed ? '' : 'rotate-180'
-            }`}
-            aria-hidden="true"
-          />
+          <span className={cn("chip-dot", chip.dot)} />
+          {chip.label}
         </button>
-        <div
-          className={`overflow-hidden transition-all duration-200 ${
-            collapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'
-          }`}
-        >
-          <div className="space-y-1 pb-2">
-            {items.map((task) => (
-              <TaskListViewItem
-                key={task.id}
-                task={task}
-                isSelected={selectedTaskIds.has(task.id)}
-                onSelect={handleToggleTaskSelection}
-                onStatusChange={(id, status) => void handleStatusChange(id, status)}
-                onPriorityChange={(id, priority) => void handlePriorityChange(id, priority)}
-                onDueDateChange={(id, date) => void handleDueDateChange(id, date)}
-                onAssigneeChange={(id, userId) => void handleAssigneeChange(id, userId)}
-                onTimerToggle={(id) => void handleTimerToggle(id)}
-                runningTimerId={runningTimer?.taskId ?? null}
-                canTrackTime={canTrackTime}
-                onRequestBlockedModal={handleRequestBlockedModal}
-              />
-            ))}
-            {items.length === 0 && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 px-4 py-2">
-                Nessun task in questa sezione
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // -------------------------
-  // Main render
-  // -------------------------
+      ))}
+    </div>
+  )
 
   return (
-    <div className="space-y-4">
-      {/* ---- Header ---- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Task</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            Gestisci e traccia i tuoi task
-          </p>
+    <EntityList<TaskRow>
+      title="Task"
+      icon={ListChecks}
+      data={tasks}
+      pagination={pagination}
+      isLoading={isLoading}
+      error={toError(error)}
+      columns={columns}
+      getId={(t) => t.id}
+      filterConfig={filterConfig}
+      filters={filters}
+      onFilterChange={handleFilterChange}
+      onFilterClear={handleFilterClear}
+      sortBy={filters.sortBy}
+      sortOrder={filters.sortOrder as "asc" | "desc"}
+      onSort={handleSort}
+      onPageChange={handlePageChange}
+      onRowClick={(t) => navigate(`/tasks/${t.id}`)}
+      createHref="/tasks/new"
+      createLabel="Nuovo Task"
+      emptyIcon={ListChecks}
+      emptyTitle="Nessun task"
+      emptyDescription="Crea il tuo primo task"
+      headerExtra={viewToggle}
+      afterFilters={
+        <div className="flex items-center gap-2 flex-wrap">
+          {chipFilterRow}
+          <TagFilter
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
         </div>
-        <div className="flex items-center gap-2 self-start flex-wrap">
-          {canSeeAllTasks && (
-            <ExportButton
-              entity="tasks"
-              filters={{
-                ...(projectFilter && projectFilter !== 'standalone' ? { projectId: projectFilter } : {}),
-                ...(statusFilter ? { status: statusFilter } : {}),
-                ...(departmentFilter ? { departmentId: departmentFilter } : {}),
-              }}
-            />
-          )}
-          {canCreateTask && (
-            <button onClick={() => navigate('/tasks/new')} className="btn-primary flex items-center">
-              <Plus className="w-4 h-4 mr-2" />
-              Nuovo Task
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ---- Saved Views Bar ---- */}
-      <SavedViewsBar
-        entity="task"
-        currentFilters={currentFilters}
-        onApplyView={handleApplyView}
-      />
-
-      {/* ---- Compact Stat Pills ---- */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtra per stato">
-        {/* Totale */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter('')}
-          className={[
-            'stat-pill bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
-            statusFilter === ''
-              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
-              : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600',
-          ].join(' ')}
-          aria-pressed={statusFilter === ''}
-          title="Mostra tutti i task"
-        >
-          <CheckSquare className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>{taskCounts.total}</span>
-          <span>Totale</span>
-        </button>
-
-        {/* Da Fare */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}
-          className={[
-            'stat-pill bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
-            statusFilter === 'todo'
-              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
-              : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600',
-          ].join(' ')}
-          aria-pressed={statusFilter === 'todo'}
-          title="Filtra: Da fare"
-        >
-          <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>{taskCounts.todo}</span>
-          <span>Da Fare</span>
-        </button>
-
-        {/* In Corso */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'in_progress' ? '' : 'in_progress')}
-          className={[
-            'stat-pill bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-            statusFilter === 'in_progress'
-              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
-              : 'hover:ring-1 hover:ring-blue-300 dark:hover:ring-blue-700',
-          ].join(' ')}
-          aria-pressed={statusFilter === 'in_progress'}
-          title="Filtra: In corso"
-        >
-          <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>{taskCounts.inProgress}</span>
-          <span>In Corso</span>
-        </button>
-
-        {/* Bloccati */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'blocked' ? '' : 'blocked')}
-          className={[
-            'stat-pill bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-            statusFilter === 'blocked'
-              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
-              : 'hover:ring-1 hover:ring-red-300 dark:hover:ring-red-700',
-          ].join(' ')}
-          aria-pressed={statusFilter === 'blocked'}
-          title="Filtra: Bloccati"
-        >
-          <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>{taskCounts.blocked}</span>
-          <span>Bloccati</span>
-        </button>
-
-        {/* Completati */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
-          className={[
-            'stat-pill bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-            statusFilter === 'done'
-              ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900 scale-105'
-              : 'hover:ring-1 hover:ring-green-300 dark:hover:ring-green-700',
-          ].join(' ')}
-          aria-pressed={statusFilter === 'done'}
-          title="Filtra: Completati"
-        >
-          <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>{taskCounts.completed}</span>
-          <span>Completati</span>
-        </button>
-      </div>
-
-      {/* ---- Filter Bar ---- */}
-      <TaskListViewFilters
-        search={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        priorityFilter={priorityFilter}
-        onPriorityFilterChange={setPriorityFilter}
-        projectFilter={projectFilter}
-        onProjectFilterChange={setProjectFilter}
-        departmentFilter={departmentFilter}
-        onDepartmentFilterChange={setDepartmentFilter}
-        showAll={showAllTasks}
-        onShowAllChange={setShowAllTasks}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        isAdmin={canSeeAllTasks}
-        projects={projects}
-        departments={departments}
-        activeFilterCount={activeFilterCount}
-        onResetFilters={handleResetFilters}
-        showAdvancedFilter={showAdvancedFilter}
-        onToggleAdvancedFilter={() => setShowAdvancedFilter((v) => !v)}
-        advancedFilterRuleCount={advancedFilterRuleCount}
-      />
-
-      {/* ---- Advanced Filter Panel (animated slide-down) ---- */}
-      <AnimatePresence>
-        {showAdvancedFilter && (
-          <motion.div
-            key="advanced-filter-panel"
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: 0 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ duration: 0.22, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="pt-0.5">
-              <AdvancedFilterBuilder
-                filter={advancedFilter}
-                onChange={setAdvancedFilter}
-                users={users}
-                projects={projects}
-                departments={departments}
-              />
-              {advancedFilterDescription && (
-                <p className="mt-2 text-xs text-primary-600 dark:text-primary-400 font-medium pl-1">
-                  {advancedFilterDescription} — i risultati visualizzati sono già filtrati.
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ---- Tasks Content ---- */}
-      {viewMode === 'tree' ? (
-        <TaskTreeView
-          mode="full"
-          myTasksOnly={!showAllTasks}
-          excludeCompleted={false}
-          projectId={projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined}
-          showSummary={true}
-          showControls={true}
-          showFilters={false}
-          editable={true}
-          onTimerToggle={handleTimerToggle}
-          runningTimerId={runningTimer?.taskId ?? null}
-          canTrackTime={canTrackTime}
-        />
-      ) : viewMode === 'table' ? (
-        (() => {
-          const handleRefetch = () => {
-            fetchMyTasks({ status: statusFilter || undefined, priority: priorityFilter || undefined, limit: 100 })
-            if (showAllTasks && canSeeAllTasks) {
-              fetchTasks({
-                search: debouncedSearch || undefined,
-                status: statusFilter || undefined,
-                priority: priorityFilter || undefined,
-                projectId: projectFilter && projectFilter !== 'standalone' ? projectFilter : undefined,
-                standalone: projectFilter === 'standalone' ? true : undefined,
-                departmentId: departmentFilter || undefined,
-                page: 1,
-                limit: 200,
-              })
+      }
+      alertItems={alertItems}
+      renderRow={viewMode === "list" ? renderRow : undefined}
+      rowClassName={(t) =>
+        cn("row-accent", t.status === "blocked" ? "bg-destructive/5" : undefined)
+      }
+      groupBy={
+        useGroupBy
+          ? {
+              getGroup: getTaskGroup,
+              order: TASK_STATUS_GROUP_ORDER,
+              labels: { ...TASK_STATUS_LABELS, recurring: "Ricorrenti attive" },
+              collapsedByDefault: COLLAPSED_BY_DEFAULT,
             }
-          }
-          return (
-            <TaskTableView
-              tasks={taskList}
-              selectedTasks={selectedTaskIds}
-              onToggleSelect={handleToggleTaskSelection}
-              onSelectAll={() => {
-                if (taskList.every((t) => selectedTaskIds.has(t.id))) {
-                  setSelectedTaskIds(new Set())
-                } else {
-                  setSelectedTaskIds(new Set(taskList.map((t) => t.id)))
-                }
-              }}
-              onRefresh={handleRefetch}
-            />
-          )
-        })()
-      ) : (
-        /* ---- List View ---- */
-        (() => {
-          if (taskList.length === 0) {
-            const hasFilters = !!(searchTerm || statusFilter || priorityFilter || projectFilter)
-            return (
-              <div className="card">
-                <EmptyState
-                  icon={CheckSquare}
-                  title={hasFilters ? 'Nessun task trovato' : 'Nessun task'}
-                  description={hasFilters ? 'Prova a modificare i filtri' : 'Crea il primo task per iniziare!'}
-                  action={
-                    canCreateTask && !hasFilters
-                      ? { label: 'Crea Task', onClick: () => navigate('/tasks/new') }
-                      : undefined
-                  }
-                />
-              </div>
-            )
-          }
-
-          const recurringTasks = taskList.filter((t) => t.isRecurring && t.status !== 'done')
-          const inProgressTasks = taskList.filter((t) => t.status === 'in_progress' && !t.isRecurring)
-          const todoTasks = taskList.filter((t) => t.status === 'todo' && !t.isRecurring)
-          const blockedTasks = taskList.filter((t) => t.status === 'blocked' && !t.isRecurring)
-          const reviewTasks = taskList.filter((t) => t.status === 'review' && !t.isRecurring)
-          const completedTasks = taskList.filter((t) => t.status === 'done')
-
-          return (
-            <div className="card p-6">
-              {/* Single QuickAddTask at the top */}
-              <div className="mb-5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-white/[0.02]">
-                <QuickAddTask
-                  defaultStatus={
-                    (statusFilter as TaskStatus) ||
-                    (inProgressTasks.length > 0 ? 'in_progress' : 'todo')
-                  }
-                  placeholder="Aggiungi nuovo task..."
-                  onCreated={handleQuickAddCreated}
-                />
-              </div>
-
-              <div className="space-y-4">
-                {recurringTasks.length > 0 &&
-                  renderSection('recurring', 'Ricorrenti', recurringTasks)}
-
-                {renderSection('in_progress', 'In Corso', inProgressTasks, true)}
-
-                {renderSection('todo', 'Da Fare', todoTasks, true)}
-
-                {reviewTasks.length > 0 &&
-                  renderSection('review', 'In Revisione', reviewTasks)}
-
-                {blockedTasks.length > 0 &&
-                  renderSection('blocked', 'Bloccati', blockedTasks)}
-
-                {renderSection('done', 'Completati', completedTasks)}
-              </div>
-            </div>
-          )
-        })()
-      )}
-
-      {/* ---- Floating Bulk Action Bar ---- */}
-      {selectedTaskIds.size > 0 && (
-        <TaskBulkActionBar
-          selectedIds={Array.from(selectedTaskIds)}
-          onClearSelection={() => setSelectedTaskIds(new Set())}
-          onBulkStatusChange={handleBulkStatusChange}
-          onBulkPriorityChange={handleBulkPriorityChange}
-          onBulkDelete={() => setShowBulkDeleteConfirm(true)}
-          isAdmin={user?.role === 'admin' || user?.role === 'direzione'}
-        />
-      )}
-
-      {/* ---- Blocked Reason Modal ---- */}
-      <BlockedReasonModal
-        isOpen={showBlockedModal}
-        taskTitle={pendingBlockedTaskTitle}
-        isSubmitting={isChangingStatus}
-        onCancel={handleBlockedCancel}
-        onConfirm={handleBlockedConfirm}
-      />
-
-      {/* ---- Bulk Delete Confirmation Modal ---- */}
-      <DeleteConfirmModal
-        isOpen={showBulkDeleteConfirm}
-        title={`Eliminare ${selectedTaskIds.size} task?`}
-        message={`Stai per eliminare ${selectedTaskIds.size} task selezionat${selectedTaskIds.size === 1 ? 'o' : 'i'}. Questa azione non può essere annullata.`}
-        isDeleting={isBulkDeleting}
-        onCancel={() => setShowBulkDeleteConfirm(false)}
-        onConfirm={handleBulkDelete}
-      />
-    </div>
+          : undefined
+      }
+      selectedIds={selectedIds}
+      onSelectToggle={toggle}
+      onSelectAll={handleSelectAll}
+      bulkActions={bulkActions}
+      focusedIndex={focusedIndex}
+      kpiStrip={kpiCards}
+    />
   )
 }

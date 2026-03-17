@@ -10,6 +10,7 @@ import { initWeeklyReportScheduler } from './scheduler/weeklyReportScheduler.js'
 import { initEmailService } from './services/emailService.js'
 import { initEmailNotificationScheduler } from './scheduler/emailNotificationScheduler.js'
 import { startAutomationScheduler } from './scheduler/automationScheduler.js'
+import { seedDefaults, getAllPolicies } from './services/permissionService.js'
 
 const PORT = process.env.PORT || 3000
 
@@ -46,6 +47,17 @@ httpServer.listen(Number(PORT), '0.0.0.0', async () => {
 
   // Initialize automation scheduler (overdue task checks every 15 min)
   startAutomationScheduler()
+
+  // Seed default permission policies if table is empty
+  try {
+    const existing = await getAllPolicies()
+    if (existing.length === 0) {
+      await seedDefaults()
+      logger.info('Permission policies auto-seeded on first startup')
+    }
+  } catch (err) {
+    logger.warn('Could not auto-seed permission policies (table may not exist yet):', err)
+  }
 })
 
 // Handle uncaught exceptions

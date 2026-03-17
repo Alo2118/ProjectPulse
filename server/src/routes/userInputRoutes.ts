@@ -17,6 +17,7 @@ import {
   acknowledgeInput,
   rejectInput,
   getUserInputStats,
+  addReply,
 } from '../controllers/userInputController.js'
 import { authMiddleware, requireRole } from '../middleware/authMiddleware.js'
 
@@ -60,5 +61,8 @@ router.post('/:id/acknowledge', requireRole('admin', 'direzione'), acknowledgeIn
 
 // POST /api/inputs/:id/reject - Reject input (admin/direzione)
 router.post('/:id/reject', requireRole('admin', 'direzione'), rejectInput)
+
+// POST /api/inputs/:id/reply - Add reply to input (all authenticated users)
+router.post('/:id/reply', addReply)
 
 export default router

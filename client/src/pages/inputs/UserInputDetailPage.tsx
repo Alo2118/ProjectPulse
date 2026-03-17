@@ -1,456 +1,390 @@
-/**
- * User Input Detail Page - Shows single input details with actions
- * @module pages/inputs/UserInputDetailPage
- */
-
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useUserInputStore } from '@stores/userInputStore'
-import { useAuthStore } from '@stores/authStore'
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
-  Loader2,
-  Edit,
-  Trash2,
-  Play,
-  CheckCircle,
+  Pencil,
+  MoreHorizontal,
+  PlayCircle,
+  CheckCircle2,
   XCircle,
-  ArrowRightCircle,
-  FolderPlus,
-  User,
   Calendar,
-  Clock,
+  Tag,
+  AlertTriangle,
+  User,
   ExternalLink,
-  Info,
-} from 'lucide-react'
+} from "lucide-react"
+import { toast } from "sonner"
+import { EntityDetail } from "@/components/common/EntityDetail"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { MetaRow } from "@/components/common/MetaRow"
+import { TagEditor } from "@/components/common/TagEditor"
+import { ActivityTab } from "@/components/common/ActivityTab"
+import { NoteTab } from "@/components/common/NoteTab"
+import { ConversationTab } from "@/components/domain/inputs/ConversationTab"
 import {
   INPUT_STATUS_LABELS,
-  INPUT_STATUS_COLORS,
-  INPUT_CATEGORY_LABELS,
-  INPUT_CATEGORY_COLORS,
   TASK_PRIORITY_LABELS,
-  TASK_PRIORITY_COLORS,
-  RESOLUTION_TYPE_LABELS,
-  RESOLUTION_TYPE_COLORS,
-} from '@/constants'
-import UserInputFormModal from './UserInputFormModal'
-import ConvertToTaskModal from './ConvertToTaskModal'
-import ConvertToProjectModal from './ConvertToProjectModal'
-import { Breadcrumb } from '@/components/common/Breadcrumb'
-import { ConfirmDialog } from '@components/common/ConfirmDialog'
-import { DetailPageHeader } from '@components/common/DetailPageHeader'
-import { TabSection } from '@components/common/TabSection'
+  INPUT_CATEGORY_LABELS,
+} from "@/lib/constants"
+import { formatDate, toError } from "@/lib/utils"
+import {
+  useInputQuery,
+  useDeleteInput,
+  useProcessInput,
+  useAcknowledgeInput,
+  useRejectInput,
+} from "@/hooks/api/useInputs"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { WorkflowStepper } from "@/components/common/WorkflowStepper"
+import { userInputWorkflow } from "@/lib/workflows/userInputWorkflow"
+import type { ValidationData } from "@/lib/workflow-engine"
 
-export default function UserInputDetailPage() {
+function UserInputDetailPage() {
   const { id } = useParams<{ id: string }>()
+  useSetPageContext({ domain: "input", entityId: id })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const {
-    currentInput,
-    isLoading,
-    fetchInput,
-    deleteInput,
-    startProcessing,
-    acknowledgeInput,
-    rejectInput,
-    clearCurrentInput,
-  } = useUserInputStore()
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [isConvertToTaskOpen, setIsConvertToTaskOpen] = useState(false)
-  const [isConvertToProjectOpen, setIsConvertToProjectOpen] = useState(false)
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [rejectReason, setRejectReason] = useState('')
-
-  useEffect(() => {
-    if (id) {
-      fetchInput(id)
-    }
-    return () => clearCurrentInput()
-  }, [id])
-
-  const canManage = user?.role === 'admin' || user?.role === 'direzione'
-  const isOwner = currentInput?.createdById === user?.id
-  const isPending = currentInput?.status === 'pending'
-  const isResolved = currentInput?.status === 'resolved'
-  const canEdit = (isOwner && isPending) || user?.role === 'admin'
-  const canDelete = (isOwner && isPending) || user?.role === 'admin'
+  const { data: input, isLoading, error } = useInputQuery(id ?? "")
+  const deleteMutation = useDeleteInput()
+  const processMutation = useProcessInput()
+  const acknowledgeMutation = useAcknowledgeInput()
+  const rejectMutation = useRejectInput()
 
   const handleDelete = async () => {
-    if (!currentInput) return
-    setIsDeleting(true)
+    if (!id) return
     try {
-      await deleteInput(currentInput.id)
-      navigate('/inputs')
+      await deleteMutation.mutateAsync(id)
+      toast.success("Segnalazione eliminata")
+      navigate("/inputs")
     } catch {
-      setIsDeleting(false)
+      toast.error("Errore nell'eliminazione")
     }
   }
 
-  const handleStartProcessing = async () => {
-    if (!currentInput) return
+  const handleProcess = async () => {
+    if (!id) return
     try {
-      await startProcessing(currentInput.id)
+      await processMutation.mutateAsync(id)
+      toast.success("Segnalazione presa in carico")
     } catch {
-      // error
+      toast.error("Errore nel processamento")
     }
   }
 
   const handleAcknowledge = async () => {
-    if (!currentInput) return
+    if (!id) return
     try {
-      await acknowledgeInput(currentInput.id, 'Preso visione')
+      await acknowledgeMutation.mutateAsync(id)
+      toast.success("Segnalazione accettata")
     } catch {
-      // error
+      toast.error("Errore nell'accettazione")
     }
   }
 
   const handleReject = async () => {
-    if (!currentInput || !rejectReason.trim()) return
+    if (!id) return
     try {
-      await rejectInput(currentInput.id, rejectReason)
-      setIsRejectModalOpen(false)
-      setRejectReason('')
+      await rejectMutation.mutateAsync({ id, reason: "Rifiutata" })
+      toast.success("Segnalazione rifiutata")
     } catch {
-      // error
+      toast.error("Errore nel rifiuto")
     }
   }
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+  const isPending = input?.status === "pending"
+  const isProcessing = input?.status === "processing"
+
+  const handleWorkflowAdvance = async (nextPhase: string) => {
+    if (!id) return
+    try {
+      if (nextPhase === "processing") {
+        await processMutation.mutateAsync(id)
+        toast.success("Segnalazione presa in carico")
+      } else if (nextPhase === "resolved") {
+        await acknowledgeMutation.mutateAsync(id)
+        toast.success("Segnalazione risolta")
+      }
+    } catch {
+      toast.error("Errore nell'aggiornamento dello stato")
+    }
   }
 
-  if (isLoading || !currentInput) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
-      </div>
-    )
-  }
+  const isWorkflowAdvancing =
+    processMutation.isPending || acknowledgeMutation.isPending
 
-  const detailsTabContent = (
-    <div className="space-y-6">
-      {/* Description */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Descrizione</h3>
-        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm">
-          {currentInput.description || 'Nessuna descrizione fornita.'}
-        </p>
-      </div>
+  const detailsContent = input ? (
+    <Card>
+      <CardContent className="p-5 space-y-4">
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">
+            Descrizione
+          </h3>
+          <p className="text-sm text-foreground whitespace-pre-wrap">
+            {input.description || "Nessuna descrizione fornita."}
+          </p>
+        </div>
 
-      {/* Metadata */}
-      <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Informazioni</h3>
-        <dl className="space-y-3">
-          <div className="flex items-start gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0">Stato</dt>
-            <dd>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${INPUT_STATUS_COLORS[currentInput.status] || ''}`}>
-                {INPUT_STATUS_LABELS[currentInput.status] || currentInput.status}
-              </span>
-            </dd>
-          </div>
-          <div className="flex items-start gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0">Categoria</dt>
-            <dd>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${INPUT_CATEGORY_COLORS[currentInput.category] || ''}`}>
-                {INPUT_CATEGORY_LABELS[currentInput.category] || currentInput.category}
-              </span>
-            </dd>
-          </div>
-          <div className="flex items-start gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0">Priorita'</dt>
-            <dd>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${TASK_PRIORITY_COLORS[currentInput.priority] || ''}`}>
-                {TASK_PRIORITY_LABELS[currentInput.priority] || currentInput.priority}
-              </span>
-            </dd>
-          </div>
-          <div className="flex items-center gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-              <User className="w-3.5 h-3.5" />
-              Creato da
-            </dt>
-            <dd className="text-sm text-gray-900 dark:text-white">
-              {currentInput.createdBy
-                ? `${currentInput.createdBy.firstName} ${currentInput.createdBy.lastName}`
-                : '-'}
-            </dd>
-          </div>
-          <div className="flex items-center gap-3">
-            <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" />
-              Creato il
-            </dt>
-            <dd className="text-sm text-gray-900 dark:text-white">
-              {formatDate(currentInput.createdAt)}
-            </dd>
-          </div>
-          {currentInput.processedBy && (
-            <div className="flex items-center gap-3">
-              <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-                <User className="w-3.5 h-3.5" />
-                Elaborato da
-              </dt>
-              <dd className="text-sm text-gray-900 dark:text-white">
-                {currentInput.processedBy.firstName} {currentInput.processedBy.lastName}
-              </dd>
+        {input.status === "resolved" && input.resolutionType && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                Risoluzione
+              </h3>
+              <p className="text-sm text-foreground capitalize">
+                {input.resolutionType}
+              </p>
             </div>
-          )}
-          {currentInput.processedAt && (
-            <div className="flex items-center gap-3">
-              <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                Elaborato il
-              </dt>
-              <dd className="text-sm text-gray-900 dark:text-white">
-                {formatDate(currentInput.processedAt)}
-              </dd>
-            </div>
-          )}
-          {currentInput.resolvedAt && (
-            <div className="flex items-center gap-3">
-              <dt className="text-sm text-gray-500 dark:text-gray-400 w-32 flex-shrink-0 flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" />
-                Risolto il
-              </dt>
-              <dd className="text-sm text-gray-900 dark:text-white">
-                {formatDate(currentInput.resolvedAt)}
-              </dd>
-            </div>
-          )}
-        </dl>
-      </div>
+          </>
+        )}
 
-      {/* Resolution Info */}
-      {isResolved && currentInput.resolutionType && (
-        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Risoluzione</h3>
-          <div className="space-y-3">
+        {input.convertedTaskId && (
+          <>
+            <Separator />
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Tipo:</span>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${RESOLUTION_TYPE_COLORS[currentInput.resolutionType] || ''}`}>
-                {RESOLUTION_TYPE_LABELS[currentInput.resolutionType]}
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Convertita in task:
               </span>
+              <Link
+                to={`/tasks/${input.convertedTaskId}`}
+                className="text-sm text-primary hover:underline"
+              >
+                Vai al task
+              </Link>
             </div>
-            {currentInput.resolutionNotes && (
-              <div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">Note:</span>
-                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                  {currentInput.resolutionNotes}
-                </p>
-              </div>
-            )}
-            {currentInput.convertedTask && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Task creato:</span>
-                <Link
-                  to={`/tasks/${currentInput.convertedTask.id}`}
-                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center"
-                >
-                  {currentInput.convertedTask.code} - {currentInput.convertedTask.title}
-                  <ExternalLink className="w-3 h-3 ml-1" />
-                </Link>
-              </div>
-            )}
-            {currentInput.convertedProject && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Progetto creato:</span>
-                <Link
-                  to={`/projects/${currentInput.convertedProject.id}`}
-                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center"
-                >
-                  {currentInput.convertedProject.name}
-                  <ExternalLink className="w-3 h-3 ml-1" />
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
 
-      {/* Actions for managers */}
-      {canManage && !isResolved && (
-        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Azioni</h3>
-          <div className="flex flex-wrap gap-3">
-            {isPending && (
-              <button onClick={handleStartProcessing} className="btn-secondary flex items-center">
-                <Play className="w-4 h-4 mr-2" />
-                Avvia Elaborazione
-              </button>
-            )}
-            <button
-              onClick={() => setIsConvertToTaskOpen(true)}
-              className="btn-primary flex items-center"
+        {input.convertedProjectId && (
+          <div className="flex items-center gap-2">
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              Convertita in progetto:
+            </span>
+            <Link
+              to={`/projects/${input.convertedProjectId}`}
+              className="text-sm text-primary hover:underline"
             >
-              <ArrowRightCircle className="w-4 h-4 mr-2" />
-              Converti in Task
-            </button>
-            <button
-              onClick={() => setIsConvertToProjectOpen(true)}
-              className="btn-secondary flex items-center"
-            >
-              <FolderPlus className="w-4 h-4 mr-2" />
-              Converti in Progetto
-            </button>
-            <button onClick={handleAcknowledge} className="btn-secondary flex items-center">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Prendi Visione
-            </button>
-            <button
-              onClick={() => setIsRejectModalOpen(true)}
-              className="btn-danger flex items-center"
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              Rifiuta
-            </button>
+              Vai al progetto
+            </Link>
           </div>
-        </div>
-      )}
-    </div>
-  )
+        )}
+      </CardContent>
+    </Card>
+  ) : null
 
   return (
-    <div className="space-y-4">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Segnalazioni', href: '/inputs' },
-          { label: currentInput.title },
-        ]}
-      />
-
-      {/* Header */}
-      <DetailPageHeader
-        title={currentInput.title}
-        subtitle={currentInput.code || undefined}
-        backTo="/inputs"
-      >
-        {/* Status badge */}
-        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${INPUT_STATUS_COLORS[currentInput.status] || ''}`}>
-          {INPUT_STATUS_LABELS[currentInput.status] || currentInput.status}
-        </span>
-        {canEdit && (
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="btn-secondary flex items-center"
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Modifica
-          </button>
-        )}
-        {canDelete && (
-          <button onClick={() => setIsDeleteConfirmOpen(true)} className="btn-danger flex items-center">
-            <Trash2 className="w-4 h-4 mr-2" />
-            Elimina
-          </button>
-        )}
-      </DetailPageHeader>
-
-      {/* Tabbed content */}
-      <TabSection
-        tabs={[
-          {
-            id: 'dettagli',
-            label: 'Dettagli',
-            icon: Info,
-            content: detailsTabContent,
-          },
-        ]}
-        defaultTab="dettagli"
-      />
-
-      {/* Modals */}
-      <UserInputFormModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSuccess={() => {
-          setIsEditModalOpen(false)
-          if (id) fetchInput(id)
-        }}
-        input={currentInput}
-      />
-
-      <ConvertToTaskModal
-        isOpen={isConvertToTaskOpen}
-        onClose={() => setIsConvertToTaskOpen(false)}
-        inputId={currentInput.id}
-        inputTitle={currentInput.title}
-        onSuccess={() => {
-          setIsConvertToTaskOpen(false)
-          if (id) fetchInput(id)
-        }}
-      />
-
-      <ConvertToProjectModal
-        isOpen={isConvertToProjectOpen}
-        onClose={() => setIsConvertToProjectOpen(false)}
-        inputId={currentInput.id}
-        inputTitle={currentInput.title}
-        inputDescription={currentInput.description}
-        onSuccess={() => {
-          setIsConvertToProjectOpen(false)
-          if (id) fetchInput(id)
-        }}
-      />
-
-      {/* Reject Modal */}
-      {isRejectModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={() => setIsRejectModalOpen(false)} />
-            <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Rifiuta Segnalazione
-              </h3>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Motivo del rifiuto *
-                </label>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  rows={3}
-                  className="input"
-                  placeholder="Spiega il motivo del rifiuto..."
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setIsRejectModalOpen(false)} className="btn-secondary">
-                  Annulla
-                </button>
-                <button
-                  onClick={handleReject}
-                  disabled={!rejectReason.trim()}
-                  className="btn-danger"
-                >
-                  Rifiuta
-                </button>
-              </div>
-            </div>
+    <EntityDetail
+      isLoading={isLoading}
+      error={toError(error)}
+      notFound={!isLoading && !error && !input}
+      breadcrumbs={[
+        { label: "Home", href: "/" },
+        { label: "Segnalazioni", href: "/inputs" },
+        { label: input?.title ?? "..." },
+      ]}
+      title={input?.title}
+      subtitle={input?.code ? `#${input.code}` : undefined}
+      tagEditor={
+        id ? (
+          <TagEditor entityType="userInput" entityId={id} className="mt-1" />
+        ) : undefined
+      }
+      badges={
+        input ? (
+          <>
+            <StatusBadge status={input.status} labels={INPUT_STATUS_LABELS} />
+            <StatusBadge status={input.category} labels={INPUT_CATEGORY_LABELS} />
+            <StatusBadge status={input.priority} labels={TASK_PRIORITY_LABELS} />
+          </>
+        ) : undefined
+      }
+      kpiRow={
+        input ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card
+              className="kpi-accent card-hover"
+              style={
+                { "--kpi-gradient": "var(--gradient-task)" } as React.CSSProperties
+              }
+            >
+              <CardContent className="p-3">
+                <p className="text-kpi-label mb-1.5">Stato</p>
+                <StatusBadge status={input.status} labels={INPUT_STATUS_LABELS} />
+              </CardContent>
+            </Card>
+            <Card
+              className="kpi-accent card-hover"
+              style={
+                {
+                  "--kpi-gradient": "var(--gradient-project)",
+                } as React.CSSProperties
+              }
+            >
+              <CardContent className="p-3">
+                <p className="text-kpi-label mb-1.5">Segnalato da</p>
+                <p className="text-sm font-medium">
+                  {input.createdBy
+                    ? `${input.createdBy.firstName} ${input.createdBy.lastName}`
+                    : "—"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card
+              className="kpi-accent card-hover"
+              style={
+                {
+                  "--kpi-gradient": "var(--gradient-success)",
+                } as React.CSSProperties
+              }
+            >
+              <CardContent className="p-3">
+                <p className="text-kpi-label mb-1.5">Data</p>
+                <p className="text-sm font-medium">{formatDate(input.createdAt)}</p>
+              </CardContent>
+            </Card>
+            <Card
+              className="kpi-accent card-hover"
+              style={
+                {
+                  "--kpi-gradient": "var(--gradient-warning)",
+                } as React.CSSProperties
+              }
+            >
+              <CardContent className="p-3">
+                <p className="text-kpi-label mb-1.5">Risposte</p>
+                <p className="text-kpi-value">{input.replies?.length ?? 0}</p>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      )}
-
-      <ConfirmDialog
-        isOpen={isDeleteConfirmOpen}
-        onClose={() => setIsDeleteConfirmOpen(false)}
-        onConfirm={handleDelete}
-        title="Elimina segnalazione"
-        message={`Sei sicuro di voler eliminare "${currentInput.title}"? L'operazione non puo' essere annullata.`}
-        confirmLabel="Elimina"
-        variant="danger"
-        isLoading={isDeleting}
-      />
-    </div>
+        ) : undefined
+      }
+      beforeContent={
+        input && input.status !== "resolved" ? (
+          <WorkflowStepper
+            workflow={userInputWorkflow}
+            currentPhase={input.status}
+            validationData={
+              {
+                hasDescription: !!(
+                  input.description && input.description.trim().length > 0
+                ),
+              } satisfies ValidationData
+            }
+            onAdvance={handleWorkflowAdvance}
+            canAdvancePhase={!isWorkflowAdvancing}
+          />
+        ) : undefined
+      }
+      headerActions={
+        input ? (
+          <>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/inputs/${id}/edit`}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Modifica
+              </Link>
+            </Button>
+            {(isPending || isProcessing) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isPending && (
+                    <DropdownMenuItem onClick={handleProcess}>
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Prendi in carico
+                    </DropdownMenuItem>
+                  )}
+                  {(isPending || isProcessing) && (
+                    <DropdownMenuItem onClick={handleAcknowledge}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Accetta
+                    </DropdownMenuItem>
+                  )}
+                  {(isPending || isProcessing) && (
+                    <DropdownMenuItem
+                      onClick={handleReject}
+                      className="text-destructive"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Rifiuta
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </>
+        ) : undefined
+      }
+      tabs={
+        input
+          ? [
+              {
+                key: "conversation",
+                label: "Conversazione",
+                content: <ConversationTab inputId={id!} />,
+              },
+              {
+                key: "dettagli",
+                label: "Dettagli",
+                content: detailsContent,
+              },
+              {
+                key: "note",
+                label: "Note",
+                content: <NoteTab entityType="userInput" entityId={id!} />,
+              },
+              {
+                key: "activity",
+                label: "Attività",
+                content: <ActivityTab entityType="userInput" entityId={id!} />,
+              },
+            ]
+          : undefined
+      }
+      sidebar={
+        input ? (
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground mb-3">
+              Informazioni
+            </h3>
+            <MetaRow icon={Tag} label="Stato">
+              <StatusBadge status={input.status} labels={INPUT_STATUS_LABELS} />
+            </MetaRow>
+            <MetaRow icon={Tag} label="Categoria">
+              <StatusBadge status={input.category} labels={INPUT_CATEGORY_LABELS} />
+            </MetaRow>
+            <MetaRow icon={AlertTriangle} label="Priorità">
+              <StatusBadge status={input.priority} labels={TASK_PRIORITY_LABELS} />
+            </MetaRow>
+            <MetaRow icon={User} label="Segnalato da">
+              {input.createdBy
+                ? `${input.createdBy.firstName} ${input.createdBy.lastName}`
+                : "—"}
+            </MetaRow>
+            <MetaRow icon={Calendar} label="Data">
+              {formatDate(input.createdAt)}
+            </MetaRow>
+          </div>
+        ) : undefined
+      }
+      onDelete={handleDelete}
+      isDeleting={deleteMutation.isPending}
+      deleteConfirmMessage="Sei sicuro di voler eliminare questa segnalazione? Questa azione non può essere annullata."
+    />
   )
 }
+
+export default UserInputDetailPage

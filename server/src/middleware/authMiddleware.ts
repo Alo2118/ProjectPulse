@@ -21,15 +21,15 @@ export const authMiddleware = (
   _res: Response,
   next: NextFunction
 ) => {
-  const authHeader = req.headers.authorization
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AppError('No token provided', 401)
-  }
-
-  const token = authHeader.split(' ')[1]
-
   try {
+    const authHeader = req.headers.authorization
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next(new AppError('No token provided', 401))
+    }
+
+    const token = authHeader.split(' ')[1]
+
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET!
@@ -37,19 +37,20 @@ export const authMiddleware = (
 
     req.user = decoded
     next()
-  } catch {
-    throw new AppError('Invalid token', 401)
+  } catch (error) {
+    if (error instanceof AppError) return next(error)
+    next(new AppError('Invalid token', 401))
   }
 }
 
 export const requireRole = (...roles: string[]) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
-      throw new AppError('Unauthorized', 401)
+      return next(new AppError('Unauthorized', 401))
     }
 
     if (!roles.includes(req.user.role)) {
-      throw new AppError('Forbidden: insufficient permissions', 403)
+      return next(new AppError('Forbidden: insufficient permissions', 403))
     }
 
     next()

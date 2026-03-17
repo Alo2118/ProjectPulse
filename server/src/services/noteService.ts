@@ -10,6 +10,8 @@ import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
 import { notificationService } from './notificationService.js'
 import { parseMentionedUserIds } from '../utils/mentions.js'
+import { noteWithRelationsSelect } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
 import {
   CreateNoteInput,
   UpdateNoteInput,
@@ -18,39 +20,8 @@ import {
   EntityType,
   NoteableEntityType,
 } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
-const noteSelectFields = {
-  id: true,
-  content: true,
-  entityType: true,
-  entityId: true,
-  isInternal: true,
-  isDeleted: true,
-  parentId: true,
-  createdAt: true,
-  updatedAt: true,
-  userId: true,
-}
-
-const noteWithRelationsSelect = {
-  ...noteSelectFields,
-  user: {
-    select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, role: true },
-  },
-  replies: {
-    where: { isDeleted: false },
-    select: {
-      id: true,
-      content: true,
-      createdAt: true,
-      userId: true,
-      user: {
-        select: { id: true, firstName: true, lastName: true, avatarUrl: true },
-      },
-    },
-    orderBy: { createdAt: 'asc' as const },
-  },
-}
 
 /**
  * Verifies that an entity exists and is not deleted
@@ -81,7 +52,7 @@ export async function createNote(data: CreateNoteInput, userId: string) {
   // Verify entity exists
   const entityExists = await verifyEntityExists(data.entityType, data.entityId)
   if (!entityExists) {
-    throw new Error(`${data.entityType} not found`)
+    throw new AppError(`${data.entityType} not found`, 404)
   }
 
   // Verify parent note exists if provided
@@ -90,7 +61,7 @@ export async function createNote(data: CreateNoteInput, userId: string) {
       where: { id: data.parentId, isDeleted: false },
     })
     if (!parentNote) {
-      throw new Error('Parent note not found')
+      throw new AppError('Parent note not found', 404)
     }
   }
 
@@ -215,12 +186,7 @@ export async function getEntityNotes(
 
   return {
     data: notes,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 

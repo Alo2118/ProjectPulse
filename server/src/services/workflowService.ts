@@ -24,6 +24,7 @@ export interface WorkflowStatus {
 export interface ParsedWorkflow {
   id: string
   name: string
+  domain: string
   statuses: WorkflowStatus[]
   transitions: Record<string, string[]>
   isSystem: boolean
@@ -56,6 +57,7 @@ const DEFAULT_TRANSITIONS: Record<string, string[]> = {
 const HARDCODED_DEFAULT_WORKFLOW: ParsedWorkflow = {
   id: DEFAULT_WORKFLOW_ID,
   name: 'Default',
+  domain: 'task',
   statuses: DEFAULT_STATUSES,
   transitions: DEFAULT_TRANSITIONS,
   isSystem: true,
@@ -69,6 +71,7 @@ const workflowSelectFields = {
   id: true,
   name: true,
   description: true,
+  domain: true,
   statuses: true,
   transitions: true,
   isDefault: true,
@@ -87,6 +90,7 @@ type WorkflowRecord = {
   id: string
   name: string
   description: string | null
+  domain: string
   statuses: string
   transitions: string
   isDefault: boolean
@@ -101,6 +105,7 @@ function parseWorkflowTemplate(record: WorkflowRecord): ParsedWorkflow {
   return {
     id: record.id,
     name: record.name,
+    domain: record.domain,
     statuses: JSON.parse(record.statuses) as WorkflowStatus[],
     transitions: JSON.parse(record.transitions) as Record<string, string[]>,
     isSystem: record.isSystem,
@@ -161,9 +166,12 @@ function validateWorkflowData(
 /**
  * Get all active workflow templates.
  */
-export async function getWorkflowTemplates(): Promise<ParsedWorkflow[]> {
+export async function getWorkflowTemplates(domain?: string): Promise<ParsedWorkflow[]> {
   const records = await prisma.workflowTemplate.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...(domain ? { domain } : {}),
+    },
     select: workflowSelectFields,
     orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
   })
@@ -195,6 +203,7 @@ export async function createWorkflowTemplate(
   data: {
     name: string
     description?: string
+    domain?: string
     statuses: WorkflowStatus[]
     transitions: Record<string, string[]>
   },
@@ -218,6 +227,7 @@ export async function createWorkflowTemplate(
     data: {
       name: data.name,
       description: data.description ?? null,
+      domain: data.domain ?? 'task',
       statuses: JSON.stringify(data.statuses),
       transitions: JSON.stringify(data.transitions),
       isDefault: false,
@@ -371,9 +381,9 @@ export async function getProjectWorkflow(
     }
   }
 
-  // Fall back to system-default template in DB
+  // Fall back to system-default template in DB (task domain)
   const systemDefault = await prisma.workflowTemplate.findFirst({
-    where: { isDefault: true, isSystem: true, isActive: true },
+    where: { isDefault: true, isSystem: true, isActive: true, domain: 'task' },
     select: workflowSelectFields,
   })
 

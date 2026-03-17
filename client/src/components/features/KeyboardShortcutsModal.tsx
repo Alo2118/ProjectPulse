@@ -1,166 +1,157 @@
-/**
- * KeyboardShortcutsModal - Displays all available keyboard shortcuts grouped by category
- * @module components/features/KeyboardShortcutsModal
- */
+import { Fragment } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Separator } from "@/components/ui/separator"
 
-import { ArrowRight, Keyboard, X } from 'lucide-react'
-import { BaseModal } from '@components/ui/BaseModal'
-import type { ShortcutDefinition } from '@hooks/useKeyboardShortcuts'
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-interface KeyboardShortcutsModalProps {
-  isOpen: boolean
-  onClose: () => void
-  shortcuts: ShortcutDefinition[]
+interface ShortcutEntry {
+  keys: string[]
+  description: string
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-/**
- * Split a combo string such as "ctrl+k" into display tokens ["Ctrl", "K"].
- * Sequences such as ['g', 't'] render as ["G", "→", "T"].
- */
-function parseShortcutDisplay(keys: string[], isSequence: boolean | undefined): string[][] {
-  if (isSequence) {
-    // Each key in the sequence is its own badge group separated by an arrow
-    return keys.map((k) => [k.toUpperCase()])
-  }
-
-  // Multiple alternatives (e.g. ctrl+k / meta+k) — show the first relevant one
-  const primary = keys[0]
-  return [
-    primary
-      .split('+')
-      .map((part) => {
-        if (part === 'ctrl') return 'Ctrl'
-        if (part === 'meta') return '⌘'
-        if (part === 'shift') return 'Shift'
-        if (part === 'alt') return 'Alt'
-        return part.toUpperCase()
-      }),
-  ]
+interface ShortcutGroup {
+  heading: string
+  entries: ShortcutEntry[]
 }
 
-function KeyBadge({ label }: { label: string }) {
-  return (
-    <kbd
-      className="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-700
-                 border border-gray-300 dark:border-gray-600 rounded
-                 text-xs font-mono font-medium text-gray-700 dark:text-gray-300"
-    >
-      {label}
-    </kbd>
-  )
+// ---------------------------------------------------------------------------
+// Shortcut data
+// ---------------------------------------------------------------------------
+
+const SHORTCUT_GROUPS: ShortcutGroup[] = [
+  {
+    heading: "Navigazione",
+    entries: [
+      { keys: ["Ctrl", "K"], description: "Apri ricerca rapida" },
+      { keys: ["G", "H"], description: "Vai a Home" },
+      { keys: ["G", "P"], description: "Vai a Progetti" },
+      { keys: ["G", "T"], description: "Vai a Task" },
+    ],
+  },
+  {
+    heading: "Lista",
+    entries: [
+      { keys: ["J"], description: "Elemento successivo" },
+      { keys: ["K"], description: "Elemento precedente" },
+      { keys: ["↓"], description: "Elemento successivo" },
+      { keys: ["↑"], description: "Elemento precedente" },
+      { keys: ["Enter"], description: "Apri elemento selezionato" },
+    ],
+  },
+  {
+    heading: "Azioni",
+    entries: [
+      { keys: ["N"], description: "Nuovo elemento" },
+      { keys: ["E"], description: "Modifica elemento selezionato" },
+      { keys: ["Backspace"], description: "Elimina elemento selezionato" },
+    ],
+  },
+  {
+    heading: "Vista",
+    entries: [
+      { keys: ["F"], description: "Apri / chiudi filtri" },
+      { keys: ["/"], description: "Cerca nella lista" },
+    ],
+  },
+]
+
+// ---------------------------------------------------------------------------
+// Sub-component: key combo renderer
+// ---------------------------------------------------------------------------
+
+interface KeyComboProps {
+  keys: string[]
 }
 
-function ShortcutKeys({ keys, isSequence }: { keys: string[]; isSequence?: boolean }) {
-  const groups = parseShortcutDisplay(keys, isSequence)
-
-  if (isSequence) {
-    return (
-      <span className="flex items-center gap-1">
-        {groups.map((group, groupIdx) => (
-          <span key={groupIdx} className="flex items-center gap-1">
-            {groupIdx > 0 && (
-              <ArrowRight className="w-3 h-3 text-gray-400 dark:text-gray-500" aria-hidden />
-            )}
-            {group.map((label, labelIdx) => (
-              <KeyBadge key={labelIdx} label={label} />
-            ))}
-          </span>
-        ))}
-      </span>
-    )
-  }
-
+function KeyCombo({ keys }: KeyComboProps) {
   return (
     <span className="flex items-center gap-1">
-      {groups[0].map((label, idx) => (
-        <span key={idx} className="flex items-center gap-0.5">
-          {idx > 0 && <span className="text-gray-400 dark:text-gray-500 text-xs">+</span>}
-          <KeyBadge label={label} />
-        </span>
+      {keys.map((key, i) => (
+        <Fragment key={i}>
+          <kbd
+            className={[
+              "inline-flex min-w-[1.75rem] items-center justify-center",
+              "rounded border border-border bg-muted px-1.5 py-0.5",
+              "font-mono text-[11px] font-medium text-muted-foreground",
+              "shadow-[0_1px_0_0_hsl(var(--border))]",
+            ].join(" ")}
+          >
+            {key}
+          </kbd>
+          {i < keys.length - 1 && (
+            <span className="text-[10px] text-muted-foreground">poi</span>
+          )}
+        </Fragment>
       ))}
     </span>
   )
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+interface KeyboardShortcutsModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
 
 export function KeyboardShortcutsModal({
-  isOpen,
-  onClose,
-  shortcuts,
+  open,
+  onOpenChange,
 }: KeyboardShortcutsModalProps) {
-  // Group shortcuts by category
-  const grouped = shortcuts.reduce<Record<string, ShortcutDefinition[]>>((acc, shortcut) => {
-    if (!acc[shortcut.category]) {
-      acc[shortcut.category] = []
-    }
-    acc[shortcut.category].push(shortcut)
-    return acc
-  }, {})
-
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="lg"
-      showCloseButton={false}
-    >
-      {/* Custom scrollable content — the panel itself does not scroll, the inner div does */}
-      <div className="flex flex-col max-h-[80vh]">
-        {/* Sticky header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-surface-800/95 backdrop-blur-xl rounded-t-xl">
-          <h2
-            id="shortcuts-modal-title"
-            className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
-          >
-            <Keyboard className="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden />
-            Scorciatoie da Tastiera
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Chiudi scorciatoie"
-            className="btn-icon"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Scorciatoie da tastiera</DialogTitle>
+          <DialogDescription>
+            Usa queste combinazioni per navigare e agire rapidamente.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Scrollable body */}
-        <div className="px-6 py-4 space-y-6 overflow-y-auto">
-          {Object.entries(grouped).map(([category, categoryShortcuts]) => (
-            <section key={category} aria-labelledby={`category-${category}`}>
-              <h3
-                id={`category-${category}`}
-                className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3"
-              >
-                {category}
+        <div className="space-y-5 py-2">
+          {SHORTCUT_GROUPS.map((group, groupIndex) => (
+            <div key={group.heading}>
+              {groupIndex > 0 && <Separator className="mb-4" />}
+
+              <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.heading}
               </h3>
-              <ul className="space-y-2" role="list">
-                {categoryShortcuts.map((shortcut) => (
-                  <li
-                    key={shortcut.label}
-                    className="flex items-center justify-between gap-4 py-1.5"
-                  >
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {shortcut.label}
-                    </span>
-                    <ShortcutKeys keys={shortcut.keys} isSequence={shortcut.isSequence} />
-                  </li>
-                ))}
-              </ul>
-            </section>
+
+              <table className="w-full text-sm" role="table">
+                <tbody>
+                  {group.entries.map((entry) => (
+                    <tr
+                      key={entry.description}
+                      className="border-b border-border/50 last:border-0"
+                    >
+                      <td className="py-2 pr-4 text-left text-foreground/90">
+                        {entry.description}
+                      </td>
+                      <td className="py-2 text-right">
+                        <KeyCombo keys={entry.keys} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ))}
         </div>
 
-        {/* Footer hint */}
-        <div className="px-6 py-3 border-t border-gray-100 dark:border-gray-700 rounded-b-xl">
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-            Premi <KeyBadge label="?" /> in qualsiasi momento per aprire questa finestra
-          </p>
-        </div>
-      </div>
-    </BaseModal>
+        <p className="text-center text-xs text-muted-foreground">
+          Le scorciatoie di navigazione (G) richiedono la pressione sequenziale dei tasti.
+        </p>
+      </DialogContent>
+    </Dialog>
   )
 }

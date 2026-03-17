@@ -8,23 +8,16 @@
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { departmentSelectFields } from '../utils/selectFields.js'
+import { buildPagination } from '../utils/paginate.js'
 import {
   CreateDepartmentInput,
   UpdateDepartmentInput,
   DepartmentQueryParams,
   EntityType,
 } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
-const departmentSelectFields = {
-  id: true,
-  name: true,
-  description: true,
-  color: true,
-  isActive: true,
-  isDeleted: true,
-  createdAt: true,
-  updatedAt: true,
-}
 
 /**
  * Gets all departments with optional search and pagination
@@ -58,12 +51,7 @@ async function getDepartments(params: DepartmentQueryParams = {}) {
 
   return {
     data: departments,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: buildPagination(page, limit, total),
   }
 }
 
@@ -87,7 +75,7 @@ async function createDepartment(data: CreateDepartmentInput, userId: string) {
       select: { id: true },
     })
     if (existing) {
-      throw new Error(`Un reparto con nome "${data.name}" esiste già`)
+      throw new AppError(`Un reparto con nome "${data.name}" esiste già`, 400)
     }
 
     const created = await tx.department.create({
@@ -125,7 +113,7 @@ async function updateDepartment(id: string, data: UpdateDepartmentInput, userId:
       select: { id: true },
     })
     if (nameConflict) {
-      throw new Error(`Un reparto con nome "${data.name}" esiste già`)
+      throw new AppError(`Un reparto con nome "${data.name}" esiste già`, 400)
     }
   }
 

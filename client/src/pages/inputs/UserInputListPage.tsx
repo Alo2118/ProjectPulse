@@ -1,296 +1,308 @@
-/**
- * User Input List Page - Shows all user inputs with filters
- * @module pages/inputs/UserInputListPage
- */
-
-import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { useUserInputStore } from '@stores/userInputStore'
-import { useAuthStore } from '@stores/authStore'
+import { useState, useMemo, useCallback } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { MessageSquarePlus, Loader2, Calendar } from "lucide-react"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
+import { toast } from "sonner"
+import { EntityList, type Column, type FilterConfig } from "@/components/common/EntityList"
+import { EntityRow } from "@/components/common/EntityRow"
+import { TagFilter } from "@/components/common/TagFilter"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { FormField } from "@/components/common/FormField"
+import { INPUT_STATUS_LABELS, TASK_PRIORITY_LABELS, INPUT_CATEGORY_LABELS } from "@/lib/constants"
+import { formatDate, toError } from "@/lib/utils"
+import { useInputListQuery, useCreateInput } from "@/hooks/api/useInputs"
+import { useStatsQuery } from "@/hooks/api/useStats"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
-  Plus,
-  Search,
-  Loader2,
-  MessageSquarePlus,
-  User,
-  Calendar,
-} from 'lucide-react'
-import { Pagination } from '@components/common/Pagination'
-import { useDebounce } from '@hooks/useDebounce'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
-  INPUT_STATUS_LABELS,
-  INPUT_STATUS_COLORS,
-  INPUT_CATEGORY_LABELS,
-  INPUT_CATEGORY_COLORS,
-  TASK_PRIORITY_LABELS,
-  TASK_PRIORITY_COLORS,
-} from '@/constants'
-import UserInputFormModal from './UserInputFormModal'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
-export default function UserInputListPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  useAuthStore()
-  const { inputs, pagination, isLoading, fetchInputs, fetchMyInputs } = useUserInputStore()
+interface UserInput {
+  id: string
+  code: string
+  title: string
+  description?: string
+  category: string
+  priority: string
+  status: string
+  createdAt: string
+}
 
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
-  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '')
-  const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || '')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [showMyInputs, setShowMyInputs] = useState(false)
+const CATEGORY_OPTIONS = Object.entries(INPUT_CATEGORY_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}))
 
-  const debouncedSearch = useDebounce(searchTerm, 300)
+const STATUS_OPTIONS = Object.entries(INPUT_STATUS_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}))
 
-  useEffect(() => {
-    const filters: Record<string, string> = {}
-    if (debouncedSearch) filters.search = debouncedSearch
-    if (statusFilter) filters.status = statusFilter
-    if (categoryFilter) filters.category = categoryFilter
-    if (priorityFilter) filters.priority = priorityFilter
+const PRIORITY_OPTIONS = Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}))
 
-    const params = new URLSearchParams(filters)
-    setSearchParams(params)
-
-    const fetchFn = showMyInputs ? fetchMyInputs : fetchInputs
-    fetchFn({
-      search: debouncedSearch || undefined,
-      status: statusFilter || undefined,
-      category: categoryFilter || undefined,
-      priority: priorityFilter || undefined,
-      page: pagination.page,
-      limit: pagination.limit,
-    })
-  }, [debouncedSearch, statusFilter, categoryFilter, priorityFilter, showMyInputs])
-
-  const handlePageChange = (newPage: number) => {
-    const fetchFn = showMyInputs ? fetchMyInputs : fetchInputs
-    fetchFn({
-      search: debouncedSearch || undefined,
-      status: statusFilter || undefined,
-      category: categoryFilter || undefined,
-      priority: priorityFilter || undefined,
-      page: newPage,
-      limit: pagination.limit,
-    })
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
-
-  if (isLoading && inputs.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+const columns: Column<UserInput>[] = [
+  {
+    key: "title",
+    header: "Segnalazione",
+    sortable: true,
+    cell: (item) => (
+      <div className="min-w-0 py-0.5">
+        <span className="font-medium text-sm truncate block leading-tight">{item.title}</span>
+        <span className="text-[11px] text-muted-foreground font-data tabular-nums">{item.code}</span>
       </div>
-    )
+    ),
+  },
+  {
+    key: "category",
+    header: "Categoria",
+    className: "w-[100px]",
+    cell: (item) => (
+      <span className="text-xs text-muted-foreground">
+        {INPUT_CATEGORY_LABELS[item.category] ?? item.category}
+      </span>
+    ),
+  },
+  {
+    key: "status",
+    header: "Stato",
+    className: "w-[130px]",
+    cell: (item) => (
+      <div className="flex flex-col gap-0.5">
+        <StatusBadge status={item.status} labels={INPUT_STATUS_LABELS} />
+        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-current opacity-40" />
+          {TASK_PRIORITY_LABELS[item.priority] ?? item.priority}
+        </span>
+      </div>
+    ),
+  },
+  {
+    key: "createdAt",
+    header: "Data",
+    sortable: true,
+    className: "w-[100px]",
+    cell: (item) => (
+      <span className="text-xs font-data tabular-nums flex items-center gap-1">
+        <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+        {formatDate(item.createdAt)}
+      </span>
+    ),
+  },
+]
+
+const filterConfig: FilterConfig[] = [
+  { key: "search", label: "Cerca", type: "search", placeholder: "Cerca segnalazioni..." },
+  { key: "status", label: "Stato", type: "select", options: STATUS_OPTIONS },
+  { key: "category", label: "Categoria", type: "select", options: CATEGORY_OPTIONS },
+]
+
+function UserInputListPage() {
+  useSetPageContext({ domain: 'input' })
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [form, setForm] = useState({ title: "", description: "", category: "bug", priority: "medium" })
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+
+  const filters = useMemo(
+    () => ({
+      search: searchParams.get("search") ?? "",
+      status: searchParams.get("status") ?? "",
+      category: searchParams.get("category") ?? "",
+      page: searchParams.get("page") ?? "1",
+    }),
+    [searchParams],
+  )
+
+  const { data, isLoading, error } = useInputListQuery(filters)
+  const { data: kpiCards } = useStatsQuery('inputs')
+  const createMutation = useCreateInput()
+
+  const items: UserInput[] = data?.data ?? []
+  const pagination = data?.pagination
+
+  const handleFilterChange = useCallback(
+    (key: string, value: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (value) {
+          next.set(key, value)
+        } else {
+          next.delete(key)
+        }
+        if (key !== "page") next.delete("page")
+        return next
+      })
+    },
+    [setSearchParams],
+  )
+
+  const handleFilterClear = useCallback(() => {
+    setSearchParams(new URLSearchParams())
+  }, [setSearchParams])
+
+  const handlePageChange = useCallback(
+    (page: number) => handleFilterChange("page", String(page)),
+    [handleFilterChange],
+  )
+
+  // Render row for list view using EntityRow
+  const renderRow = useCallback(
+    (item: UserInput) => (
+      <EntityRow
+        id={item.id}
+        name={item.title}
+        status={item.status}
+        entityType="userInput"
+        onClick={() => navigate(`/inputs/${item.id}`)}
+        code={item.code}
+        subtitle={INPUT_CATEGORY_LABELS[item.category] ?? item.category}
+        extraBadges={
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            {TASK_PRIORITY_LABELS[item.priority] ?? item.priority}
+          </Badge>
+        }
+      />
+    ),
+    [navigate]
+  )
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.title.trim()) return
+    try {
+      await createMutation.mutateAsync(form)
+      toast.success("Segnalazione creata con successo")
+      setCreateOpen(false)
+      setForm({ title: "", description: "", category: "bug", priority: "medium" })
+    } catch {
+      toast.error("Errore nella creazione della segnalazione")
+    }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Segnalazioni</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            Gestisci segnalazioni e suggerimenti
-          </p>
-        </div>
-        <button onClick={() => setIsModalOpen(true)} className="btn-primary flex items-center">
-          <Plus className="w-4 h-4 mr-2" />
-          Nuova Segnalazione
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="card p-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-64">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="search"
-                placeholder="Cerca segnalazioni..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-10"
-              />
-            </div>
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutti gli stati</option>
-            <option value="pending">In attesa</option>
-            <option value="processing">In elaborazione</option>
-            <option value="resolved">Risolto</option>
-          </select>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutte le categorie</option>
-            <option value="bug">Bug</option>
-            <option value="feature_request">Nuova funzionalità</option>
-            <option value="improvement">Miglioramento</option>
-            <option value="question">Domanda</option>
-            <option value="other">Altro</option>
-          </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="">Tutte le priorità</option>
-            <option value="low">Bassa</option>
-            <option value="medium">Media</option>
-            <option value="high">Alta</option>
-            <option value="critical">Critica</option>
-          </select>
-          <button
-            onClick={() => setShowMyInputs(!showMyInputs)}
-            className={`px-4 py-2 rounded-lg border transition-colors ${
-              showMyInputs
-                ? 'bg-primary-100 border-primary-500 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            {showMyInputs ? 'Le mie' : 'Tutte'}
-          </button>
-        </div>
-      </div>
-
-      {/* Inputs List */}
-      {inputs.length === 0 ? (
-        <div className="card p-8 text-center">
-          <MessageSquarePlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {searchTerm || statusFilter || categoryFilter || priorityFilter
-              ? 'Nessuna segnalazione trovata'
-              : 'Nessuna segnalazione'}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            {searchTerm || statusFilter || categoryFilter || priorityFilter
-              ? 'Prova a modificare i filtri di ricerca'
-              : 'Invia una nuova segnalazione o suggerimento'}
-          </p>
-          {!searchTerm && !statusFilter && !categoryFilter && (
-            <button onClick={() => setIsModalOpen(true)} className="btn-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Nuova Segnalazione
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="card divide-y divide-gray-200 dark:divide-gray-700">
-            {inputs.map((input) => (
-              <div
-                key={input.id}
-                className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-              >
-                {/* Category Icon */}
-                <div className="mr-4">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      input.category === 'bug'
-                        ? 'bg-red-100 dark:bg-red-900/30'
-                        : input.category === 'feature_request'
-                        ? 'bg-purple-100 dark:bg-purple-900/30'
-                        : input.category === 'improvement'
-                        ? 'bg-blue-100 dark:bg-blue-900/30'
-                        : input.category === 'question'
-                        ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                        : 'bg-gray-100 dark:bg-gray-700'
-                    }`}
-                  >
-                    <MessageSquarePlus
-                      className={`w-5 h-5 ${
-                        input.category === 'bug'
-                          ? 'text-red-600 dark:text-red-400'
-                          : input.category === 'feature_request'
-                          ? 'text-purple-600 dark:text-purple-400'
-                          : input.category === 'improvement'
-                          ? 'text-blue-600 dark:text-blue-400'
-                          : input.category === 'question'
-                          ? 'text-yellow-600 dark:text-yellow-400'
-                          : 'text-gray-600 dark:text-gray-400'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                {/* Input Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to={`/inputs/${input.id}`}
-                      className="text-base font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 truncate"
-                    >
-                      {input.title}
-                    </Link>
-                  </div>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{input.code}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${INPUT_CATEGORY_COLORS[input.category]}`}>
-                      {INPUT_CATEGORY_LABELS[input.category]}
-                    </span>
-                    {input.createdBy && (
-                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        <User className="w-3 h-3 mr-1" />
-                        <span className="max-w-24 truncate">
-                          {input.createdBy.firstName} {input.createdBy.lastName?.charAt(0)}.
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Input Details */}
-                <div className="flex items-center gap-4 ml-4">
-                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {formatDate(input.createdAt)}
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${TASK_PRIORITY_COLORS[input.priority]}`}>
-                    {TASK_PRIORITY_LABELS[input.priority]}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${INPUT_STATUS_COLORS[input.status]}`}>
-                    {INPUT_STATUS_LABELS[input.status]}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          <Pagination
-            page={pagination.page}
-            pages={pagination.pages}
-            total={pagination.total}
-            limit={pagination.limit}
-            onPageChange={handlePageChange}
+    <>
+      <EntityList<UserInput>
+        title="Segnalazioni"
+        icon={MessageSquarePlus}
+        data={items}
+        pagination={pagination}
+        isLoading={isLoading}
+        error={toError(error)}
+        columns={columns}
+        getId={(item) => item.id}
+        filterConfig={filterConfig}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onFilterClear={handleFilterClear}
+        onPageChange={handlePageChange}
+        onRowClick={(item) => navigate(`/inputs/${item.id}`)}
+        emptyTitle="Nessuna segnalazione"
+        emptyDescription="Non ci sono segnalazioni da mostrare."
+        kpiStrip={kpiCards}
+        renderRow={renderRow}
+        afterFilters={
+          <TagFilter
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
           />
-        </>
-      )}
-
-      {/* Create Modal */}
-      <UserInputFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={() => {
-          setIsModalOpen(false)
-          const fetchFn = showMyInputs ? fetchMyInputs : fetchInputs
-          fetchFn({ page: 1 })
-        }}
+        }
+        headerExtra={
+          <Button onClick={() => setCreateOpen(true)}>
+            <MessageSquarePlus className="h-4 w-4 mr-1" />
+            Nuova segnalazione
+          </Button>
+        }
       />
-    </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuova segnalazione</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <FormField label="Titolo" required>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Titolo della segnalazione"
+              />
+            </FormField>
+            <FormField label="Descrizione">
+              <Textarea
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Descrizione dettagliata..."
+                rows={4}
+              />
+            </FormField>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Categoria">
+                <Select
+                  value={form.category}
+                  onValueChange={(val) => setForm((f) => ({ ...f, category: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField label="Priorita'">
+                <Select
+                  value={form.priority}
+                  onValueChange={(val) => setForm((f) => ({ ...f, priority: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Annulla
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending || !form.title.trim()}>
+                {createMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                Crea
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
+
+export default UserInputListPage

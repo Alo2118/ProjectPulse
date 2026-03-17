@@ -1,391 +1,388 @@
-/**
- * Document Detail Page - View document with approval workflow
- * @module pages/documents/DocumentDetailPage
- */
-
-import { useEffect, useState, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useDocumentStore } from '@stores/documentStore'
-import { useAuthStore } from '@stores/authStore'
+import { useMemo } from "react"
+import { useParams, useNavigate, Link } from "react-router-dom"
 import {
-  ArrowLeft,
-  Loader2,
-  Edit2,
-  Trash2,
-  FolderOpen,
-  FileText,
+  Pencil,
   Download,
-  Upload,
-  CheckCircle,
-  ChevronDown,
-  User,
-  CalendarClock,
-  AlertCircle,
-  RefreshCw,
-} from 'lucide-react'
+  MoreHorizontal,
+  Calendar,
+  Tag,
+  FileText,
+  FolderOpen,
+  HardDrive,
+  Hash,
+  Clock,
+  GitCommitVertical,
+} from "lucide-react"
+import { toast } from "sonner"
+import { EntityDetail } from "@/components/common/EntityDetail"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { MetaRow } from "@/components/common/MetaRow"
+import { TagEditor } from "@/components/common/TagEditor"
+import { NoteTab } from "@/components/common/NoteTab"
+import { ActivityTab } from "@/components/common/ActivityTab"
+import { KpiStrip, type KpiCard } from "@/components/common/KpiStrip"
+import { DOCUMENT_STATUS_LABELS, DOCUMENT_TYPE_LABELS, DOCUMENT_STATUS_TRANSITIONS } from "@/lib/constants"
+import { formatDate, formatFileSize, toError } from "@/lib/utils"
 import {
-  DOCUMENT_STATUS_LABELS,
-  DOCUMENT_STATUS_COLORS,
-  DOCUMENT_TYPE_LABELS,
-  DOCUMENT_TYPE_COLORS,
-  DOCUMENT_STATUS_TRANSITIONS,
-} from '@/constants'
-import { DocumentStatus } from '@/types'
-import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal'
+  useDocumentQuery,
+  useDeleteDocument,
+  useChangeDocumentStatus,
+} from "@/hooks/api/useDocuments"
+import { api } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { WorkflowStepper } from "@/components/common/WorkflowStepper"
+import { documentWorkflow } from "@/lib/workflows/documentWorkflow"
+import type { ValidationData } from "@/lib/workflow-engine"
+import { usePrivilegedRole } from "@/hooks/ui/usePrivilegedRole"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
+import { useRelatedQuery } from "@/hooks/api/useRelated"
+import { Badge } from "@/components/ui/badge"
 
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-function formatFileSize(bytes: number | null): string {
-  if (!bytes) return '-'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-export default function DocumentDetailPage() {
+function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>()
+  useSetPageContext({ domain: 'document', entityId: id })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const {
-    currentDocument,
-    isLoading,
-    fetchDocument,
-    changeDocumentStatus,
-    uploadFile,
-    deleteDocument,
-    clearCurrentDocument,
-  } = useDocumentStore()
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (id) {
-      fetchDocument(id)
-    }
-    return () => clearCurrentDocument()
-  }, [id, fetchDocument, clearCurrentDocument])
-
-  const canManageDocuments = user?.role === 'admin' || user?.role === 'direzione'
-  const canDelete = user?.role === 'admin'
-
-  const handleStatusChange = async (newStatus: DocumentStatus) => {
-    if (!id) return
-    try {
-      await changeDocumentStatus(id, newStatus)
-    } catch {
-      // silently ignore
-    }
-  }
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!id || !e.target.files?.[0]) return
-    setIsUploading(true)
-    try {
-      await uploadFile(id, e.target.files[0])
-    } catch {
-      // silently ignore
-    } finally {
-      setIsUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
+  const { data: doc, isLoading, error } = useDocumentQuery(id ?? "")
+  const deleteMutation = useDeleteDocument()
+  const statusMutation = useChangeDocumentStatus()
+  const { isPrivileged: canApprove } = usePrivilegedRole()
+  const { data: relatedData } = useRelatedQuery('document', id ?? '', ['versions', 'tasks'])
 
   const handleDelete = async () => {
-    if (!id || isDeleting) return
-    setIsDeleting(true)
+    if (!id) return
     try {
-      await deleteDocument(id)
-      navigate('/documents')
+      await deleteMutation.mutateAsync(id)
+      toast.success("Documento eliminato")
+      navigate("/documents")
     } catch {
-      setIsDeleting(false)
+      toast.error("Errore nell'eliminazione")
     }
   }
 
-  if (isLoading || !currentDocument) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
-      </div>
-    )
+  const handleStatusChange = async (status: string) => {
+    if (!id) return
+    try {
+      await statusMutation.mutateAsync({ id, status })
+      toast.success("Stato aggiornato")
+    } catch {
+      toast.error("Errore nell'aggiornamento dello stato")
+    }
   }
 
-  const allowedTransitions = DOCUMENT_STATUS_TRANSITIONS[currentDocument.status] || []
+  const handleDownload = async () => {
+    if (!id || !doc?.fileName) return
+    try {
+      const response = await api.get(`/documents/${id}/download`, {
+        responseType: "blob",
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement("a")
+      link.href = url
+      link.download = doc.fileName
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.error("Errore nel download del file")
+    }
+  }
+
+  const transitions = doc ? DOCUMENT_STATUS_TRANSITIONS[doc.status] ?? [] : []
+
+  // KPI row (computed inline)
+  const kpiCards = useMemo<KpiCard[]>(() => {
+    if (!doc) return []
+    const daysInStatus = Math.floor(
+      (Date.now() - new Date(doc.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    return [
+      {
+        label: "Stato workflow",
+        value: DOCUMENT_STATUS_LABELS[doc.status] ?? doc.status,
+        color: doc.status === "approved" ? "success" : doc.status === "review" ? "warning" : "project",
+        icon: FileText,
+      },
+      {
+        label: "Versione",
+        value: `v${doc.version}`,
+        color: "indigo",
+        icon: GitCommitVertical,
+      },
+      {
+        label: "Giorni in stato corrente",
+        value: String(daysInStatus),
+        subtitle: `dal ${formatDate(doc.updatedAt)}`,
+        color: daysInStatus > 14 ? "warning" : "task",
+        icon: Clock,
+      },
+      {
+        label: "Progetto",
+        value: doc.project?.name ?? "—",
+        color: "project",
+        icon: FolderOpen,
+      },
+    ]
+  }, [doc])
 
   return (
-    <div className="space-y-4">
-      {/* Compact Header */}
-      <div className="card p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 mt-0.5"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-500 dark:text-gray-400">{currentDocument.code}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">v{currentDocument.version}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${DOCUMENT_STATUS_COLORS[currentDocument.status]}`}>
-                  {DOCUMENT_STATUS_LABELS[currentDocument.status]}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${DOCUMENT_TYPE_COLORS[currentDocument.type]}`}>
-                  {DOCUMENT_TYPE_LABELS[currentDocument.type]}
-                </span>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-1 break-words">
-                {currentDocument.title}
-              </h1>
-
-              {/* Inline Info */}
-              <div className="flex items-center gap-4 mt-2 flex-wrap text-sm">
-                {currentDocument.project && (
-                  <Link
-                    to={`/projects/${currentDocument.project.id}`}
-                    className="flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline"
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                    {currentDocument.project.name}
-                  </Link>
-                )}
-                {currentDocument.createdBy && (
-                  <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                    <User className="w-4 h-4" />
-                    {currentDocument.createdBy.firstName} {currentDocument.createdBy.lastName}
-                  </span>
-                )}
-                <span className="text-gray-500 dark:text-gray-400">
-                  Creato {formatDate(currentDocument.createdAt)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          {canManageDocuments && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => navigate(`/documents/${id}/edit`)}
-                className="btn-secondary text-sm py-1.5"
-              >
-                <Edit2 className="w-4 h-4 mr-1.5" />
+    <EntityDetail
+      isLoading={isLoading}
+      error={toError(error)}
+      notFound={!isLoading && !error && !doc}
+      breadcrumbs={[
+        { label: "Home", href: "/" },
+        ...(doc?.project
+          ? [
+              { label: "Progetti", href: "/projects" },
+              { label: doc.project.name, href: `/projects/${doc.project.id}` },
+            ]
+          : []),
+        { label: "Documenti", href: "/documents" },
+        { label: doc?.title ?? "..." },
+      ]}
+      title={doc?.title}
+      subtitle={doc?.code}
+      colorBar="var(--gradient-milestone)"
+      tagEditor={id ? <TagEditor entityType="document" entityId={id} className="mt-1" /> : undefined}
+      kpiRow={kpiCards.length > 0 ? <KpiStrip cards={kpiCards} /> : undefined}
+      badges={
+        doc ? (
+          <>
+            <StatusBadge status={doc.status} labels={DOCUMENT_STATUS_LABELS} />
+            <StatusBadge status={doc.type} labels={DOCUMENT_TYPE_LABELS} />
+          </>
+        ) : undefined
+      }
+      beforeContent={
+        doc ? (
+          <WorkflowStepper
+            workflow={documentWorkflow}
+            currentPhase={doc.status === "obsolete" ? "approved" : doc.status}
+            validationData={
+              {
+                attachmentCount: doc.fileName ? 1 : 0,
+                hasApprover: canApprove,
+              } satisfies ValidationData
+            }
+            onAdvance={(nextPhase) => handleStatusChange(nextPhase)}
+            canAdvancePhase={!statusMutation.isPending && canApprove}
+          />
+        ) : undefined
+      }
+      headerActions={
+        doc ? (
+          <>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/documents/${id}/edit`}>
+                <Pencil className="h-4 w-4 mr-1" />
                 Modifica
-              </button>
-              {canDelete && (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="btn-danger text-sm py-1.5"
+              </Link>
+            </Button>
+            {doc.fileName && (
+              <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-1" />
+                Scarica
+              </Button>
+            )}
+            {transitions.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {transitions.map((t) => (
+                    <DropdownMenuItem
+                      key={t.value}
+                      onClick={() => handleStatusChange(t.value)}
+                    >
+                      {t.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </>
+        ) : undefined
+      }
+      tabs={
+        doc
+          ? [
+              {
+                key: "dettagli",
+                label: "Dettagli",
+                content: (
+                  <Card>
+                    <CardContent className="p-5 space-y-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                          Descrizione
+                        </h3>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">
+                          {doc.description || "Nessuna descrizione fornita."}
+                        </p>
+                      </div>
+
+                      {doc.fileName && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                              File allegato
+                            </h3>
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="text-sm font-medium text-foreground">
+                                  {doc.fileName}
+                                </p>
+                                {doc.fileSize && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatFileSize(doc.fileSize)}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleDownload}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      <Separator />
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                          Storico versioni
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Versione corrente: <span className="text-data font-semibold text-foreground">v{doc.version}</span>
+                        </p>
+                        {relatedData?.versions && Array.isArray(relatedData.versions) && relatedData.versions.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {(relatedData.versions as Array<{ id: string; version: number; createdAt: string; status?: string }>).map((v) => (
+                              <div key={v.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 row-accent group">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-data text-[10px]">v{v.version}</Badge>
+                                  {v.status && (
+                                    <StatusBadge status={v.status} labels={DOCUMENT_STATUS_LABELS} />
+                                  )}
+                                </div>
+                                <span className="text-data text-[10px] text-muted-foreground tabular-nums">{formatDate(v.createdAt)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">Nessuna versione precedente</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ),
+              },
+              {
+                key: "note",
+                label: "Note",
+                content: (
+                  <div className="mt-4">
+                    <NoteTab entityType="document" entityId={id!} />
+                  </div>
+                ),
+              },
+              {
+                key: "activity",
+                label: "Attività",
+                content: (
+                  <div className="mt-4">
+                    <ActivityTab entityType="document" entityId={id!} />
+                  </div>
+                ),
+              },
+            ]
+          : undefined
+      }
+      sidebar={
+        doc ? (
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Informazioni</h3>
+            <MetaRow icon={Tag} label="Stato">
+              <StatusBadge status={doc.status} labels={DOCUMENT_STATUS_LABELS} />
+            </MetaRow>
+            <MetaRow icon={FileText} label="Tipo">
+              {DOCUMENT_TYPE_LABELS[doc.type] ?? doc.type}
+            </MetaRow>
+            <MetaRow icon={Hash} label="Versione">
+              <span className="text-data font-semibold">v{doc.version}</span>
+            </MetaRow>
+            <MetaRow icon={FolderOpen} label="Progetto">
+              {doc.project ? (
+                <Link
+                  to={`/projects/${doc.project.id}`}
+                  className="text-primary hover:underline"
                 >
-                  <Trash2 className="w-4 h-4 mr-1.5" />
-                  Elimina
-                </button>
+                  {doc.project.name}
+                </Link>
+              ) : (
+                "-"
               )}
-            </div>
-          )}
-        </div>
-
-        {/* Approval info if approved */}
-        {currentDocument.approvedBy && (
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              Approvato da{' '}
-              <strong>
-                {currentDocument.approvedBy.firstName} {currentDocument.approvedBy.lastName}
-              </strong>
-              {currentDocument.approvedAt && (
-                <span className="text-gray-500 dark:text-gray-400">
-                  {' '}il {formatDate(currentDocument.approvedAt)}
-                </span>
-              )}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Review Info */}
-      {(currentDocument.reviewDueDate || currentDocument.reviewFrequencyDays) && (
-        <div className="card p-4">
-          <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <CalendarClock className="w-4 h-4 text-primary-500" />
-            Revisione Periodica
-          </h2>
-          <div className="flex flex-wrap items-center gap-4">
-            {currentDocument.reviewDueDate && (() => {
-              const dueDate = new Date(currentDocument.reviewDueDate)
-              const isOverdue = dueDate < new Date()
-              return (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Prossima revisione:</span>
-                  <span className={`text-sm font-medium ${
-                    isOverdue
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-gray-900 dark:text-white'
-                  }`}>
-                    {formatDate(currentDocument.reviewDueDate)}
-                  </span>
-                  {isOverdue && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full">
-                      <AlertCircle className="w-3 h-3" />
-                      Scaduta
-                    </span>
+            </MetaRow>
+            {doc.fileName && (
+              <MetaRow icon={HardDrive} label="File">
+                <div className="text-right">
+                  <p className="text-xs">{doc.fileName}</p>
+                  {doc.fileSize && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(doc.fileSize)}
+                    </p>
                   )}
                 </div>
-              )
-            })()}
-            {currentDocument.reviewFrequencyDays && (
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Frequenza: ogni <span className="font-medium text-gray-900 dark:text-white">{currentDocument.reviewFrequencyDays}</span> giorni
-                </span>
-              </div>
+              </MetaRow>
+            )}
+            <MetaRow icon={Calendar} label="Data">
+              {formatDate(doc.createdAt)}
+            </MetaRow>
+            {/* Related tasks */}
+            {relatedData?.tasks && Array.isArray(relatedData.tasks) && relatedData.tasks.length > 0 && (
+              <>
+                <Separator className="my-3" />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Task correlati
+                </p>
+                <div className="space-y-1.5">
+                  {(relatedData.tasks as Array<{ id: string; title: string }>).slice(0, 5).map((t) => (
+                    <Link
+                      key={t.id}
+                      to={`/tasks/${t.id}`}
+                      className="flex items-center gap-2 text-xs hover:text-primary transition-colors"
+                    >
+                      <FileText className="h-3 w-3 text-blue-500 shrink-0" />
+                      <span className="truncate">{t.title}</span>
+                    </Link>
+                  ))}
+                </div>
+              </>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Description - Collapsible */}
-      {currentDocument.description && (
-        <div className="card">
-          <button
-            onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          >
-            <span className="font-medium text-gray-900 dark:text-white">Descrizione</span>
-            <ChevronDown
-              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                isDescriptionExpanded ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-          {isDescriptionExpanded && (
-            <div className="px-4 pb-4">
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {currentDocument.description}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* File Section */}
-      <div className="card p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-gray-900 dark:text-white">File Allegato</h2>
-          {canManageDocuments && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
-                onChange={handleFileUpload}
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="btn-secondary text-sm py-1.5"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                    Caricamento...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-1.5" />
-                    {currentDocument.filePath ? 'Nuova Versione' : 'Carica File'}
-                  </>
-                )}
-              </button>
-            </>
-          )}
-        </div>
-
-        {currentDocument.filePath ? (
-          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="flex items-center gap-3">
-              <FileText className="w-8 h-8 text-blue-500 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {currentDocument.code}-v{currentDocument.version}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {currentDocument.mimeType} · {formatFileSize(currentDocument.fileSize)}
-                </p>
-              </div>
-            </div>
-            <a
-              href={`${import.meta.env.VITE_API_URL || '/api'}/documents/${currentDocument.id}/download`}
-              className="btn-secondary text-sm py-1.5"
-            >
-              <Download className="w-4 h-4 mr-1.5" />
-              Scarica
-            </a>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-            Nessun file allegato
-          </p>
-        )}
-
-        {canManageDocuments && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Il caricamento di un nuovo file incrementa la versione e riporta lo stato a Bozza
-          </p>
-        )}
-      </div>
-
-      {/* Workflow Approval */}
-      {canManageDocuments && allowedTransitions.length > 0 && (
-        <div className="card p-4">
-          <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Workflow Approvazione
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {allowedTransitions.map((status) => (
-              <button
-                key={status}
-                onClick={() => handleStatusChange(status)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                  status === 'approved'
-                    ? 'bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400'
-                    : status === 'obsolete'
-                      ? 'bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400'
-                      : 'bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {status === 'approved' && <CheckCircle className="w-4 h-4 mr-1 inline" />}
-                {DOCUMENT_STATUS_LABELS[status]}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={showDeleteConfirm}
-        title="Conferma eliminazione"
-        message="Sei sicuro di voler eliminare il documento"
-        itemName={currentDocument.title}
-        isDeleting={isDeleting}
-        onCancel={() => setShowDeleteConfirm(false)}
-        onConfirm={handleDelete}
-      />
-    </div>
+        ) : undefined
+      }
+      onDelete={handleDelete}
+      isDeleting={deleteMutation.isPending}
+      deleteConfirmMessage="Sei sicuro di voler eliminare questo documento? Questa azione non puo' essere annullata."
+    />
   )
 }
+
+export default DocumentDetailPage

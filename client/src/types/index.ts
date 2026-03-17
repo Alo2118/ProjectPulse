@@ -9,16 +9,7 @@
 
 export type UserRole = 'admin' | 'direzione' | 'dipendente' | 'guest'
 
-export type ProjectStatus =
-  | 'planning'
-  | 'design'
-  | 'verification'
-  | 'validation'
-  | 'transfer'
-  | 'maintenance'
-  | 'completed'
-  | 'on_hold'
-  | 'cancelled'
+export type ProjectStatus = 'active' | 'on_hold' | 'cancelled' | 'completed'
 
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical'
 
@@ -29,10 +20,6 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskType = 'milestone' | 'task' | 'subtask'
 
 export type RiskStatus = 'open' | 'mitigated' | 'accepted' | 'closed'
-
-export type RiskProbability = 'low' | 'medium' | 'high'
-
-export type RiskImpact = 'low' | 'medium' | 'high'
 
 export type RiskCategory = 'technical' | 'regulatory' | 'resource' | 'schedule'
 
@@ -48,6 +35,32 @@ export type DocumentStatus = 'draft' | 'review' | 'approved' | 'obsolete'
 
 export type Theme = 'light' | 'dark' | 'system'
 
+export type ThemeStyle = "office-classic" | "asana-like" | "tech-hud"
+export type ThemeMode = "light" | "dark" | "system"
+
+export type HealthStatus = 'healthy' | 'at_risk' | 'critical'
+
+export type AuditEntityType =
+  | 'user'
+  | 'project'
+  | 'task'
+  | 'risk'
+  | 'document'
+  | 'comment'
+  | 'time_entry'
+  | 'user_input'
+  | 'note'
+  | 'attachment'
+  | 'tag'
+
+export type AuditActionType =
+  | 'create'
+  | 'update'
+  | 'delete'
+  | 'status_change'
+  | 'login'
+  | 'logout'
+
 // ============================================================
 // BASE TYPES
 // ============================================================
@@ -60,6 +73,7 @@ export interface User {
   role: UserRole
   avatarUrl: string | null
   theme?: Theme
+  themeStyle?: string | null
   isActive?: boolean
   createdAt?: string
   lastLoginAt?: string | null
@@ -78,6 +92,36 @@ export interface ProjectTemplate {
   projectCount: number
 }
 
+export interface ProjectPhase {
+  key: string
+  label: string
+  description: string
+  order: number
+  color: string
+  isFinal: boolean
+  isInitial: boolean
+}
+
+export interface MilestonePhaseInfo {
+  id: string
+  code: string
+  title: string
+  status: string
+  phaseKey: string | null
+  dueDate: string | null
+  _count: { subtasks: number }
+}
+
+export interface ProjectPhasesResponse {
+  currentPhaseKey: string | null
+  status: ProjectStatus
+  phases: ProjectPhase[]
+  transitions: Record<string, string[]>
+  milestonesByPhase: Record<string, MilestonePhaseInfo[]>
+  canAdvance: boolean
+  nextPhaseKey: string | null
+}
+
 export interface Project {
   id: string
   code: string
@@ -94,6 +138,9 @@ export interface Project {
   updatedAt: string
   ownerId: string
   templateId: string | null
+  phaseTemplateId?: string | null
+  phases?: string | null
+  currentPhaseKey?: string | null
   createdById: string
   owner?: {
     id: string
@@ -151,6 +198,7 @@ export interface Task {
   departmentId: string | null
   createdById: string
   position: number
+  phaseKey?: string | null
   isRecurring?: boolean
   recurrencePattern?: {
     type: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -300,8 +348,8 @@ export interface Risk {
   title: string
   description: string | null
   category: RiskCategory
-  probability: RiskProbability
-  impact: RiskImpact
+  probability: number  // 1-5
+  impact: number       // 1-5
   status: RiskStatus
   mitigationPlan: string | null
   projectId: string
@@ -337,23 +385,7 @@ export interface RiskStats {
   openRisks: number
 }
 
-export interface RiskMatrix {
-  low: {
-    low: Risk[]
-    medium: Risk[]
-    high: Risk[]
-  }
-  medium: {
-    low: Risk[]
-    medium: Risk[]
-    high: Risk[]
-  }
-  high: {
-    low: Risk[]
-    medium: Risk[]
-    high: Risk[]
-  }
-}
+export type RiskMatrix = Record<number, Record<number, Risk[]>>
 
 export interface UserInput {
   id: string
@@ -490,14 +522,16 @@ export interface Notification {
 // API RESPONSE TYPES
 // ============================================================
 
+export interface Pagination {
+  page: number
+  limit: number
+  total: number
+  pages: number
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    pages: number
-  }
+  pagination: Pagination
 }
 
 export interface ApiResponse<T> {
@@ -704,9 +738,9 @@ export interface RiskSummary {
   title: string
   description: string | null
   category: string
-  probability: string
-  impact: string
-  riskLevel: number
+  probability: number
+  impact: number
+  score: number  // probability × impact (1-25)
   status: string
   mitigationPlan: string | null
   projectId: string
@@ -1310,13 +1344,30 @@ export interface WorkflowTemplate {
 // AUTOMATION TYPES
 // ============================================================
 
+export type AutomationDomain = 'task' | 'risk' | 'document' | 'project'
+
 export type TriggerType =
+  // Task triggers
   | 'task_status_changed'
   | 'task_created'
   | 'task_assigned'
   | 'all_subtasks_completed'
   | 'task_overdue'
   | 'task_deadline_approaching'
+  | 'task_updated'
+  | 'task_commented'
+  | 'task_idle'
+  // Risk triggers
+  | 'risk_created'
+  | 'risk_status_changed'
+  | 'risk_level_changed'
+  // Document triggers
+  | 'document_created'
+  | 'document_status_changed'
+  | 'document_review_due'
+  // Project triggers
+  | 'project_status_changed'
+  | 'project_deadline_approaching'
 
 export type ActionType =
   | 'notify_user'
@@ -1326,6 +1377,11 @@ export type ActionType =
   | 'set_task_field'
   | 'create_comment'
   | 'assign_to_user'
+  | 'set_risk_field'
+  | 'set_document_field'
+  | 'set_project_field'
+  | 'create_task'
+  | 'send_email'
 
 export type ConditionType =
   | 'task_priority_is'
@@ -1334,6 +1390,12 @@ export type ConditionType =
   | 'task_in_project'
   | 'task_has_subtasks'
   | 'task_field_equals'
+  | 'risk_probability_is'
+  | 'risk_impact_is'
+  | 'risk_category_is'
+  | 'document_type_is'
+  | 'project_status_is'
+  | 'project_priority_is'
 
 export interface TriggerConfig {
   type: TriggerType
@@ -1354,12 +1416,15 @@ export interface AutomationRule {
   id: string
   name: string
   description: string | null
+  domain: AutomationDomain
   projectId: string | null
   trigger: TriggerConfig
   conditions: ConditionConfig[]
+  conditionLogic: 'AND' | 'OR'
   actions: ActionConfig[]
   isActive: boolean
   priority: number
+  cooldownMinutes: number
   createdById: string
   lastTriggeredAt: string | null
   triggerCount: number
@@ -1367,6 +1432,25 @@ export interface AutomationRule {
   updatedAt: string
   project?: { id: string; code: string; name: string } | null
   createdBy?: { id: string; firstName: string; lastName: string } | null
+}
+
+export interface AutomationRecommendation {
+  id: string
+  projectId: string | null
+  pattern: string
+  evidence: Record<string, unknown>
+  suggestedRule: Record<string, unknown>
+  impact: 'high' | 'medium' | 'low'
+  status: 'pending' | 'applied' | 'dismissed'
+  project?: { id: string; name: string } | null
+  createdAt: string
+}
+
+export interface AutomationPackage {
+  key: string
+  name: string
+  description: string
+  templates: string[]
 }
 
 export interface AutomationLog {
@@ -1467,4 +1551,61 @@ export interface FilterRule {
 export interface AdvancedFilter {
   logic: 'and' | 'or'
   rules: FilterRule[]
+}
+
+// ============================================================
+// DOCUMENT VERSION TYPES
+// ============================================================
+
+export interface DocumentVersion {
+  id: string
+  documentId: string
+  version: number
+  filePath: string
+  fileSize: number
+  mimeType: string
+  note: string | null
+  uploadedBy: { id: string; firstName: string; lastName: string }
+  createdAt: string
+}
+
+// ============================================================
+// RISK-TASK LINK TYPES
+// ============================================================
+
+export type RiskTaskLinkType = 'mitigation' | 'verification' | 'related'
+
+export interface RiskTaskLink {
+  id: string
+  riskId: string
+  taskId: string
+  linkType: RiskTaskLinkType
+  createdAt: string
+  createdBy: { id: string; firstName: string; lastName: string }
+}
+
+// ============================================================
+// ACTIVITY & KPI TYPES
+// ============================================================
+
+export interface ActivityItem {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string
+  field?: string
+  oldValue?: string
+  newValue?: string
+  user: { id: string; firstName: string; lastName: string }
+  createdAt: string
+}
+
+export interface KpiCard {
+  label: string
+  value: string | number
+  trend?: { value: string; direction: 'up' | 'down' | 'neutral' }
+  subtitle?: string
+  color: string
+  icon?: string
 }

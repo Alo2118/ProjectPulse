@@ -1,514 +1,332 @@
-/**
- * CommandPalette - Global search overlay triggered by Ctrl+K
- * @module components/features/CommandPalette
- */
-
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useCallback, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
-  Search,
   CheckSquare,
-  FolderOpen,
-  User,
+  FolderKanban,
+  Users,
   AlertTriangle,
   FileText,
+  Plus,
+  BarChart3,
   Loader2,
+  Clock,
+  Search,
   X,
-} from 'lucide-react'
-import { useSearchStore } from '@stores/searchStore'
-import type {
-  TaskSearchResult,
-  ProjectSearchResult,
-  UserSearchResult,
-  RiskSearchResult,
-  DocumentSearchResult,
-} from '@stores/searchStore'
+} from "lucide-react"
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command"
+import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { useUIStore } from "@/stores/uiStore"
+import { useSearchQuery, type SearchDomain } from "@/hooks/api/useSearch"
+import { cn } from "@/lib/utils"
+import {
+  TASK_STATUS_LABELS,
+  PROJECT_STATUS_LABELS,
+  RISK_STATUS_LABELS,
+  DOCUMENT_STATUS_LABELS,
+} from "@/lib/constants"
 
-// ---------------------------------------------------------------------------
-// Types for the flattened result list used for keyboard navigation
-// ---------------------------------------------------------------------------
+const DOMAIN_TABS: Array<{ value: SearchDomain; label: string; icon: React.ElementType }> = [
+  { value: "all", label: "Tutto", icon: Search },
+  { value: "tasks", label: "Task", icon: CheckSquare },
+  { value: "projects", label: "Progetti", icon: FolderKanban },
+  { value: "users", label: "Utenti", icon: Users },
+  { value: "risks", label: "Rischi", icon: AlertTriangle },
+  { value: "documents", label: "Documenti", icon: FileText },
+]
 
-type ResultItem =
-  | { kind: 'task'; data: TaskSearchResult }
-  | { kind: 'project'; data: ProjectSearchResult }
-  | { kind: 'user'; data: UserSearchResult }
-  | { kind: 'risk'; data: RiskSearchResult }
-  | { kind: 'document'; data: DocumentSearchResult }
-
-// ---------------------------------------------------------------------------
-// Status badge helper
-// ---------------------------------------------------------------------------
-
-function StatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    // Task statuses
-    todo: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-    blocked: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    done: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    cancelled: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
-    // Project statuses
-    planning: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-    active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    on_hold: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-    completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    // Risk statuses
-    open: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    mitigated: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-    closed: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
-    // Document statuses
-    draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    archived: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
-  }
-
-  const cls = colorMap[status] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-
-  return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${cls}`}>
-      {status.replace(/_/g, ' ')}
-    </span>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Section header
-// ---------------------------------------------------------------------------
-
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-750 border-b border-gray-100 dark:border-gray-700/50">
-      {label}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Individual result rows
-// ---------------------------------------------------------------------------
-
-function TaskRow({ item, selected, onSelect }: { item: TaskSearchResult; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors ${
-        selected
-          ? 'bg-blue-50 dark:bg-blue-900/30'
-          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-      }`}
-    >
-      <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" />
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-          {item.title}
-        </span>
-        {item.projectName && (
-          <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
-            {item.projectName}
-          </span>
-        )}
-      </span>
-      <span className="text-xs text-gray-400 font-mono shrink-0">{item.code}</span>
-      <StatusBadge status={item.status} />
-    </button>
-  )
-}
-
-function ProjectRow({ item, selected, onSelect }: { item: ProjectSearchResult; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors ${
-        selected
-          ? 'bg-blue-50 dark:bg-blue-900/30'
-          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-      }`}
-    >
-      <FolderOpen className="w-4 h-4 text-purple-500 shrink-0" />
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-          {item.name}
-        </span>
-      </span>
-      <span className="text-xs text-gray-400 font-mono shrink-0">{item.code}</span>
-      <StatusBadge status={item.status} />
-    </button>
-  )
-}
-
-function UserRow({ item, selected, onSelect }: { item: UserSearchResult; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors ${
-        selected
-          ? 'bg-blue-50 dark:bg-blue-900/30'
-          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-      }`}
-    >
-      <User className="w-4 h-4 text-green-500 shrink-0" />
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-          {item.firstName} {item.lastName}
-        </span>
-        <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
-          {item.email}
-        </span>
-      </span>
-      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 shrink-0`}>
-        {item.role}
-      </span>
-    </button>
-  )
-}
-
-function RiskRow({ item, selected, onSelect }: { item: RiskSearchResult; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors ${
-        selected
-          ? 'bg-blue-50 dark:bg-blue-900/30'
-          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-      }`}
-    >
-      <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-          {item.title}
-        </span>
-      </span>
-      <span className="text-xs text-gray-400 font-mono shrink-0">{item.code}</span>
-      <StatusBadge status={item.status} />
-    </button>
-  )
-}
-
-function DocumentRow({ item, selected, onSelect }: { item: DocumentSearchResult; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors ${
-        selected
-          ? 'bg-blue-50 dark:bg-blue-900/30'
-          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-      }`}
-    >
-      <FileText className="w-4 h-4 text-amber-500 shrink-0" />
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-          {item.title}
-        </span>
-      </span>
-      <span className="text-xs text-gray-400 font-mono shrink-0">{item.code}</span>
-      <StatusBadge status={item.status} />
-    </button>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Main CommandPalette component
-// ---------------------------------------------------------------------------
-
-export default function CommandPalette() {
+export function CommandPalette() {
+  const open = useUIStore((s) => s.commandPaletteOpen)
+  const setOpen = useUIStore((s) => s.setCommandPalette)
+  const recentSearches = useUIStore((s) => s.recentSearches)
+  const addRecentSearch = useUIStore((s) => s.addRecentSearch)
+  const clearRecentSearches = useUIStore((s) => s.clearRecentSearches)
   const navigate = useNavigate()
-  const { isOpen, query, results, isLoading, setQuery, search, close } = useSearchStore()
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ---- Keyboard shortcut to open/close ----
+  const [query, setQuery] = useState("")
+  const [debouncedQuery, setDebouncedQuery] = useState("")
+  const [activeDomain, setActiveDomain] = useState<SearchDomain>("all")
+
+  // Debounce query by 300ms
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault()
-        if (isOpen) {
-          close()
-        } else {
-          useSearchStore.getState().open()
-        }
-      }
-      if (e.key === 'Escape' && isOpen) {
-        close()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, close])
-
-  // ---- Focus input when opened ----
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedIndex(0)
-      const timer = setTimeout(() => inputRef.current?.focus(), 50)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen])
-
-  // ---- Build flat list of results for keyboard navigation ----
-  const flatItems: ResultItem[] = []
-  if (results) {
-    results.tasks.forEach((t) => flatItems.push({ kind: 'task', data: t }))
-    results.projects.forEach((p) => flatItems.push({ kind: 'project', data: p }))
-    results.users.forEach((u) => flatItems.push({ kind: 'user', data: u }))
-    results.risks.forEach((r) => flatItems.push({ kind: 'risk', data: r }))
-    results.documents.forEach((d) => flatItems.push({ kind: 'document', data: d }))
-  }
-
-  // ---- Navigate on item select ----
-  const handleSelect = useCallback(
-    (item: ResultItem) => {
-      close()
-      switch (item.kind) {
-        case 'task':
-          navigate(`/tasks/${item.data.id}`)
-          break
-        case 'project':
-          navigate(`/projects/${item.data.id}`)
-          break
-        case 'user':
-          navigate(`/users/${item.data.id}/edit`)
-          break
-        case 'risk':
-          navigate(`/risks/${item.data.id}`)
-          break
-        case 'document':
-          navigate(`/documents/${item.data.id}`)
-          break
-      }
-    },
-    [close, navigate]
-  )
-
-  // ---- Keyboard navigation inside the palette ----
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev + 1) % Math.max(flatItems.length, 1))
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev - 1 + Math.max(flatItems.length, 1)) % Math.max(flatItems.length, 1))
-      } else if (e.key === 'Enter' && flatItems.length > 0) {
-        e.preventDefault()
-        handleSelect(flatItems[selectedIndex])
-      }
-    },
-    [flatItems, selectedIndex, handleSelect]
-  )
-
-  // ---- Handle input change with debounce ----
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setQuery(val)
-    setSelectedIndex(0)
-
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      void search(val)
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query)
     }, 300)
-  }
+    return () => clearTimeout(timer)
+  }, [query])
 
-  // ---- Compute index offsets for each section ----
-  const taskOffset = 0
-  const projectOffset = results ? results.tasks.length : 0
-  const userOffset = projectOffset + (results ? results.projects.length : 0)
-  const riskOffset = userOffset + (results ? results.users.length : 0)
-  const documentOffset = riskOffset + (results ? results.risks.length : 0)
+  const { data: results, isLoading } = useSearchQuery(debouncedQuery, activeDomain)
 
-  const hasResults = flatItems.length > 0
-  const showNoResults = query.trim().length >= 2 && !isLoading && !hasResults
+  const handleSelect = useCallback(
+    (path: string) => {
+      if (debouncedQuery.length >= 2) {
+        addRecentSearch(debouncedQuery)
+      }
+      navigate(path)
+      setOpen(false)
+      setQuery("")
+      setActiveDomain("all")
+    },
+    [navigate, setOpen, debouncedQuery, addRecentSearch]
+  )
+
+  const handleOpenChange = useCallback(
+    (value: boolean) => {
+      setOpen(value)
+      if (!value) {
+        setQuery("")
+        setActiveDomain("all")
+      }
+    },
+    [setOpen]
+  )
+
+  const handleRecentSearchClick = useCallback(
+    (recentQuery: string) => {
+      setQuery(recentQuery)
+    },
+    []
+  )
+
+  const tasks = results?.tasks ?? []
+  const projects = results?.projects ?? []
+  const users = results?.users ?? []
+  const risks = results?.risks ?? []
+  const documents = results?.documents ?? []
+
+  const hasResults =
+    tasks.length > 0 ||
+    projects.length > 0 ||
+    users.length > 0 ||
+    risks.length > 0 ||
+    documents.length > 0
+
+  const showSearch = debouncedQuery.length >= 2
+  const showRecentSearches = !showSearch && recentSearches.length > 0
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-            onClick={close}
-            aria-hidden="true"
-          />
+    <CommandDialog open={open} onOpenChange={handleOpenChange}>
+      <CommandInput
+        placeholder="Cerca task, progetti, utenti..."
+        value={query}
+        onValueChange={setQuery}
+      />
 
-          {/* Palette container */}
-          <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4 pointer-events-none">
-            <motion.div
-              key="palette"
-              initial={{ opacity: 0, scale: 0.95, y: -8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -8 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
-              className="w-full max-w-xl pointer-events-auto"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Ricerca globale"
+      {/* Domain filter tabs */}
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-border">
+        {DOMAIN_TABS.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setActiveDomain(tab.value)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                "hover:bg-accent hover:text-accent-foreground",
+                activeDomain === tab.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground"
+              )}
             >
-              <div className="modal-panel overflow-hidden">
+              <Icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
 
-                {/* Search input row */}
-                <div className="flex items-center gap-3 px-4 border-b border-gray-200 dark:border-gray-700">
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 text-gray-400 shrink-0 animate-spin" />
-                  ) : (
-                    <Search className="w-5 h-5 text-gray-400 shrink-0" />
-                  )}
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={query}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Cerca task, progetti, utenti..."
-                    aria-label="Cerca"
-                    className="w-full px-0 py-3.5 bg-transparent text-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 outline-none"
-                  />
-                  {query.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => { setQuery(''); useSearchStore.getState().clear() }}
-                      className="btn-icon shrink-0"
-                      aria-label="Cancella ricerca"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  <kbd className="hidden sm:inline-flex shrink-0 items-center gap-0.5 text-xs text-gray-400 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5">
-                    Esc
-                  </kbd>
-                </div>
-
-                {/* Results area */}
-                <div className="max-h-[60vh] overflow-y-auto">
-
-                  {/* Placeholder when query too short */}
-                  {query.trim().length < 2 && !isLoading && (
-                    <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-                      Digita almeno 2 caratteri per cercare...
-                    </div>
-                  )}
-
-                  {/* No results */}
-                  {showNoResults && (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                      Nessun risultato per{' '}
-                      <span className="font-medium text-gray-700 dark:text-gray-200">
-                        &ldquo;{query}&rdquo;
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Task results */}
-                  {hasResults && results && results.tasks.length > 0 && (
-                    <div>
-                      <SectionHeader label="Task" />
-                      {results.tasks.map((task, i) => (
-                        <TaskRow
-                          key={task.id}
-                          item={task}
-                          selected={selectedIndex === taskOffset + i}
-                          onSelect={() => handleSelect({ kind: 'task', data: task })}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Project results */}
-                  {hasResults && results && results.projects.length > 0 && (
-                    <div>
-                      <SectionHeader label="Progetti" />
-                      {results.projects.map((project, i) => (
-                        <ProjectRow
-                          key={project.id}
-                          item={project}
-                          selected={selectedIndex === projectOffset + i}
-                          onSelect={() => handleSelect({ kind: 'project', data: project })}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* User results */}
-                  {hasResults && results && results.users.length > 0 && (
-                    <div>
-                      <SectionHeader label="Utenti" />
-                      {results.users.map((user, i) => (
-                        <UserRow
-                          key={user.id}
-                          item={user}
-                          selected={selectedIndex === userOffset + i}
-                          onSelect={() => handleSelect({ kind: 'user', data: user })}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Risk results */}
-                  {hasResults && results && results.risks.length > 0 && (
-                    <div>
-                      <SectionHeader label="Rischi" />
-                      {results.risks.map((risk, i) => (
-                        <RiskRow
-                          key={risk.id}
-                          item={risk}
-                          selected={selectedIndex === riskOffset + i}
-                          onSelect={() => handleSelect({ kind: 'risk', data: risk })}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Document results */}
-                  {hasResults && results && results.documents.length > 0 && (
-                    <div>
-                      <SectionHeader label="Documenti" />
-                      {results.documents.map((doc, i) => (
-                        <DocumentRow
-                          key={doc.id}
-                          item={doc}
-                          selected={selectedIndex === documentOffset + i}
-                          onSelect={() => handleSelect({ kind: 'document', data: doc })}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer hint */}
-                {hasResults && (
-                  <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <kbd className="border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5">↑</kbd>
-                      <kbd className="border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5">↓</kbd>
-                      naviga
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <kbd className="border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5">↵</kbd>
-                      apri
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <kbd className="border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5">Esc</kbd>
-                      chiudi
-                    </span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+      <CommandList>
+        {showSearch && isLoading && (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        </>
-      )}
-    </AnimatePresence>
+        )}
+
+        {showSearch && !isLoading && !hasResults && (
+          <CommandEmpty>
+            Nessun risultato per &apos;{debouncedQuery}&apos;
+          </CommandEmpty>
+        )}
+
+        {showSearch && !isLoading && hasResults && (
+          <>
+            {tasks.length > 0 && (
+              <CommandGroup heading="Task">
+                {tasks.map((t: Record<string, string>) => (
+                  <CommandItem
+                    key={t.id}
+                    value={`task-${t.id}`}
+                    onSelect={() => handleSelect(`/tasks/${t.id}`)}
+                    className="flex items-center gap-2"
+                  >
+                    <CheckSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{t.title}</span>
+                      <span className="text-xs text-muted-foreground">{t.code}</span>
+                    </span>
+                    {t.status && (
+                      <StatusBadge status={t.status} labels={TASK_STATUS_LABELS} />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {projects.length > 0 && (
+              <CommandGroup heading="Progetti">
+                {projects.map((p: Record<string, string>) => (
+                  <CommandItem
+                    key={p.id}
+                    value={`project-${p.id}`}
+                    onSelect={() => handleSelect(`/projects/${p.id}`)}
+                    className="flex items-center gap-2"
+                  >
+                    <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{p.name}</span>
+                      <span className="text-xs text-muted-foreground">{p.code}</span>
+                    </span>
+                    {p.status && (
+                      <StatusBadge status={p.status} labels={PROJECT_STATUS_LABELS} />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {users.length > 0 && (
+              <CommandGroup heading="Utenti">
+                {users.map((u: Record<string, string>) => (
+                  <CommandItem
+                    key={u.id}
+                    value={`user-${u.id}`}
+                    onSelect={() => handleSelect(`/users/${u.id}`)}
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{u.firstName} {u.lastName}</span>
+                      <span className="text-xs text-muted-foreground">{u.email}</span>
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {risks.length > 0 && (
+              <CommandGroup heading="Rischi">
+                {risks.map((r: Record<string, string>) => (
+                  <CommandItem
+                    key={r.id}
+                    value={`risk-${r.id}`}
+                    onSelect={() => handleSelect(`/risks/${r.id}`)}
+                    className="flex items-center gap-2"
+                  >
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{r.title}</span>
+                      <span className="text-xs text-muted-foreground">{r.code}</span>
+                    </span>
+                    {r.status && (
+                      <StatusBadge status={r.status} labels={RISK_STATUS_LABELS} />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {documents.length > 0 && (
+              <CommandGroup heading="Documenti">
+                {documents.map((d: Record<string, string>) => (
+                  <CommandItem
+                    key={d.id}
+                    value={`document-${d.id}`}
+                    onSelect={() => handleSelect(`/documents/${d.id}`)}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{d.title}</span>
+                      <span className="text-xs text-muted-foreground">{d.code}</span>
+                    </span>
+                    {d.status && (
+                      <StatusBadge status={d.status} labels={DOCUMENT_STATUS_LABELS} />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </>
+        )}
+
+        {/* Recent searches (shown when input is empty) */}
+        {showRecentSearches && (
+          <CommandGroup
+            heading={
+              <span className="flex items-center justify-between w-full">
+                <span>Ricerche recenti</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto py-0 px-1 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    clearRecentSearches()
+                  }}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancella cronologia
+                </Button>
+              </span>
+            }
+          >
+            {recentSearches.map((recent) => (
+              <CommandItem
+                key={`recent-${recent.timestamp}`}
+                value={`recent-${recent.query}`}
+                onSelect={() => handleRecentSearchClick(recent.query)}
+              >
+                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span>{recent.query}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {!showSearch && (
+          <CommandGroup heading="Azioni rapide">
+            <CommandItem
+              value="nuovo-task"
+              onSelect={() => handleSelect("/tasks/new")}
+            >
+              <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>Nuovo Task</span>
+            </CommandItem>
+            <CommandItem
+              value="nuovo-progetto"
+              onSelect={() => handleSelect("/projects/new")}
+            >
+              <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>Nuovo Progetto</span>
+            </CommandItem>
+            <CommandItem
+              value="analytics"
+              onSelect={() => handleSelect("/analytics")}
+            >
+              <BarChart3 className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>Analytics</span>
+            </CommandItem>
+          </CommandGroup>
+        )}
+      </CommandList>
+    </CommandDialog>
   )
 }

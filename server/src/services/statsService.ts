@@ -10,6 +10,9 @@
  */
 
 import { prisma } from '../models/prismaClient.js'
+import { AppError } from '../middleware/errorMiddleware.js'
+import { RISK_CRITICAL_THRESHOLD, RISK_HIGH_THRESHOLD } from '../constants/enums.js'
+import type { KpiCard } from '../types/index.js'
 
 // ============================================================
 // PUBLIC TYPES
@@ -295,4 +298,340 @@ export async function getProjectTaskCountsMap(
   }
 
   return result
+}
+
+// ============================================================
+// LIST-LEVEL KPI CARDS
+// ============================================================
+
+/**
+ * KPI cards for the project list page.
+ */
+export async function getProjectStats(userId?: string, role?: string): Promise<KpiCard[]> {
+  // Suppress unused param warnings — reserved for future role-based filtering
+  void userId; void role
+  const where = { isDeleted: false }
+  const [total, active, onHold, completed] = await Promise.all([
+    prisma.project.count({ where }),
+    prisma.project.count({ where: { ...where, status: 'active' } }),
+    prisma.project.count({ where: { ...where, status: 'on_hold' } }),
+    prisma.project.count({ where: { ...where, status: 'completed' } }),
+  ])
+
+  return [
+    { label: 'Totale progetti', value: total, color: 'blue', icon: 'FolderKanban' },
+    { label: 'Attivi', value: active, color: 'green', icon: 'Play' },
+    { label: 'In pausa', value: onHold, color: 'amber', icon: 'Pause' },
+    { label: 'Completati', value: completed, color: 'emerald', icon: 'CheckCircle' },
+  ]
+}
+
+/**
+ * KPI cards for the task list page.
+ * Named getTaskKpis to avoid collision with existing getTaskStats().
+ */
+export async function getTaskKpis(userId?: string, role?: string): Promise<KpiCard[]> {
+  const baseWhere: Record<string, unknown> = { isDeleted: false, taskType: { not: 'milestone' } }
+  const assigneeFilter = role === 'dipendente' && userId
+    ? { assigneeId: userId }
+    : {}
+  const where = { ...baseWhere, ...assigneeFilter }
+
+  const [total, todo, inProgress, done, blocked] = await Promise.all([
+    prisma.task.count({ where }),
+    prisma.task.count({ where: { ...where, status: 'todo' } }),
+    prisma.task.count({ where: { ...where, status: 'in_progress' } }),
+    prisma.task.count({ where: { ...where, status: 'done' } }),
+    prisma.task.count({ where: { ...where, status: 'blocked' } }),
+  ])
+
+  return [
+    { label: 'Totale task', value: total, color: 'blue', icon: 'CheckSquare' },
+    { label: 'Da fare', value: todo, color: 'slate', icon: 'Circle' },
+    { label: 'In corso', value: inProgress, color: 'blue', icon: 'Play' },
+    { label: 'Completati', value: done, color: 'green', icon: 'CheckCircle' },
+    { label: 'Bloccati', value: blocked, color: 'red', icon: 'Ban' },
+  ]
+}
+
+/**
+ * KPI cards for the risk list page.
+ */
+export async function getRiskStats(userId?: string, role?: string): Promise<KpiCard[]> {
+  void userId; void role
+  const where = { isDeleted: false }
+
+  const [total, open, mitigated] = await Promise.all([
+    prisma.risk.count({ where }),
+    prisma.risk.count({ where: { ...where, status: 'open' } }),
+    prisma.risk.count({ where: { ...where, status: 'mitigated' } }),
+  ])
+
+  // Count critical/high risks by score
+  const openRisks = await prisma.risk.findMany({
+    where: { ...where, status: 'open' },
+    select: { probability: true, impact: true },
+  })
+  const critical = openRisks.filter(r => Number(r.probability) * Number(r.impact) >= RISK_CRITICAL_THRESHOLD).length
+  const high = openRisks.filter(r => {
+    const s = Number(r.probability) * Number(r.impact)
+    return s >= RISK_HIGH_THRESHOLD && s < RISK_CRITICAL_THRESHOLD
+  }).length
+
+  return [
+    { label: 'Totale rischi', value: total, color: 'red', icon: 'AlertTriangle' },
+    { label: 'Aperti', value: open, color: 'red', icon: 'AlertCircle' },
+    { label: 'Critici', value: critical, color: 'red', icon: 'Flame' },
+    { label: 'Alti', value: high, color: 'orange', icon: 'TrendingUp' },
+    { label: 'Mitigati', value: mitigated, color: 'blue', icon: 'Shield' },
+  ]
+}
+
+/**
+ * KPI cards for the document list page.
+ */
+export async function getDocumentStats(userId?: string, role?: string): Promise<KpiCard[]> {
+  void userId; void role
+  const where = { isDeleted: false }
+
+  const [total, draft, review, approved] = await Promise.all([
+    prisma.document.count({ where }),
+    prisma.document.count({ where: { ...where, status: 'draft' } }),
+    prisma.document.count({ where: { ...where, status: 'review' } }),
+    prisma.document.count({ where: { ...where, status: 'approved' } }),
+  ])
+
+  return [
+    { label: 'Totale documenti', value: total, color: 'purple', icon: 'FileText' },
+    { label: 'Bozze', value: draft, color: 'slate', icon: 'FilePlus' },
+    { label: 'In revisione', value: review, color: 'amber', icon: 'FileSearch' },
+    { label: 'Approvati', value: approved, color: 'green', icon: 'FileCheck' },
+  ]
+}
+
+/**
+ * KPI cards for the user management page.
+ */
+export async function getUserStats(): Promise<KpiCard[]> {
+  const where = { isDeleted: false, isActive: true }
+
+  const [total, admins, direzione, dipendenti] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.count({ where: { ...where, role: 'admin' } }),
+    prisma.user.count({ where: { ...where, role: 'direzione' } }),
+    prisma.user.count({ where: { ...where, role: 'dipendente' } }),
+  ])
+
+  return [
+    { label: 'Totale utenti', value: total, color: 'green', icon: 'Users' },
+    { label: 'Admin', value: admins, color: 'red', icon: 'ShieldCheck' },
+    { label: 'Direzione', value: direzione, color: 'purple', icon: 'Crown' },
+    { label: 'Dipendenti', value: dipendenti, color: 'blue', icon: 'User' },
+  ]
+}
+
+// ============================================================
+// BUDGET BREAKDOWN
+// ============================================================
+
+export interface BudgetMember {
+  userId: string
+  firstName: string
+  lastName: string
+  hoursLogged: number
+  cost: number
+  hourlyRate: number
+}
+
+export interface BudgetBreakdown {
+  budget: number | null
+  totalCost: number
+  totalHours: number
+  budgetUsedPercent: number | null
+  members: BudgetMember[]
+}
+
+/**
+ * Returns a per-member cost breakdown for a project, based on time entries
+ * and each user's hourly rate.
+ */
+export async function getBudgetBreakdown(projectId: string): Promise<BudgetBreakdown> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, budget: true },
+  })
+  if (!project) {
+    throw new AppError('Project not found', 404)
+  }
+
+  const timeEntries = await prisma.timeEntry.findMany({
+    where: {
+      task: { projectId, isDeleted: false },
+      isDeleted: false,
+    },
+    select: {
+      userId: true,
+      duration: true,
+      user: { select: { id: true, firstName: true, lastName: true, hourlyRate: true } },
+    },
+  })
+
+  // Group by user
+  const byUser = new Map<string, { user: typeof timeEntries[0]['user']; totalMinutes: number; totalCost: number }>()
+  for (const te of timeEntries) {
+    const existing = byUser.get(te.userId) ?? {
+      user: te.user,
+      totalMinutes: 0,
+      totalCost: 0,
+    }
+    existing.totalMinutes += te.duration ?? 0
+    const hourlyRate = Number(te.user.hourlyRate ?? 0)
+    existing.totalCost += ((te.duration ?? 0) / 60) * hourlyRate
+    byUser.set(te.userId, existing)
+  }
+
+  const members: BudgetMember[] = Array.from(byUser.values()).map(m => ({
+    userId: m.user.id,
+    firstName: m.user.firstName,
+    lastName: m.user.lastName,
+    hoursLogged: Math.round((m.totalMinutes / 60) * 100) / 100,
+    cost: Math.round(m.totalCost * 100) / 100,
+    hourlyRate: Number(m.user.hourlyRate ?? 0),
+  }))
+
+  const totalCost = members.reduce((sum, m) => sum + m.cost, 0)
+  const totalHours = members.reduce((sum, m) => sum + m.hoursLogged, 0)
+  const budgetValue = project.budget ? Number(project.budget) : null
+
+  return {
+    budget: budgetValue,
+    totalCost: Math.round(totalCost * 100) / 100,
+    totalHours: Math.round(totalHours * 100) / 100,
+    budgetUsedPercent: budgetValue ? Math.round((totalCost / budgetValue) * 10000) / 100 : null,
+    members,
+  }
+}
+
+// ============================================================
+// DETAIL-LEVEL SUMMARY CARDS
+// ============================================================
+
+/**
+ * Summary KPI cards for a single project detail page.
+ */
+export async function getProjectSummary(projectId: string): Promise<KpiCard[]> {
+  const [tasks, milestones, timeEntries, project] = await Promise.all([
+    prisma.task.findMany({
+      where: { projectId, isDeleted: false, taskType: { not: 'milestone' } },
+      select: { status: true, estimatedHours: true },
+    }),
+    prisma.task.count({
+      where: { projectId, isDeleted: false, taskType: 'milestone' },
+    }),
+    prisma.timeEntry.findMany({
+      where: { task: { projectId }, isDeleted: false },
+      select: { duration: true, user: { select: { hourlyRate: true } } },
+    }),
+    prisma.project.findUnique({
+      where: { id: projectId },
+      select: { budget: true },
+    }),
+  ])
+
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter(t => t.status === 'done').length
+  const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+  const hoursLogged = timeEntries.reduce((sum, te) => sum + (te.duration ?? 0), 0) / 60
+  const hoursEstimated = tasks.reduce((sum, t) => sum + Number(t.estimatedHours ?? 0), 0)
+  const budgetHoursPercent = hoursEstimated > 0
+    ? Math.round((hoursLogged / hoursEstimated) * 100)
+    : null
+
+  // Money budget
+  const moneyUsed = timeEntries.reduce((sum, te) => {
+    const rate = te.user?.hourlyRate ? Number(te.user.hourlyRate) : 0
+    return sum + ((te.duration ?? 0) / 60) * rate
+  }, 0)
+  const budgetTotal = project?.budget ? Number(project.budget) : null
+  const budgetMoneyPercent = budgetTotal
+    ? Math.round((moneyUsed / budgetTotal) * 100)
+    : null
+
+  const cards: KpiCard[] = [
+    { label: 'Avanzamento', value: `${progress}%`, color: 'blue', icon: 'TrendingUp' },
+    { label: 'Task', value: `${completedTasks}/${totalTasks}`, color: 'blue', icon: 'CheckSquare' },
+    { label: 'Milestone', value: milestones, color: 'purple', icon: 'Flag' },
+    {
+      label: 'Ore registrate', value: `${hoursLogged.toFixed(1)}h`, color: 'green', icon: 'Clock',
+      subtitle: hoursEstimated > 0 ? `di ${hoursEstimated}h stimate` : undefined,
+    },
+  ]
+
+  if (budgetHoursPercent !== null) {
+    cards.push({
+      label: 'Budget ore', value: `${budgetHoursPercent}%`,
+      color: budgetHoursPercent > 100 ? 'red' : 'green', icon: 'Timer',
+    })
+  }
+
+  if (budgetMoneyPercent !== null) {
+    cards.push({
+      label: 'Budget €', value: `${budgetMoneyPercent}%`,
+      color: budgetMoneyPercent > 100 ? 'red' : 'green', icon: 'Euro',
+      subtitle: `€${moneyUsed.toFixed(0)} di €${budgetTotal!.toFixed(0)}`,
+    })
+  }
+
+  return cards
+}
+
+/**
+ * Summary KPI cards for a single task detail page.
+ */
+export async function getTaskSummary(taskId: string): Promise<KpiCard[]> {
+  const [subtasks, timeEntries, task] = await Promise.all([
+    prisma.task.findMany({
+      where: { parentTaskId: taskId, isDeleted: false },
+      select: { status: true },
+    }),
+    prisma.timeEntry.findMany({
+      where: { taskId, isDeleted: false },
+      select: { duration: true },
+    }),
+    prisma.task.findUnique({
+      where: { id: taskId },
+      select: { estimatedHours: true },
+    }),
+  ])
+
+  const subtotalDone = subtasks.filter(s => s.status === 'done').length
+  const subtasksTotal = subtasks.length
+  const completion = subtasksTotal > 0
+    ? Math.round((subtotalDone / subtasksTotal) * 100)
+    : 0
+
+  const hoursLogged = timeEntries.reduce((sum, te) => sum + (te.duration ?? 0), 0) / 60
+  const hoursEstimated = Number(task?.estimatedHours ?? 0)
+  const hoursRemaining = Math.max(0, hoursEstimated - hoursLogged)
+
+  const cards: KpiCard[] = []
+
+  if (subtasksTotal > 0) {
+    cards.push({
+      label: 'Subtask', value: `${subtotalDone}/${subtasksTotal}`, color: 'blue', icon: 'GitBranch',
+      subtitle: `${completion}% completato`,
+    })
+  }
+
+  cards.push({ label: 'Ore registrate', value: `${hoursLogged.toFixed(1)}h`, color: 'green', icon: 'Clock' })
+
+  if (hoursEstimated > 0) {
+    cards.push(
+      { label: 'Ore stimate', value: `${hoursEstimated}h`, color: 'blue', icon: 'Timer' },
+      { label: 'Ore rimanenti', value: `${hoursRemaining.toFixed(1)}h`, color: hoursRemaining > 0 ? 'amber' : 'green', icon: 'Hourglass' },
+    )
+  }
+
+  return cards
 }

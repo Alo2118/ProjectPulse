@@ -14,6 +14,7 @@ import {
 } from '../types/index.js'
 import { auditService } from './auditService.js'
 import { EntityType } from '../types/index.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
 /**
  * Calculate next occurrence date based on recurrence pattern
@@ -87,11 +88,11 @@ export async function completeOccurrence(
   })
 
   if (!task) {
-    throw new Error('Task not found')
+    throw new AppError('Task not found', 404)
   }
 
   if (!task.isRecurring) {
-    throw new Error('Task is not recurring')
+    throw new AppError('Task is not recurring', 400)
   }
 
   // Create completion record in transaction
@@ -207,6 +208,7 @@ export async function getRecurringTaskWithCompletions(
       estimatedHours: true,
       actualHours: true,
       position: true,
+      phaseKey: true,
       blockedReason: true,
       isRecurring: true,
       recurrencePattern: true,
@@ -305,10 +307,10 @@ export async function setRecurrence(
   // Validate pattern if provided
   if (pattern) {
     if (!pattern.type || !Object.values(RecurrenceType).includes(pattern.type)) {
-      throw new Error('Invalid recurrence type')
+      throw new AppError('Invalid recurrence type', 400)
     }
     if (!pattern.interval || pattern.interval < 1) {
-      throw new Error('Interval must be >= 1')
+      throw new AppError('Interval must be >= 1', 400)
     }
   }
 
@@ -317,7 +319,7 @@ export async function setRecurrence(
       where: { id: taskId },
       data: {
         isRecurring,
-        recurrencePattern: isRecurring && pattern ? (pattern as unknown as any) : null,
+        recurrencePattern: isRecurring && pattern ? JSON.stringify(pattern) : null,
       },
       select: {
         id: true,

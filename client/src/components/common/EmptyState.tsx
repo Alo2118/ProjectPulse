@@ -1,37 +1,77 @@
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface EmptyStateProps {
   icon: LucideIcon
   title: string
   description?: string
-  action?: {
-    label: string
-    onClick: () => void
-  }
-  compact?: boolean
-  className?: string
+  action?: { label: string; onClick: () => void }
 }
 
-export function EmptyState({ icon: Icon, title, description, action, compact = false, className = '' }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className={`text-center ${compact ? 'py-6' : 'py-12'} ${className}`}>
-      <div className={`mx-auto mb-3 rounded-full bg-gray-100 dark:bg-surface-800 flex items-center justify-center ${
-        compact ? 'w-12 h-12' : 'w-20 h-20'
-      }`}>
-        <Icon className={`text-gray-400 dark:text-gray-500 ${compact ? 'w-6 h-6' : 'w-10 h-10'}`} />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "48px 24px",
+        background: "var(--bg-surface)",
+        border: "1px dashed var(--border-default)",
+        borderRadius: "var(--radius, 8px)",
+        textAlign: "center",
+      }}
+    >
+      {/* Icon box */}
+      <div
+        style={{
+          width: "48px",
+          height: "48px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-default)",
+          borderRadius: "12px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: "16px",
+          color: "var(--text-muted)",
+          flexShrink: 0,
+        }}
+      >
+        <Icon style={{ width: "20px", height: "20px" }} />
       </div>
-      <h3 className={`font-medium text-gray-900 dark:text-white ${compact ? 'text-sm mb-1' : 'text-lg mb-2'}`}>
+
+      {/* Title */}
+      <h3
+        style={{
+          fontSize: "14px",
+          fontWeight: 600,
+          color: "var(--text-primary)",
+          marginBottom: "4px",
+        }}
+      >
         {title}
       </h3>
+
+      {/* Description */}
       {description && (
-        <p className={`text-gray-500 dark:text-gray-400 max-w-sm mx-auto ${compact ? 'text-xs' : 'text-sm mb-4'}`}>
+        <p
+          style={{
+            fontSize: "12px",
+            color: "var(--text-muted)",
+            textAlign: "center",
+            maxWidth: "300px",
+          }}
+        >
           {description}
         </p>
       )}
-      {action && !compact && (
-        <button onClick={action.onClick} className="btn-primary mt-4">
+
+      {/* Action */}
+      {action && (
+        <Button onClick={action.onClick} className="mt-4">
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   )

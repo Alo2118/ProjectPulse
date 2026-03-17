@@ -143,8 +143,8 @@ export interface RiskContextData {
   code: string
   title: string
   category: string
-  probability: string
-  impact: string
+  probability: number
+  impact: number
   status: string
   ownerId: string | null
   projectId: string

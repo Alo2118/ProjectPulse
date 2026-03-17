@@ -8,6 +8,8 @@ import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import * as permissionService from '../services/permissionService.js'
 import { logger } from '../utils/logger.js'
+import { sendSuccess, sendCreated, sendError } from '../utils/responseHelpers.js'
+import { AppError } from '../middleware/errorMiddleware.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -30,7 +32,7 @@ const updateMemberSchema = z.object({
 
 function getRequester(req: Request): { userId: string; role: string } {
   if (!req.user) {
-    throw new Error('Unauthenticated request reached controller')
+    throw new AppError('Unauthenticated', 401)
   }
   return { userId: req.user.userId, role: req.user.role }
 }
@@ -61,7 +63,7 @@ export async function getMembers(
     )
 
     const members = await permissionService.getProjectMembers(projectId)
-    res.json({ success: true, data: members })
+    sendSuccess(res, members)
   } catch (error) {
     logger.error('Error fetching project members', { error })
     next(error)
@@ -91,10 +93,7 @@ export async function addMember(
 
     const parsed = addMemberSchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: parsed.error.errors[0]?.message ?? 'Dati non validi',
-      })
+      sendError(res, parsed.error.errors[0]?.message ?? 'Dati non validi', 400)
       return
     }
 
@@ -105,7 +104,7 @@ export async function addMember(
       userId
     )
 
-    res.status(201).json({ success: true, data: member })
+    sendCreated(res, member)
   } catch (error) {
     logger.error('Error adding project member', { error })
     next(error)
@@ -135,10 +134,7 @@ export async function updateMember(
 
     const parsed = updateMemberSchema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: parsed.error.errors[0]?.message ?? 'Dati non validi',
-      })
+      sendError(res, parsed.error.errors[0]?.message ?? 'Dati non validi', 400)
       return
     }
 
@@ -148,7 +144,7 @@ export async function updateMember(
       userId
     )
 
-    res.json({ success: true, data: updated })
+    sendSuccess(res, updated)
   } catch (error) {
     logger.error('Error updating project member', { error })
     next(error)
@@ -178,7 +174,7 @@ export async function removeMember(
 
     await permissionService.removeProjectMember(memberId, userId)
 
-    res.json({ success: true, message: 'Membro rimosso dal progetto' })
+    sendSuccess(res, { message: 'Membro rimosso dal progetto' })
   } catch (error) {
     logger.error('Error removing project member', { error })
     next(error)

@@ -1,961 +1,915 @@
-/**
- * Task Detail Page - Two-column layout with metadata sidebar
- * @module pages/tasks/TaskDetailPage
- */
-
-import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { toast } from '@stores/toastStore'
-import { useTaskStore } from '@stores/taskStore'
-import { useAuthStore } from '@stores/authStore'
-import { useTimerToggle } from '@hooks/useTimerToggle'
-import { useTaskTreeStore } from '@stores/taskTreeStore'
-import api from '@services/api'
+import { useMemo } from "react"
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { useSetPageContext } from "@/hooks/ui/usePageContext"
 import {
+  Pencil,
   Calendar,
-  User,
   Clock,
-  Play,
-  Square,
-  Edit2,
+  User,
   FolderKanban,
-  AlertCircle,
-  GitBranch,
-  MessageSquare,
-  ExternalLink,
-  Timer,
-  StickyNote,
-  Paperclip,
+  Flag,
   AlertTriangle,
-  Target,
-  CheckSquare,
-  ListTodo,
-  Repeat2,
-  Copy,
-  Check,
-  History,
-  Loader2,
-  Tag as TagIcon,
-} from 'lucide-react'
-import { Comment, TaskStatus, Note, Attachment, Tag } from '@/types'
-import { StatusIcon } from '@/components/ui/StatusIcon'
-import { ProgressBar } from '@/components/ui/ProgressBar'
-import { ChecklistSection } from '@/components/tasks/ChecklistSection'
-import { CustomFieldsSection } from '@/components/tasks/CustomFieldsSection'
-import { CommentSection } from '@/components/tasks/CommentSection'
-import { TaskTreeView } from '@/components/reports/TaskTreeView'
-import { BlockedReasonModal } from '@/components/tasks/BlockedReasonModal'
-import { NoteSection } from '@/components/common/NoteSection'
-import { AttachmentSection } from '@/components/common/AttachmentSection'
-import { DetailPageHeader } from '@/components/common/DetailPageHeader'
-import { TabSection } from '@/components/common/TabSection'
-import { Breadcrumb } from '@/components/common/Breadcrumb'
-import { DepartmentBadge } from '@/components/ui/DepartmentBadge'
+  GitBranch,
+  ChevronRight,
+  Upload,
+  Download,
+  FileText,
+  FilePlus,
+  Timer,
+  Plus,
+  MoreHorizontal,
+} from "lucide-react"
+import { toast } from "sonner"
+import { EntityDetail } from "@/components/common/EntityDetail"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  useTaskQuery,
+  useChangeTaskStatus,
+  useDeleteTask,
+  useSubtasksQuery,
+} from "@/hooks/api/useTasks"
+import { useTimeEntryListQuery } from "@/hooks/api/useTimeEntries"
+import { useSummaryQuery } from "@/hooks/api/useStats"
+import { KpiStrip } from "@/components/common/KpiStrip"
+import { useAttachmentListQuery } from "@/hooks/api/useAttachments"
+import {
+  TASK_STATUS_LABELS,
+  TASK_PRIORITY_LABELS,
   TASK_TYPE_LABELS,
   TASK_TYPE_COLORS,
-} from '@/constants'
-import { useTagStore } from '@stores/tagStore'
-import { useWorkflowStore } from '@stores/workflowStore'
-import TagList from '@components/tags/TagList'
-import WorkflowStepper from '@components/tasks/WorkflowStepper'
-import ActivityFeed from '@components/common/ActivityFeed'
-import StatusTimeline from '@components/tasks/StatusTimeline'
-import { formatDate, formatDateRelative, formatHoursFromDecimal } from '@utils/dateFormatters'
-import { useTaskRoom } from '@hooks/useTaskRoom'
+  STATUS_COLORS_LEGACY,
+} from "@/lib/constants"
+import { formatDate, formatDateTime, getUserInitials, getAvatarColor, formatFileSize, toError } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { TagEditor } from "@/components/common/TagEditor"
+import { ActivityTab } from "@/components/common/ActivityTab"
+import { CommentSection } from "@/components/domain/tasks/CommentSection"
+import { ChecklistSection } from "@/components/domain/tasks/ChecklistSection"
+import { WorkflowStepper } from "@/components/common/WorkflowStepper"
+import { taskWorkflow } from "@/lib/workflows/taskWorkflow"
+import type { ValidationData } from "@/lib/workflow-engine"
 
-function formatHours(value: number | null | undefined): string {
-  return formatHoursFromDecimal(value)
+// ---- Types ----
+
+interface TaskData {
+  id: string
+  code: string
+  title: string
+  description?: string | null
+  taskType: string
+  status: string
+  priority: string
+  startDate?: string | null
+  dueDate?: string | null
+  estimatedHours?: number | null
+  actualHours?: number | null
+  blockedReason?: string | null
+  projectId?: string | null
+  assigneeId?: string | null
+  parentTaskId?: string | null
+  phaseKey?: string | null
+  createdAt?: string | null
+  project?: { id: string; name: string; code: string } | null
+  assignee?: { id: string; firstName: string; lastName: string } | null
+  parentTask?: { id: string; code: string; title: string; taskType: string } | null
+  subtasksSummary?: { total: number; completed: number } | null
+  _count?: {
+    comments: number
+    timeEntries: number
+    subtasks: number
+  }
 }
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────
+interface SubtaskRow {
+  id: string
+  code: string
+  title: string
+  status: string
+  priority: string
+  dueDate?: string | null
+  assignee?: { firstName: string; lastName: string } | null
+}
 
-function TaskDetailSkeleton() {
+interface TimeEntryRow {
+  id: string
+  description?: string | null
+  startTime?: string | null
+  endTime?: string | null
+  hours?: number | null
+  durationMinutes?: number | null
+  user?: { id: string; firstName: string; lastName: string } | null
+}
+
+interface AttachmentRow {
+  id: string
+  fileName: string
+  fileType?: string | null
+  fileSize?: number | null
+  createdAt: string
+  uploader?: { firstName: string; lastName: string } | null
+}
+
+// ---- Helpers ----
+
+function getNextStatus(current: string): string | null {
+  const flow: Record<string, string> = {
+    todo: "in_progress",
+    in_progress: "review",
+    review: "done",
+  }
+  return flow[current] ?? null
+}
+
+function getNextStatusLabel(current: string): string {
+  const next = getNextStatus(current)
+  if (!next) return ""
+  return TASK_STATUS_LABELS[next] ?? next
+}
+
+function getFileIcon(fileType: string | null | undefined) {
+  if (!fileType) return <FileText className="h-5 w-5 text-muted-foreground" />
+  const t = fileType.toLowerCase()
+  if (t.includes("pdf")) return <FileText className="h-5 w-5 text-red-500" />
+  if (t.includes("image") || t.includes("png") || t.includes("jpg") || t.includes("jpeg"))
+    return <FileText className="h-5 w-5 text-blue-500" />
+  if (t.includes("word") || t.includes("doc"))
+    return <FileText className="h-5 w-5 text-blue-600" />
+  if (t.includes("excel") || t.includes("sheet") || t.includes("csv"))
+    return <FileText className="h-5 w-5 text-green-600" />
+  return <FileText className="h-5 w-5 text-muted-foreground" />
+}
+
+// ---- Sub-components ----
+
+function KpiRow({ t, subtaskList }: { t: TaskData; subtaskList: SubtaskRow[] }) {
+  const totalSubs = t.subtasksSummary?.total ?? t._count?.subtasks ?? subtaskList.length
+  const doneSubs = t.subtasksSummary?.completed ?? subtaskList.filter((s) => s.status === "done" || s.status === "cancelled").length
+  const completionPct = totalSubs > 0 ? Math.round((doneSubs / totalSubs) * 100) : 0
+  const logged = t.actualHours ?? 0
+  const estimated = t.estimatedHours ?? 0
+  const assigneeName = t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : "Non assegnato"
+  const assigneeInitials = t.assignee ? getUserInitials(t.assignee.firstName, t.assignee.lastName) : "—"
+  const assigneeColor = t.assignee ? getAvatarColor(`${t.assignee.firstName}${t.assignee.lastName}`) : "bg-muted"
+
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Breadcrumb skeleton */}
-      <div className="flex gap-2 items-center">
-        <div className="skeleton h-4 w-16 rounded" />
-        <div className="skeleton h-4 w-4 rounded" />
-        <div className="skeleton h-4 w-24 rounded" />
-        <div className="skeleton h-4 w-4 rounded" />
-        <div className="skeleton h-4 w-32 rounded" />
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* Avanzamento */}
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-primary)" } as React.CSSProperties}>
+        <CardContent className="p-3 space-y-1.5">
+          <p className="text-kpi-label">Avanzamento</p>
+          <p className="text-kpi-value text-foreground">{completionPct}%</p>
+          <Progress value={completionPct} className="h-1.5 progress-shine" />
+        </CardContent>
+      </Card>
+
+      {/* Subtask */}
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-milestone)" } as React.CSSProperties}>
+        <CardContent className="p-3 space-y-1">
+          <p className="text-kpi-label">Subtask</p>
+          <div className="flex items-baseline gap-1">
+            <GitBranch className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-kpi-value text-foreground">{totalSubs}</span>
+          </div>
+          <p className="text-micro text-muted-foreground">
+            {doneSubs} fatti · {totalSubs - doneSubs} aperti
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Ore loggate */}
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-warning)" } as React.CSSProperties}>
+        <CardContent className="p-3 space-y-1">
+          <p className="text-kpi-label">Ore loggate</p>
+          <div className="flex items-baseline gap-1">
+            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-kpi-value text-foreground">{logged}h</span>
+          </div>
+          {estimated > 0 && (
+            <p className="text-micro text-muted-foreground">su {estimated}h stimate</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Assegnato a */}
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-success)" } as React.CSSProperties}>
+        <CardContent className="p-3 space-y-1">
+          <p className="text-kpi-label">Assegnato a</p>
+          <div className="flex items-center gap-2 mt-1">
+            {t.assignee ? (
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className={cn("text-white text-[10px] font-medium", assigneeColor)}>
+                  {assigneeInitials}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <User className="h-5 w-5 text-muted-foreground" />
+            )}
+            <span className="text-sm font-medium text-foreground truncate">{assigneeName}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Fase / Progetto */}
+      <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-project)" } as React.CSSProperties}>
+        <CardContent className="p-3 space-y-1">
+          <p className="text-kpi-label">Progetto</p>
+          {t.project ? (
+            <Link
+              to={`/projects/${t.project.id}`}
+              className="flex items-center gap-1.5 mt-1 group"
+            >
+              <FolderKanban className="h-4 w-4 text-blue-500 shrink-0" />
+              <span className="text-sm font-medium text-primary group-hover:underline truncate">
+                {t.project.name}
+              </span>
+            </Link>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-1">—</p>
+          )}
+          {t.phaseKey && (
+            <p className="text-micro text-muted-foreground">{t.phaseKey}</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function DetailsTab({ t }: { t: TaskData }) {
+  const isDueDateOverdue =
+    t.dueDate &&
+    t.status !== "done" &&
+    t.status !== "cancelled" &&
+    new Date(t.dueDate) < new Date()
+
+  return (
+    <div className="space-y-4 pt-4">
+      {/* Blocked reason banner */}
+      {t.status === "blocked" && t.blockedReason && (
+        <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4">
+          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-destructive">Motivo del blocco</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{t.blockedReason}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Description */}
+      <div
+        className={cn(
+          "rounded-md border border-border px-5 py-4 transition-colors",
+          "hover:bg-muted/30 cursor-default"
+        )}
+      >
+        <h3 className="text-sm font-semibold text-foreground mb-2">Descrizione</h3>
+        {t.description ? (
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+            {t.description}
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">Nessuna descrizione</p>
+        )}
       </div>
 
-      {/* Header skeleton */}
-      <div className="flex items-center gap-4">
-        <div className="skeleton w-9 h-9 rounded-lg" />
-        <div className="flex-1">
-          <div className="skeleton h-7 w-64 rounded-lg" />
-          <div className="skeleton h-4 w-32 mt-1 rounded" />
-        </div>
-        <div className="flex gap-1.5">
-          <div className="skeleton w-9 h-9 rounded-lg" />
-          <div className="skeleton w-9 h-9 rounded-lg" />
-          <div className="skeleton w-9 h-9 rounded-lg" />
-          <div className="skeleton w-9 h-9 rounded-lg" />
-        </div>
-      </div>
-
-      {/* Two-column skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="skeleton w-9 h-9 rounded-lg" />
-              <div className="skeleton h-4 w-24 rounded" />
+      {/* Details grid */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Dettagli</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground w-24 shrink-0">Inizio</span>
+              <span className="text-sm text-foreground">{t.startDate ? formatDate(t.startDate) : "—"}</span>
             </div>
-            <div className="skeleton h-7 w-3/4 rounded-lg" />
-            <div className="skeleton h-4 w-full mt-3 rounded" />
-            <div className="skeleton h-4 w-2/3 mt-2 rounded" />
-          </div>
-          <div className="card p-4">
-            <div className="flex gap-3 mb-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="skeleton h-8 w-20 rounded-lg" />
-              ))}
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground w-24 shrink-0">Scadenza</span>
+              <span className={cn("text-sm", isDueDateOverdue && "text-destructive font-medium")}>
+                {t.dueDate ? formatDate(t.dueDate) : "—"}
+              </span>
             </div>
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="skeleton h-4 w-full rounded" />
-              ))}
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground w-24 shrink-0">Ore stimate</span>
+              <span className="text-sm text-foreground">{t.estimatedHours != null ? `${t.estimatedHours}h` : "—"}</span>
             </div>
-          </div>
-        </div>
-
-        {/* Right sidebar skeleton */}
-        <div className="lg:col-span-1">
-          <div className="card p-4 space-y-0">
-            {/* Stepper skeleton */}
-            <div className="flex gap-2 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-1">
-                  <div className="skeleton w-7 h-7 rounded-full" />
-                  {i < 3 && <div className="skeleton h-0.5 w-8 rounded" />}
-                </div>
-              ))}
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground w-24 shrink-0">Ore effettive</span>
+              <span className="text-sm text-foreground">{t.actualHours != null ? `${t.actualHours}h` : "—"}</span>
             </div>
-            {/* Meta rows skeleton */}
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex justify-between py-2.5 border-b border-gray-100 dark:border-gray-700/50 last:border-0">
-                <div className="skeleton h-4 w-20 rounded" />
-                <div className="skeleton h-4 w-24 rounded" />
+            {t.parentTask && (
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <GitBranch className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground w-24 shrink-0">Task padre</span>
+                <Link
+                  to={`/tasks/${t.parentTask.id}`}
+                  className="text-sm text-primary hover:underline truncate"
+                >
+                  {t.parentTask.title}
+                </Link>
               </div>
-            ))}
+            )}
+            {t.createdAt && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground w-24 shrink-0">Creato il</span>
+                <span className="text-sm text-foreground">{formatDateTime(t.createdAt)}</span>
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function SubtasksTab({
+  subtaskList,
+  taskId,
+}: {
+  subtaskList: SubtaskRow[]
+  taskId: string
+}) {
+  const total = subtaskList.length
+  const done = subtaskList.filter((s) => s.status === "done" || s.status === "cancelled").length
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+
+  return (
+    <div className="space-y-4 pt-4">
+      {/* Progress header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 space-y-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{done} / {total} completati</span>
+            <span className="font-medium tabular-nums">{pct}%</span>
+          </div>
+          <Progress value={pct} className="h-2 progress-shine" />
         </div>
+        <Button size="sm" variant="outline" asChild>
+          <Link to={`/tasks/new?parentTaskId=${taskId}`}>
+            <Plus className="h-4 w-4 mr-1" />
+            Nuovo subtask
+          </Link>
+        </Button>
+      </div>
+
+      {/* Subtask list */}
+      {subtaskList.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border py-10 text-center">
+          <GitBranch className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Nessun subtask</p>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {subtaskList.map((sub) => {
+            const isOverdue =
+              sub.dueDate &&
+              sub.status !== "done" &&
+              sub.status !== "cancelled" &&
+              new Date(sub.dueDate) < new Date()
+            const initials = sub.assignee ? getUserInitials(sub.assignee.firstName, sub.assignee.lastName) : null
+            const color = sub.assignee ? getAvatarColor(`${sub.assignee.firstName}${sub.assignee.lastName}`) : "bg-muted"
+            const isDone = sub.status === "done" || sub.status === "cancelled"
+
+            return (
+              <Link
+                key={sub.id}
+                to={`/tasks/${sub.id}`}
+                className="flex items-center gap-3 rounded-md border border-border px-4 py-3 hover:bg-muted/40 transition-colors group"
+              >
+                {/* Checkbox visual */}
+                <div
+                  className={cn(
+                    "h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors",
+                    isDone
+                      ? "border-green-500 bg-green-500"
+                      : "border-border group-hover:border-primary/50"
+                  )}
+                >
+                  {isDone && (
+                    <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 12 12">
+                      <path d="M10.28 2.28a.75.75 0 0 0-1.06 0L4.5 7l-1.72-1.72a.75.75 0 1 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.06 0l5.25-5.25a.75.75 0 0 0 0-1.06z" />
+                    </svg>
+                  )}
+                </div>
+
+                {/* Name */}
+                <span className={cn("flex-1 text-sm font-medium truncate", isDone && "line-through text-muted-foreground")}>
+                  {sub.title}
+                </span>
+
+                {/* Status + deadline + assignee */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {sub.dueDate && (
+                    <span className={cn("text-xs", isOverdue ? "text-destructive font-medium" : "text-muted-foreground")}>
+                      {formatDate(sub.dueDate)}
+                    </span>
+                  )}
+                  <StatusBadge status={sub.status} labels={TASK_STATUS_LABELS} />
+                  {initials && (
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className={cn("text-white text-[9px] font-medium", color)}>
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Add subtask dashed row */}
+      <Link
+        to={`/tasks/new?parentTaskId=${taskId}`}
+        className="flex items-center gap-2 rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+      >
+        <Plus className="h-4 w-4" />
+        Aggiungi subtask
+      </Link>
+    </div>
+  )
+}
+
+function TimeEntriesTab({
+  taskId,
+  estimatedHours,
+}: {
+  taskId: string
+  estimatedHours?: number | null
+}) {
+  const { data, isLoading } = useTimeEntryListQuery({ taskId })
+  const rawList = (data?.data ?? data ?? []) as TimeEntryRow[]
+
+  const totalLogged = rawList.reduce((acc, e) => {
+    if (e.hours != null) return acc + e.hours
+    if (e.durationMinutes != null) return acc + e.durationMinutes / 60
+    return acc
+  }, 0)
+
+  const estimated = estimatedHours ?? 0
+  const remaining = Math.max(estimated - totalLogged, 0)
+  const loggedPct = estimated > 0 ? Math.min(Math.round((totalLogged / estimated) * 100), 100) : 0
+
+  return (
+    <div className="space-y-4 pt-4">
+      {/* Header with action */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Log Ore</h3>
+        <Button size="sm" variant="outline" asChild>
+          <Link to={`/time-tracking?taskId=${taskId}`}>
+            <Timer className="h-4 w-4 mr-1" />
+            Aggiungi voce
+          </Link>
+        </Button>
+      </div>
+
+      {/* 3-card summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-time)" } as React.CSSProperties}>
+          <CardContent className="p-3 text-center">
+            <p className="text-kpi-label mb-1">Loggate</p>
+            <p className="text-kpi-value text-foreground text-data">{totalLogged.toFixed(1)}h</p>
+          </CardContent>
+        </Card>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-milestone)" } as React.CSSProperties}>
+          <CardContent className="p-3 text-center">
+            <p className="text-kpi-label mb-1">Stimate</p>
+            <p className="text-kpi-value text-foreground text-data">{estimated > 0 ? `${estimated}h` : "—"}</p>
+          </CardContent>
+        </Card>
+        <Card className="kpi-accent" style={{ "--kpi-gradient": "var(--gradient-success)" } as React.CSSProperties}>
+          <CardContent className="p-3 text-center">
+            <p className="text-kpi-label mb-1">Rimanenti</p>
+            <p className={cn("text-kpi-value text-data", remaining === 0 && estimated > 0 ? "text-success" : "text-foreground")}>
+              {estimated > 0 ? `${remaining.toFixed(1)}h` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Progress bar */}
+      {estimated > 0 && (
+        <div className="space-y-1">
+          <Progress
+            value={loggedPct}
+            className={cn("h-2 progress-shine", loggedPct >= 100 && "[&>div]:bg-destructive")}
+          />
+          <p className="text-xs text-muted-foreground text-right">{loggedPct}% del budget ore utilizzato</p>
+        </div>
+      )}
+
+      {/* Entries */}
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-14 rounded-md bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : rawList.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border py-8 text-center">
+          <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Nessuna voce registrata</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Voci recenti</p>
+          {rawList.map((entry) => {
+            const firstName = entry.user?.firstName ?? "?"
+            const lastName = entry.user?.lastName ?? "?"
+            const initials = getUserInitials(firstName, lastName)
+            const color = getAvatarColor(`${firstName}${lastName}`)
+            const hours = entry.hours != null
+              ? entry.hours
+              : entry.durationMinutes != null
+              ? entry.durationMinutes / 60
+              : 0
+
+            return (
+              <div key={entry.id} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
+                <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground truncate">
+                    {entry.description ?? "Voce ore"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {entry.startTime ? formatDate(entry.startTime) : "—"}
+                    {entry.endTime && entry.startTime && ` → ${formatDate(entry.endTime)}`}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold text-foreground text-data shrink-0">
+                  {hours.toFixed(1)}h
+                </span>
+                <Avatar className="h-7 w-7 shrink-0">
+                  <AvatarFallback className={cn("text-white text-[9px] font-medium", color)}>
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AttachmentsTab({ taskId }: { taskId: string }) {
+  const { data, isLoading } = useAttachmentListQuery("task", taskId)
+  const attachments = (data ?? []) as AttachmentRow[]
+
+  return (
+    <div className="space-y-4 pt-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {attachments.length} {attachments.length === 1 ? "file allegato" : "file allegati"}
+        </p>
+        <Button size="sm" variant="outline">
+          <Upload className="h-4 w-4 mr-1" />
+          Carica file
+        </Button>
+      </div>
+
+      {/* File list */}
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-16 rounded-md bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : attachments.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border py-8 text-center">
+          <FilePlus className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Nessun allegato</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {attachments.map((att) => (
+            <div key={att.id} className="flex items-center gap-3 rounded-md border border-border px-4 py-3">
+              {getFileIcon(att.fileType)}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{att.fileName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {att.fileType ?? "File"}
+                  {att.fileSize != null && ` · ${formatFileSize(att.fileSize)}`}
+                  {" · "}{formatDate(att.createdAt)}
+                  {att.uploader && ` · ${att.uploader.firstName} ${att.uploader.lastName}`}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                <Download className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload zone */}
+      <div className="flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border py-8 text-center hover:border-primary/40 hover:bg-muted/20 transition-colors cursor-pointer">
+        <Upload className="h-6 w-6 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Trascina qui i file o clicca per caricare</p>
       </div>
     </div>
   )
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────
+// ---- Main component ----
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>()
+  useSetPageContext({ domain: "task", entityId: id })
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const { currentTask, isLoading, fetchTask, changeTaskStatus, clearCurrentTask, cloneTask } = useTaskStore()
-  const { canTrackTime, handleTimerToggle: timerToggleById, runningTimerTaskId } = useTimerToggle()
-  const { treeData } = useTaskTreeStore()
-  const { fetchProjectWorkflow, getAvailableTransitions, getStatusLabel } = useWorkflowStore()
 
-  const [comments, setComments] = useState<Comment[]>([])
-  const [commentsLoading, setCommentsLoading] = useState(false)
-  const [notes, setNotes] = useState<Note[]>([])
-  const [notesLoading, setNotesLoading] = useState(false)
-  const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [attachmentsLoading, setAttachmentsLoading] = useState(false)
-  const [taskTags, setTaskTags] = useState<Tag[]>([])
-  const { fetchEntityTags } = useTagStore()
-  const [showBlockedModal, setShowBlockedModal] = useState(false)
-  const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null)
-  const [isChangingStatus, setIsChangingStatus] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
-  const [isCloning, setIsCloning] = useState(false)
+  const { data: task, isLoading, error } = useTaskQuery(id ?? "")
+  const { data: subtasks } = useSubtasksQuery(id ?? "")
+  const { data: summaryKpis } = useSummaryQuery('task', id ?? '')
+  const changeStatus = useChangeTaskStatus()
+  const deleteTask = useDeleteTask()
 
-  useEffect(() => {
-    if (id) {
-      fetchTask(id)
-      loadComments(id)
-      loadNotes(id)
-      loadAttachments(id)
-      fetchEntityTags('task', id).then(setTaskTags)
+  const t = task as TaskData | undefined
+  const subtaskList = (subtasks ?? []) as SubtaskRow[]
+
+  // ---- Breadcrumbs ----
+  const breadcrumbs = useMemo(() => {
+    const crumbs: Array<{ label: string; href?: string; domain?: string }> = [
+      { label: "Home", href: "/" },
+    ]
+    if (t?.project) {
+      crumbs.push({ label: "Progetti", href: "/projects", domain: "project" })
+      crumbs.push({ label: t.project.name, href: `/projects/${t.project.id}` })
+    } else {
+      crumbs.push({ label: "Task", href: "/tasks" })
     }
-    return () => clearCurrentTask()
-  }, [id, fetchTask, clearCurrentTask, fetchEntityTags])
-
-  // Fetch project workflow for dynamic status transitions
-  useEffect(() => {
-    if (currentTask?.projectId) {
-      fetchProjectWorkflow(currentTask.projectId)
+    if (t?.parentTask) {
+      crumbs.push({ label: t.parentTask.title, href: `/tasks/${t.parentTask.id}` })
     }
-  }, [currentTask?.projectId, fetchProjectWorkflow])
+    crumbs.push({ label: t?.title ?? "..." })
+    return crumbs
+  }, [t])
 
-  const loadComments = async (taskId: string) => {
-    setCommentsLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Comment[] }>(
-        `/comments/task/${taskId}`
-      )
-      if (response.data.success) {
-        setComments(response.data.data)
-      }
-    } catch {
-      toast.error('Errore', 'Impossibile caricare i commenti')
-    } finally {
-      setCommentsLoading(false)
-    }
-  }
-
-  const loadNotes = async (taskId: string) => {
-    setNotesLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Note[] }>(
-        `/notes/task/${taskId}`
-      )
-      if (response.data.success) {
-        setNotes(response.data.data)
-      }
-    } catch {
-      toast.error('Errore', 'Impossibile caricare le note')
-    } finally {
-      setNotesLoading(false)
-    }
-  }
-
-  const loadAttachments = async (taskId: string) => {
-    setAttachmentsLoading(true)
-    try {
-      const response = await api.get<{ success: boolean; data: Attachment[] }>(
-        `/attachments/task/${taskId}`
-      )
-      if (response.data.success) {
-        setAttachments(response.data.data)
-      }
-    } catch {
-      toast.error('Errore', 'Impossibile caricare gli allegati')
-    } finally {
-      setAttachmentsLoading(false)
-    }
-  }
-
-  const handleStatusChange = useCallback(
-    async (newStatus: TaskStatus) => {
-      if (!id) return
-
-      if (newStatus === 'blocked') {
-        setPendingStatus(newStatus)
-        setShowBlockedModal(true)
-        return
-      }
-
-      try {
-        await changeTaskStatus(id, newStatus)
-      } catch {
-        // silently ignore
-      }
-    },
-    [id, changeTaskStatus]
-  )
-
-  const handleBlockedConfirm = useCallback(
-    async (reason: string) => {
-      if (!id || !pendingStatus) return
-
-      setIsChangingStatus(true)
-      try {
-        await changeTaskStatus(id, pendingStatus, reason)
-        setShowBlockedModal(false)
-        setPendingStatus(null)
-      } catch {
-        // silently ignore
-      } finally {
-        setIsChangingStatus(false)
-      }
-    },
-    [id, pendingStatus, changeTaskStatus]
-  )
-
-  const handleBlockedCancel = useCallback(() => {
-    setShowBlockedModal(false)
-    setPendingStatus(null)
-  }, [])
-
-  const handleTimerToggle = useCallback(async () => {
+  // ---- Handlers ----
+  const handleStatusChange = (newStatus: string) => {
     if (!id) return
-    await timerToggleById(id)
-  }, [id, timerToggleById])
-
-  const handleSubtaskTimerToggle = useCallback(
-    async (taskId: string) => {
-      await timerToggleById(taskId)
-    },
-    [timerToggleById]
-  )
-
-  const handleCommentAdded = useCallback((comment: Comment) => {
-    setComments((prev) => [comment, ...prev])
-  }, [])
-
-  const handleCommentDeleted = useCallback((commentId: string) => {
-    setComments((prev) => prev.filter((c) => c.id !== commentId))
-  }, [])
-
-  // Real-time comment handlers — called by useTaskRoom when another user
-  // creates, edits, or deletes a comment on this task.
-  const handleRealtimeCommentCreated = useCallback(({ comment }: { comment: Comment; taskId: string }) => {
-    // Guard against duplicates (the author's own action already updated state via handleCommentAdded)
-    setComments((prev) =>
-      prev.some((c) => c.id === comment.id) ? prev : [comment, ...prev]
+    changeStatus.mutate(
+      { id, status: newStatus },
+      {
+        onSuccess: () => toast.success("Stato aggiornato"),
+        onError: () => toast.error("Errore nell'aggiornamento dello stato"),
+      }
     )
-  }, [])
+  }
 
-  const handleRealtimeCommentUpdated = useCallback(({ comment }: { comment: Comment; taskId: string }) => {
-    setComments((prev) =>
-      prev.map((c) => (c.id === comment.id ? comment : c))
-    )
-  }, [])
-
-  const handleRealtimeCommentDeleted = useCallback(({ commentId }: { commentId: string; taskId: string }) => {
-    setComments((prev) => prev.filter((c) => c.id !== commentId))
-  }, [])
-
-  // Join the task socket room to receive real-time comment updates from other users
-  useTaskRoom(id, {
-    onCommentCreated: handleRealtimeCommentCreated,
-    onCommentUpdated: handleRealtimeCommentUpdated,
-    onCommentDeleted: handleRealtimeCommentDeleted,
-  })
-
-  const handleNoteAdded = useCallback((note: Note) => {
-    setNotes((prev) => [note, ...prev])
-  }, [])
-
-  const handleNoteDeleted = useCallback((noteId: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== noteId))
-  }, [])
-
-  const handleAttachmentAdded = useCallback((attachment: Attachment) => {
-    setAttachments((prev) => [attachment, ...prev])
-  }, [])
-
-  const handleAttachmentDeleted = useCallback((attachmentId: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== attachmentId))
-  }, [])
-
-  const handleCopyLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setIsCopied(true)
-      toast.success('Link copiato', 'Il link al task è stato copiato negli appunti.')
-      setTimeout(() => setIsCopied(false), 2000)
-    } catch {
-      toast.error('Errore', 'Impossibile copiare il link.')
-    }
-  }, [])
-
-  const handleCloneTask = useCallback(async () => {
+  const handleDelete = () => {
     if (!id) return
-    setIsCloning(true)
-    try {
-      const cloned = await cloneTask(id, false)
-      toast.success('Task duplicato', `Creato "${cloned.title}"`)
-      navigate(`/tasks/${cloned.id}`)
-    } catch {
-      // Error toast already shown in store
-    } finally {
-      setIsCloning(false)
-    }
-  }, [id, cloneTask, navigate])
-
-  // ── Derived state ─────────────────────────────────────────────────────────
-
-  const isCreator = currentTask?.createdById === user?.id
-  const isAssignee = currentTask?.assignee?.id === user?.id
-  const isTaskOwner = isCreator || isAssignee
-  const canEdit = user?.role === 'admin' || user?.role === 'direzione' || isTaskOwner
-  const isTimerRunning = runningTimerTaskId === id
-
-  const estimatedHours = currentTask?.estimatedHours ?? 0
-  const actualHours = currentTask?.actualHours ?? 0
-  const hoursProgress = estimatedHours > 0 ? Math.min((actualHours / estimatedHours) * 100, 100) : 0
-  const isOverBudget = actualHours > estimatedHours && estimatedHours > 0
-
-  const daysUntilDeadline = currentTask?.dueDate
-    ? Math.ceil((new Date(currentTask.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null
-
-  const isFinished = currentTask?.status === 'done' || currentTask?.status === 'cancelled'
-  const isOverdue = daysUntilDeadline !== null && daysUntilDeadline < 0 && !isFinished
-  const isDueSoon = daysUntilDeadline !== null && daysUntilDeadline >= 0 && daysUntilDeadline <= 2 && !isFinished
-
-  // ── Loading state ─────────────────────────────────────────────────────────
-
-  if (isLoading && !currentTask) {
-    return <TaskDetailSkeleton />
+    deleteTask.mutate(id, {
+      onSuccess: () => {
+        toast.success("Task eliminato")
+        navigate("/tasks")
+      },
+      onError: () => toast.error("Errore nell'eliminazione"),
+    })
   }
 
-  if (!currentTask) {
-    return (
-      <div className="card p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Task non trovato</h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
-          Il task richiesto non esiste o è stato eliminato.
-        </p>
-        <button onClick={() => navigate('/tasks')} className="btn-primary">
-          Torna ai Task
-        </button>
-      </div>
-    )
-  }
+  // ---- Header: editable badges (visual chips linking to edit) ----
+  const editableBadges = t ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Task type */}
+      <Badge variant="secondary" className={TASK_TYPE_COLORS[t.taskType]}>
+        {TASK_TYPE_LABELS[t.taskType] ?? t.taskType}
+      </Badge>
 
-  // ── Task type icon config ──────────────────────────────────────────────────
+      {/* Status chip */}
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium cursor-default",
+          STATUS_COLORS_LEGACY[t.status]
+        )}
+      >
+        {TASK_STATUS_LABELS[t.status] ?? t.status}
+        <ChevronRight className="h-3 w-3 opacity-60" />
+      </span>
 
-  const taskTypeIcon = currentTask.taskType === 'milestone'
-    ? { icon: Target, bg: 'bg-amber-100 dark:bg-amber-900/30', color: 'text-amber-600 dark:text-amber-400' }
-    : currentTask.taskType === 'subtask'
-      ? { icon: ListTodo, bg: 'bg-gray-100 dark:bg-gray-700', color: 'text-gray-600 dark:text-gray-400' }
-      : { icon: CheckSquare, bg: 'bg-blue-100 dark:bg-blue-900/30', color: 'text-blue-600 dark:text-blue-400' }
+      {/* Priority chip */}
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium cursor-default",
+          STATUS_COLORS_LEGACY[t.priority]
+        )}
+      >
+        <Flag className="h-3 w-3" />
+        {TASK_PRIORITY_LABELS[t.priority] ?? t.priority}
+      </span>
 
-  const TaskTypeIconComponent = taskTypeIcon.icon
-  const projectId = currentTask.projectId ?? null
+      {/* Assignee chip */}
+      {t.assignee && (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-xs text-foreground cursor-default">
+          <User className="h-3 w-3 text-muted-foreground" />
+          {t.assignee.firstName} {t.assignee.lastName}
+        </span>
+      )}
 
-  // ── Status transitions ────────────────────────────────────────────────────
+      {/* Project chip */}
+      {t.project && (
+        <Link
+          to={`/projects/${t.project.id}`}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:border-primary/50 hover:text-primary transition-colors"
+        >
+          <FolderKanban className="h-3 w-3 text-muted-foreground" />
+          {t.project.name}
+        </Link>
+      )}
 
-  const effectiveProjectId = projectId ?? ''
-  const transitions = (canEdit || isAssignee) && currentTask.status !== 'cancelled'
-    ? getAvailableTransitions(effectiveProjectId, currentTask.status)
-    : []
+      {/* Deadline chip */}
+      {t.dueDate && (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-xs cursor-default",
+            t.status !== "done" && t.status !== "cancelled" && new Date(t.dueDate) < new Date()
+              ? "border-destructive/50 text-destructive"
+              : "text-foreground"
+          )}
+        >
+          <Calendar className="h-3 w-3 text-muted-foreground" />
+          {formatDate(t.dueDate)}
+        </span>
+      )}
+    </div>
+  ) : null
 
-  const subtaskCount = treeData?.subtasks?.length ?? 0
+  // ---- Header: action buttons ----
+  const headerActions = t ? (
+    <>
+      <Button variant="outline" size="sm" asChild>
+        <Link to={`/time-tracking?taskId=${id}`}>
+          <Timer className="h-4 w-4 mr-1" />
+          Log ore
+        </Link>
+      </Button>
 
-  // ── Render ────────────────────────────────────────────────────────────────
+      {/* Advance status button */}
+      {getNextStatus(t.status) && (
+        <Button
+          size="sm"
+          onClick={() => handleStatusChange(getNextStatus(t.status)!)}
+          disabled={changeStatus.isPending}
+        >
+          {changeStatus.isPending ? "..." : `Avanza: ${getNextStatusLabel(t.status)}`}
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      )}
+
+      {/* Edit + more menu */}
+      <Button variant="outline" size="sm" asChild>
+        <Link to={`/tasks/${id}/edit`}>
+          <Pencil className="h-4 w-4 mr-1" />
+          Modifica
+        </Link>
+      </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-9 w-9">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+            <DropdownMenuItem
+              key={value}
+              onClick={() => handleStatusChange(value)}
+              disabled={value === t.status}
+            >
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  ) : null
+
+  // ---- KPI row ----
+  const kpiRow = t ? (
+    <div className="space-y-3">
+      {summaryKpis && summaryKpis.length > 0 && <KpiStrip cards={summaryKpis} />}
+      <KpiRow t={t} subtaskList={subtaskList} />
+    </div>
+  ) : undefined
+
+  // ---- Tabs ----
+  const tabs = useMemo(
+    () =>
+      id && t
+        ? [
+            {
+              key: "details",
+              label: "Dettagli",
+              content: <DetailsTab t={t} />,
+            },
+            {
+              key: "subtasks",
+              label: "Subtask",
+              count: t.subtasksSummary?.total ?? t._count?.subtasks ?? subtaskList.length,
+              content: <SubtasksTab subtaskList={subtaskList} taskId={id} />,
+            },
+            {
+              key: "time",
+              label: "Log ore",
+              count: t._count?.timeEntries,
+              content: <TimeEntriesTab taskId={id} estimatedHours={t.estimatedHours} />,
+            },
+            {
+              key: "attachments",
+              label: "Allegati",
+              content: <AttachmentsTab taskId={id} />,
+            },
+            {
+              key: "comments",
+              label: "Commenti",
+              count: t._count?.comments,
+              content: <CommentSection taskId={id} />,
+            },
+            {
+              key: "checklist",
+              label: "Checklist",
+              content: <ChecklistSection taskId={id} />,
+            },
+            {
+              key: "activity",
+              label: "Attività",
+              content: (
+                <div className="mt-4">
+                  <ActivityTab entityType="task" entityId={id} />
+                </div>
+              ),
+            },
+          ]
+        : [],
+    [id, t, subtaskList]
+  )
 
   return (
-    <div className="space-y-4">
-
-      {/* ── Breadcrumb ── */}
-      <Breadcrumb
-        items={[
-          { label: 'Task', href: '/tasks' },
-          ...(currentTask.project
-            ? [{ label: currentTask.project.name, href: `/projects/${currentTask.project.id}` }]
-            : []),
-          ...(currentTask.parentTask
-            ? [{ label: currentTask.parentTask.title || currentTask.parentTask.code, href: `/tasks/${currentTask.parentTask.id}` }]
-            : []),
-          { label: currentTask.title },
-        ]}
-      />
-
-      {/* ── Page Header with icon-button actions ── */}
-      <DetailPageHeader title="Dettagli Task" subtitle={currentTask.code}>
-        {/* Timer button — colored, icon-only on mobile */}
-        {canTrackTime && currentTask.taskType !== 'milestone' && (
-          <button
-            onClick={handleTimerToggle}
-            title={isTimerRunning ? 'Ferma timer' : 'Avvia timer'}
-            className={`flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-lg font-medium transition-all duration-200 active:scale-95 ${
-              isTimerRunning
-                ? 'bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500'
-                : 'bg-primary-500 text-white hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500'
-            }`}
-          >
-            {isTimerRunning ? (
-              <Square className="w-4 h-4" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            <span className="hidden sm:inline">
-              {isTimerRunning ? 'Stop' : 'Timer'}
-            </span>
-            {isTimerRunning && (
-              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            )}
-          </button>
-        )}
-
-        {/* Copy link */}
-        <button
-          onClick={handleCopyLink}
-          title="Copia link al task"
-          className={`btn-icon ${isCopied ? 'text-green-600 dark:text-green-400' : ''}`}
-        >
-          {isCopied ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Copy className="w-4 h-4" />
-          )}
-        </button>
-
-        {/* Duplicate */}
-        <button
-          onClick={handleCloneTask}
-          disabled={isCloning}
-          title="Duplica task"
-          className="btn-icon disabled:opacity-50"
-        >
-          {isCloning ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Copy className="w-4 h-4 rotate-[15deg]" />
-          )}
-        </button>
-
-        {/* Edit */}
-        {canEdit && (
-          <button
-            onClick={() => navigate(`/tasks/${id}/edit`)}
-            title="Modifica task"
-            className="btn-icon"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-        )}
-      </DetailPageHeader>
-
-      {/* ── Two-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ════════════════ LEFT COLUMN ════════════════ */}
-        <div className="lg:col-span-2 space-y-4">
-
-          {/* ── Title card ── */}
-          <div className="card p-5">
-            {/* Type badge + code */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`p-2 rounded-lg flex-shrink-0 ${taskTypeIcon.bg}`}>
-                <TaskTypeIconComponent className={`w-4 h-4 ${taskTypeIcon.color}`} />
-              </div>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${TASK_TYPE_COLORS[currentTask.taskType || 'task']}`}>
-                {TASK_TYPE_LABELS[currentTask.taskType || 'task']}
-              </span>
-              <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">{currentTask.code}</span>
-            </div>
-
-            {/* Title + recurring badge */}
-            <div className="flex items-start gap-2 flex-wrap">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-snug">
-                {currentTask.title}
-              </h2>
-              {currentTask.isRecurring && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium flex-shrink-0 mt-0.5">
-                  <Repeat2 className="w-3 h-3" />
-                  Ricorrente
-                </span>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="mt-3">
-              {currentTask.description ? (
-                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                  {currentTask.description}
-                </p>
-              ) : canEdit ? (
-                <button
-                  onClick={() => navigate(`/tasks/${id}/edit`)}
-                  className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
-                >
-                  + Aggiungi descrizione
-                </button>
-              ) : (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Nessuna descrizione</p>
-              )}
-            </div>
-
-            {/* Milestone info banner */}
-            {currentTask.taskType === 'milestone' && (
-              <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                  <Target className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm">
-                    Questa milestone raccoglie task figlie. Il tempo e l'avanzamento sono calcolati automaticamente.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Blocked reason banner */}
-            {currentTask.status === 'blocked' && currentTask.blockedReason && (
-              <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Motivo del blocco</h4>
-                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-wrap">
-                      {currentTask.blockedReason}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── Checklist ── */}
-          {currentTask.taskType !== 'milestone' && (
-            <ChecklistSection taskId={currentTask.id} readOnly={!canEdit} />
-          )}
-
-          {/* ── Custom Fields ── */}
-          <CustomFieldsSection
-            taskId={currentTask.id}
-            projectId={currentTask.projectId}
-            readOnly={!canEdit}
+    <EntityDetail
+      isLoading={isLoading}
+      error={toError(error)}
+      notFound={!isLoading && !error && !t}
+      breadcrumbs={breadcrumbs}
+      title={t?.title}
+      subtitle={t?.code}
+      editableBadges={editableBadges}
+      tagEditor={id ? <TagEditor entityType="task" entityId={id} className="mt-1" /> : undefined}
+      headerActions={headerActions}
+      colorBar="var(--gradient-task)"
+      kpiRow={kpiRow}
+      beforeContent={
+        t ? (
+          <WorkflowStepper
+            workflow={taskWorkflow}
+            currentPhase={t.status}
+            validationData={
+              {
+                hasAssignee: !!t.assigneeId,
+                hasDescription: !!(t.description && t.description.trim().length > 0),
+                hasChecklist: false,
+                checklistProgress: 100,
+                hoursLogged: t.actualHours ?? 0,
+                hasApprover: false,
+              } satisfies ValidationData
+            }
+            onAdvance={(nextPhase) => handleStatusChange(nextPhase)}
+            onBlock={(reason) => {
+              if (!id) return
+              changeStatus.mutate(
+                { id, status: "blocked", blockedReason: reason },
+                {
+                  onSuccess: () => toast.success("Task bloccato"),
+                  onError: () => toast.error("Errore nel blocco del task"),
+                }
+              )
+            }}
+            canAdvancePhase={!changeStatus.isPending}
           />
-
-          {/* ── Tabs: Subtasks / Comments / Notes / Attachments / Activity ── */}
-          <TabSection
-            defaultTab="subtasks"
-            tabs={[
-              {
-                id: 'subtasks',
-                label: 'Subtask',
-                icon: GitBranch,
-                count: subtaskCount,
-                content: (
-                  <div>
-                    {canEdit && (
-                      <div className="flex justify-end mb-3">
-                        <Link
-                          to={`/tasks/new?parentTaskId=${id}&projectId=${currentTask.projectId || ''}`}
-                          className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
-                        >
-                          + Aggiungi subtask
-                        </Link>
-                      </div>
-                    )}
-                    <TaskTreeView
-                      parentTaskId={id}
-                      mode="compact"
-                      showSummary={false}
-                      showControls={false}
-                      showFilters={false}
-                      canTrackTime={canTrackTime}
-                      onTimerToggle={handleSubtaskTimerToggle}
-                      runningTimerId={runningTimerTaskId}
-                    />
-                  </div>
-                ),
-              },
-              {
-                id: 'comments',
-                label: 'Commenti',
-                icon: MessageSquare,
-                count: comments.length,
-                content: (
-                  <CommentSection
-                    taskId={id || ''}
-                    comments={comments}
-                    currentUser={user}
-                    isLoading={commentsLoading}
-                    onCommentAdded={handleCommentAdded}
-                    onCommentDeleted={handleCommentDeleted}
-                  />
-                ),
-              },
-              {
-                id: 'notes',
-                label: 'Note',
-                icon: StickyNote,
-                count: notes.length,
-                content: (
-                  <NoteSection
-                    entityType="task"
-                    entityId={id || ''}
-                    notes={notes}
-                    currentUser={user}
-                    isLoading={notesLoading}
-                    onNoteAdded={handleNoteAdded}
-                    onNoteDeleted={handleNoteDeleted}
-                    showInternalToggle={user?.role === 'admin' || user?.role === 'direzione'}
-                  />
-                ),
-              },
-              {
-                id: 'attachments',
-                label: 'Allegati',
-                icon: Paperclip,
-                count: attachments.length,
-                content: (
-                  <AttachmentSection
-                    entityType="task"
-                    entityId={id || ''}
-                    attachments={attachments}
-                    currentUser={user}
-                    isLoading={attachmentsLoading}
-                    onAttachmentAdded={handleAttachmentAdded}
-                    onAttachmentDeleted={handleAttachmentDeleted}
-                  />
-                ),
-              },
-              {
-                id: 'activity',
-                label: "Attivita'",
-                icon: History,
-                content: (
-                  <div className="space-y-4">
-                    <StatusTimeline entityId={id!} projectId={projectId} />
-                    <ActivityFeed entityType="task" entityId={id!} />
-                  </div>
-                ),
-              },
-            ]}
-          />
-        </div>
-
-        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
-        <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-20 space-y-4">
-            <div className="card p-4">
-
-              {/* ── Workflow Stepper ── */}
-              <div className="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700/50 overflow-x-auto scrollbar-hide">
-                <WorkflowStepper currentStatus={currentTask.status} projectId={projectId} />
-              </div>
-
-              {/* ── Current status + transitions ── */}
-              <div className="py-2.5 border-b border-gray-100 dark:border-gray-700/50">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <StatusIcon type="taskStatus" value={currentTask.status} size="sm" showLabel />
-                  {transitions.length > 0 && (
-                    <span className="text-gray-300 dark:text-gray-600 text-xs">→</span>
-                  )}
-                  {transitions.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChange(status as TaskStatus)}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    >
-                      <StatusIcon type="taskStatus" value={status} size="sm" />
-                      <span>{getStatusLabel(effectiveProjectId, status)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Priorità ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <AlertCircle className="w-4 h-4" />
-                  Priorità
-                </span>
-                <span className="meta-row-value">
-                  <StatusIcon type="taskPriority" value={currentTask.priority} size="sm" showLabel />
-                </span>
-              </div>
-
-              {/* ── Assegnato ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <User className="w-4 h-4" />
-                  Assegnato
-                </span>
-                <span className="meta-row-value">
-                  {currentTask.assignee
-                    ? `${currentTask.assignee.firstName} ${currentTask.assignee.lastName}`
-                    : <span className="text-gray-400 dark:text-gray-500 font-normal">—</span>
-                  }
-                </span>
-              </div>
-
-              {/* ── Reparto ── */}
-              {currentTask.department && (
-                <div className="meta-row">
-                  <span className="meta-row-label">
-                    <FolderKanban className="w-4 h-4" />
-                    Reparto
-                  </span>
-                  <span className="meta-row-value">
-                    <DepartmentBadge department={currentTask.department} size="sm" />
-                  </span>
-                </div>
-              )}
-
-              {/* ── Data Inizio ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Calendar className="w-4 h-4" />
-                  Inizio
-                </span>
-                <span className="meta-row-value">
-                  {currentTask.startDate
-                    ? formatDate(currentTask.startDate)
-                    : <span className="text-gray-400 dark:text-gray-500 font-normal">—</span>
-                  }
-                </span>
-              </div>
-
-              {/* ── Scadenza ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Calendar className="w-4 h-4" />
-                  Scadenza
-                </span>
-                <span className={`meta-row-value flex items-center gap-1.5 justify-end ${
-                  isOverdue
-                    ? 'text-red-600 dark:text-red-400'
-                    : isDueSoon
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : ''
-                }`}>
-                  {currentTask.dueDate ? (
-                    <>
-                      {formatDateRelative(currentTask.dueDate)}
-                      {isOverdue && <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />}
-                    </>
-                  ) : (
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">—</span>
-                  )}
-                </span>
-              </div>
-
-              {/* ── Ore ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Clock className="w-4 h-4" />
-                  Ore
-                </span>
-                <div className="flex items-center gap-2 text-right">
-                  {estimatedHours > 0 ? (
-                    <>
-                      <div className="w-16">
-                        <ProgressBar value={hoursProgress} size="sm" color={isOverBudget ? 'red' : 'blue'} />
-                      </div>
-                      <span className={`text-sm font-medium whitespace-nowrap ${isOverBudget ? 'text-red-500 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
-                        {formatHours(actualHours)} / {formatHours(estimatedHours)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="meta-row-value">
-                      {formatHours(actualHours)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Registrazioni ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <Timer className="w-4 h-4" />
-                  Registrazioni
-                </span>
-                <span className="meta-row-value flex items-center gap-1.5 justify-end">
-                  {currentTask._count?.timeEntries ?? 0}
-                  {isTimerRunning && (
-                    <span className="flex items-center gap-1 text-red-500 dark:text-red-400 text-xs font-normal">
-                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                      Attivo
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              {/* ── Progetto ── */}
-              {currentTask.project && (
-                <div className="meta-row">
-                  <span className="meta-row-label">
-                    <FolderKanban className="w-4 h-4" />
-                    Progetto
-                  </span>
-                  <Link
-                    to={`/projects/${currentTask.project.id}`}
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors text-right truncate max-w-[9rem]"
-                  >
-                    {currentTask.project.name}
-                  </Link>
-                </div>
-              )}
-
-              {/* ── Parent task ── */}
-              {currentTask.parentTask && (
-                <div className="meta-row">
-                  <span className="meta-row-label">
-                    <GitBranch className="w-4 h-4" />
-                    Parent
-                  </span>
-                  <Link
-                    to={`/tasks/${currentTask.parentTask.id}`}
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors text-right truncate max-w-[9rem]"
-                  >
-                    {currentTask.parentTask.title || currentTask.parentTask.code}
-                  </Link>
-                </div>
-              )}
-
-              {/* ── Subtask count ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <ListTodo className="w-4 h-4" />
-                  Subtask
-                </span>
-                <span className="meta-row-value">{subtaskCount}</span>
-              </div>
-
-              {/* ── Commenti count ── */}
-              <div className="meta-row">
-                <span className="meta-row-label">
-                  <MessageSquare className="w-4 h-4" />
-                  Commenti
-                </span>
-                <span className="meta-row-value">{comments.length}</span>
-              </div>
-
-              {/* ── Tag ── */}
-              {taskTags.length > 0 && (
-                <div className="meta-row items-start">
-                  <span className="meta-row-label pt-0.5">
-                    <TagIcon className="w-4 h-4" />
-                    Tag
-                  </span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    <TagList tags={taskTags} size="sm" />
-                  </div>
-                </div>
-              )}
-
-              {/* ── Quick Links (vertical list) ── */}
-              <div className="pt-3 mt-1 border-t border-gray-100 dark:border-gray-700/50 space-y-0.5">
-                <Link
-                  to={`/time-tracking?taskId=${id}`}
-                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
-                >
-                  <Clock className="w-4 h-4 text-green-500 dark:text-green-400 flex-shrink-0" />
-                  Time Entries
-                </Link>
-                {currentTask.project && (
-                  <Link
-                    to={`/projects/${currentTask.project.id}`}
-                    className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
-                  >
-                    <FolderKanban className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
-                    {currentTask.project.name}
-                  </Link>
-                )}
-                <Link
-                  to={`/tasks?projectId=${currentTask.projectId || ''}`}
-                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4 text-purple-500 dark:text-purple-400 flex-shrink-0" />
-                  Altri task del progetto
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Blocked Reason Modal ── */}
-      <BlockedReasonModal
-        isOpen={showBlockedModal}
-        taskTitle={currentTask.title}
-        isSubmitting={isChangingStatus}
-        onCancel={handleBlockedCancel}
-        onConfirm={handleBlockedConfirm}
-      />
-    </div>
+        ) : undefined
+      }
+      tabs={tabs}
+      onDelete={handleDelete}
+      deleteConfirmMessage="Sei sicuro di voler eliminare questo task? Tutti i sottotask, commenti e checklist associati saranno eliminati."
+      isDeleting={deleteTask.isPending}
+    />
   )
 }

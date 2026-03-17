@@ -17,6 +17,7 @@ import { z } from 'zod'
 import { invitationService } from '../services/invitationService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { logger } from '../utils/logger.js'
+import { sendSuccess, sendCreated, sendError } from '../utils/responseHelpers.js'
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -42,7 +43,7 @@ const acceptInvitationSchema = z.object({
 /**
  * Checks whether the authenticated user has manage_members capability for the given project.
  * Admins and direzione always pass. Project owners and managers also pass.
- * Returns 403 if the check fails.
+ * Returns false and sends an error response if the check fails.
  */
 async function assertCanManageMembers(
   req: Request,
@@ -50,7 +51,7 @@ async function assertCanManageMembers(
   projectId: string
 ): Promise<boolean> {
   if (!req.user) {
-    res.status(401).json({ success: false, error: 'Authentication required' })
+    sendError(res, 'Authentication required', 401)
     return false
   }
 
@@ -75,7 +76,7 @@ async function assertCanManageMembers(
   })
 
   if (!project) {
-    res.status(404).json({ success: false, error: 'Project not found' })
+    sendError(res, 'Project not found', 404)
     return false
   }
 
@@ -83,10 +84,7 @@ async function assertCanManageMembers(
   const isProjectManager = membership?.projectRole === 'owner' || membership?.projectRole === 'manager'
 
   if (!isProjectOwner && !isProjectManager) {
-    res.status(403).json({
-      success: false,
-      error: 'You do not have permission to manage members for this project',
-    })
+    sendError(res, 'You do not have permission to manage members for this project', 403)
     return false
   }
 
@@ -109,7 +107,7 @@ export async function createInvitation(
 ): Promise<void> {
   try {
     if (!req.user) {
-      res.status(401).json({ success: false, error: 'Authentication required' })
+      sendError(res, 'Authentication required', 401)
       return
     }
 
@@ -121,11 +119,11 @@ export async function createInvitation(
     const parsed = createInvitationSchema.safeParse(req.body)
     if (!parsed.success) {
       const firstError = parsed.error.errors[0]
-      res.status(400).json({
-        success: false,
-        error: firstError ? `${firstError.path.join('.')}: ${firstError.message}` : 'Validation failed',
-        errors: parsed.error.errors,
-      })
+      sendError(
+        res,
+        firstError ? `${firstError.path.join('.')}: ${firstError.message}` : 'Validation failed',
+        400
+      )
       return
     }
 
@@ -138,10 +136,10 @@ export async function createInvitation(
       req.user.userId
     )
 
-    res.status(201).json({ success: true, data: invitation })
+    sendCreated(res, invitation)
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, error: error.message })
+      sendError(res, error.message, error.statusCode)
       return
     }
     logger.error('Error creating invitation', { error })
@@ -165,17 +163,14 @@ export async function validateInvitation(
     const invitation = await invitationService.validateInvitation(token)
 
     if (!invitation) {
-      res.status(404).json({
-        success: false,
-        error: 'Invitation not found, already accepted, or expired',
-      })
+      sendError(res, 'Invitation not found, already accepted, or expired', 404)
       return
     }
 
     // Return only non-sensitive data — omit the raw token from the response body
     const { token: _token, invitedById: _invitedById, ...safeInvitation } = invitation
 
-    res.json({ success: true, data: safeInvitation })
+    sendSuccess(res, safeInvitation)
   } catch (error) {
     logger.error('Error validating invitation', { error })
     next(error)
@@ -202,11 +197,11 @@ export async function acceptInvitation(
     const parsed = acceptInvitationSchema.safeParse(req.body)
     if (!parsed.success) {
       const firstError = parsed.error.errors[0]
-      res.status(400).json({
-        success: false,
-        error: firstError ? `${firstError.path.join('.')}: ${firstError.message}` : 'Validation failed',
-        errors: parsed.error.errors,
-      })
+      sendError(
+        res,
+        firstError ? `${firstError.path.join('.')}: ${firstError.message}` : 'Validation failed',
+        400
+      )
       return
     }
 
@@ -216,10 +211,10 @@ export async function acceptInvitation(
 
     const result = await invitationService.acceptInvitation(token, userData)
 
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, error: error.message })
+      sendError(res, error.message, error.statusCode)
       return
     }
     logger.error('Error accepting invitation', { error })
@@ -239,7 +234,7 @@ export async function listInvitations(
 ): Promise<void> {
   try {
     if (!req.user) {
-      res.status(401).json({ success: false, error: 'Authentication required' })
+      sendError(res, 'Authentication required', 401)
       return
     }
 
@@ -250,7 +245,7 @@ export async function listInvitations(
 
     const invitations = await invitationService.listPendingInvitations(projectId)
 
-    res.json({ success: true, data: invitations })
+    sendSuccess(res, invitations)
   } catch (error) {
     logger.error('Error listing invitations', { error })
     next(error)
@@ -269,7 +264,7 @@ export async function cancelInvitation(
 ): Promise<void> {
   try {
     if (!req.user) {
-      res.status(401).json({ success: false, error: 'Authentication required' })
+      sendError(res, 'Authentication required', 401)
       return
     }
 
@@ -283,7 +278,7 @@ export async function cancelInvitation(
     })
 
     if (!invitation) {
-      res.status(404).json({ success: false, error: 'Invitation not found' })
+      sendError(res, 'Invitation not found', 404)
       return
     }
 
@@ -292,10 +287,10 @@ export async function cancelInvitation(
 
     await invitationService.cancelInvitation(id)
 
-    res.json({ success: true, message: 'Invitation cancelled' })
+    sendSuccess(res, { message: 'Invitation cancelled' })
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, error: error.message })
+      sendError(res, error.message, error.statusCode)
       return
     }
     logger.error('Error cancelling invitation', { error })

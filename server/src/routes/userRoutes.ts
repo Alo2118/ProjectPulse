@@ -5,6 +5,7 @@ import {
   createUser,
   updateUser,
   updateProfile,
+  updateMyPreferences,
   updateTheme,
   deleteUser,
   hardDeleteUser,
@@ -21,6 +22,7 @@ router.get('/:id', getUser)
 
 // Self-profile updates: any authenticated user can update their own profile (except role)
 router.put('/me', updateProfile)
+router.patch('/me/preferences', updateMyPreferences)
 router.patch('/me/theme', updateTheme)
 
 // Write access: admin only

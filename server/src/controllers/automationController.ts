@@ -18,7 +18,6 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
 import * as automationService from '../services/automationService.js'
 import * as recommendationService from '../services/automation/recommendationService.js'
 import { AUTOMATION_TEMPLATES, AUTOMATION_PACKAGES } from '../services/automationTemplates.js'
@@ -26,132 +25,15 @@ import { assertProjectCapability } from '../services/permissionService.js'
 import { AppError } from '../middleware/errorMiddleware.js'
 import { logger } from '../utils/logger.js'
 import type { TriggerConfig, ConditionConfig, ActionConfig } from '../services/automation/types.js'
-
-// ============================================================
-// VALIDATION SCHEMAS
-// ============================================================
-
-const triggerConfigSchema = z.object({
-  type: z.enum([
-    // Task triggers
-    'task_status_changed',
-    'task_created',
-    'task_assigned',
-    'task_updated',
-    'task_commented',
-    'task_idle',
-    'all_subtasks_completed',
-    'task_overdue',
-    'task_deadline_approaching',
-    // Risk triggers
-    'risk_created',
-    'risk_status_changed',
-    'risk_level_changed',
-    // Document triggers
-    'document_created',
-    'document_status_changed',
-    'document_review_due',
-    // Project triggers
-    'project_status_changed',
-    'project_deadline_approaching',
-  ]),
-  params: z.record(z.unknown()).default({}),
-})
-
-const conditionConfigSchema = z.object({
-  type: z.enum([
-    // Task conditions
-    'task_priority_is',
-    'task_type_is',
-    'task_has_assignee',
-    'task_in_project',
-    'task_has_subtasks',
-    'task_field_equals',
-    // Risk conditions
-    'risk_probability_is',
-    'risk_impact_is',
-    'risk_category_is',
-    // Document conditions
-    'document_type_is',
-    'document_status_is',
-    // Project conditions
-    'project_status_is',
-    'project_priority_is',
-    // Cross-domain conditions
-    'entity_in_project',
-    'time_since_last_update',
-    'user_workload_above',
-  ]),
-  params: z.record(z.unknown()).default({}),
-})
-
-const actionConfigSchema = z.object({
-  type: z.enum([
-    // Notification actions
-    'notify_user',
-    'notify_assignee',
-    'notify_project_owner',
-    // Task actions
-    'update_parent_status',
-    'set_task_field',
-    'create_comment',
-    'assign_to_user',
-    // Entity actions
-    'set_due_date',
-    'create_subtask',
-    // Email action
-    'send_email',
-    // Risk/Document actions
-    'set_risk_field',
-    'set_document_field',
-    // Integration actions
-    'webhook',
-    // Escalation action
-    'escalate',
-  ]),
-  params: z.record(z.unknown()).default({}),
-})
-
-const createSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
-  description: z.string().max(1000).optional(),
-  projectId: z.string().uuid('Invalid project ID').optional(),
-  trigger: triggerConfigSchema,
-  conditions: z.array(conditionConfigSchema).default([]),
-  actions: z.array(actionConfigSchema).min(1, 'At least one action is required'),
-  isActive: z.boolean().default(true),
-  priority: z.number().int().min(0).max(100).default(0),
-  domain: z.enum(['task', 'risk', 'document', 'project']).default('task'),
-  conditionLogic: z.enum(['AND', 'OR']).default('AND'),
-  cooldownMinutes: z.number().int().min(0).default(0),
-})
-
-const updateSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  description: z.string().max(1000).optional(),
-  projectId: z.string().uuid().nullable().optional(),
-  trigger: triggerConfigSchema.optional(),
-  conditions: z.array(conditionConfigSchema).optional(),
-  actions: z.array(actionConfigSchema).min(1).optional(),
-  isActive: z.boolean().optional(),
-  priority: z.number().int().min(0).max(100).optional(),
-  domain: z.enum(['task', 'risk', 'document', 'project']).optional(),
-  conditionLogic: z.enum(['AND', 'OR']).optional(),
-  cooldownMinutes: z.number().int().min(0).optional(),
-})
-
-const logsQuerySchema = z.object({
-  page: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .default('1'),
-  limit: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .default('50'),
-})
+import { sendSuccess, sendCreated, sendError } from '../utils/responseHelpers.js'
+import { requireUserId } from '../utils/controllerHelpers.js'
+import {
+  createAutomationSchema,
+  updateAutomationSchema,
+  automationLogsQuerySchema,
+  toggleAutomationSchema,
+  fromTemplateSchema,
+} from '../schemas/automationSchemas.js'
 
 // ============================================================
 // HANDLERS - GLOBAL (admin / direzione)
@@ -168,7 +50,7 @@ export async function getAutomations(
 ): Promise<void> {
   try {
     const rules = await automationService.getAutomationRules()
-    res.json({ success: true, data: rules })
+    sendSuccess(res, rules)
   } catch (error) {
     logger.error('Error fetching automation rules', { error })
     next(error)
@@ -189,7 +71,7 @@ export async function getAutomation(
     if (!rule) {
       return next(new AppError('Automation rule not found', 404))
     }
-    res.json({ success: true, data: rule })
+    sendSuccess(res, rule)
   } catch (error) {
     logger.error('Error fetching automation rule', { error, ruleId: req.params['id'] })
     next(error)
@@ -206,9 +88,9 @@ export async function getAutomationLogs(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { page, limit } = logsQuerySchema.parse(req.query)
+    const { page, limit } = automationLogsQuerySchema.parse(req.query)
     const result = await automationService.getAutomationLogs(req.params['id']!, page, limit)
-    res.json({ success: true, data: result })
+    sendSuccess(res, result)
   } catch (error) {
     logger.error('Error fetching automation logs', { error, ruleId: req.params['id'] })
     next(error)
@@ -225,13 +107,10 @@ export async function createAutomation(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
-
-    const data = createSchema.parse(req.body)
-    const rule = await automationService.createAutomationRule(data, req.user.userId)
-    res.status(201).json({ success: true, data: rule })
+    const userId = requireUserId(req)
+    const data = createAutomationSchema.parse(req.body)
+    const rule = await automationService.createAutomationRule(data, userId)
+    sendCreated(res, rule)
   } catch (error) {
     logger.error('Error creating automation rule', { error })
     next(error)
@@ -248,17 +127,14 @@ export async function updateAutomation(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
-
-    const data = updateSchema.parse(req.body)
+    const userId = requireUserId(req)
+    const data = updateAutomationSchema.parse(req.body)
     const rule = await automationService.updateAutomationRule(
       req.params['id']!,
       data,
-      req.user.userId
+      userId
     )
-    res.json({ success: true, data: rule })
+    sendSuccess(res, rule)
   } catch (error) {
     logger.error('Error updating automation rule', { error, ruleId: req.params['id'] })
     next(error)
@@ -276,7 +152,7 @@ export async function deleteAutomation(
 ): Promise<void> {
   try {
     await automationService.deleteAutomationRule(req.params['id']!)
-    res.json({ success: true, data: null })
+    sendSuccess(res, null)
   } catch (error) {
     logger.error('Error deleting automation rule', { error, ruleId: req.params['id'] })
     next(error)
@@ -293,9 +169,9 @@ export async function toggleAutomation(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { isActive } = z.object({ isActive: z.boolean() }).parse(req.body)
+    const { isActive } = toggleAutomationSchema.parse(req.body)
     const rule = await automationService.toggleAutomationRule(req.params['id']!, isActive)
-    res.json({ success: true, data: rule })
+    sendSuccess(res, rule)
   } catch (error) {
     logger.error('Error toggling automation rule', { error, ruleId: req.params['id'] })
     next(error)
@@ -317,19 +193,16 @@ export async function getProjectAutomations(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
-
+    const userId = requireUserId(req)
     const { projectId } = req.params
 
     // Admin and direzione bypass capability check
-    if (req.user.role !== 'admin' && req.user.role !== 'direzione') {
-      await assertProjectCapability(req.user.userId, req.user.role, projectId!, 'view_project')
+    if (req.user!.role !== 'admin' && req.user!.role !== 'direzione') {
+      await assertProjectCapability(userId, req.user!.role, projectId!, 'view_project')
     }
 
     const rules = await automationService.getAutomationRules(projectId)
-    res.json({ success: true, data: rules })
+    sendSuccess(res, rules)
   } catch (error) {
     logger.error('Error fetching project automation rules', {
       error,
@@ -350,20 +223,17 @@ export async function createProjectAutomation(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
-
+    const userId = requireUserId(req)
     const { projectId } = req.params
 
     // Admin and direzione bypass capability check
-    if (req.user.role !== 'admin' && req.user.role !== 'direzione') {
-      await assertProjectCapability(req.user.userId, req.user.role, projectId!, 'configure_workflow')
+    if (req.user!.role !== 'admin' && req.user!.role !== 'direzione') {
+      await assertProjectCapability(userId, req.user!.role, projectId!, 'configure_workflow')
     }
 
-    const body = createSchema.parse({ ...req.body, projectId })
-    const rule = await automationService.createAutomationRule(body, req.user.userId)
-    res.status(201).json({ success: true, data: rule })
+    const body = createAutomationSchema.parse({ ...req.body, projectId })
+    const rule = await automationService.createAutomationRule(body, userId)
+    sendCreated(res, rule)
   } catch (error) {
     logger.error('Error creating project automation rule', {
       error,
@@ -388,7 +258,7 @@ export async function getAutomationTemplatesHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    res.json({ success: true, data: AUTOMATION_TEMPLATES })
+    sendSuccess(res, AUTOMATION_TEMPLATES)
   } catch (error) {
     logger.error('Error fetching automation templates', { error })
     next(error)
@@ -410,32 +280,16 @@ export async function getRegistryMetadata(_req: Request, res: Response) {
     const conditions = registry.getAllConditions()
     const actions = registry.getAllActions()
 
-    res.json({
-      success: true,
-      data: {
-        triggers: triggers.map(t => ({ type: t.type, domain: t.domain })),
-        conditions: conditions.map(c => ({ type: c.type, domain: c.domain })),
-        actions: actions.map(a => ({ type: a.type, domain: a.domain })),
-      }
+    sendSuccess(res, {
+      triggers: triggers.map(t => ({ type: t.type, domain: t.domain })),
+      conditions: conditions.map(c => ({ type: c.type, domain: c.domain })),
+      actions: actions.map(a => ({ type: a.type, domain: a.domain })),
     })
   } catch (error) {
     logger.error('Error fetching registry metadata', { error })
-    res.status(500).json({ success: false, error: 'Failed to load registry metadata' })
+    sendError(res, 'Failed to load registry metadata', 500)
   }
 }
-
-const fromTemplateSchema = z.object({
-  templateKey: z.string().min(1, 'templateKey is required'),
-  name: z.string().min(1).max(200).optional(),
-  projectId: z.string().uuid('Invalid project ID').optional(),
-  isActive: z.boolean().default(true),
-  priority: z.number().int().min(0).max(100).default(0),
-  /**
-   * Partial overrides merged into each action's params.
-   * For example: { userId: 'abc-123' } to fill in a userId for assign_to_user.
-   */
-  overrides: z.record(z.unknown()).optional(),
-})
 
 /**
  * POST /api/automations/from-template
@@ -449,9 +303,7 @@ export async function createFromTemplateHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
+    const userId = requireUserId(req)
 
     const parsed = fromTemplateSchema.parse(req.body)
     const { templateKey, name, projectId, isActive, priority, overrides } = parsed
@@ -469,7 +321,7 @@ export async function createFromTemplateHandler(
         }))
       : template.actions
 
-    const input = createSchema.parse({
+    const input = createAutomationSchema.parse({
       name: name ?? template.name,
       description: template.description,
       projectId,
@@ -482,15 +334,15 @@ export async function createFromTemplateHandler(
       cooldownMinutes: template.cooldownMinutes ?? 0,
     })
 
-    const rule = await automationService.createAutomationRule(input, req.user.userId)
+    const rule = await automationService.createAutomationRule(input, userId)
 
     logger.info('Automation rule created from template', {
       templateKey,
       ruleId: rule.id,
-      createdBy: req.user.userId,
+      createdBy: userId,
     })
 
-    res.status(201).json({ success: true, data: rule })
+    sendCreated(res, rule)
   } catch (error) {
     logger.error('Error creating automation rule from template', { error })
     next(error)
@@ -514,7 +366,7 @@ export async function getRecommendationsHandler(
     const projectId = req.query['projectId'] as string | undefined
     const recommendations =
       await recommendationService.getRecommendations(projectId)
-    res.json({ success: true, data: recommendations })
+    sendSuccess(res, recommendations)
   } catch (error) {
     logger.error('Error fetching automation recommendations', { error })
     next(error)
@@ -532,7 +384,7 @@ export async function generateRecommendationsHandler(
 ): Promise<void> {
   try {
     const count = await recommendationService.generateRecommendations()
-    res.json({ success: true, data: { generated: count } })
+    sendSuccess(res, { generated: count })
   } catch (error) {
     logger.error('Error generating automation recommendations', { error })
     next(error)
@@ -549,15 +401,12 @@ export async function applyRecommendationHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
-
+    const userId = requireUserId(req)
     const rule = await recommendationService.applyRecommendation(
       req.params['id']!,
-      req.user.userId
+      userId
     )
-    res.json({ success: true, data: rule })
+    sendSuccess(res, rule)
   } catch (error) {
     logger.error('Error applying automation recommendation', {
       error,
@@ -577,15 +426,12 @@ export async function dismissRecommendationHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
-
+    const userId = requireUserId(req)
     await recommendationService.dismissRecommendation(
       req.params['id']!,
-      req.user.userId
+      userId
     )
-    res.json({ success: true })
+    sendSuccess(res, { message: 'Recommendation dismissed' })
   } catch (error) {
     logger.error('Error dismissing automation recommendation', {
       error,
@@ -609,7 +455,7 @@ export async function getPackagesHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    res.json({ success: true, data: AUTOMATION_PACKAGES })
+    sendSuccess(res, AUTOMATION_PACKAGES)
   } catch (error) {
     logger.error('Error fetching automation packages', { error })
     next(error)
@@ -626,10 +472,7 @@ export async function activatePackageHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401))
-    }
-
+    const userId = requireUserId(req)
     const { key } = req.params
     const projectId = req.query['projectId'] as string | undefined
 
@@ -657,7 +500,7 @@ export async function activatePackageHandler(
           conditionLogic: 'AND',
           cooldownMinutes: template.cooldownMinutes ?? 0,
         },
-        req.user.userId
+        userId
       )
       createdRules.push(rule)
     }
@@ -666,13 +509,10 @@ export async function activatePackageHandler(
       packageKey: key,
       rulesCreated: createdRules.length,
       projectId,
-      activatedBy: req.user.userId,
+      activatedBy: userId,
     })
 
-    res.json({
-      success: true,
-      data: { package: pkg.name, rulesCreated: createdRules.length, rules: createdRules },
-    })
+    sendSuccess(res, { package: pkg.name, rulesCreated: createdRules.length, rules: createdRules })
   } catch (error) {
     logger.error('Error activating automation package', {
       error,

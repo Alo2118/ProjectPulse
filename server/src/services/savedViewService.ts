@@ -7,6 +7,7 @@
 import { prisma } from '../models/prismaClient.js'
 import { logger } from '../utils/logger.js'
 import { auditService } from './auditService.js'
+import { savedViewSelectFields } from '../utils/selectFields.js'
 import {
   CreateSavedViewInput,
   UpdateSavedViewInput,
@@ -14,23 +15,6 @@ import {
   EntityType,
 } from '../types/index.js'
 
-const savedViewSelectFields = {
-  id: true,
-  name: true,
-  entity: true,
-  filters: true,
-  columns: true,
-  sortBy: true,
-  sortOrder: true,
-  isShared: true,
-  isDefault: true,
-  userId: true,
-  createdAt: true,
-  updatedAt: true,
-  user: {
-    select: { id: true, firstName: true, lastName: true },
-  },
-}
 
 /**
  * Parses the stored JSON strings back to their typed values
